@@ -7,8 +7,12 @@ export const metadata: Metadata = {
   title: "UrbanGaon AI Todo Platform • Enterprise Operating System",
   description: "A voice-first, calendar-integrated deliverable management application built for high-performance teams and executive leadership.",
   icons: {
-    icon: "/urbangaon-logo.png",
-    apple: "/urbangaon-logo.png"
+    icon: [
+      { url: "/favicon.png", type: "image/png" },
+      { url: "/urbangaon-icon.png", type: "image/png" }
+    ],
+    shortcut: "/favicon.png",
+    apple: "/urbangaon-icon.png"
   }
 };
 
