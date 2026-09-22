@@ -18,6 +18,8 @@ export const Header: React.FC = () => {
     setIsMobileNavOpen,
     dbStatus
   } = useApp();
+//
+
 
   const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
 
