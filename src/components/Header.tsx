@@ -76,15 +76,11 @@ export const Header: React.FC = () => {
         </div>
 
         <div className="platform-title-group">
-          <div className="platform-title">
-            UrbanGaon AI Todo
-            <span className="status-dot-online" title="System Operational & Synchronized" />
-            <span style={{ fontSize: 'clamp(0.6rem, 1.5vw, 0.72rem)', color: '#10b981', fontWeight: 600, whiteSpace: 'nowrap' }}>
-              Online
-            </span>
+          <div className="platform-title-main">
+            AI Deliverable Management System
           </div>
           <div className="platform-subtitle">
-            Intelligent Voice & Calendar Deliverable Management System
+            Intelligent Voice & Calendar Executive Operating Engine
           </div>
         </div>
       </div>
