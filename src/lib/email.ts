@@ -18,14 +18,15 @@ interface SendDigestOptions {
 }
 
 export async function createEmailTransporter(): Promise<{ transporter: Transporter; isTestAccount: boolean }> {
-  const host = process.env.SMTP_HOST;
+  const rawHost = process.env.SMTP_HOST;
+  const host = (rawHost && !rawHost.includes('@')) ? rawHost : 'smtp.gmail.com';
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
 
   // If real SMTP credentials are provided (e.g. Gmail App Password)
   if (user && pass && user !== 'your_email@gmail.com') {
     const transporter = nodemailer.createTransport({
-      host: host || 'smtp.gmail.com',
+      host: host,
       port: Number(process.env.SMTP_PORT) || 465,
       secure: process.env.SMTP_SECURE === 'true' || true,
       auth: { user, pass },
