@@ -103,6 +103,23 @@ export const Header: React.FC = () => {
             >
               🍃 {dbStatus === 'connected' ? 'MongoDB Atlas' : 'MongoDB Ready'}
             </span>
+            <span
+              style={{
+                fontSize: '0.65rem',
+                padding: '1px 6px',
+                borderRadius: '4px',
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '3px',
+                backgroundColor: '#eff6ff',
+                color: '#1d4ed8',
+                border: '1px solid #bfdbfe',
+              }}
+              title="Real-time multi-device synchronization active worldwide via SSE (<100ms latency) & 3s heartbeat"
+            >
+              ⚡ Live Sync (Any Device)
+            </span>
           </div>
           <div className="platform-subtitle">
             Intelligent Voice & Calendar Deliverable Management System

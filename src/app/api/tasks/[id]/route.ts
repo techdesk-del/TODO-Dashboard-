@@ -7,6 +7,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import { TaskModel } from '@/models/Task';
+import { broadcastTaskMutation } from '@/lib/events';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -33,6 +37,9 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     if (!updated) {
       return NextResponse.json({ success: false, error: `Task '${id}' not found` }, { status: 404 });
     }
+
+    // Broadcast instant real-time update to all connected devices worldwide
+    broadcastTaskMutation({ action: 'UPDATED', taskId: id });
 
     return NextResponse.json({ success: true, data: updated });
   } catch (err: unknown) {
@@ -68,6 +75,9 @@ export async function DELETE(_req: NextRequest, ctx: RouteContext) {
     if (!updated) {
       return NextResponse.json({ success: false, error: `Task '${id}' not found` }, { status: 404 });
     }
+
+    // Broadcast instant real-time deletion to all connected devices worldwide
+    broadcastTaskMutation({ action: 'DELETED', taskId: id });
 
     return NextResponse.json({ success: true, message: `Task '${id}' soft-deleted`, data: updated });
   } catch (err: unknown) {

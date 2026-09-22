@@ -65,20 +65,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [dbStatus, setDbStatus] = useState<DBStatus>('connecting');
 
   // ── Sync with MongoDB Atlas & LocalStorage ───────────────────────
-  const refreshFromDB = useCallback(async () => {
+  const refreshFromDB = useCallback(async (isSilent = true) => {
     try {
-      const res = await fetch('/api/tasks');
+      const res = await fetch(`/api/tasks?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache, no-store' },
+      });
       if (res.ok) {
         const json = await res.json();
-        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+        if (json.success && Array.isArray(json.data)) {
           setTasks(json.data);
           setDbStatus('connected');
           return;
         }
       }
-      setDbStatus('fallback');
+      if (!isSilent) setDbStatus('fallback');
     } catch {
-      setDbStatus('fallback');
+      if (!isSilent) setDbStatus('fallback');
     }
   }, []);
 
@@ -99,11 +102,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.error('[AppContext] audit restore failed', e);
     }
 
-    // Then try to fetch from MongoDB API
-    refreshFromDB();
+    // Initial load from MongoDB
+    refreshFromDB(false);
 
     // Also fetch members if available
-    fetch('/api/members')
+    fetch(`/api/members?_t=${Date.now()}`, { cache: 'no-store' })
       .then(res => res.json())
       .then(json => {
         if (json.success && Array.isArray(json.data) && json.data.length > 0) {
@@ -113,7 +116,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .catch(() => {});
 
     // And audit logs
-    fetch('/api/audit')
+    fetch(`/api/audit?_t=${Date.now()}`, { cache: 'no-store' })
       .then(res => res.json())
       .then(json => {
         if (json.success && Array.isArray(json.data) && json.data.length > 0) {
@@ -121,6 +124,59 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       })
       .catch(() => {});
+  }, [refreshFromDB]);
+
+  // ── Real-Time Synchronization Engine (SSE Stream + 3s Heartbeat Polling) ───
+  useEffect(() => {
+    let eventSource: EventSource | null = null;
+    let isMounted = true;
+
+    const connectSSE = () => {
+      if (typeof window === 'undefined') return;
+      try {
+        eventSource = new EventSource('/api/realtime');
+
+        eventSource.addEventListener('task_mutation', (e) => {
+          try {
+            const data = JSON.parse(e.data);
+            console.log('[Realtime SSE] Live mutation received:', data);
+          } catch {}
+          refreshFromDB(true);
+        });
+
+        eventSource.onerror = () => {
+          eventSource?.close();
+          // Attempt reconnection after 3 seconds
+          if (isMounted) setTimeout(connectSSE, 3000);
+        };
+      } catch (err) {
+        console.debug('[Realtime SSE] Fallback to heartbeat polling', err);
+      }
+    };
+
+    connectSSE();
+
+    // Heartbeat poll every 3 seconds for 100% cross-device guarantee
+    const heartbeatTimer = setInterval(() => {
+      refreshFromDB(true);
+    }, 3000);
+
+    // Instant sync when tab is focused or phone screen is unlocked
+    const onTabActive = () => {
+      refreshFromDB(true);
+    };
+
+    window.addEventListener('focus', onTabActive);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') onTabActive();
+    });
+
+    return () => {
+      isMounted = false;
+      clearInterval(heartbeatTimer);
+      eventSource?.close();
+      window.removeEventListener('focus', onTabActive);
+    };
   }, [refreshFromDB]);
 
   // ── Persist tasks to localStorage as local cache

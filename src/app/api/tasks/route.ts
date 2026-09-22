@@ -9,6 +9,10 @@ import connectDB from '@/lib/db';
 import { TaskModel } from '@/models/Task';
 import { MemberModel } from '@/models/Member';
 import { INITIAL_TASKS, INITIAL_MEMBERS } from '@/lib/mockData';
+import { broadcastTaskMutation } from '@/lib/events';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 /* ── Helpers ─────────────────────────────────────────────────────── */
 async function seedIfEmpty() {
@@ -59,6 +63,12 @@ export async function GET(req: NextRequest) {
         database: 'MongoDB Atlas',
         cached:   false,
       },
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      }
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
@@ -92,6 +102,9 @@ export async function POST(req: NextRequest) {
       { $set: { ...body, updatedAt: new Date().toISOString() } },
       { upsert: true, new: true, lean: true }
     );
+
+    // Broadcast instant real-time event to all connected devices worldwide
+    broadcastTaskMutation({ action: 'CREATED', taskId: task?.id || body.id });
 
     return NextResponse.json({
       success:  true,
