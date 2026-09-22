@@ -76,9 +76,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (json.success && Array.isArray(json.data)) {
           setTasks(prev => {
             const serverMap = new Map(json.data.map((t: Task) => [t.id, t]));
-            // Smart Merge: Preserve very recent locally-added tasks (<15s) so they don't vanish
-            const pending = prev.filter(t => t.isJustAdded && !serverMap.has(t.id));
-            return [...pending, ...json.data];
+            // Smart Merge: Preserve very recent locally-added tasks (<15s) so they don't vanish, exclude cancelled / test items
+            const pending = prev.filter(t => 
+              t.isJustAdded && 
+              !serverMap.has(t.id) && 
+              t.status !== 'Cancelled' && 
+              !t.title?.toLowerCase().includes('mobile simulator') &&
+              t.id !== 'task-1790071325492'
+            );
+            const cleanServerTasks = json.data.filter((t: Task) => 
+              t.status !== 'Cancelled' && 
+              !t.title?.toLowerCase().includes('mobile simulator') &&
+              t.id !== 'task-1790071325492'
+            );
+            return [...pending, ...cleanServerTasks];
           });
           setDbStatus('connected');
           return;
@@ -95,7 +106,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Check localStorage first for instant hydration
     try {
       const savedTasks = localStorage.getItem('urbangaon_tasks_v2');
-      if (savedTasks) setTasks(JSON.parse(savedTasks));
+      if (savedTasks) {
+        const parsed = JSON.parse(savedTasks);
+        const cleaned = Array.isArray(parsed)
+          ? parsed.filter((t: Task) => 
+              t.id !== 'task-1790071325492' && 
+              !t.title?.toLowerCase().includes('mobile simulator') && 
+              t.status !== 'Cancelled'
+            )
+          : [];
+        setTasks(cleaned);
+        localStorage.setItem('urbangaon_tasks_v2', JSON.stringify(cleaned));
+      }
     } catch (e) {
       console.error('[AppContext] tasks restore failed', e);
     }

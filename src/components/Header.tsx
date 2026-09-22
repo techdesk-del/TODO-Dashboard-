@@ -82,40 +82,6 @@ export const Header: React.FC = () => {
             <span style={{ fontSize: 'clamp(0.6rem, 1.5vw, 0.72rem)', color: '#10b981', fontWeight: 600, whiteSpace: 'nowrap' }}>
               Online
             </span>
-            <span
-              style={{
-                fontSize: '0.65rem',
-                padding: '1px 6px',
-                borderRadius: '4px',
-                fontWeight: 600,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                backgroundColor: dbStatus === 'connected' ? '#ecfdf5' : '#fef3c7',
-                color: dbStatus === 'connected' ? '#047857' : '#b45309',
-                border: dbStatus === 'connected' ? '1px solid #a7f3d0' : '1px solid #fde68a'
-              }}
-              title={dbStatus === 'connected' ? 'MongoDB Atlas Cluster connected & actively synced' : 'Running on high-performance local cache; add MONGODB_URI to .env.local to link Atlas cluster'}
-            >
-              🍃 {dbStatus === 'connected' ? 'MongoDB Atlas' : 'MongoDB Ready'}
-            </span>
-            <span
-              style={{
-                fontSize: '0.65rem',
-                padding: '1px 6px',
-                borderRadius: '4px',
-                fontWeight: 600,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '3px',
-                backgroundColor: '#eff6ff',
-                color: '#1d4ed8',
-                border: '1px solid #bfdbfe',
-              }}
-              title="Real-time multi-device synchronization active worldwide via SSE (<100ms latency) & 3s heartbeat"
-            >
-              ⚡ Live Sync (Any Device)
-            </span>
           </div>
           <div className="platform-subtitle">
             Intelligent Voice & Calendar Deliverable Management System
