@@ -28,9 +28,10 @@ export default function Home() {
 
   const [viewScope, setViewScope] = useState<'selected' | 'all'>('all');
 
-  // Tasks for current selected date
-  const dateTasks = tasks.filter(t => t.scheduledDate === selectedDate);
-  const displayTasks = viewScope === 'all' ? tasks : dateTasks;
+  // Filter out cancelled / deleted tasks
+  const activeTasks = tasks.filter(t => t.status !== 'Cancelled');
+  const dateTasks = activeTasks.filter(t => t.scheduledDate === selectedDate);
+  const displayTasks = viewScope === 'all' ? activeTasks : dateTasks;
 
   const formatDateTitle = (dateStr: string) => {
     if (dateStr === '2026-09-15') return 'Tuesday, 15 September 2026';
@@ -99,7 +100,7 @@ export default function Home() {
                   </div>
                   <div className="workspace-date-sub">
                     {viewScope === 'all'
-                      ? `Worldwide Real-Time Ledger • ${tasks.length} Total Deliverables Synchronized with MongoDB Atlas`
+                      ? `Worldwide Real-Time Ledger • ${activeTasks.length} Total Deliverables Synchronized with MongoDB Atlas`
                       : `Filtered from Calendar • ${dateTasks.length} Tasks Scheduled for this Date`}
                   </div>
                 </div>
@@ -125,7 +126,7 @@ export default function Home() {
                     }}
                   >
                     <Globe size={13} />
-                    All Dates ({tasks.length})
+                    All Dates ({activeTasks.length})
                   </button>
 
                   <button
