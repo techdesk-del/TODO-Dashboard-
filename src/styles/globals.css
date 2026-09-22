@@ -324,19 +324,22 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
   -webkit-backdrop-filter: blur(2px);
 }
 
-/* CEO Card */
+/* CEO Card — Flush edge-to-edge at top with zero white space */
 .ceo-access-card {
-  margin-top: 0 !important;
+  margin: 0 calc(-1 * clamp(0.75rem, 3vw, 1rem)) 0.5rem calc(-1 * clamp(0.75rem, 3vw, 1rem)) !important;
   background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-  border: 1.5px solid #fcd34d;
-  border-radius: var(--radius-md);
-  padding: clamp(0.65rem, 2vw, 0.85rem) clamp(0.75rem, 2vw, 1rem);
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-bottom: 1.5px solid #fcd34d !important;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm) !important;
+  padding: 0.75rem clamp(0.85rem, 2.5vw, 1.15rem) !important;
   display: flex;
   align-items: center;
   justify-content: space-between;
   cursor: pointer;
   transition: all 0.25s ease;
-  box-shadow: 0 2px 4px rgba(217, 119, 6, 0.1);
+  box-shadow: 0 2px 5px rgba(217, 119, 6, 0.08);
   flex-shrink: 0;
   gap: 0.5rem;
   touch-action: manipulation;
