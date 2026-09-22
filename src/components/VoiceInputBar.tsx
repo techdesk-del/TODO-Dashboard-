@@ -1,8 +1,7 @@
-'use client';
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { parseSpeechOrTextCommand } from '@/lib/aiParser';
+import { soundEngine } from '@/lib/sound';
 import { Mic, ArrowRight, X, Sparkles, Check, Radio } from 'lucide-react';
 import { ParsedVoiceEntity } from '@/types';
 
@@ -13,6 +12,7 @@ export const VoiceInputBar: React.FC = () => {
   const [showStreamModal, setShowStreamModal] = useState(false);
   const [currentTranscription, setCurrentTranscription] = useState('');
   const [extractedData, setExtractedData] = useState<ParsedVoiceEntity | null>(null);
+  const [aiModelLabel, setAiModelLabel] = useState('Intelligent Extraction');
   const recognitionRef = useRef<any>(null);
 
   // Initialize Web Speech API if supported
@@ -51,23 +51,43 @@ export const VoiceInputBar: React.FC = () => {
     }
   }, []);
 
+  const parseWithGeminiOrLocal = async (text: string) => {
+    // 1. Instant local parsing (<5ms)
+    const local = parseSpeechOrTextCommand(text);
+    setExtractedData(local);
+    setAiModelLabel('Local Parser (<180ms)');
+
+    // 2. Enhance with Google Gemini AI in background
+    try {
+      const res = await fetch('/api/ai/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: text }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          setExtractedData(json.data);
+          setAiModelLabel(json.meta?.model || 'Google Gemini AI');
+        }
+      }
+    } catch {
+      // Keep local result
+    }
+  };
+
   const triggerVoiceCapture = () => {
     setIsListening(true);
     setShowStreamModal(true);
 
-    // Standard blueprint prompt for demonstration
     const samplePrompt = "Schedule database migration today at 5:00 PM assigned to Alex Rivera on high priority";
     setCurrentTranscription(samplePrompt);
-    const parsed = parseSpeechOrTextCommand(samplePrompt);
-    setExtractedData(parsed);
+    parseWithGeminiOrLocal(samplePrompt);
 
-    // If real speech recognition is available, try to start it
     if (recognitionRef.current) {
       try {
         recognitionRef.current.start();
-      } catch (err) {
-        // already started or fallback
-      }
+      } catch (err) {}
     }
   };
 
@@ -77,14 +97,16 @@ export const VoiceInputBar: React.FC = () => {
 
     const rawText = inputText.trim();
     setCurrentTranscription(rawText);
-    const parsed = parseSpeechOrTextCommand(rawText);
-    setExtractedData(parsed);
+    parseWithGeminiOrLocal(rawText);
     setShowStreamModal(true);
     setInputText('');
   };
 
   const handleConfirmAndSave = () => {
     if (!extractedData) return;
+
+    // Play pleasant enterprise acoustic chime
+    soundEngine.playSuccessChime();
 
     const targetMember = members.find(m => m.name.toLowerCase().includes(extractedData.assigneeName.toLowerCase())) || members[1];
 
@@ -164,7 +186,7 @@ export const VoiceInputBar: React.FC = () => {
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                  Latency: <strong>{extractedData?.latencyMs || 94}ms</strong> · Model: <strong>Whisper + TaskAI</strong>
+                  Latency: <strong>{extractedData?.latencyMs || 94}ms</strong> · Engine: <strong style={{ color: '#2563eb' }}>{aiModelLabel}</strong>
                 </span>
                 <button className="calendar-nav-btn" onClick={() => setShowStreamModal(false)}>
                   <X size={16} />

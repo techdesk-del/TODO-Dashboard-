@@ -1,11 +1,41 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Mail, Clock, AlertCircle, Calendar as CalendarIcon, X, Check } from 'lucide-react';
 
 export const MorningDigestPreviewModal: React.FC = () => {
   const { showMorningDigestModal, setShowMorningDigestModal, currentUser, tasks } = useApp();
+  const [isSending, setIsSending] = useState(false);
+  const [sendResult, setSendResult] = useState<{ success: boolean; message: string; previewUrl?: string | null } | null>(null);
+
+  const handleSendLiveEmail = async () => {
+    setIsSending(true);
+    setSendResult(null);
+    try {
+      const res = await fetch('/api/reminders/digest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: currentUser.email, name: currentUser.name }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to dispatch email');
+
+      const firstRes = data.results?.[0];
+      setSendResult({
+        success: true,
+        message: `✓ Email successfully dispatched to ${currentUser.email}! Check inbox or test console.`,
+        previewUrl: firstRes?.previewUrl,
+      });
+    } catch (err: unknown) {
+      setSendResult({
+        success: false,
+        message: `Failed: ${err instanceof Error ? err.message : 'SMTP dispatch error'}`,
+      });
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   if (!showMorningDigestModal) return null;
 
@@ -143,14 +173,51 @@ export const MorningDigestPreviewModal: React.FC = () => {
           </div>
         </div>
 
+        {/* Email Send Result Status */}
+        {sendResult && (
+          <div style={{
+            background: sendResult.success ? '#ecfdf5' : '#fef2f2',
+            border: sendResult.success ? '1px solid #a7f3d0' : '1px solid #fecaca',
+            borderRadius: '6px',
+            padding: '8px 12px',
+            fontSize: '0.75rem',
+            color: sendResult.success ? '#065f46' : '#991b1b',
+          }}>
+            {sendResult.message}
+            {sendResult.previewUrl && (
+              <div style={{ marginTop: '4px' }}>
+                <a
+                  href={sendResult.previewUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: '#2563eb', fontWeight: 700, textDecoration: 'underline' }}
+                >
+                  View Delivered Email in Ethereal Test Inbox ↗
+                </a>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Footer */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #e2e8f0', paddingTop: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #e2e8f0', paddingTop: '0.75rem', gap: '0.5rem', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
             Flowchart 13 • Corporate Anti-Spam Guarantee
           </span>
-          <button className="btn-primary" onClick={() => setShowMorningDigestModal(false)}>
-            Close Preview
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <button
+              className="btn-primary"
+              disabled={isSending}
+              onClick={handleSendLiveEmail}
+              style={{ background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', borderColor: '#059669', fontSize: '0.78rem' }}
+            >
+              <Mail size={14} style={{ marginRight: '4px' }} />
+              {isSending ? 'Sending via SMTP...' : 'Send Live Email via SMTP'}
+            </button>
+            <button className="btn-secondary" onClick={() => setShowMorningDigestModal(false)}>
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </div>

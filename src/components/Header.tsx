@@ -1,9 +1,9 @@
-'use client';
-
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Role } from '@/types';
-import { Mail, Moon, ChevronDown, Check, Compass, Menu, X as XIcon } from 'lucide-react';
+import { Mail, Moon, ChevronDown, Check, Compass, Menu, X as XIcon, Bell, Lock } from 'lucide-react';
+import { AuthModal } from './AuthModal';
+import { useTaskDeadlines } from '@/hooks/useTaskDeadlines';
 
 export const Header: React.FC = () => {
   const {
@@ -22,6 +22,8 @@ export const Header: React.FC = () => {
 
 
   const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const { notificationPermission, requestPermission } = useTaskDeadlines();
 
   const formatDateDisplay = (dateStr: string) => {
     if (dateStr === '2026-09-15') return 'Tue, 15 Sep 2026';
@@ -148,12 +150,30 @@ export const Header: React.FC = () => {
           <span>Flows</span>
         </button>
 
+        {/* Browser Push Notification Permission Button */}
+        <button
+          onClick={requestPermission}
+          className="btn-secondary"
+          title={notificationPermission === 'granted' ? 'Desktop Notifications Active (15m alerts)' : 'Click to enable Desktop Push Notifications'}
+          style={{
+            padding: 'clamp(0.28rem,1.5vw,0.35rem) clamp(0.4rem,2vw,0.65rem)',
+            background: notificationPermission === 'granted' ? '#ecfdf5' : undefined,
+            borderColor: notificationPermission === 'granted' ? '#a7f3d0' : undefined,
+            color: notificationPermission === 'granted' ? '#047857' : undefined,
+          }}
+        >
+          <Bell size={14} color={notificationPermission === 'granted' ? '#059669' : '#64748b'} />
+          <span style={{ fontSize: '0.72rem' }}>
+            {notificationPermission === 'granted' ? 'Alerts ON' : 'Enable Alerts'}
+          </span>
+        </button>
+
         {/* User Profile & Role Switcher */}
         <div style={{ position: 'relative', flexShrink: 0 }}>
           <div
             className="user-profile-badge"
             onClick={() => setIsRoleMenuOpen(!isRoleMenuOpen)}
-            title="Click to switch test roles"
+            title="Click to switch roles or sign in"
           >
             <div className="avatar-circle">{currentUser.avatar}</div>
             <div className="user-info-text">
@@ -176,8 +196,34 @@ export const Header: React.FC = () => {
               padding: '0.5rem',
               zIndex: 100
             }}>
+              {/* Credentials Sign In Trigger */}
+              <div
+                onClick={() => { setIsAuthModalOpen(true); setIsRoleMenuOpen(false); }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.5rem 0.65rem',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  marginBottom: '0.5rem',
+                }}
+              >
+                <Lock size={14} color="#2563eb" />
+                <div>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#1e3a8a' }}>
+                    Sign In / Register (2FA)
+                  </div>
+                  <div style={{ fontSize: '0.65rem', color: '#64748b' }}>
+                    MongoDB Credentials Auth
+                  </div>
+                </div>
+              </div>
+
               <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#94a3b8', padding: '0.4rem 0.6rem', textTransform: 'uppercase' }}>
-                Switch Organizational Role
+                Quick Demo Role Switch
               </div>
               {roleOptions.map(opt => (
                 <div
@@ -207,6 +253,9 @@ export const Header: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Enterprise Authentication Modal */}
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </header>
   );
 };
