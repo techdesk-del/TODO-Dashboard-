@@ -83,7 +83,7 @@ export const Sidebar: React.FC = () => {
 
       <aside 
         className={`app-sidebar ${isMobileNavOpen ? 'mobile-open' : ''}`}
-        style={{ paddingTop: 0 }}
+        style={{ paddingTop: 0, marginTop: 0, top: 0, position: 'relative', height: '100%' }}
       >
       {/* CEO Access Portal Golden Card (Slide 4, Slide 9) - Flush with 0px top space */}
       <div 
