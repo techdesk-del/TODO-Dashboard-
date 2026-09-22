@@ -1,0 +1,69 @@
+:root {
+  /* Color Palette - Enterprise & Executive */
+  --bg-app: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-surface-elevated: #f1f5f9;
+  --bg-sidebar: #ffffff;
+  --border-subtle: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --text-inverse: #ffffff;
+
+  /* Brand Accents */
+  --brand-blue: #2563eb;
+  --brand-blue-hover: #1d4ed8;
+  --brand-blue-light: #eff6ff;
+  --brand-blue-border: #bfdbfe;
+
+  /* Executive CEO Accents */
+  --ceo-gold: #d97706;
+  --ceo-gold-light: #fef3c7;
+  --ceo-gold-border: #fcd34d;
+  --ceo-gold-hover: #b45309;
+  --ceo-dark: #1e1b4b;
+
+  /* Status & Priority Tokens */
+  --priority-urgent-bg: #fee2e2;
+  --priority-urgent-text: #b91c1c;
+  --priority-urgent-border: #fca5a5;
+
+  --priority-high-bg: #ffedd5;
+  --priority-high-text: #c2410c;
+  --priority-high-border: #fdba74;
+
+  --priority-normal-bg: #ecfdf5;
+  --priority-normal-text: #047857;
+  --priority-normal-border: #a7f3d0;
+
+  --status-in-progress-bg: #e0f2fe;
+  --status-in-progress-text: #0369a1;
+
+  --status-completed-bg: #dcfce7;
+  --status-completed-text: #15803d;
+
+  --status-hold-bg: #fef9c3;
+  --status-hold-text: #854d0e;
+
+  --status-escalated-bg: #ffe4e6;
+  --status-escalated-text: #9f1239;
+
+  /* Shadows & Glassmorphism */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-glow-blue: 0 0 15px rgba(37, 99, 235, 0.4);
+  --shadow-glow-gold: 0 0 15px rgba(217, 119, 6, 0.35);
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-full: 9999px;
+
+  /* Fonts */
+  --font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-heading: 'Outfit', 'Inter', system-ui, sans-serif;
+}
