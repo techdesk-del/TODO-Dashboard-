@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
@@ -14,19 +14,23 @@ import { AuditTrailModal } from '@/components/AuditTrailModal';
 import { SystemConfigModal } from '@/components/SystemConfigModal';
 import { WorkflowManualModal } from '@/components/WorkflowManualModal';
 import { MorningDigestPreviewModal } from '@/components/MorningDigestPreviewModal';
-import { Check, Calendar as CalendarIcon, Sparkles } from 'lucide-react';
+import { Check, Calendar as CalendarIcon, Sparkles, Globe, CalendarDays } from 'lucide-react';
 
 export default function Home() {
   const {
     activeView,
     selectedDate,
+    setSelectedDate,
     tasks,
     bannerNotification,
     viewingAuditForTaskId
   } = useApp();
 
+  const [viewScope, setViewScope] = useState<'selected' | 'all'>('all');
+
   // Tasks for current selected date
   const dateTasks = tasks.filter(t => t.scheduledDate === selectedDate);
+  const displayTasks = viewScope === 'all' ? tasks : dateTasks;
 
   const formatDateTitle = (dateStr: string) => {
     if (dateStr === '2026-09-15') return 'Tuesday, 15 September 2026';
@@ -82,30 +86,79 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Tasks for Selected Date Header (Slide 4 & Slide 7) */}
-              <div className="workspace-heading-row">
+              {/* Tasks Heading & Scope Selector (All Dates vs Selected Date) */}
+              <div className="workspace-heading-row" style={{ flexWrap: 'wrap', gap: '0.75rem' }}>
                 <div>
-                  <div className="workspace-date-title">
+                  <div className="workspace-date-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <span>📅</span>
-                    <span>Tasks for: {formatDateTitle(selectedDate)}</span>
+                    <span>
+                      {viewScope === 'all'
+                        ? 'All Deliverables Across All Dates'
+                        : `Tasks for: ${formatDateTitle(selectedDate)}`}
+                    </span>
                   </div>
                   <div className="workspace-date-sub">
-                    Filtered from Left Calendar • {dateTasks.length} Tasks Scheduled
+                    {viewScope === 'all'
+                      ? `Worldwide Real-Time Ledger • ${tasks.length} Total Deliverables Synchronized with MongoDB Atlas`
+                      : `Filtered from Calendar • ${dateTasks.length} Tasks Scheduled for this Date`}
                   </div>
                 </div>
 
-                <div className="task-count-pill">
-                  {dateTasks.length} Tasks Scheduled
+                {/* Scope Switcher: All Dates vs Selected Date */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#f1f5f9', padding: '3px', borderRadius: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setViewScope('all')}
+                    style={{
+                      padding: '4px 10px',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      background: viewScope === 'all' ? '#2563eb' : 'transparent',
+                      color: viewScope === 'all' ? '#ffffff' : '#64748b',
+                      boxShadow: viewScope === 'all' ? '0 1px 3px rgba(37,99,235,0.3)' : 'none',
+                    }}
+                  >
+                    <Globe size={13} />
+                    All Dates ({tasks.length})
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setViewScope('selected')}
+                    style={{
+                      padding: '4px 10px',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      background: viewScope === 'selected' ? '#ffffff' : 'transparent',
+                      color: viewScope === 'selected' ? '#0f172a' : '#64748b',
+                      boxShadow: viewScope === 'selected' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    }}
+                  >
+                    <CalendarDays size={13} />
+                    {selectedDate.slice(5)} ({dateTasks.length})
+                  </button>
                 </div>
               </div>
 
               {/* Task Cards List (Slide 4, 7, 8) */}
               <div className="task-cards-list">
-                {dateTasks.map(task => (
+                {displayTasks.map(task => (
                   <TaskCard key={task.id} task={task} />
                 ))}
 
-                {dateTasks.length === 0 && (
+                {displayTasks.length === 0 && (
                   <div style={{
                     background: '#ffffff',
                     border: '1px dashed #cbd5e1',

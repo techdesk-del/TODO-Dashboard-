@@ -74,7 +74,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (res.ok) {
         const json = await res.json();
         if (json.success && Array.isArray(json.data)) {
-          setTasks(json.data);
+          setTasks(prev => {
+            const serverMap = new Map(json.data.map((t: Task) => [t.id, t]));
+            // Smart Merge: Preserve very recent locally-added tasks (<15s) so they don't vanish
+            const pending = prev.filter(t => t.isJustAdded && !serverMap.has(t.id));
+            return [...pending, ...json.data];
+          });
           setDbStatus('connected');
           return;
         }
@@ -277,12 +282,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTasks(prev => [task, ...prev]);
     setSelectedDate(createdDate);
 
-    // Sync to MongoDB Atlas API
+    // Sync to MongoDB Atlas API with confirmation
     fetch('/api/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(task)
-    }).catch(err => console.debug('[Tasks] MongoDB sync failed:', err));
+    })
+      .then(async res => {
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          console.error('[Tasks] MongoDB sync error:', errData);
+        } else {
+          const data = await res.json();
+          if (data?.data) {
+            setTasks(prev => prev.map(t => t.id === task.id ? { ...data.data, isJustAdded: false } : t));
+          }
+        }
+      })
+      .catch(err => console.error('[Tasks] MongoDB sync failed:', err));
 
     logAudit({
       taskId: task.id,
@@ -314,7 +331,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates)
-    }).catch(err => console.debug('[Tasks] MongoDB patch failed:', err));
+    })
+      .then(async res => {
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          console.error('[Tasks] MongoDB patch error:', errData);
+        }
+      })
+      .catch(err => console.debug('[Tasks] MongoDB patch failed:', err));
 
     const oldTask = tasks.find(t => t.id === taskId);
     logAudit({

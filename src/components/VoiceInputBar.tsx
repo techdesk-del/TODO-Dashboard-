@@ -96,10 +96,42 @@ export const VoiceInputBar: React.FC = () => {
     if (!inputText.trim()) return;
 
     const rawText = inputText.trim();
-    setCurrentTranscription(rawText);
-    parseWithGeminiOrLocal(rawText);
-    setShowStreamModal(true);
     setInputText('');
+
+    // Play enterprise acoustic chime
+    soundEngine.playSuccessChime();
+
+    // Parse immediately with deterministic entity extractor
+    const parsed = parseSpeechOrTextCommand(rawText);
+    const targetMember = members.find(m => m.name.toLowerCase().includes(parsed.assigneeName.toLowerCase())) || members[1];
+
+    addTask({
+      title: parsed.title,
+      scheduledDate: parsed.scheduledDate,
+      time: parsed.time,
+      priority: parsed.priority,
+      status: 'In Progress',
+      progressPercent: 50,
+      isJustAdded: true,
+      department: targetMember.department,
+      assignees: [
+        {
+          id: targetMember.id,
+          name: targetMember.name,
+          email: targetMember.email,
+          department: targetMember.department,
+          designation: targetMember.designation,
+          avatar: targetMember.avatar,
+          status: 'In Progress'
+        }
+      ],
+      aiMetadata: {
+        rawTranscript: rawText,
+        extractionLatencyMs: parsed.latencyMs,
+        source: 'text_nlp',
+        confidenceScore: parsed.confidence
+      }
+    });
   };
 
   const handleConfirmAndSave = () => {
