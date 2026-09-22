@@ -299,10 +299,10 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
   min-width: clamp(240px, 22vw, 280px);
   background: var(--bg-surface);
   border-right: 1px solid var(--border-subtle);
-  padding: 0.35rem clamp(0.75rem, 3vw, 1rem) 1rem;
+  padding: 0 clamp(0.75rem, 3vw, 1rem) 1rem !important;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.65rem;
   flex-shrink: 0;
   overflow-y: auto;
   overflow-x: hidden;
@@ -326,6 +326,7 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
 
 /* CEO Card */
 .ceo-access-card {
+  margin-top: 0 !important;
   background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
   border: 1.5px solid #fcd34d;
   border-radius: var(--radius-md);

@@ -81,12 +81,16 @@ export const Sidebar: React.FC = () => {
         aria-hidden="true"
       />
 
-      <aside className={`app-sidebar ${isMobileNavOpen ? 'mobile-open' : ''}`}>
+      <aside 
+        className={`app-sidebar ${isMobileNavOpen ? 'mobile-open' : ''}`}
+        style={{ paddingTop: 0 }}
+      >
       {/* CEO Access Portal Golden Card (Slide 4, Slide 9) */}
       <div 
         className="ceo-access-card"
         onClick={handleCeoAccessClick}
         style={{
+          marginTop: 0,
           boxShadow: activeView === 'ceo_portal' ? '0 0 15px rgba(217, 119, 6, 0.45)' : undefined,
           borderColor: activeView === 'ceo_portal' ? '#d97706' : undefined
         }}
