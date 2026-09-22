@@ -58,25 +58,21 @@ export const Header: React.FC = () => {
         <div
           className="logo-container"
           onClick={() => setActiveView('workspace')}
-          style={{ cursor: 'pointer' }}
+          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+          title="UrbanGaon — a perfect balance"
         >
-          <div style={{
-            background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)',
-            color: 'white',
-            borderRadius: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 800,
-            boxShadow: '0 2px 5px rgba(37, 99, 235, 0.3)',
-            flexShrink: 0,
-          }}>
-            UG
-          </div>
-          <div style={{ minWidth: 0 }}>
-            <div className="brand-logo-text">UrbanGaon</div>
-            <div className="brand-tagline">a perfect balance</div>
-          </div>
+          <img
+            src="/urbangaon-logo.png"
+            alt="UrbanGaon — a perfect balance"
+            className="brand-official-logo"
+            style={{
+              height: 'clamp(28px, 4vw, 36px)',
+              width: 'auto',
+              maxWidth: 'clamp(130px, 25vw, 175px)',
+              objectFit: 'contain',
+              display: 'block'
+            }}
+          />
         </div>
 
         <div className="platform-title-group">
