@@ -77,10 +77,10 @@ export const Header: React.FC = () => {
 
         <div className="platform-title-group">
           <div className="platform-title-main">
-            AI Deliverable Management System
+            Intelligent Voice & Calendar Todo
           </div>
           <div className="platform-subtitle">
-            Intelligent Voice & Calendar Executive Operating Engine
+            Real-Time Synchronized Daily Task Planner
           </div>
         </div>
       </div>
