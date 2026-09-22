@@ -85,14 +85,20 @@ export const Sidebar: React.FC = () => {
         className={`app-sidebar ${isMobileNavOpen ? 'mobile-open' : ''}`}
         style={{ paddingTop: 0 }}
       >
-      {/* CEO Access Portal Golden Card (Slide 4, Slide 9) */}
+      {/* CEO Access Portal Golden Card (Slide 4, Slide 9) - Flush with 0px top space */}
       <div 
         className="ceo-access-card"
         onClick={handleCeoAccessClick}
         style={{
           marginTop: 0,
-          boxShadow: activeView === 'ceo_portal' ? '0 0 15px rgba(217, 119, 6, 0.45)' : undefined,
-          borderColor: activeView === 'ceo_portal' ? '#d97706' : undefined
+          borderTop: 'none',
+          borderLeft: 'none',
+          borderRight: 'none',
+          borderBottom: activeView === 'ceo_portal' ? '2px solid #d97706' : '1.5px solid #fcd34d',
+          borderRadius: '0 0 var(--radius-sm) var(--radius-sm)',
+          marginLeft: 'calc(-1 * clamp(0.75rem, 3vw, 1rem))',
+          marginRight: 'calc(-1 * clamp(0.75rem, 3vw, 1rem))',
+          boxShadow: activeView === 'ceo_portal' ? '0 0 15px rgba(217, 119, 6, 0.45)' : '0 2px 5px rgba(217, 119, 6, 0.08)',
         }}
       >
         <div className="ceo-title-group">
