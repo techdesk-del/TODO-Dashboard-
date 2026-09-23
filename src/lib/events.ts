@@ -25,7 +25,7 @@ export const REALTIME_EVENTS = {
   AUDIT_LOG: 'AUDIT_LOG',
 } as const;
 
-export function broadcastTaskMutation(payload: { action: 'CREATED' | 'UPDATED' | 'DELETED'; taskId: string; source?: string }) {
+export function broadcastTaskMutation(payload: { action: 'CREATED' | 'UPDATED' | 'DELETED' | 'DELETED_ALL'; taskId: string; source?: string }) {
   try {
     realtimeEmitter.emit(REALTIME_EVENTS.TASK_MUTATION, {
       ...payload,
