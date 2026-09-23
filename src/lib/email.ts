@@ -28,8 +28,11 @@ export async function createEmailTransporter(): Promise<{ transporter: Transport
     const transporter = nodemailer.createTransport({
       host: host,
       port: Number(process.env.SMTP_PORT) || 465,
-      secure: process.env.SMTP_SECURE === 'true' || true,
+      secure: process.env.SMTP_SECURE === 'true' || process.env.SMTP_PORT === '465',
       auth: { user, pass },
+      connectionTimeout: 8000,
+      greetingTimeout: 5000,
+      socketTimeout: 10000,
     });
     return { transporter, isTestAccount: false };
   }
@@ -44,6 +47,9 @@ export async function createEmailTransporter(): Promise<{ transporter: Transport
       user: testAccount.user,
       pass: testAccount.pass,
     },
+    connectionTimeout: 8000,
+    greetingTimeout: 5000,
+    socketTimeout: 10000,
   });
   return { transporter, isTestAccount: true };
 }
@@ -139,16 +145,36 @@ export function generateDigestHtml(opts: SendDigestOptions): string {
 }
 
 export async function sendMorningDigestEmail(opts: SendDigestOptions) {
-  const { transporter, isTestAccount } = await createEmailTransporter();
+  let { transporter, isTestAccount } = await createEmailTransporter();
   const html = generateDigestHtml(opts);
   const from = process.env.SMTP_FROM || '"UrbanGaon Dispatcher" <alerts@urbangaon.com>';
 
-  const info = await transporter.sendMail({
-    from,
-    to: opts.toEmail,
-    subject: `📋 Daily Operational Focus: ${opts.dateString} — ${opts.toName}`,
-    html,
-  });
+  let info;
+  try {
+    info = await transporter.sendMail({
+      from,
+      to: opts.toEmail,
+      subject: `📋 Daily Operational Focus: ${opts.dateString} — ${opts.toName}`,
+      html,
+    });
+  } catch (sendErr) {
+    console.warn('[Live SMTP failed, falling back to Ethereal Mailbox]:', sendErr);
+    const testAccount = await nodemailer.createTestAccount();
+    const fallbackTransporter = nodemailer.createTransport({
+      host: 'smtp.ethereal.email',
+      port: 587,
+      secure: false,
+      auth: { user: testAccount.user, pass: testAccount.pass },
+      connectionTimeout: 8000,
+    });
+    isTestAccount = true;
+    info = await fallbackTransporter.sendMail({
+      from,
+      to: opts.toEmail,
+      subject: `📋 Daily Operational Focus: ${opts.dateString} — ${opts.toName}`,
+      html,
+    });
+  }
 
   const previewUrl = isTestAccount ? nodemailer.getTestMessageUrl(info) : null;
 

@@ -1,5 +1,6 @@
 import { ParsedVoiceEntity, TaskPriority } from '@/types';
 import { INITIAL_MEMBERS } from './mockData';
+import { getTodayStr, getTomorrowStr } from './dateUtils';
 
 export function parseSpeechOrTextCommand(input: string): ParsedVoiceEntity {
   const startTime = performance.now();
@@ -27,19 +28,15 @@ export function parseSpeechOrTextCommand(input: string): ParsedVoiceEntity {
     time = `${formattedHours}:${rawMinutes} ${ampm}`;
   }
 
-  // 3. Extract Scheduled Date
-  // Default date in blueprints is 2026-09-15
-  let scheduledDate = '2026-09-15';
-  if (lower.includes('tomorrow') || lower.includes('16 sep') || lower.includes('wednesday')) {
-    scheduledDate = '2026-09-16';
-  } else if (lower.includes('today') || lower.includes('15 sep') || lower.includes('tuesday')) {
-    scheduledDate = '2026-09-15';
-  } else if (lower.includes('17 sep') || lower.includes('thursday')) {
-    scheduledDate = '2026-09-17';
-  } else if (lower.includes('18 sep') || lower.includes('friday')) {
-    scheduledDate = '2026-09-18';
-  } else if (lower.includes('22 sep') || lower.includes('next tue')) {
-    scheduledDate = '2026-09-22';
+  // 3. Extract Scheduled Date dynamically synced to today
+  const today = getTodayStr();
+  const tomorrow = getTomorrowStr();
+  let scheduledDate = today;
+
+  if (lower.includes('tomorrow') || lower.includes('kal')) {
+    scheduledDate = tomorrow;
+  } else if (lower.includes('today') || lower.includes('aaj')) {
+    scheduledDate = today;
   } else {
     // Check for explicit YYYY-MM-DD
     const dateMatch = text.match(/\b(202\d-\d{2}-\d{2})\b/);

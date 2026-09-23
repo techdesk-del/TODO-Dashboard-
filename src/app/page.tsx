@@ -14,6 +14,7 @@ import { AuditTrailModal } from '@/components/AuditTrailModal';
 import { SystemConfigModal } from '@/components/SystemConfigModal';
 import { WorkflowManualModal } from '@/components/WorkflowManualModal';
 import { MorningDigestPreviewModal } from '@/components/MorningDigestPreviewModal';
+import { formatDateTitle } from '@/lib/dateUtils';
 import { Check, Calendar as CalendarIcon, Sparkles, Globe, CalendarDays } from 'lucide-react';
 
 export default function Home() {
@@ -33,12 +34,7 @@ export default function Home() {
   const dateTasks = activeTasks.filter(t => t.scheduledDate === selectedDate);
   const displayTasks = viewScope === 'all' ? activeTasks : dateTasks;
 
-  const formatDateTitle = (dateStr: string) => {
-    if (dateStr === '2026-09-15') return 'Tuesday, 15 September 2026';
-    if (dateStr === '2026-09-16') return 'Wednesday, 16 September 2026';
-    const d = new Date(dateStr + 'T00:00:00');
-    return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  };
+
 
   return (
     <div className="app-layout">

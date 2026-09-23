@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Task, TeamMember, AuditLogEntry, SystemConfig, Role, TaskStatus } from '@/types';
 import { INITIAL_TASKS, INITIAL_MEMBERS, INITIAL_AUDIT_LOGS, INITIAL_SYSTEM_CONFIG } from '@/lib/mockData';
+import { getTodayStr } from '@/lib/dateUtils';
 import * as XLSX from 'xlsx';
 
 export type DBStatus = 'connected' | 'connecting' | 'fallback';
@@ -32,6 +33,9 @@ interface AppContextType {
   reopenTask: (taskId: string, reason: string) => void;
   cancelTask: (taskId: string, reason: string) => void;
   completeTask: (taskId: string, assigneeId?: string) => void;
+  addMember: (memberData: Partial<TeamMember>) => Promise<TeamMember>;
+  clearAllTasks: () => Promise<void>;
+  logoutUser: () => void;
   exportToExcel: () => void;
   isMobileNavOpen: boolean;
   setIsMobileNavOpen: (open: boolean) => void;
@@ -48,9 +52,9 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<TeamMember>(INITIAL_MEMBERS[0]);
-  const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [members, setMembers] = useState<TeamMember[]>(INITIAL_MEMBERS);
-  const [selectedDate, setSelectedDate] = useState<string>('2026-09-15');
+  const [selectedDate, setSelectedDate] = useState<string>(getTodayStr());
   const [activeView, setActiveView] = useState<'workspace' | 'calendar' | 'ceo_portal' | 'admin_hr' | 'team_view' | 'audit_trail' | 'system_config' | 'workflow_manual'>('workspace');
   const [selectedMemberFilter, setSelectedMemberFilter] = useState<string | null>(null);
   const [bannerNotification, setBannerNotification] = useState<{ message: string; badge: string } | null>({
@@ -387,10 +391,153 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const reopenTask = (taskId: string, reason: string) => {
+    const targetTask = tasks.find(t => t.id === taskId);
     updateTask(taskId, {
       status: 'In Progress',
-      progressPercent: 50
+      progressPercent: 50,
+      holdReason: undefined,
+      cancellationReason: undefined
     }, `Reopened by Management: "${reason}"`);
+
+    logAudit({
+      taskId,
+      taskTitle: targetTask?.title || 'Task',
+      action: 'REOPENED',
+      fieldChanged: 'Status -> In Progress',
+      oldValue: targetTask?.status || 'Done',
+      newValue: 'In Progress (50%)',
+      notes: `Reopened by Management with mandatory justification: "${reason}"`
+    });
+
+    setBannerNotification({
+      message: `Reopened deliverable '${targetTask?.title || 'Task'}' as In Progress`,
+      badge: '✓ Action Logged'
+    });
+  };
+
+  const addMember = async (memberData: Partial<TeamMember>): Promise<TeamMember> => {
+    const rawName = memberData.name?.trim() || 'New Staff';
+    const initials = memberData.avatar || rawName
+      .split(' ')
+      .map(part => part[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+
+    const cleanEmail = memberData.email?.trim().toLowerCase() || `staff.${Date.now()}@urbangaon.com`;
+    const newId = memberData.id || `usr-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+    const newMember: TeamMember = {
+      id: newId,
+      name: rawName,
+      email: cleanEmail,
+      role: memberData.role || 'EMPLOYEE',
+      designation: memberData.designation || 'Specialist',
+      department: memberData.department || 'Product & Tech',
+      avatar: initials,
+      status: memberData.status || 'ACTIVE',
+      totalTasks: 0,
+      completedTasks: 0,
+      activeTasks: 0,
+      overdueTasks: 0,
+      velocity: 100,
+    };
+
+    // Optimistic UI update
+    setMembers(prev => {
+      if (prev.some(m => m.email.toLowerCase() === cleanEmail)) return prev;
+      return [...prev, newMember];
+    });
+
+    // Send to MongoDB Atlas API in background
+    try {
+      const res = await fetch('/api/members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newMember),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          setMembers(prev => prev.map(m => m.id === newMember.id ? json.data : m));
+        }
+      }
+    } catch (err) {
+      console.error('[Members] MongoDB sync error:', err);
+    }
+
+    logAudit({
+      action: 'CREATED',
+      fieldChanged: 'Staff Directory / Account Provisioning',
+      oldValue: 'Unregistered',
+      newValue: `${newMember.name} (${newMember.designation} - ${newMember.department})`,
+      notes: `Employee account created & credentials dispatched by ${currentUser.name} (${currentUser.role})`
+    });
+
+    setBannerNotification({
+      message: `Employee account successfully provisioned for ${newMember.name}`,
+      badge: '✓ Account Active'
+    });
+
+    return newMember;
+  };
+
+  const clearAllTasks = async () => {
+    // Optimistically clear local state
+    setTasks([]);
+    try {
+      localStorage.removeItem('urbangaon_tasks_v2');
+    } catch {}
+
+    // Call server DELETE endpoint to wipe MongoDB collection
+    try {
+      await fetch('/api/tasks', { method: 'DELETE' });
+    } catch (err) {
+      console.error('[AppContext] clear tasks error:', err);
+    }
+
+    logAudit({
+      action: 'UPDATED',
+      fieldChanged: 'Task Ledger Wipe',
+      oldValue: 'Prior deliverables',
+      newValue: '0 Tasks (Clean Slate)',
+      notes: `All deliverables cleared by ${currentUser.name} (${currentUser.role}) for fresh user testing`
+    });
+
+    setBannerNotification({
+      message: 'All deliverables cleared from MongoDB Atlas & local ledger. Ready for fresh test tasks!',
+      badge: '✓ Clean Slate'
+    });
+  };
+
+  const logoutUser = () => {
+    const guestUser: TeamMember = {
+      id: 'guest',
+      name: 'Logged Out Guest',
+      email: 'guest@urbangaon.com',
+      role: 'EMPLOYEE',
+      designation: 'Unauthenticated User',
+      department: 'General Staff',
+      avatar: 'GU',
+      status: 'ACTIVE',
+      totalTasks: 0,
+      completedTasks: 0,
+      activeTasks: 0,
+      overdueTasks: 0,
+      velocity: 100
+    };
+    setCurrentUser(guestUser);
+    logAudit({
+      action: 'LOGIN',
+      fieldChanged: 'Auth Session / Logout',
+      oldValue: currentUser.name,
+      newValue: 'Logged Out Guest',
+      notes: `User ${currentUser.name} signed out`
+    });
+    setBannerNotification({
+      message: 'You have been signed out. Click Sign In to access your account.',
+      badge: '✓ Logged Out'
+    });
   };
 
   const cancelTask = (taskId: string, reason: string) => {
@@ -549,6 +696,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         reopenTask,
         cancelTask,
         completeTask,
+        addMember,
+        clearAllTasks,
+        logoutUser,
         exportToExcel,
         isMobileNavOpen,
         setIsMobileNavOpen,

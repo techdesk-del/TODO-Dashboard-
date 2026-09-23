@@ -9,6 +9,7 @@ import { TaskModel } from '@/models/Task';
 import { MemberModel } from '@/models/Member';
 import { AuditLogModel } from '@/models/AuditLog';
 import { sendMorningDigestEmail } from '@/lib/email';
+import { getTodayStr, formatDateDisplay } from '@/lib/dateUtils';
 import type { Task } from '@/types';
 
 export async function POST(req: NextRequest) {
@@ -19,7 +20,8 @@ export async function POST(req: NextRequest) {
     const targetName = body.name;
 
     const allTasks = (await TaskModel.find({ status: { $ne: 'Cancelled' } }).lean().exec()) as unknown as Task[];
-    const todayStr = '2026-09-15';
+    const todayStr = getTodayStr();
+    const displayDate = formatDateDisplay(todayStr);
 
     let recipients: Array<{ name: string; email: string }> = [];
 
@@ -47,7 +49,7 @@ export async function POST(req: NextRequest) {
         overdueTasks: overdue,
         todayTasks: today,
         upcomingTasks: upcoming,
-        dateString: 'Tuesday, 15 Sep 2026',
+        dateString: displayDate,
       });
 
       results.push({

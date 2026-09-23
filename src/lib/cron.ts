@@ -11,6 +11,8 @@ import connectDB from './db';
 import { TaskModel } from '@/models/Task';
 import { AuditLogModel } from '@/models/AuditLog';
 
+import { getTodayStr } from './dateUtils';
+
 interface CronCache {
   isInitialized: boolean;
 }
@@ -25,16 +27,16 @@ global.__cronCache = cache;
 
 export async function executeNightlyRollover(): Promise<{ rolledOverCount: number }> {
   await connectDB();
-  const yesterday = '2026-09-15';
-  const tomorrow = '2026-09-16';
+  const today = getTodayStr();
 
+  // Roll over any uncompleted task scheduled before today
   const result = await TaskModel.updateMany(
     {
-      scheduledDate: yesterday,
+      scheduledDate: { $lt: today },
       status: { $nin: ['Done', 'Cancelled'] }
     },
     {
-      $set: { scheduledDate: tomorrow },
+      $set: { scheduledDate: today },
       $inc: { carryForwardCount: 1 }
     }
   );
@@ -46,14 +48,14 @@ export async function executeNightlyRollover(): Promise<{ rolledOverCount: numbe
     actorRole: 'SUPER_ADMIN',
     action: 'CARRIED_FORWARD',
     fieldChanged: 'Nightly Uncompleted Tasks Rollover Engine',
-    oldValue: `${result.modifiedCount} uncompleted tasks on ${yesterday}`,
-    newValue: `Auto-shifted to ${tomorrow} with carry-forward increment`,
+    oldValue: `${result.modifiedCount} uncompleted tasks prior to ${today}`,
+    newValue: `Auto-shifted to ${today} with carry-forward increment`,
     ipAddress: '127.0.0.1',
     deviceInfo: 'node-cron background daemon',
     notes: 'Preserved 100% commitment integrity with zero manual intervention',
   });
 
-  console.log(`[Cron 00:05 AM] ✓ Rolled over ${result.modifiedCount} tasks to ${tomorrow}`);
+  console.log(`[Cron 00:05 AM] ✓ Rolled over ${result.modifiedCount} uncompleted tasks to ${today}`);
   return { rolledOverCount: result.modifiedCount };
 }
 

@@ -15,18 +15,19 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 /* ── Helpers ─────────────────────────────────────────────────────── */
-async function seedIfEmpty() {
-  const count = await TaskModel.countDocuments();
-  if (count === 0) {
-    console.log('[API/tasks] Empty collection — seeding with mock data...');
-    await TaskModel.insertMany(INITIAL_TASKS, { ordered: false });
-    console.log(`[API/tasks] ✓ Seeded ${INITIAL_TASKS.length} tasks`);
-  }
-
+async function seedIfEmpty(forceSeed = false) {
   const memberCount = await MemberModel.countDocuments();
   if (memberCount === 0) {
     await MemberModel.insertMany(INITIAL_MEMBERS, { ordered: false });
     console.log(`[API/tasks] ✓ Seeded ${INITIAL_MEMBERS.length} members`);
+  }
+
+  if (forceSeed) {
+    const count = await TaskModel.countDocuments();
+    if (count === 0) {
+      await TaskModel.insertMany(INITIAL_TASKS, { ordered: false });
+      console.log(`[API/tasks] ✓ Seeded ${INITIAL_TASKS.length} tasks`);
+    }
   }
 }
 
@@ -35,9 +36,9 @@ export async function GET(req: NextRequest) {
   const t0 = Date.now();
   try {
     await connectDB();
-    await seedIfEmpty();
-
     const { searchParams } = new URL(req.url);
+    const shouldSeed = searchParams.get('seed') === 'true';
+    await seedIfEmpty(shouldSeed);
     const date       = searchParams.get('date');       // YYYY-MM-DD
     const assigneeId = searchParams.get('assigneeId'); // member drilldown
     const status     = searchParams.get('status');     // filter by status
@@ -114,6 +115,28 @@ export async function POST(req: NextRequest) {
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
     console.error('[API/tasks POST]', msg);
+    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+  }
+}
+
+/* ── DELETE /api/tasks (Clear all deliverables for fresh testing) ── */
+export async function DELETE() {
+  try {
+    await connectDB();
+    const result = await TaskModel.deleteMany({});
+    console.log(`[API/tasks DELETE] Cleared ${result.deletedCount} tasks from MongoDB Atlas`);
+
+    // Broadcast mutation to instantly notify all devices in real-time
+    broadcastTaskMutation({ action: 'DELETED_ALL', taskId: 'all' });
+
+    return NextResponse.json({
+      success: true,
+      message: `Cleared ${result.deletedCount} tasks from MongoDB Atlas`,
+      deletedCount: result.deletedCount,
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[API/tasks DELETE]', msg);
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }

@@ -4,6 +4,7 @@ import { parseSpeechOrTextCommand } from '@/lib/aiParser';
 import { soundEngine } from '@/lib/sound';
 import { Mic, ArrowRight, X, Sparkles, Check, Radio } from 'lucide-react';
 import { ParsedVoiceEntity } from '@/types';
+import { getTodayStr, formatDateDisplay } from '@/lib/dateUtils';
 
 export const VoiceInputBar: React.FC = () => {
   const { addTask, members, selectedDate } = useApp();
@@ -260,7 +261,7 @@ export const VoiceInputBar: React.FC = () => {
                 <div className="entity-card">
                   <span className="entity-card-num">2. TARGET DATE</span>
                   <span className="entity-card-val">
-                    {extractedData?.scheduledDate === '2026-09-15' ? 'Today (15 Sep)' : extractedData?.scheduledDate}
+                    {formatDateDisplay(extractedData?.scheduledDate) || 'Today'}
                   </span>
                 </div>
 

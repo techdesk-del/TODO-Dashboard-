@@ -1,9 +1,24 @@
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Role } from '@/types';
-import { Mail, Moon, ChevronDown, Check, Compass, Menu, X as XIcon, Bell, Lock } from 'lucide-react';
+import { 
+  Mail, 
+  Moon, 
+  ChevronDown, 
+  Check, 
+  Compass, 
+  Menu, 
+  X as XIcon, 
+  Bell, 
+  Lock, 
+  LogIn, 
+  LogOut, 
+  Trash2,
+  CalendarDays
+} from 'lucide-react';
 import { AuthModal } from './AuthModal';
 import { useTaskDeadlines } from '@/hooks/useTaskDeadlines';
+import { formatDateDisplay } from '@/lib/dateUtils';
 
 export const Header: React.FC = () => {
   const {
@@ -16,21 +31,14 @@ export const Header: React.FC = () => {
     activeView,
     isMobileNavOpen,
     setIsMobileNavOpen,
-    dbStatus
+    clearAllTasks,
+    logoutUser,
+    tasks
   } = useApp();
-//
-
 
   const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const { notificationPermission, requestPermission } = useTaskDeadlines();
-
-  const formatDateDisplay = (dateStr: string) => {
-    if (dateStr === '2026-09-15') return 'Tue, 15 Sep 2026';
-    if (dateStr === '2026-09-16') return 'Wed, 16 Sep 2026';
-    const d = new Date(dateStr + 'T00:00:00');
-    return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
-  };
 
   const roleOptions: { role: Role; label: string; desc: string }[] = [
     { role: 'SUPER_ADMIN', label: 'Super Admin / Director', desc: 'Full Executive Command & Audit' },
@@ -38,6 +46,17 @@ export const Header: React.FC = () => {
     { role: 'MANAGER',     label: 'Reporting Manager',      desc: 'Team Balancing & Escalations' },
     { role: 'EMPLOYEE',    label: 'Employee / Staff',       desc: 'Daily Register & Voice AI' }
   ];
+
+  const handleClearData = async () => {
+    const isConfirmed = confirm(
+      'Are you sure you want to clear ALL deliverables from MongoDB Atlas and local memory?\n\nThis will reset the board to 0 tasks so you can test with fresh data.'
+    );
+    if (isConfirmed) {
+      await clearAllTasks();
+    }
+  };
+
+  const isGuest = currentUser.id === 'guest';
 
   return (
     <header className="app-header">
@@ -87,9 +106,27 @@ export const Header: React.FC = () => {
 
       {/* Right: Meta actions + user */}
       <div className="header-meta-group">
-        <div className="active-date-pill">
+        {/* Dynamic Synchronized Date Badge */}
+        <div className="active-date-pill" title="Current Active Calendar Date">
+          <CalendarDays size={13} style={{ marginRight: '4px', verticalAlign: '-1px' }} />
           {formatDateDisplay(selectedDate)}
         </div>
+
+        {/* Clear Data Button for Fresh Testing */}
+        <button
+          onClick={handleClearData}
+          className="btn-secondary"
+          title="Clear all tasks from MongoDB to test with fresh data"
+          style={{
+            padding: 'clamp(0.28rem,1.5vw,0.35rem) clamp(0.4rem,2vw,0.65rem)',
+            color: '#dc2626',
+            borderColor: '#fca5a5',
+            background: '#fef2f2'
+          }}
+        >
+          <Trash2 size={13} color="#dc2626" />
+          <span>Clear Data ({tasks.length})</span>
+        </button>
 
         <button
           onClick={() => setShowMorningDigestModal(true)}
@@ -125,30 +162,48 @@ export const Header: React.FC = () => {
           <span>Flows</span>
         </button>
 
-        {/* Browser Push Notification Permission Button */}
-        <button
-          onClick={requestPermission}
-          className="btn-secondary"
-          title={notificationPermission === 'granted' ? 'Desktop Notifications Active (15m alerts)' : 'Click to enable Desktop Push Notifications'}
-          style={{
-            padding: 'clamp(0.28rem,1.5vw,0.35rem) clamp(0.4rem,2vw,0.65rem)',
-            background: notificationPermission === 'granted' ? '#ecfdf5' : undefined,
-            borderColor: notificationPermission === 'granted' ? '#a7f3d0' : undefined,
-            color: notificationPermission === 'granted' ? '#047857' : undefined,
-          }}
-        >
-          <Bell size={14} color={notificationPermission === 'granted' ? '#059669' : '#64748b'} />
-          <span style={{ fontSize: '0.72rem' }}>
-            {notificationPermission === 'granted' ? 'Alerts ON' : 'Enable Alerts'}
-          </span>
-        </button>
+        {/* Explicit Sign In / Log In Button */}
+        {isGuest ? (
+          <button
+            onClick={() => setIsAuthModalOpen(true)}
+            className="btn-primary"
+            style={{
+              padding: 'clamp(0.3rem,1.5vw,0.38rem) clamp(0.6rem,2vw,0.85rem)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              fontSize: '0.75rem',
+              background: '#2563eb'
+            }}
+            title="Sign In / Register with Email & Password"
+          >
+            <LogIn size={14} />
+            <span>Sign In</span>
+          </button>
+        ) : (
+          <button
+            onClick={logoutUser}
+            className="btn-secondary"
+            style={{
+              padding: 'clamp(0.28rem,1.5vw,0.35rem) clamp(0.4rem,2vw,0.65rem)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              color: '#64748b'
+            }}
+            title="Sign Out of current user session"
+          >
+            <LogOut size={13} />
+            <span>Log Out</span>
+          </button>
+        )}
 
         {/* User Profile & Role Switcher */}
         <div style={{ position: 'relative', flexShrink: 0 }}>
           <div
             className="user-profile-badge"
             onClick={() => setIsRoleMenuOpen(!isRoleMenuOpen)}
-            title="Click to switch roles or sign in"
+            title="Click to view user menu, switch roles, or manage login"
           >
             <div className="avatar-circle">{currentUser.avatar}</div>
             <div className="user-info-text">
@@ -167,7 +222,7 @@ export const Header: React.FC = () => {
               border: '1px solid #cbd5e1',
               borderRadius: '10px',
               boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
-              width: 'min(260px, 90vw)',
+              width: 'min(280px, 90vw)',
               padding: '0.5rem',
               zIndex: 100
             }}>
@@ -177,28 +232,51 @@ export const Header: React.FC = () => {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.5rem 0.65rem',
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
+                  gap: '0.6rem',
+                  padding: '0.6rem 0.75rem',
+                  background: '#eff6ff',
+                  border: '1px solid #bfdbfe',
                   borderRadius: '6px',
                   cursor: 'pointer',
                   marginBottom: '0.5rem',
                 }}
               >
-                <Lock size={14} color="#2563eb" />
+                <Lock size={15} color="#2563eb" />
                 <div>
-                  <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#1e3a8a' }}>
-                    Sign In / Register (2FA)
+                  <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1e40af' }}>
+                    {isGuest ? 'Sign In / Register' : 'Switch Account (Login)'}
                   </div>
-                  <div style={{ fontSize: '0.65rem', color: '#64748b' }}>
-                    MongoDB Credentials Auth
+                  <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
+                    Flowchart 1-5 Credentials Auth
                   </div>
                 </div>
               </div>
 
+              {!isGuest && (
+                <div
+                  onClick={() => { logoutUser(); setIsRoleMenuOpen(false); }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.6rem',
+                    padding: '0.5rem 0.75rem',
+                    background: '#fef2f2',
+                    border: '1px solid #fecaca',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    marginBottom: '0.5rem',
+                    color: '#dc2626'
+                  }}
+                >
+                  <LogOut size={14} color="#dc2626" />
+                  <span style={{ fontSize: '0.78rem', fontWeight: 700 }}>
+                    Log Out ({currentUser.name})
+                  </span>
+                </div>
+              )}
+
               <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#94a3b8', padding: '0.4rem 0.6rem', textTransform: 'uppercase' }}>
-                Quick Demo Role Switch
+                Quick Role Switching (Demo)
               </div>
               {roleOptions.map(opt => (
                 <div

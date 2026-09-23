@@ -28,7 +28,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
     completeTask, 
     holdTask, 
     escalateTask, 
+    reopenTask,
     members,
+    systemConfig,
     setViewingAuditForTaskId
   } = useApp();
 
@@ -37,8 +39,12 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
   const [editedTime, setEditedTime] = useState(task.time);
   const [editedAssigneeId, setEditedAssigneeId] = useState(task.assignees[0]?.id || members[1].id);
   const [editedPriority, setEditedPriority] = useState<TaskPriority>(task.priority);
+  const [editedProject, setEditedProject] = useState(task.project || 'Core Infrastructure');
+  const [editedDepartment, setEditedDepartment] = useState(task.department || 'Product & Tech');
+  const [editedLocation, setEditedLocation] = useState(task.location || 'Bangalore HQ');
+  const [editedRemarks, setEditedRemarks] = useState(task.assignees[0]?.remarks || '');
 
-  // Modals for Hold & Escalate
+  // Modals for Hold, Escalate & Reopen
   const [showHoldModal, setShowHoldModal] = useState(false);
   const [holdReasonInput, setHoldReasonInput] = useState('');
   const [showEscalateModal, setShowEscalateModal] = useState(false);
@@ -46,6 +52,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
   const [escalateTargetLeader, setEscalateTargetLeader] = useState('Akash Das (Director)');
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [rescheduleDateInput, setRescheduleDateInput] = useState(task.scheduledDate);
+  const [showReopenModal, setShowReopenModal] = useState(false);
+  const [reopenReasonInput, setReopenReasonInput] = useState('');
 
   const isCompleted = task.status === 'Done';
 
@@ -58,8 +66,17 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
       });
       completeTask(task.id);
     } else {
-      updateTask(task.id, { status: 'In Progress', progressPercent: 50 }, 'Marked task as In Progress');
+      setShowReopenModal(true);
+      setReopenReasonInput('');
     }
+  };
+
+  const handleConfirmReopen = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reopenReasonInput.trim()) return;
+    reopenTask(task.id, reopenReasonInput.trim());
+    setShowReopenModal(false);
+    setReopenReasonInput('');
   };
 
   const handleSaveInline = () => {
@@ -70,18 +87,22 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
       title: editedTitle,
       time: editedTime,
       priority: editedPriority,
+      project: editedProject,
+      department: editedDepartment,
+      location: editedLocation,
       assignees: [
         {
           id: selectedMember.id,
           name: selectedMember.name,
           email: selectedMember.email,
-          department: selectedMember.department,
+          department: editedDepartment,
           designation: selectedMember.designation,
           avatar: selectedMember.avatar,
           status: task.status,
+          remarks: editedRemarks,
         }
       ]
-    }, `Inline task edit: scheduled time updated from ${oldTime} to ${editedTime}`);
+    }, `Inline task edit: time updated to ${editedTime}, project: ${editedProject}, location: ${editedLocation}`);
 
     setIsInlineEditing(false);
   };
@@ -181,6 +202,56 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
               <option value="HIGH">High Priority</option>
               <option value="URGENT">Urgent Priority</option>
             </select>
+          </div>
+
+          <div className="form-field-group">
+            <label className="form-field-label">Project (Master List)</label>
+            <select
+              className="form-select"
+              value={editedProject}
+              onChange={(e) => setEditedProject(e.target.value)}
+            >
+              {(systemConfig?.masterLists?.projects || ['Core Infrastructure', 'Enterprise Expansion', 'Growth Strategy Q3']).map(p => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-field-group">
+            <label className="form-field-label">Department (Master List)</label>
+            <select
+              className="form-select"
+              value={editedDepartment}
+              onChange={(e) => setEditedDepartment(e.target.value)}
+            >
+              {(systemConfig?.masterLists?.departments || ['DevOps & DB', 'Product & Tech', 'Frontend Engineering', 'Design & UI', 'Sales & Growth', 'Finance']).map(d => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-field-group">
+            <label className="form-field-label">Location (Master List)</label>
+            <select
+              className="form-select"
+              value={editedLocation}
+              onChange={(e) => setEditedLocation(e.target.value)}
+            >
+              {(systemConfig?.masterLists?.locations || ['Bangalore HQ', 'Mumbai Office', 'Remote India', 'Delhi NCR Branch']).map(l => (
+                <option key={l} value={l}>{l}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-field-group" style={{ gridColumn: 'span 2' }}>
+            <label className="form-field-label">Notes, Comments & Remarks</label>
+            <input
+              type="text"
+              className="form-input"
+              value={editedRemarks}
+              onChange={(e) => setEditedRemarks(e.target.value)}
+              placeholder="e.g. Reviewed with tech lead; pending schema migration validation"
+            />
           </div>
         </div>
 
@@ -377,6 +448,22 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
           >
             <ShieldCheck size={13} color="#059669" />
           </button>
+
+          {isCompleted && (
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => {
+                setShowReopenModal(true);
+                setReopenReasonInput('');
+              }}
+              title="FC 10: Reopen Completed Task with Justification"
+              style={{ padding: '0.4rem 0.6rem', color: '#1e40af', background: '#eff6ff', borderColor: '#bfdbfe' }}
+            >
+              <RotateCcw size={13} color="#1e40af" />
+              Reopen
+            </button>
+          )}
         </div>
       </div>
 
@@ -484,6 +571,45 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
                 <button type="button" className="btn-secondary" onClick={() => setShowRescheduleModal(false)}>Cancel</button>
                 <button type="submit" className="btn-primary">Update Schedule</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Modal: Reopen Task with Mandatory Justification */}
+      {showReopenModal && (
+        <div className="stream-overlay" onClick={() => setShowReopenModal(false)}>
+          <div className="stream-modal-card" style={{ maxWidth: '460px' }} onClick={e => e.stopPropagation()}>
+            <div className="stream-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <RotateCcw size={16} color="#1e40af" />
+                <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#1e3a8a', margin: 0 }}>
+                  Reopen Completed Task (Governance)
+                </h3>
+              </div>
+              <button className="calendar-nav-btn" onClick={() => setShowReopenModal(false)}><X size={16} /></button>
+            </div>
+            <p style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.5rem' }}>
+              Reopening <strong>"{task.title}"</strong> requires a documented management reason to maintain compliance traceability.
+            </p>
+            <form onSubmit={handleConfirmReopen} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
+              <div className="form-field-group">
+                <label className="form-field-label">Mandatory Reopen Reason *</label>
+                <textarea
+                  className="form-input"
+                  required
+                  rows={3}
+                  placeholder="e.g. Additional testing requested by client; reopened for revisions."
+                  value={reopenReasonInput}
+                  onChange={e => setReopenReasonInput(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                <button type="button" className="btn-secondary" onClick={() => setShowReopenModal(false)}>Cancel</button>
+                <button type="submit" className="btn-primary" style={{ background: '#1e40af' }}>
+                  Confirm Reopen
+                </button>
               </div>
             </form>
           </div>

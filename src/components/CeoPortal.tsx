@@ -38,11 +38,13 @@ export const CeoPortal: React.FC = () => {
     ? tasks.filter(t => t.assignees.some(a => a.name.toLowerCase().includes(activeMember.name.toLowerCase()) || a.id === activeMember.id))
     : tasks;
 
-  // KPIs
-  const totalTasksCount = 42; // as specified in blueprint slide 9
-  const sprintVelocity = '88.4%';
-  const pendingBlockersCount = 2;
-  const completedThisWeekCount = 26;
+  // KPIs dynamically computed from live task register
+  const totalTasksCount = displayedTasks.length;
+  const completedThisWeekCount = displayedTasks.filter(t => t.status === 'Done').length;
+  const pendingBlockersCount = displayedTasks.filter(t => t.status === 'On Hold' || t.status === 'Escalated').length;
+  const sprintVelocity = totalTasksCount > 0 
+    ? `${Math.round((completedThisWeekCount / totalTasksCount) * 100)}%` 
+    : '100%';
 
   // Function to print or generate PDF report
   const handleDownloadBoardReport = () => {
