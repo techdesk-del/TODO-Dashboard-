@@ -27,6 +27,8 @@ export async function GET(req: NextRequest) {
         }
       };
 
+      //
+
       realtimeEmitter.on(REALTIME_EVENTS.TASK_MUTATION, onTaskMutation);
 
       // 3. Keep-alive heartbeat every 15 seconds
