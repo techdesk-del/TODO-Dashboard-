@@ -157,44 +157,79 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .catch(() => {});
   }, [refreshFromDB]);
 
-  // ── Real-Time Synchronization Engine (SSE Stream + 3s Heartbeat Polling) ───
+  // ── Real-Time Synchronization Engine ────────────────────────────
+  // Architecture: MongoDB change-detection via SSE (works on Vercel serverless)
+  // + 1.5s heartbeat poll as a guaranteed fallback for all devices.
+  // When a task is created/updated on ANY device:
+  //   1. MongoDB Atlas updatedAt changes
+  //   2. SSE endpoint on all connected clients detects the change within 2s
+  //   3. SSE pushes task_mutation event → triggers refreshFromDB()
+  //   4. Heartbeat poll also catches it within 1.5s as a safety net
   useEffect(() => {
     let eventSource: EventSource | null = null;
     let isMounted = true;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
     const connectSSE = () => {
-      if (typeof window === 'undefined') return;
+      if (typeof window === 'undefined' || !isMounted) return;
       try {
+        // Close any existing connection first
+        if (eventSource) {
+          eventSource.close();
+          eventSource = null;
+        }
+
         eventSource = new EventSource('/api/realtime');
 
+        // Server detected a task change in MongoDB → refresh immediately
         eventSource.addEventListener('task_mutation', (e) => {
           try {
             const data = JSON.parse(e.data);
-            console.log('[Realtime SSE] Live mutation received:', data);
+            console.log('[Realtime SSE] Cross-device mutation:', data.taskTitle || data.taskId, data.action);
           } catch {}
-          refreshFromDB(true);
+          if (isMounted) refreshFromDB(true);
         });
 
+        // Server says stream cycle ended → reconnect immediately (no delay)
+        eventSource.addEventListener('reconnect', () => {
+          eventSource?.close();
+          if (isMounted) {
+            reconnectTimer = setTimeout(connectSSE, 150);
+          }
+        });
+
+        // SSE connection error → retry in 2s
         eventSource.onerror = () => {
           eventSource?.close();
-          // Attempt reconnection after 3 seconds
-          if (isMounted) setTimeout(connectSSE, 3000);
+          eventSource = null;
+          if (isMounted) {
+            reconnectTimer = setTimeout(connectSSE, 2000);
+          }
         };
+
       } catch (err) {
-        console.debug('[Realtime SSE] Fallback to heartbeat polling', err);
+        console.debug('[Realtime SSE] SSE unavailable, relying on heartbeat poll', err);
       }
     };
 
+    // Start SSE connection
     connectSSE();
 
-    // Heartbeat poll every 3 seconds for 100% cross-device guarantee
+    // Heartbeat poll every 1.5 seconds — the guaranteed cross-device sync safety net.
+    // Even if SSE is unavailable (network/proxy issues), this catches all changes.
     const heartbeatTimer = setInterval(() => {
-      refreshFromDB(true);
-    }, 3000);
+      if (isMounted) refreshFromDB(true);
+    }, 1500);
 
-    // Instant sync when tab is focused or phone screen is unlocked
+    // Instant sync when: tab is focused again OR phone screen is unlocked
     const onTabActive = () => {
-      refreshFromDB(true);
+      if (isMounted) {
+        refreshFromDB(true);
+        // Also reconnect SSE if it got disconnected while tab was hidden
+        if (!eventSource || eventSource.readyState === EventSource.CLOSED) {
+          connectSSE();
+        }
+      }
     };
 
     window.addEventListener('focus', onTabActive);
@@ -205,6 +240,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => {
       isMounted = false;
       clearInterval(heartbeatTimer);
+      if (reconnectTimer) clearTimeout(reconnectTimer);
       eventSource?.close();
       window.removeEventListener('focus', onTabActive);
     };
