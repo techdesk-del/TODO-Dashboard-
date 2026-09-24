@@ -1,0 +1,66 @@
+# ============================================================
+# UrbanGaon AI Todo Platform — Docker Compose
+# For Synology DS925+ Container Manager
+# ============================================================
+
+version: '3.8'
+
+services:
+  urbangaon-todo:
+    # Build from local Dockerfile OR pull from registry
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+    
+    # Container name shown in DS925+ Container Manager
+    container_name: urbangaon-todo
+
+    # Always restart on crash or NAS reboot
+    restart: always
+
+    # Map NAS port 3000 to container port 3000
+    ports:
+      - "3000:3000"
+
+    # Environment variables (loaded from .env.local on NAS)
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=${MONGODB_URI}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_SECURE=${SMTP_SECURE}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - SMTP_FROM=${SMTP_FROM}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+
+    # Mount logs directory so you can read them from DSM File Station
+    volumes:
+      - /volume1/docker/urbangaon-todo/logs:/app/logs
+
+    # Resource limits (DS925+ has plenty, but good practice)
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+    # Health check — DSM shows green/red status
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/cron"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
