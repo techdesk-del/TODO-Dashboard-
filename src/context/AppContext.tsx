@@ -95,14 +95,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (json.success && Array.isArray(json.data)) {
           setTasks(prev => {
             const serverMap = new Map(json.data.map((t: Task) => [t.id, t]));
-            // Smart Merge: Preserve very recent locally-added tasks (<15s) so they don't vanish, exclude cancelled / test items
-            const pending = prev.filter(t => 
-              t.isJustAdded && 
-              !serverMap.has(t.id) && 
-              t.status !== 'Cancelled' && 
-              !t.title?.toLowerCase().includes('mobile simulator') &&
-              t.id !== 'task-1790071325492'
-            );
+            const now = Date.now();
+            // Preserve only very freshly added local tasks (<4s, in-flight POST)
+            const pending = prev.filter(t => {
+              if (!t.isJustAdded) return false;
+              if (serverMap.has(t.id)) return false;
+              if (t.status === 'Cancelled') return false;
+              const ageMs = t.createdAt ? (now - new Date(t.createdAt).getTime()) : 999999;
+              return ageMs < 4000;
+            });
             const cleanServerTasks = json.data.filter((t: Task) => 
               t.status !== 'Cancelled' && 
               !t.title?.toLowerCase().includes('mobile simulator') &&
@@ -208,11 +209,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         eventSource = new EventSource('/api/realtime');
 
-        // Server detected a task change in MongoDB → refresh immediately
+        // Server detected a task change in MongoDB → handle immediately & refresh
         eventSource.addEventListener('task_mutation', (e) => {
           try {
             const data = JSON.parse(e.data);
             console.log('[Realtime SSE] Cross-device mutation:', data.taskTitle || data.taskId, data.action);
+
+            if (data.action === 'DELETED' && data.taskId) {
+              setTasks(prev => {
+                const updated = prev.filter(t => t.id !== data.taskId);
+                try {
+                  localStorage.setItem('urbangaon_tasks_v2', JSON.stringify(updated));
+                } catch {}
+                return updated;
+              });
+              setBannerNotification({
+                message: `Deliverable "${data.taskTitle || data.taskId}" was deleted across connected devices`,
+                badge: '⚡ Realtime Synced'
+              });
+            } else if (data.action === 'DELETED_ALL') {
+              setTasks([]);
+              try {
+                localStorage.removeItem('urbangaon_tasks_v2');
+              } catch {}
+            }
           } catch {}
           if (isMounted) refreshFromDB(true);
         });
@@ -242,6 +262,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Start SSE connection
     connectSSE();
 
+    // Cross-tab broadcast channel for instant multi-tab sync on same machine
+    let bc: BroadcastChannel | null = null;
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        bc = new BroadcastChannel('urbangaon_task_sync');
+        bc.onmessage = (event) => {
+          const data = event.data;
+          if (data?.action === 'DELETED' && data.taskId) {
+            setTasks(prev => {
+              const updated = prev.filter(t => t.id !== data.taskId);
+              try {
+                localStorage.setItem('urbangaon_tasks_v2', JSON.stringify(updated));
+              } catch {}
+              return updated;
+            });
+          } else if (data?.action === 'DELETED_ALL') {
+            setTasks([]);
+            try {
+              localStorage.removeItem('urbangaon_tasks_v2');
+            } catch {}
+          } else {
+            if (isMounted) refreshFromDB(true);
+          }
+        };
+      }
+    } catch {}
+
     // Heartbeat poll every 1.5 seconds — the guaranteed cross-device sync safety net.
     // Even if SSE is unavailable (network/proxy issues), this catches all changes.
     const heartbeatTimer = setInterval(() => {
@@ -269,6 +316,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       clearInterval(heartbeatTimer);
       if (reconnectTimer) clearTimeout(reconnectTimer);
       eventSource?.close();
+      bc?.close();
       window.removeEventListener('focus', onTabActive);
     };
   }, [refreshFromDB]);
@@ -576,6 +624,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.removeItem('urbangaon_tasks_v2');
     } catch {}
 
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const bc = new BroadcastChannel('urbangaon_task_sync');
+        bc.postMessage({ action: 'DELETED_ALL' });
+        bc.close();
+      }
+    } catch {}
+
     // Call server DELETE endpoint to wipe MongoDB collection
     try {
       await fetch('/api/tasks', { method: 'DELETE' });
@@ -633,6 +689,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } catch {}
       return remaining;
     });
+
+    // Notify all open tabs on same device via BroadcastChannel
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const bc = new BroadcastChannel('urbangaon_task_sync');
+        bc.postMessage({ action: 'DELETED', taskId, taskTitle: targetTask?.title });
+        bc.close();
+      }
+    } catch {}
 
     // Sync deletion to MongoDB Atlas backend
     try {

@@ -17,6 +17,7 @@
 import { NextRequest } from 'next/server';
 import connectDB from '@/lib/db';
 import { TaskModel } from '@/models/Task';
+import { AuditLogModel } from '@/models/AuditLog';
 import { realtimeEmitter, REALTIME_EVENTS } from '@/lib/events';
 
 export const dynamic = 'force-dynamic';
@@ -88,8 +89,7 @@ export async function GET(req: NextRequest) {
         if (isAborted) break;
 
         try {
-          // Find any task created or updated since lastChangeAt
-          // Tasks with updatedAt > lastChangeAt means something changed
+          // 1. Check for tasks created or updated in MongoDB since lastChangeAt
           const changed = await TaskModel.findOne({
             updatedAt: { $gt: lastChangeAt },
           })
@@ -107,6 +107,27 @@ export async function GET(req: NextRequest) {
               status: changed.status,
               timestamp: Date.now(),
               source: 'mongodb-changedetect',
+            });
+          }
+
+          // 2. Check for tasks deleted in MongoDB since lastChangeAt
+          const deletedEntry = await AuditLogModel.findOne({
+            action: 'DELETED',
+            timestamp: { $gt: lastChangeAt },
+          })
+            .sort({ timestamp: -1 })
+            .select('taskId taskTitle timestamp')
+            .lean()
+            .exec();
+
+          if (deletedEntry && deletedEntry.timestamp) {
+            lastChangeAt = deletedEntry.timestamp;
+            send('task_mutation', {
+              action: 'DELETED',
+              taskId: deletedEntry.taskId,
+              taskTitle: deletedEntry.taskTitle,
+              timestamp: Date.now(),
+              source: 'mongodb-audit-deletions',
             });
           }
 

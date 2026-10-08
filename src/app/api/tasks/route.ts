@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import { TaskModel } from '@/models/Task';
 import { MemberModel } from '@/models/Member';
+import { AuditLogModel } from '@/models/AuditLog';
 import { INITIAL_TASKS, INITIAL_MEMBERS } from '@/lib/mockData';
 import { broadcastTaskMutation } from '@/lib/events';
 
@@ -126,8 +127,24 @@ export async function DELETE() {
     const result = await TaskModel.deleteMany({});
     console.log(`[API/tasks DELETE] Cleared ${result.deletedCount} tasks from MongoDB Atlas`);
 
+    await AuditLogModel.create({
+      id: `audit-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      timestamp: new Date().toISOString(),
+      taskId: 'all',
+      taskTitle: 'All Deliverables',
+      action: 'DELETED',
+      fieldChanged: 'Task Ledger Wipe',
+      oldValue: `${result.deletedCount} tasks`,
+      newValue: '0 tasks',
+      actor: 'System / User',
+      actorRole: 'SUPER_ADMIN',
+      ipAddress: '127.0.0.1',
+      deviceInfo: 'System Engine',
+      notes: `Cleared ${result.deletedCount} tasks from MongoDB Atlas`,
+    }).catch(() => {});
+
     // Broadcast mutation to instantly notify all devices in real-time
-    broadcastTaskMutation({ action: 'DELETED_ALL', taskId: 'all' });
+    broadcastTaskMutation({ action: 'DELETED_ALL', taskId: 'all', taskTitle: 'All Deliverables' });
 
     return NextResponse.json({
       success: true,

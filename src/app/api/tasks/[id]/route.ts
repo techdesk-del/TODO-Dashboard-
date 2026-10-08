@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import { TaskModel } from '@/models/Task';
+import { AuditLogModel } from '@/models/AuditLog';
 import { broadcastTaskMutation } from '@/lib/events';
 
 export const dynamic = 'force-dynamic';
@@ -85,8 +86,27 @@ export async function DELETE(req: NextRequest, ctx: RouteContext) {
       return NextResponse.json({ success: false, error: `Task '${id}' not found` }, { status: 404 });
     }
 
+    const taskTitle = (deletedOrUpdated as { title?: string }).title || id;
+
+    // Persist server-side audit entry so cross-device sync catches the deletion across serverless instances
+    await AuditLogModel.create({
+      id: `audit-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      timestamp: new Date().toISOString(),
+      taskId: id,
+      taskTitle: taskTitle,
+      action: 'DELETED',
+      fieldChanged: 'Task Deleted',
+      oldValue: taskTitle,
+      newValue: 'DELETED',
+      actor: 'System / User',
+      actorRole: 'EMPLOYEE',
+      ipAddress: req.headers.get('x-forwarded-for') || '127.0.0.1',
+      deviceInfo: req.headers.get('user-agent') || 'Browser Device',
+      notes: soft ? 'Task soft-deleted' : 'Task permanently deleted from database',
+    }).catch(err => console.error('[API/tasks DELETE audit log error]', err));
+
     // Broadcast instant real-time deletion to all connected devices worldwide
-    broadcastTaskMutation({ action: 'DELETED', taskId: id });
+    broadcastTaskMutation({ action: 'DELETED', taskId: id, taskTitle });
 
     return NextResponse.json({
       success: true,
