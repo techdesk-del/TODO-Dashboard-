@@ -17,7 +17,7 @@ const AuditLogSchema = new Schema<AuditLogEntry>(
     action:       {
       type: String,
       required: true,
-      enum: ['CREATED', 'UPDATED', 'REOPENED', 'CANCELLED', 'ESCALATED', 'CARRIED_FORWARD', 'EXPORTED', 'LOGIN', 'CONFIG_CHANGED']
+      enum: ['CREATED', 'UPDATED', 'REOPENED', 'CANCELLED', 'ESCALATED', 'CARRIED_FORWARD', 'EXPORTED', 'LOGIN', 'CONFIG_CHANGED', 'DELETED']
     },
     fieldChanged: { type: String },
     oldValue:     { type: String },
@@ -40,8 +40,10 @@ AuditLogSchema.index({ actor: 1, timestamp: -1 });     // User activity trace
 AuditLogSchema.index({ action: 1 });                   // Action filter
 
 /* ── Model (with HMR guard) ──────────────────────────────────────── */
+if (mongoose.models && mongoose.models.AuditLog) {
+  delete mongoose.models.AuditLog;
+}
 export const AuditLogModel: Model<AuditLogEntry> =
-  (mongoose.models.AuditLog as Model<AuditLogEntry>) ||
   mongoose.model<AuditLogEntry>('AuditLog', AuditLogSchema);
 
 export default AuditLogModel;

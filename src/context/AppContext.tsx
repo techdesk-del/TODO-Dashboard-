@@ -49,6 +49,7 @@ interface AppContextType {
   escalateTask: (taskId: string, reason: string, seniorLeader: string) => void;
   reopenTask: (taskId: string, reason: string) => void;
   cancelTask: (taskId: string, reason: string) => void;
+  deleteTask: (taskId: string) => Promise<void>;
   completeTask: (taskId: string, assigneeId?: string) => void;
   addMember: (memberData: Partial<TeamMember>) => Promise<TeamMember>;
   clearAllTasks: () => Promise<void>;
@@ -621,6 +622,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }, `Cancelled task with documented rationale: "${reason}"`);
   };
 
+  const deleteTask = async (taskId: string) => {
+    const targetTask = tasks.find(t => t.id === taskId);
+
+    // Optimistically update local state immediately
+    setTasks(prev => {
+      const remaining = prev.filter(t => t.id !== taskId);
+      try {
+        localStorage.setItem('urbangaon_tasks_v2', JSON.stringify(remaining));
+      } catch {}
+      return remaining;
+    });
+
+    // Sync deletion to MongoDB Atlas backend
+    try {
+      await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
+    } catch (err) {
+      console.error('[AppContext] deleteTask error:', err);
+    }
+
+    logAudit({
+      taskId,
+      taskTitle: targetTask?.title || 'Task',
+      action: 'DELETED',
+      fieldChanged: 'Task Deleted',
+      oldValue: targetTask?.title || taskId,
+      newValue: 'Permanently Deleted from Ledger',
+      notes: `Deliverable deleted by ${currentUser.name} (${currentUser.role})`
+    });
+
+    setBannerNotification({
+      message: `Deleted task "${targetTask?.title || 'Deliverable'}"`,
+      badge: '✓ Task Deleted'
+    });
+  };
+
   const completeTask = (taskId: string, assigneeId?: string) => {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
@@ -769,6 +805,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         escalateTask,
         reopenTask,
         cancelTask,
+        deleteTask,
         completeTask,
         addMember,
         clearAllTasks,

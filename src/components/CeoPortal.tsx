@@ -14,7 +14,8 @@ import {
   AlertOctagon, 
   CheckCircle,
   Filter,
-  UserCheck
+  UserCheck,
+  Trash2
 } from 'lucide-react';
 
 export const CeoPortal: React.FC = () => {
@@ -25,7 +26,8 @@ export const CeoPortal: React.FC = () => {
     setSelectedMemberFilter, 
     exportToExcel,
     setViewingAuditForTaskId,
-    setActiveView 
+    setActiveView,
+    deleteTask
   } = useApp();
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -393,15 +395,30 @@ export const CeoPortal: React.FC = () => {
                   </div>
                 </td>
                 <td>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => setViewingAuditForTaskId(task.id)}
-                    style={{ padding: '0.35rem 0.65rem', fontSize: '0.72rem' }}
-                  >
-                    <ShieldCheck size={13} color="#059669" />
-                    View Audit
-                  </button>
+                  <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => setViewingAuditForTaskId(task.id)}
+                      style={{ padding: '0.35rem 0.65rem', fontSize: '0.72rem' }}
+                    >
+                      <ShieldCheck size={13} color="#059669" />
+                      View Audit
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-secondary btn-delete-task"
+                      onClick={() => {
+                        if (window.confirm(`CEO Action: Are you sure you want to delete deliverable "${task.title}"?`)) {
+                          deleteTask(task.id);
+                        }
+                      }}
+                      style={{ padding: '0.35rem 0.5rem', fontSize: '0.72rem', color: '#dc2626', borderColor: '#fca5a5' }}
+                      title="Delete Deliverable"
+                    >
+                      <Trash2 size={13} color="#dc2626" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

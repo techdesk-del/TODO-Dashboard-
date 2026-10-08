@@ -22,11 +22,12 @@ import {
   AlertTriangle,
   Clock,
   Layers,
-  Sparkles
+  Sparkles,
+  Trash2
 } from 'lucide-react';
 
 export const AdminHrPortal: React.FC = () => {
-  const { members, tasks, updateTask, reopenTask, addMember } = useApp();
+  const { members, tasks, updateTask, reopenTask, deleteTask, addMember } = useApp();
 
   const [activeTab, setActiveTab] = useState<'oversight' | 'create_user' | 'pending_approvals' | 'deactivation'>('oversight');
   const [selectedUserForOversight, setSelectedUserForOversight] = useState<string>('ALL');
@@ -468,6 +469,19 @@ export const AdminHrPortal: React.FC = () => {
                               Reopen
                             </button>
                           )}
+
+                          <button
+                            className="btn-secondary btn-delete-task"
+                            style={{ padding: '0.3rem 0.55rem', fontSize: '0.7rem', color: '#dc2626', borderColor: '#fca5a5' }}
+                            onClick={() => {
+                              if (window.confirm(`Are you sure you want to permanently delete "${t.title}"?`)) {
+                                deleteTask(t.id);
+                              }
+                            }}
+                            title="Delete Deliverable"
+                          >
+                            <Trash2 size={11} color="#dc2626" />
+                          </button>
                         </div>
                       </td>
                     </tr>

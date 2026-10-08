@@ -3,10 +3,10 @@
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Task, TeamMember } from '@/types';
-import { Users, Layers, ArrowRightLeft, Check, AlertTriangle, Clock, Eye, RotateCcw, X } from 'lucide-react';
+import { Users, Layers, ArrowRightLeft, Check, AlertTriangle, Clock, Eye, RotateCcw, X, Trash2 } from 'lucide-react';
 
 export const ManagerTeamView: React.FC = () => {
-  const { members, tasks, updateTask, reopenTask } = useApp();
+  const { members, tasks, updateTask, reopenTask, deleteTask } = useApp();
   const [selectedMemberId, setSelectedMemberId] = useState<string>('ALL');
 
   // Workload rebalancing modal
@@ -296,6 +296,19 @@ export const ManagerTeamView: React.FC = () => {
                             Reopen
                           </button>
                         )}
+
+                        <button
+                          className="btn-secondary btn-delete-task"
+                          style={{ padding: '0.3rem 0.6rem', fontSize: '0.72rem', color: '#dc2626', borderColor: '#fca5a5' }}
+                          onClick={() => {
+                            if (window.confirm(`Are you sure you want to delete deliverable "${t.title}"?`)) {
+                              deleteTask(t.id);
+                            }
+                          }}
+                          title="Delete deliverable"
+                        >
+                          <Trash2 size={12} color="#dc2626" />
+                        </button>
                       </div>
                     </td>
                   </tr>

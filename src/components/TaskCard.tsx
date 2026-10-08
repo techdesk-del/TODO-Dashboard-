@@ -14,7 +14,8 @@ import {
   Check, 
   X, 
   ArrowRight,
-  RotateCcw
+  RotateCcw,
+  Trash2
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -29,10 +30,14 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
     holdTask, 
     escalateTask, 
     reopenTask,
+    deleteTask,
     members,
     systemConfig,
     setViewingAuditForTaskId
   } = useApp();
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [isInlineEditing, setIsInlineEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState(task.title);
@@ -262,6 +267,17 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
 
           <button
             type="button"
+            className="btn-secondary btn-delete-task"
+            onClick={() => setShowDeleteModal(true)}
+            style={{ color: '#dc2626', borderColor: '#fca5a5' }}
+            title="Delete this deliverable"
+          >
+            <Trash2 size={13} color="#dc2626" />
+            Delete
+          </button>
+
+          <button
+            type="button"
             className="btn-secondary"
             onClick={() => setIsInlineEditing(false)}
           >
@@ -449,6 +465,16 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
             <ShieldCheck size={13} color="#059669" />
           </button>
 
+          <button
+            type="button"
+            className="btn-secondary btn-delete-task"
+            onClick={() => setShowDeleteModal(true)}
+            title="Delete Deliverable (Permanent / Remove)"
+            style={{ padding: '0.4rem 0.5rem', color: '#dc2626', borderColor: '#fca5a5' }}
+          >
+            <Trash2 size={13} color="#dc2626" />
+          </button>
+
           {isCompleted && (
             <button
               type="button"
@@ -612,6 +638,104 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Modal: Delete Task Confirmation */}
+      {showDeleteModal && (
+        <div className="stream-overlay" onClick={() => !isDeleting && setShowDeleteModal(false)}>
+          <div className="stream-modal-card" style={{ maxWidth: '440px', borderTop: '4px solid #dc2626' }} onClick={e => e.stopPropagation()}>
+            <div className="stream-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: '#fee2e2',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#dc2626',
+                  flexShrink: 0
+                }}>
+                  <Trash2 size={16} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#991b1b', margin: 0 }}>
+                    Delete Deliverable
+                  </h3>
+                  <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                    Permanent removal from ledger & database
+                  </div>
+                </div>
+              </div>
+              <button className="calendar-nav-btn" onClick={() => !isDeleting && setShowDeleteModal(false)}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              <p style={{ fontSize: '0.85rem', color: '#334155', margin: 0 }}>
+                Are you sure you want to delete this task?
+              </p>
+
+              <div style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                padding: '0.75rem',
+              }}>
+                <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#0f172a' }}>
+                  {task.title}
+                </div>
+                <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.72rem', color: '#64748b', marginTop: '0.35rem', flexWrap: 'wrap' }}>
+                  <span>📅 {task.scheduledDate}</span>
+                  <span>⏰ {task.time}</span>
+                  <span>🏷️ {task.department}</span>
+                  <span className={getPriorityBadgeClass(task.priority)} style={{ padding: '0.1rem 0.35rem', fontSize: '0.65rem' }}>
+                    {task.priority}
+                  </span>
+                </div>
+              </div>
+
+              <div style={{
+                fontSize: '0.75rem',
+                color: '#b91c1c',
+                background: '#fef2f2',
+                padding: '0.45rem 0.65rem',
+                borderRadius: '6px',
+                border: '1px solid #fecaca',
+                fontWeight: 500
+              }}>
+                ⚠️ This deliverable will be permanently deleted across all devices and MongoDB Atlas.
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.1rem' }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                style={{ background: '#dc2626', borderColor: '#b91c1c', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                disabled={isDeleting}
+                onClick={async () => {
+                  setIsDeleting(true);
+                  await deleteTask(task.id);
+                  setIsDeleting(false);
+                  setShowDeleteModal(false);
+                }}
+              >
+                <Trash2 size={13} />
+                {isDeleting ? 'Deleting...' : 'Yes, Delete Task'}
+              </button>
+            </div>
           </div>
         </div>
       )}

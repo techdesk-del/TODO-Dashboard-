@@ -62,7 +62,7 @@ export interface AuditLogEntry {
   timestamp: string;
   taskId?: string;
   taskTitle?: string;
-  action: 'CREATED' | 'UPDATED' | 'REOPENED' | 'CANCELLED' | 'ESCALATED' | 'CARRIED_FORWARD' | 'EXPORTED' | 'LOGIN' | 'CONFIG_CHANGED';
+  action: 'CREATED' | 'UPDATED' | 'REOPENED' | 'CANCELLED' | 'ESCALATED' | 'CARRIED_FORWARD' | 'EXPORTED' | 'LOGIN' | 'CONFIG_CHANGED' | 'DELETED';
   fieldChanged?: string;
   oldValue?: string;
   newValue?: string;

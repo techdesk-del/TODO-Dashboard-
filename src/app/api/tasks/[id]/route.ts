@@ -50,7 +50,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
 }
 
 /* ── DELETE /api/tasks/:id ───────────────────────────────────────── */
-export async function DELETE(_req: NextRequest, ctx: RouteContext) {
+export async function DELETE(req: NextRequest, ctx: RouteContext) {
   try {
     await connectDB();
     const { id } = await ctx.params;
@@ -59,27 +59,40 @@ export async function DELETE(_req: NextRequest, ctx: RouteContext) {
       return NextResponse.json({ success: false, error: 'Task ID is required' }, { status: 400 });
     }
 
-    // Soft delete — never permanently remove task data
-    const updated = await TaskModel.findOneAndUpdate(
-      { id },
-      {
-        $set: {
-          status:             'Cancelled',
-          cancellationReason: 'Deleted via API',
-          updatedAt:          new Date().toISOString(),
-        },
-      },
-      { new: true, lean: true }
-    );
+    const { searchParams } = new URL(req.url);
+    const soft = searchParams.get('soft') === 'true';
 
-    if (!updated) {
+    let deletedOrUpdated;
+    if (soft) {
+      // Soft delete — mark as Cancelled
+      deletedOrUpdated = await TaskModel.findOneAndUpdate(
+        { id },
+        {
+          $set: {
+            status:             'Cancelled',
+            cancellationReason: 'Deleted via API',
+            updatedAt:          new Date().toISOString(),
+          },
+        },
+        { new: true, lean: true }
+      );
+    } else {
+      // Hard delete — permanently remove task record from MongoDB
+      deletedOrUpdated = await TaskModel.findOneAndDelete({ id }).lean();
+    }
+
+    if (!deletedOrUpdated) {
       return NextResponse.json({ success: false, error: `Task '${id}' not found` }, { status: 404 });
     }
 
     // Broadcast instant real-time deletion to all connected devices worldwide
     broadcastTaskMutation({ action: 'DELETED', taskId: id });
 
-    return NextResponse.json({ success: true, message: `Task '${id}' soft-deleted`, data: updated });
+    return NextResponse.json({
+      success: true,
+      message: soft ? `Task '${id}' soft-deleted` : `Task '${id}' permanently deleted`,
+      data: deletedOrUpdated,
+    });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
     console.error('[API/tasks DELETE]', msg);
