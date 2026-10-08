@@ -48,9 +48,9 @@ export const AdminHrPortal: React.FC = () => {
   const [isSubmittingUser, setIsSubmittingUser] = useState(false);
 
   // Deactivation Handover state (FC 18)
-  const [userToDeactivate, setUserToDeactivate] = useState<string>(members[1]?.name || 'Alex Rivera');
+  const [userToDeactivate, setUserToDeactivate] = useState<string>(members[1]?.name || 'Yudhister Tiwari');
   const [handoverSuccessBanner, setHandoverSuccessBanner] = useState(false);
-  const [handoverTarget, setHandoverTarget] = useState<string>(members[0]?.name || 'Akash Das');
+  const [handoverTarget, setHandoverTarget] = useState<string>(members[0]?.name || 'Mr. Sukh Sagar Singh Bhati');
 
   // Pending sign-up requests queue (FC 2 & 3)
   const [pendingRequests, setPendingRequests] = useState([

@@ -17,6 +17,7 @@
 import { NextRequest } from 'next/server';
 import connectDB from '@/lib/db';
 import { TaskModel } from '@/models/Task';
+import { realtimeEmitter, REALTIME_EVENTS } from '@/lib/events';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -37,11 +38,6 @@ export async function GET(req: NextRequest) {
       let isAborted = false;
       let lastChangeAt = connectedAt;
 
-      // Handle client disconnect
-      req.signal.addEventListener('abort', () => {
-        isAborted = true;
-      });
-
       // Helper to send SSE events
       const send = (event: string, data: unknown) => {
         if (isAborted) return;
@@ -53,6 +49,18 @@ export async function GET(req: NextRequest) {
           isAborted = true;
         }
       };
+
+      // Listen for instant server-side mutations (<50ms delivery)
+      const onServerMutation = (payload: unknown) => {
+        send('task_mutation', payload);
+      };
+      realtimeEmitter.on(REALTIME_EVENTS.TASK_MUTATION, onServerMutation);
+
+      // Handle client disconnect
+      req.signal.addEventListener('abort', () => {
+        isAborted = true;
+        realtimeEmitter.off(REALTIME_EVENTS.TASK_MUTATION, onServerMutation);
+      });
 
       // 1. Greet the client
       send('connected', {
@@ -124,6 +132,7 @@ export async function GET(req: NextRequest) {
 
       // 4. Stream duration reached — signal client to reconnect
       if (!isAborted) {
+        realtimeEmitter.off(REALTIME_EVENTS.TASK_MUTATION, onServerMutation);
         send('reconnect', { reason: 'stream-cycle', reconnectAfterMs: 100 });
         try {
           controller.close();

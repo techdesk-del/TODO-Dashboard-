@@ -4,9 +4,26 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { Task, TeamMember, AuditLogEntry, SystemConfig, Role, TaskStatus } from '@/types';
 import { INITIAL_TASKS, INITIAL_MEMBERS, INITIAL_AUDIT_LOGS, INITIAL_SYSTEM_CONFIG } from '@/lib/mockData';
 import { getTodayStr } from '@/lib/dateUtils';
+import { isCeoUser } from '@/lib/rosterData';
 import * as XLSX from 'xlsx';
 
 export type DBStatus = 'connected' | 'connecting' | 'fallback';
+
+const GUEST_USER: TeamMember = {
+  id: 'guest',
+  name: 'Logged Out Guest',
+  email: 'guest@urbangaon.com',
+  role: 'EMPLOYEE',
+  designation: 'Unauthenticated Staff',
+  department: 'General Staff',
+  avatar: 'GU',
+  status: 'ACTIVE',
+  totalTasks: 0,
+  completedTasks: 0,
+  activeTasks: 0,
+  overdueTasks: 0,
+  velocity: 100
+};
 
 interface AppContextType {
   currentUser: TeamMember;
@@ -51,16 +68,13 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<TeamMember>(INITIAL_MEMBERS[0]);
+  const [currentUser, setCurrentUser] = useState<TeamMember>(GUEST_USER);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [members, setMembers] = useState<TeamMember[]>(INITIAL_MEMBERS);
   const [selectedDate, setSelectedDate] = useState<string>(getTodayStr());
   const [activeView, setActiveView] = useState<'workspace' | 'calendar' | 'ceo_portal' | 'admin_hr' | 'team_view' | 'audit_trail' | 'system_config' | 'workflow_manual'>('workspace');
   const [selectedMemberFilter, setSelectedMemberFilter] = useState<string | null>(null);
-  const [bannerNotification, setBannerNotification] = useState<{ message: string; badge: string } | null>({
-    message: "Added 'Database Migration (v12 to v14)' at 05:00 PM today with Alex Rivera",
-    badge: "✓ Synchronized in 180ms"
-  });
+  const [bannerNotification, setBannerNotification] = useState<{ message: string; badge: string } | null>(null);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(INITIAL_AUDIT_LOGS);
   const [systemConfig, setSystemConfig] = useState<SystemConfig>(INITIAL_SYSTEM_CONFIG);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
@@ -125,12 +139,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (e) {
       console.error('[AppContext] tasks restore failed', e);
     }
-
+    
     try {
       const savedLogs = localStorage.getItem('urbangaon_audit_v2');
       if (savedLogs) setAuditLogs(JSON.parse(savedLogs));
     } catch (e) {
       console.error('[AppContext] audit restore failed', e);
+    }
+
+    try {
+      const savedUserStr = localStorage.getItem('urbangaon_auth_user_v2');
+      if (savedUserStr) {
+        const parsed = JSON.parse(savedUserStr);
+        if (parsed && parsed.id && parsed.name) {
+          setCurrentUser(parsed);
+        }
+      }
+    } catch (e) {
+      console.warn('[AppContext] auth restore failed', e);
     }
 
     // Initial load from MongoDB
@@ -264,6 +290,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [auditLogs]);
 
+  // ── Persist authenticated user session to localStorage
+  useEffect(() => {
+    try {
+      if (currentUser && currentUser.id !== 'guest') {
+        localStorage.setItem('urbangaon_auth_user_v2', JSON.stringify(currentUser));
+      } else {
+        localStorage.removeItem('urbangaon_auth_user_v2');
+      }
+    } catch (e) {
+      console.warn('[AppContext] localStorage auth save error', e);
+    }
+  }, [currentUser]);
+
+  // ── CEO Portal Guard: Non-CEO users automatically directed to workspace
+  useEffect(() => {
+    if (!isCeoUser(currentUser) && activeView === 'ceo_portal') {
+      setActiveView('workspace');
+    }
+  }, [currentUser, activeView]);
+
   const logAudit = useCallback((entry: Omit<AuditLogEntry, 'id' | 'timestamp' | 'actor' | 'actorRole' | 'ipAddress' | 'deviceInfo'> & Partial<AuditLogEntry>) => {
     const newEntry: AuditLogEntry = {
       id: `audit-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
@@ -285,6 +331,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [currentUser]);
 
   const switchRole = (newRole: Role) => {
+    if (newRole === 'SUPER_ADMIN' && !isCeoUser(currentUser)) {
+      alert("Access Restricted: Super Admin privileges are reserved for CEO Mr. Sukh Sagar Singh Bhati.");
+      return;
+    }
     const matched = members.find(m => m.role === newRole) || {
       ...currentUser,
       role: newRole
@@ -547,22 +597,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const logoutUser = () => {
-    const guestUser: TeamMember = {
-      id: 'guest',
-      name: 'Logged Out Guest',
-      email: 'guest@urbangaon.com',
-      role: 'EMPLOYEE',
-      designation: 'Unauthenticated User',
-      department: 'General Staff',
-      avatar: 'GU',
-      status: 'ACTIVE',
-      totalTasks: 0,
-      completedTasks: 0,
-      activeTasks: 0,
-      overdueTasks: 0,
-      velocity: 100
-    };
-    setCurrentUser(guestUser);
+    try {
+      localStorage.removeItem('urbangaon_auth_user_v2');
+    } catch {}
+    setCurrentUser(GUEST_USER);
     logAudit({
       action: 'LOGIN',
       fieldChanged: 'Auth Session / Logout',

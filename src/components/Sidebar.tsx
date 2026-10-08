@@ -18,6 +18,7 @@ import {
   CalendarDays
 } from 'lucide-react';
 import { getTodayStr, getTomorrowStr, formatDateDisplay } from '@/lib/dateUtils';
+import { isCeoUser } from '@/lib/rosterData';
 import { AuthModal } from './AuthModal';
 
 export const Sidebar: React.FC = () => {
@@ -32,7 +33,8 @@ export const Sidebar: React.FC = () => {
     setIsMobileNavOpen,
     clearAllTasks,
     currentUser,
-    logoutUser
+    logoutUser,
+    setBannerNotification
   } = useApp();
 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -60,14 +62,29 @@ export const Sidebar: React.FC = () => {
 
   const monthDays = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
+  const isCeo = isMounted && isCeoUser(currentUser);
+  const isAdmin = isMounted && (isCeo || currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN');
+  const isManager = isMounted && (isAdmin || currentUser.role === 'MANAGER');
+  const isTalentOrAdmin = isMounted && (isAdmin || (currentUser.department && (currentUser.department.toLowerCase().includes('talent') || currentUser.department.toLowerCase().includes('admin'))));
+
+  const userVisibleTasks = isCeo
+    ? tasks.filter(t => t.status !== 'Cancelled')
+    : tasks.filter(t => {
+        if (t.status === 'Cancelled') return false;
+        const currentCleanEmail = (currentUser.email || '').toLowerCase().trim();
+        const isCreator = t.creator?.id === currentUser.id || (t.creator?.email && t.creator.email.toLowerCase().trim() === currentCleanEmail);
+        const isAssignee = t.assignees?.some(a => a.id === currentUser.id || (a.email && a.email.toLowerCase().trim() === currentCleanEmail));
+        return isCreator || isAssignee;
+      });
+
   // Filter tasks for today & tomorrow
-  const todayCount = isMounted ? tasks.filter(t => t.scheduledDate === todayStr).length : 0;
-  const tomorrowCount = isMounted ? tasks.filter(t => t.scheduledDate === tomorrowStr).length : 0;
+  const todayCount = isMounted ? userVisibleTasks.filter(t => t.scheduledDate === todayStr).length : 0;
+  const tomorrowCount = isMounted ? userVisibleTasks.filter(t => t.scheduledDate === tomorrowStr).length : 0;
 
   const currentYearMonthStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
   const daysWithTasks: Set<number> = isMounted
     ? new Set(
-        tasks
+        userVisibleTasks
           .map(t => {
             const parts = t.scheduledDate.split('-');
             if (parts[0] === String(currentYear) && parts[1] === String(currentMonth + 1).padStart(2, '0')) {
@@ -94,6 +111,13 @@ export const Sidebar: React.FC = () => {
   };
 
   const handleCeoAccessClick = () => {
+    if (!isCeo) {
+      setBannerNotification({
+        message: `Access Denied: The Executive CEO Portal is strictly restricted to Mr. Sukh Sagar Singh Bhati (CEO). You are currently logged in as ${currentUser.name} (${currentUser.designation}).`,
+        badge: "🔒 CEO Only"
+      });
+      return;
+    }
     setSelectedMemberFilter(null);
     setActiveView('ceo_portal');
     closeSidebar();
@@ -108,7 +132,7 @@ export const Sidebar: React.FC = () => {
     }
   };
 
-  const isGuest = currentUser.id === 'guest';
+  const isGuest = !isMounted || currentUser.id === 'guest';
 
   return (
     <>
@@ -123,28 +147,36 @@ export const Sidebar: React.FC = () => {
         className={`app-sidebar ${isMobileNavOpen ? 'mobile-open' : ''}`}
         style={{ paddingTop: 0, marginTop: 0 }}
       >
-        {/* CEO Access Portal Golden Card - Flush with 0px top space */}
-        <div 
-          className="ceo-access-card"
-          onClick={handleCeoAccessClick}
-          style={{
-            marginTop: 0,
-            borderTop: 'none',
-            borderLeft: 'none',
-            borderRight: 'none',
-            borderBottom: activeView === 'ceo_portal' ? '2px solid #d97706' : '1.5px solid #fcd34d',
-            borderRadius: '0 0 var(--radius-sm) var(--radius-sm)',
-            marginLeft: 'calc(-1 * clamp(0.75rem, 3vw, 1rem))',
-            marginRight: 'calc(-1 * clamp(0.75rem, 3vw, 1rem))',
-            boxShadow: activeView === 'ceo_portal' ? '0 0 15px rgba(217, 119, 6, 0.45)' : '0 2px 5px rgba(217, 119, 6, 0.08)',
-          }}
-        >
-          <div className="ceo-title-group">
-            <span className="ceo-crown-icon">👑</span>
-            <span className="ceo-title-text">CEO Access</span>
+        {/* CEO Access Portal Card - Gated strictly for CEO */}
+        {isCeo && (
+          <div 
+            className="ceo-access-card"
+            onClick={handleCeoAccessClick}
+            style={{
+              marginTop: 0,
+              borderTop: 'none',
+              borderLeft: 'none',
+              borderRight: 'none',
+              borderBottom: activeView === 'ceo_portal' ? '2px solid #d97706' : '1.5px solid #fcd34d',
+              borderRadius: '0 0 var(--radius-sm) var(--radius-sm)',
+              marginLeft: 'calc(-1 * clamp(0.75rem, 3vw, 1rem))',
+              marginRight: 'calc(-1 * clamp(0.75rem, 3vw, 1rem))',
+              boxShadow: activeView === 'ceo_portal' ? '0 0 15px rgba(217, 119, 6, 0.45)' : '0 2px 5px rgba(217, 119, 6, 0.08)',
+              cursor: 'pointer',
+            }}
+            title="Click to open CEO Executive Command Center"
+          >
+            <div className="ceo-title-group">
+              <span className="ceo-crown-icon">👑</span>
+              <span className="ceo-title-text">
+                CEO Access
+              </span>
+            </div>
+            <span className="ceo-view-badge">
+              CEO View ↗
+            </span>
           </div>
-          <span className="ceo-view-badge">CEO View ↗</span>
-        </div>
+        )}
 
         {/* Calendar Date Picker - Dynamically synchronized to current month */}
         <div className="calendar-widget">
@@ -254,45 +286,55 @@ export const Sidebar: React.FC = () => {
             <span>Calendar Grid View (FC 15)</span>
           </button>
 
-          <button
-            className={`nav-link-item ${activeView === 'ceo_portal' ? 'active' : ''}`}
-            onClick={handleCeoAccessClick}
-          >
-            <Crown size={16} color="#d97706" />
-            <span style={{ color: '#d97706', fontWeight: 700 }}>Executive Command Center</span>
-          </button>
+          {isCeo && (
+            <button
+              className={`nav-link-item ${activeView === 'ceo_portal' ? 'active' : ''}`}
+              onClick={handleCeoAccessClick}
+            >
+              <Crown size={16} color="#d97706" />
+              <span style={{ color: '#d97706', fontWeight: 700 }}>Executive Command Center</span>
+            </button>
+          )}
 
-          <button
-            className={`nav-link-item ${activeView === 'admin_hr' ? 'active' : ''}`}
-            onClick={() => { setActiveView('admin_hr'); closeSidebar(); }}
-          >
-            <Users size={16} />
-            <span>Admin & HR Portal (FC 1-10)</span>
-          </button>
+          {isTalentOrAdmin && (
+            <button
+              className={`nav-link-item ${activeView === 'admin_hr' ? 'active' : ''}`}
+              onClick={() => { setActiveView('admin_hr'); closeSidebar(); }}
+            >
+              <Users size={16} />
+              <span>Admin & HR Portal (FC 1-10)</span>
+            </button>
+          )}
 
-          <button
-            className={`nav-link-item ${activeView === 'team_view' ? 'active' : ''}`}
-            onClick={() => { setActiveView('team_view'); closeSidebar(); }}
-          >
-            <Layers size={16} />
-            <span>Manager "My Team" (FC 19)</span>
-          </button>
+          {isManager && (
+            <button
+              className={`nav-link-item ${activeView === 'team_view' ? 'active' : ''}`}
+              onClick={() => { setActiveView('team_view'); closeSidebar(); }}
+            >
+              <Layers size={16} />
+              <span>Manager "My Team" (FC 19)</span>
+            </button>
+          )}
 
-          <button
-            className={`nav-link-item ${activeView === 'audit_trail' ? 'active' : ''}`}
-            onClick={() => { setActiveView('audit_trail'); closeSidebar(); }}
-          >
-            <ShieldCheck size={16} />
-            <span>Immutable Audit Log (FC 12)</span>
-          </button>
+          {isAdmin && (
+            <button
+              className={`nav-link-item ${activeView === 'audit_trail' ? 'active' : ''}`}
+              onClick={() => { setActiveView('audit_trail'); closeSidebar(); }}
+            >
+              <ShieldCheck size={16} />
+              <span>Immutable Audit Log (FC 12)</span>
+            </button>
+          )}
 
-          <button
-            className={`nav-link-item ${activeView === 'system_config' ? 'active' : ''}`}
-            onClick={() => { setActiveView('system_config'); closeSidebar(); }}
-          >
-            <Sliders size={16} />
-            <span>System Config (FC 16/24)</span>
-          </button>
+          {isAdmin && (
+            <button
+              className={`nav-link-item ${activeView === 'system_config' ? 'active' : ''}`}
+              onClick={() => { setActiveView('system_config'); closeSidebar(); }}
+            >
+              <Sliders size={16} />
+              <span>System Config (FC 16/24)</span>
+            </button>
+          )}
 
           <button
             className={`nav-link-item ${activeView === 'workflow_manual' ? 'active' : ''}`}
@@ -319,7 +361,7 @@ export const Sidebar: React.FC = () => {
               onClick={() => { setIsAuthModalOpen(true); closeSidebar(); }}
             >
               <LogIn size={14} />
-              <span>Sign In / Register</span>
+              <span>Employee Sign In</span>
             </button>
           ) : (
             <div style={{ display: 'flex', gap: '0.4rem' }}>

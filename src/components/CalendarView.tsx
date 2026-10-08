@@ -1,20 +1,42 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Task } from '@/types';
+import { isCeoUser } from '@/lib/rosterData';
 import { ChevronLeft, ChevronRight, Clock, Plus, User } from 'lucide-react';
 
 export const CalendarView: React.FC = () => {
-  const { tasks, selectedDate, setSelectedDate, setActiveView } = useApp();
+  const { tasks, selectedDate, setSelectedDate, setActiveView, currentUser } = useApp();
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'day'>('month');
+  const [isMounted, setIsMounted] = useState(false);
 
-  // Days in September 2026 (1 to 30)
-  const days = Array.from({ length: 30 }, (_, i) => i + 1);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const isCeo = isMounted && isCeoUser(currentUser);
+
+  const userVisibleTasks = isCeo
+    ? tasks.filter(t => t.status !== 'Cancelled')
+    : tasks.filter(t => {
+        if (t.status === 'Cancelled') return false;
+        const currentCleanEmail = (currentUser.email || '').toLowerCase().trim();
+        const isCreator = t.creator?.id === currentUser.id || (t.creator?.email && t.creator.email.toLowerCase().trim() === currentCleanEmail);
+        const isAssignee = t.assignees?.some(a => a.id === currentUser.id || (a.email && a.email.toLowerCase().trim() === currentCleanEmail));
+        return isCreator || isAssignee;
+      });
+
+  // Dynamically compute days for current active date
+  const selectedYear = parseInt(selectedDate.split('-')[0], 10) || new Date().getFullYear();
+  const selectedMonth = parseInt(selectedDate.split('-')[1], 10) || (new Date().getMonth() + 1);
+  const selectedMonthStr = String(selectedMonth).padStart(2, '0');
+  const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
   const getTasksForDay = (day: number) => {
-    const dateStr = `2026-09-${day.toString().padStart(2, '0')}`;
-    return tasks.filter(t => t.scheduledDate === dateStr);
+    const dateStr = `${selectedYear}-${selectedMonthStr}-${day.toString().padStart(2, '0')}`;
+    return userVisibleTasks.filter(t => t.scheduledDate === dateStr);
   };
 
   const getStatusColor = (status: string) => {

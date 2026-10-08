@@ -5,9 +5,10 @@ import { soundEngine } from '@/lib/sound';
 import { Mic, ArrowRight, X, Sparkles, Check, Radio } from 'lucide-react';
 import { ParsedVoiceEntity } from '@/types';
 import { getTodayStr, formatDateDisplay } from '@/lib/dateUtils';
+import { isCeoUser } from '@/lib/rosterData';
 
 export const VoiceInputBar: React.FC = () => {
-  const { addTask, members, selectedDate } = useApp();
+  const { addTask, members, selectedDate, currentUser } = useApp();
   const [inputText, setInputText] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [showStreamModal, setShowStreamModal] = useState(false);
@@ -81,7 +82,7 @@ export const VoiceInputBar: React.FC = () => {
     setIsListening(true);
     setShowStreamModal(true);
 
-    const samplePrompt = "Schedule database migration today at 5:00 PM assigned to Alex Rivera on high priority";
+    const samplePrompt = "Schedule site inspection today at 5:00 PM assigned to Ayaz on high priority";
     setCurrentTranscription(samplePrompt);
     parseWithGeminiOrLocal(samplePrompt);
 
@@ -104,7 +105,11 @@ export const VoiceInputBar: React.FC = () => {
 
     // Parse immediately with deterministic entity extractor
     const parsed = parseSpeechOrTextCommand(rawText);
-    const targetMember = members.find(m => m.name.toLowerCase().includes(parsed.assigneeName.toLowerCase())) || members[1];
+    const isCeo = isCeoUser(currentUser);
+    const explicitlyMatched = parsed.assigneeName
+      ? members.find(m => m.name.toLowerCase().includes(parsed.assigneeName.toLowerCase()))
+      : null;
+    const targetMember = explicitlyMatched || (isCeo ? (members.find(m => m.role !== 'SUPER_ADMIN') || members[0]) : currentUser);
 
     addTask({
       title: parsed.title,
@@ -141,7 +146,11 @@ export const VoiceInputBar: React.FC = () => {
     // Play pleasant enterprise acoustic chime
     soundEngine.playSuccessChime();
 
-    const targetMember = members.find(m => m.name.toLowerCase().includes(extractedData.assigneeName.toLowerCase())) || members[1];
+    const isCeo = isCeoUser(currentUser);
+    const explicitlyMatched = extractedData.assigneeName
+      ? members.find(m => m.name.toLowerCase().includes(extractedData.assigneeName.toLowerCase()))
+      : null;
+    const targetMember = explicitlyMatched || (isCeo ? (members.find(m => m.role !== 'SUPER_ADMIN') || members[0]) : currentUser);
 
     addTask({
       title: extractedData.title,
@@ -199,7 +208,7 @@ export const VoiceInputBar: React.FC = () => {
             className="composer-input"
             value={inputText}
             onChange={e => setInputText(e.target.value)}
-            placeholder="Or type your task here in simple words (e.g. Schedule database migration today at 5pm with Alex Rivera)..."
+            placeholder="Or type your task here in simple words (e.g. Schedule sales review today at 5pm with Yudhister Tiwari)..."
           />
           <button type="submit" className="composer-send-btn" title="Submit task command">
             <ArrowRight size={18} />
@@ -273,7 +282,7 @@ export const VoiceInputBar: React.FC = () => {
                 <div className="entity-card">
                   <span className="entity-card-num">4. ASSIGNEE & PRIORITY</span>
                   <span className="entity-card-val" style={{ color: extractedData?.priority === 'URGENT' ? '#dc2626' : '#c2410c' }}>
-                    {extractedData?.assigneeName || 'Alex Rivera'} ({extractedData?.priority || 'HIGH'})
+                    {extractedData?.assigneeName || 'Ayaz'} ({extractedData?.priority || 'HIGH'})
                   </span>
                 </div>
               </div>

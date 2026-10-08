@@ -229,7 +229,7 @@ export const CeoPortal: React.FC = () => {
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                       <span className="filter-badge-count">{member.totalTasks} Tasks</span>
-                      {member.name === 'Alex Rivera' && (
+                      {members[1]?.id === member.id && (
                         <span style={{
                           background: '#dc2626',
                           color: 'white',

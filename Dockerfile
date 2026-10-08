@@ -8,9 +8,10 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 
-# Install dependencies only when package files change
+# Install ALL dependencies (including devDependencies like typescript)
+# needed for the build step. The final runner stage only copies standalone output.
 COPY package.json package-lock.json* ./
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci && npm cache clean --force
 
 # ── Stage 2: Builder ─────────────────────────────────────────
 FROM node:20-alpine AS builder

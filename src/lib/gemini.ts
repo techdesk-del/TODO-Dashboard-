@@ -51,8 +51,8 @@ Return ONLY a valid JSON object matching this exact schema:
   "scheduledDate": string (YYYY-MM-DD format, e.g. 2026-09-15 for today, 2026-09-16 for tomorrow),
   "time": string (e.g. "05:00 PM", "11:00 AM"),
   "priority": string ("URGENT", "HIGH", or "NORMAL"),
-  "assigneeName": string (e.g. "Alex Rivera", "Akash Das", "Priya Sharma", or "Unassigned"),
-  "department": string (e.g. "DevOps & DB", "Sales & Growth", "Design & UI", "Product & Tech", "Finance"),
+  "assigneeName": string (e.g. "Ayaz", "Yudhister Tiwari", "Mr. Sukh Sagar Singh Bhati", "Pratap", or "Unassigned"),
+  "department": string (e.g. "Civil", "Sales", "Legal Team", "Accounts", "Purchase Department", "Admin Desk", "Talent Team"),
   "confidence": number (between 0.8 and 1.0)
 }
 Do NOT include markdown backticks or commentary, only raw JSON.`;
@@ -93,8 +93,8 @@ Do NOT include markdown backticks or commentary, only raw JSON.`;
       scheduledDate: parsed.scheduledDate || '2026-09-15',
       time: parsed.time || '05:00 PM',
       priority: (parsed.priority || 'NORMAL') as 'URGENT' | 'HIGH' | 'NORMAL',
-      assigneeName: parsed.assigneeName || 'Alex Rivera',
-      department: parsed.department || 'Product & Tech',
+      assigneeName: parsed.assigneeName || 'Ayaz',
+      department: parsed.department || 'Civil',
       latencyMs: Date.now() - t0,
       confidence: parsed.confidence || 0.98,
       modelUsed: 'Google Gemini 1.5 Flash (Cloud AI)',

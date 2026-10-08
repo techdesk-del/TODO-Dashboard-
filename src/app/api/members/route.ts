@@ -1,18 +1,19 @@
-
 /**
  * app/api/members/route.ts
  * GET /api/members — Fetch team members list
+ * POST /api/members — Add new team member (internal HR/Admin)
  */
 
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import { MemberModel } from '@/models/Member';
 import { INITIAL_MEMBERS } from '@/lib/mockData';
+import { syncOfficialRosterToDB } from '@/lib/rosterSync';
 
 async function seedMembersIfEmpty() {
   const count = await MemberModel.countDocuments();
   if (count === 0) {
-    console.log('[API/members] Empty collection — seeding with mock data...');
+    console.log('[API/members] Empty collection — seeding with official team roster...');
     await MemberModel.insertMany(INITIAL_MEMBERS, { ordered: false });
     console.log(`[API/members] ✓ Seeded ${INITIAL_MEMBERS.length} members`);
   }
@@ -22,6 +23,8 @@ export async function GET() {
   try {
     await connectDB();
     await seedMembersIfEmpty();
+    // Keep roster in sync with official designations and roles
+    await syncOfficialRosterToDB().catch(() => {});
 
     const members = await MemberModel.find({}).lean().exec();
 
@@ -41,7 +44,7 @@ export async function POST(req: Request) {
     await connectDB();
     const body = await req.json();
 
-    const { name, email, role = 'EMPLOYEE', designation = 'Specialist', department = 'Product & Tech', avatar, managerId, status = 'ACTIVE' } = body;
+    const { name, email, role = 'EMPLOYEE', designation = 'Specialist', department = 'Sales', avatar, managerId, status = 'ACTIVE' } = body;
 
     if (!name || !email) {
       return NextResponse.json(

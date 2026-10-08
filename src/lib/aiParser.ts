@@ -46,20 +46,37 @@ export function parseSpeechOrTextCommand(input: string): ParsedVoiceEntity {
   }
 
   // 4. Extract Assignee
-  let matchedAssignee = INITIAL_MEMBERS[1]; // default Alex Rivera
+  let matchedAssignee = INITIAL_MEMBERS[0]; // default Mr. Sukh Sagar Singh Bhati (CEO)
   let bestScore = 0;
 
   for (const member of INITIAL_MEMBERS) {
     const memNameLower = member.name.toLowerCase();
-    const memFirstName = memNameLower.split(' ')[0];
+    const parts = memNameLower.split(' ').filter(p => !['mr.', 'mr', 'dr.', 'dr'].includes(p));
+    const deptLower = member.department.toLowerCase();
+
+    // Check CEO keywords
+    if (member.role === 'SUPER_ADMIN' && (lower.includes('ceo') || lower.includes('bhati') || lower.includes('sukh sagar'))) {
+      matchedAssignee = member;
+      bestScore = 110;
+      break;
+    }
+
     if (lower.includes(memNameLower)) {
       matchedAssignee = member;
       bestScore = 100;
       break;
-    } else if (lower.includes(memFirstName) && bestScore < 80) {
-      matchedAssignee = member;
-      bestScore = 80;
-    } else if (lower.includes(member.department.toLowerCase()) && bestScore < 60) {
+    }
+
+    // Check individual name parts (e.g. "Ayaz", "Yudhister", "Pratap", "Utkarsh", "Kanchan", "Rekha", "Sharmila", "Satya")
+    for (const part of parts) {
+      if (part.length > 2 && lower.includes(part) && bestScore < 85) {
+        matchedAssignee = member;
+        bestScore = 85;
+      }
+    }
+
+    // Check department keywords
+    if (lower.includes(deptLower) && bestScore < 60) {
       matchedAssignee = member;
       bestScore = 60;
     }
@@ -95,8 +112,8 @@ export function parseSpeechOrTextCommand(input: string): ParsedVoiceEntity {
     scheduledDate,
     time,
     priority,
-    assigneeName: matchedAssignee.name,
-    department: matchedAssignee.department,
+    assigneeName: bestScore > 0 ? matchedAssignee.name : '',
+    department: bestScore > 0 ? matchedAssignee.department : '',
     latencyMs: latency,
     confidence: 0.985
   };

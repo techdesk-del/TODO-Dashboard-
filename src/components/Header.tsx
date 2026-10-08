@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Role } from '@/types';
 import { 
@@ -38,7 +38,12 @@ export const Header: React.FC = () => {
 
   const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const { notificationPermission, requestPermission } = useTaskDeadlines();
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const roleOptions: { role: Role; label: string; desc: string }[] = [
     { role: 'SUPER_ADMIN', label: 'Super Admin / Director', desc: 'Full Executive Command & Audit' },
@@ -56,7 +61,7 @@ export const Header: React.FC = () => {
     }
   };
 
-  const isGuest = currentUser.id === 'guest';
+  const isGuest = !isMounted || currentUser.id === 'guest';
 
   return (
     <header className="app-header">
@@ -175,7 +180,7 @@ export const Header: React.FC = () => {
               fontSize: '0.75rem',
               background: '#2563eb'
             }}
-            title="Sign In / Register with Email & Password"
+            title="Sign In with Corporate Email & Password"
           >
             <LogIn size={14} />
             <span>Sign In</span>
@@ -205,10 +210,10 @@ export const Header: React.FC = () => {
             onClick={() => setIsRoleMenuOpen(!isRoleMenuOpen)}
             title="Click to view user menu, switch roles, or manage login"
           >
-            <div className="avatar-circle">{currentUser.avatar}</div>
+            <div className="avatar-circle">{isMounted ? currentUser.avatar : 'GU'}</div>
             <div className="user-info-text">
-              <span className="user-name">{currentUser.name.split(' ')[0]}</span>
-              <span className="user-role-label">{currentUser.role.replace('_', ' ')}</span>
+              <span className="user-name">{isMounted ? currentUser.name.split(' ')[0] : 'Guest'}</span>
+              <span className="user-role-label">{isMounted ? currentUser.role.replace('_', ' ') : 'EMPLOYEE'}</span>
             </div>
             <ChevronDown size={12} color="#64748b" style={{ flexShrink: 0 }} />
           </div>
@@ -244,7 +249,7 @@ export const Header: React.FC = () => {
                 <Lock size={15} color="#2563eb" />
                 <div>
                   <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1e40af' }}>
-                    {isGuest ? 'Sign In / Register' : 'Switch Account (Login)'}
+                    {isGuest ? 'Sign In / Employee Login' : 'Switch Account (Login)'}
                   </div>
                   <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
                     Flowchart 1-5 Credentials Auth
@@ -281,7 +286,16 @@ export const Header: React.FC = () => {
               {roleOptions.map(opt => (
                 <div
                   key={opt.role}
-                  onClick={() => { switchRole(opt.role); setIsRoleMenuOpen(false); }}
+                  onClick={() => {
+                    if (opt.role === 'SUPER_ADMIN' && currentUser.email !== 'ceo@urbangaon.com') {
+                      alert("Access Restricted: Super Admin / CEO privileges require signing in as Mr. Sukh Sagar Singh Bhati (ceo@urbangaon.com).");
+                      setIsAuthModalOpen(true);
+                      setIsRoleMenuOpen(false);
+                      return;
+                    }
+                    switchRole(opt.role);
+                    setIsRoleMenuOpen(false);
+                  }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
