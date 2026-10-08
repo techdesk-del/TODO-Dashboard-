@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { Task, TeamMember, AuditLogEntry, SystemConfig, Role, TaskStatus } from '@/types';
 import { INITIAL_TASKS, INITIAL_MEMBERS, INITIAL_AUDIT_LOGS, INITIAL_SYSTEM_CONFIG } from '@/lib/mockData';
 import { getTodayStr } from '@/lib/dateUtils';
@@ -82,6 +82,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [viewingAuditForTaskId, setViewingAuditForTaskId] = useState<string | null>(null);
   const [showMorningDigestModal, setShowMorningDigestModal] = useState(false);
   const [dbStatus, setDbStatus] = useState<DBStatus>('connecting');
+  const deletedIdsRef = useRef<Set<string>>(new Set());
 
   // ── Sync with MongoDB Atlas & LocalStorage ───────────────────────
   const refreshFromDB = useCallback(async (isSilent = true) => {
@@ -105,6 +106,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               return ageMs < 4000;
             });
             const cleanServerTasks = json.data.filter((t: Task) => 
+              !deletedIdsRef.current.has(t.id) &&
               t.status !== 'Cancelled' && 
               !t.title?.toLowerCase().includes('mobile simulator') &&
               t.id !== 'task-1790071325492'
@@ -216,6 +218,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             console.log('[Realtime SSE] Cross-device mutation:', data.taskTitle || data.taskId, data.action);
 
             if (data.action === 'DELETED' && data.taskId) {
+              deletedIdsRef.current.add(data.taskId);
               setTasks(prev => {
                 const updated = prev.filter(t => t.id !== data.taskId);
                 try {
@@ -270,6 +273,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         bc.onmessage = (event) => {
           const data = event.data;
           if (data?.action === 'DELETED' && data.taskId) {
+            deletedIdsRef.current.add(data.taskId);
             setTasks(prev => {
               const updated = prev.filter(t => t.id !== data.taskId);
               try {
@@ -438,6 +442,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+
+    deletedIdsRef.current.delete(task.id);
 
     // Optimistic state update
     setTasks(prev => [task, ...prev]);
@@ -680,6 +686,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteTask = async (taskId: string) => {
     const targetTask = tasks.find(t => t.id === taskId);
+    deletedIdsRef.current.add(taskId);
 
     // Optimistically update local state immediately
     setTasks(prev => {

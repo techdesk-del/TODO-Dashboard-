@@ -10,7 +10,7 @@ import { TaskModel } from '@/models/Task';
 import { MemberModel } from '@/models/Member';
 import { AuditLogModel } from '@/models/AuditLog';
 import { INITIAL_TASKS, INITIAL_MEMBERS } from '@/lib/mockData';
-import { broadcastTaskMutation } from '@/lib/events';
+import { broadcastTaskMutation, isTaskDeleted, unmarkTaskDeleted, globalDeletedTaskIds } from '@/lib/events';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -56,9 +56,12 @@ export async function GET(req: NextRequest) {
       .lean()     // Returns plain JS objects (faster, no Mongoose overhead)
       .exec();
 
+    // Guard against race conditions / replication lag
+    const validTasks = tasks.filter(t => !isTaskDeleted(t.id));
+
     return NextResponse.json({
       success:  true,
-      data:     tasks,
+      data:     validTasks,
       meta: {
         count:    tasks.length,
         latencyMs: Date.now() - t0,
@@ -98,6 +101,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Reset any tombstone for newly created task
+    unmarkTaskDeleted(body.id);
+
     // Upsert — safe to call multiple times
     const task = await TaskModel.findOneAndUpdate(
       { id: body.id },
@@ -126,6 +132,9 @@ export async function DELETE() {
     await connectDB();
     const result = await TaskModel.deleteMany({});
     console.log(`[API/tasks DELETE] Cleared ${result.deletedCount} tasks from MongoDB Atlas`);
+
+    // Reset tombstone set
+    globalDeletedTaskIds.clear();
 
     await AuditLogModel.create({
       id: `audit-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,

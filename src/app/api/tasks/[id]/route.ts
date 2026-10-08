@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import { TaskModel } from '@/models/Task';
 import { AuditLogModel } from '@/models/AuditLog';
-import { broadcastTaskMutation } from '@/lib/events';
+import { broadcastTaskMutation, markTaskDeleted } from '@/lib/events';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -85,6 +85,9 @@ export async function DELETE(req: NextRequest, ctx: RouteContext) {
     if (!deletedOrUpdated) {
       return NextResponse.json({ success: false, error: `Task '${id}' not found` }, { status: 404 });
     }
+
+    // Immediately mark as deleted in in-memory tombstone to eliminate replication race condition
+    markTaskDeleted(id);
 
     const taskTitle = (deletedOrUpdated as { title?: string }).title || id;
 
