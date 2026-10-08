@@ -247,7 +247,7 @@ export default function Home() {
           {activeView === 'team_view' && <ManagerTeamView />}
           {activeView === 'audit_trail' && <AuditTrailModal />}
           {activeView === 'system_config' && <SystemConfigModal />}
-          {activeView === 'workflow_manual' && <WorkflowManualModal />}
+          {activeView === 'workflow_manual' && (isCeo ? <WorkflowManualModal /> : null)}
         </main>
       </div>
 

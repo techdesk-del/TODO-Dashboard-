@@ -303,9 +303,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [currentUser]);
 
-  // ── CEO Portal Guard: Non-CEO users automatically directed to workspace
+  // ── CEO Portal & Workflows Guard: Non-CEO users automatically directed to workspace
   useEffect(() => {
-    if (!isCeoUser(currentUser) && activeView === 'ceo_portal') {
+    if (!isCeoUser(currentUser) && (activeView === 'ceo_portal' || activeView === 'workflow_manual')) {
       setActiveView('workspace');
     }
   }, [currentUser, activeView]);

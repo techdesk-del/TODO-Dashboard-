@@ -19,6 +19,7 @@ import {
 import { AuthModal } from './AuthModal';
 import { useTaskDeadlines } from '@/hooks/useTaskDeadlines';
 import { formatDateDisplay } from '@/lib/dateUtils';
+import { isCeoUser } from '@/lib/rosterData';
 
 export const Header: React.FC = () => {
   const {
@@ -62,6 +63,8 @@ export const Header: React.FC = () => {
   };
 
   const isGuest = !isMounted || currentUser.id === 'guest';
+  const isCeo = isMounted && isCeoUser(currentUser);
+  const isAdmin = isMounted && (isCeo || currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN');
 
   return (
     <header className="app-header">
@@ -117,55 +120,62 @@ export const Header: React.FC = () => {
           {formatDateDisplay(selectedDate)}
         </div>
 
-        {/* Clear Data Button for Fresh Testing */}
-        <button
-          onClick={handleClearData}
-          className="btn-secondary"
-          title="Clear all tasks from MongoDB to test with fresh data"
-          style={{
-            padding: 'clamp(0.28rem,1.5vw,0.35rem) clamp(0.4rem,2vw,0.65rem)',
-            color: '#dc2626',
-            borderColor: '#fca5a5',
-            background: '#fef2f2'
-          }}
-        >
-          <Trash2 size={13} color="#dc2626" />
-          <span>Clear Data ({tasks.length})</span>
-        </button>
+        {/* Clear Data Button (Admin & CEO Only) */}
+        {isAdmin && (
+          <button
+            onClick={handleClearData}
+            className="btn-secondary"
+            title="Clear all tasks from MongoDB to test with fresh data (Admin / CEO Only)"
+            style={{
+              padding: 'clamp(0.28rem,1.5vw,0.35rem) clamp(0.4rem,2vw,0.65rem)',
+              color: '#dc2626',
+              borderColor: '#fca5a5',
+              background: '#fef2f2'
+            }}
+          >
+            <Trash2 size={13} color="#dc2626" />
+            <span>Clear Data ({tasks.length})</span>
+          </button>
+        )}
 
-        <button
-          onClick={() => setShowMorningDigestModal(true)}
-          className="btn-secondary"
-          title="FC 13: Simulated 08:30 AM Morning Email Digest"
-          style={{ padding: 'clamp(0.28rem,1.5vw,0.35rem) clamp(0.4rem,2vw,0.65rem)' }}
-        >
-          <Mail size={14} color="#2563eb" />
-          <span>8:30 Digest</span>
-        </button>
+        {/* Executive Actions strictly restricted to CEO */}
+        {isCeo && (
+          <>
+            <button
+              onClick={() => setShowMorningDigestModal(true)}
+              className="btn-secondary"
+              title="FC 13: Simulated 08:30 AM Morning Email Digest (CEO Only)"
+              style={{ padding: 'clamp(0.28rem,1.5vw,0.35rem) clamp(0.4rem,2vw,0.65rem)' }}
+            >
+              <Mail size={14} color="#2563eb" />
+              <span>8:30 Digest</span>
+            </button>
 
-        <button
-          onClick={runNightlyRolloverSimulation}
-          className="btn-secondary"
-          title="FC 11: Simulated 00:05 AM Midnight Carry-Forward"
-          style={{ padding: 'clamp(0.28rem,1.5vw,0.35rem) clamp(0.4rem,2vw,0.65rem)' }}
-        >
-          <Moon size={14} color="#8b5cf6" />
-          <span>Rollover</span>
-        </button>
+            <button
+              onClick={runNightlyRolloverSimulation}
+              className="btn-secondary"
+              title="FC 11: Simulated 00:05 AM Midnight Carry-Forward (CEO Only)"
+              style={{ padding: 'clamp(0.28rem,1.5vw,0.35rem) clamp(0.4rem,2vw,0.65rem)' }}
+            >
+              <Moon size={14} color="#8b5cf6" />
+              <span>Rollover</span>
+            </button>
 
-        <button
-          onClick={() => setActiveView('workflow_manual')}
-          className="btn-secondary"
-          style={{
-            padding: 'clamp(0.28rem,1.5vw,0.35rem) clamp(0.4rem,2vw,0.65rem)',
-            background: activeView === 'workflow_manual' ? '#eff6ff' : undefined,
-            borderColor: activeView === 'workflow_manual' ? '#bfdbfe' : undefined
-          }}
-          title="28 Flowcharts Executive Manual"
-        >
-          <Compass size={14} color="#d97706" />
-          <span>Flows</span>
-        </button>
+            <button
+              onClick={() => setActiveView('workflow_manual')}
+              className="btn-secondary"
+              style={{
+                padding: 'clamp(0.28rem,1.5vw,0.35rem) clamp(0.4rem,2vw,0.65rem)',
+                background: activeView === 'workflow_manual' ? '#eff6ff' : undefined,
+                borderColor: activeView === 'workflow_manual' ? '#bfdbfe' : undefined
+              }}
+              title="28 Flowcharts Executive Manual (CEO Only)"
+            >
+              <Compass size={14} color="#d97706" />
+              <span>Flows</span>
+            </button>
+          </>
+        )}
 
         {/* Explicit Sign In / Log In Button */}
         {isGuest ? (

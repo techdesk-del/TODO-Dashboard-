@@ -336,13 +336,15 @@ export const Sidebar: React.FC = () => {
             </button>
           )}
 
-          <button
-            className={`nav-link-item ${activeView === 'workflow_manual' ? 'active' : ''}`}
-            onClick={() => { setActiveView('workflow_manual'); closeSidebar(); }}
-          >
-            <BookOpen size={16} />
-            <span>28 Workflows Manual</span>
-          </button>
+          {isCeo && (
+            <button
+              className={`nav-link-item ${activeView === 'workflow_manual' ? 'active' : ''}`}
+              onClick={() => { setActiveView('workflow_manual'); closeSidebar(); }}
+            >
+              <BookOpen size={16} />
+              <span>28 Workflows Manual</span>
+            </button>
+          )}
         </nav>
 
         {/* Clear Data & Authentication Actions */}
@@ -386,15 +388,17 @@ export const Sidebar: React.FC = () => {
             </div>
           )}
 
-          <button
-            className="btn-secondary"
-            style={{ width: '100%', justifyContent: 'center', fontSize: '0.72rem', color: '#dc2626', borderColor: '#fca5a5', background: '#fef2f2', gap: '6px' }}
-            onClick={handleClearData}
-            title="Clear all tasks from MongoDB to start with fresh data"
-          >
-            <Trash2 size={13} color="#dc2626" />
-            <span>Clear All Data ({tasks.length})</span>
-          </button>
+          {isAdmin && (
+            <button
+              className="btn-secondary"
+              style={{ width: '100%', justifyContent: 'center', fontSize: '0.72rem', color: '#dc2626', borderColor: '#fca5a5', background: '#fef2f2', gap: '6px' }}
+              onClick={handleClearData}
+              title="Clear all tasks from MongoDB to start with fresh data (Admin / CEO Only)"
+            >
+              <Trash2 size={13} color="#dc2626" />
+              <span>Clear All Data ({tasks.length})</span>
+            </button>
+          )}
         </div>
 
         <div className="sidebar-footer-note">
