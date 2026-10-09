@@ -1,28 +1,32 @@
 # ============================================================
 # UrbanGaon AI Todo Platform — Docker Compose
+# Production Setup for Synology DS925+ Container Manager
 # Fully Private Self-Hosted Setup (No Third-Party Data Access)
 # ============================================================
 
 services:
-  # ── Local MongoDB (your data stays on YOUR machine) ───────
+  # ── Local MongoDB Container (Isolated Private Database) ───
   mongodb:
     image: mongo:7
     container_name: urbangaon-mongodb
-    restart: always
+    restart: unless-stopped
     ports:
-      - "27017:27017"
+      # Optional external exposure for MongoDB Compass (LAN only)
+      - "${MONGO_PORT:-27017}:27017"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: urbangaon_admin
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-urbangaon_admin}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-urbangaon_secure_2026}
-      MONGO_INITDB_DATABASE: urbangaon_todo
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:-urbangaon_todo}
     volumes:
-      # Data persists here even if container is removed
+      # Persistent volume managed by Docker (survives NAS reboots & DSM updates)
       - mongodb_data:/data/db
+    networks:
+      - urbangaon-network
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      interval: 15s
+      timeout: 5s
+      retries: 5
       start_period: 20s
     logging:
       driver: "json-file"
@@ -30,44 +34,49 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # ── Next.js App ───────────────────────────────────────────
+  # ── Next.js Application Container ─────────────────────────
   urbangaon-todo:
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
 
     container_name: urbangaon-todo
-    restart: always
+    restart: unless-stopped
 
-    # Only accessible on your local network
+    # Accessible on NAS LAN / Synology Reverse Proxy
     ports:
-      - "3000:3000"
+      - "${APP_PORT:-3000}:3000"
 
-    # Wait for MongoDB to be ready before starting
+    # Wait for MongoDB container healthcheck to pass
     depends_on:
       mongodb:
         condition: service_healthy
 
+    networks:
+      - urbangaon-network
+
     environment:
       - NODE_ENV=production
-      # Points to the LOCAL MongoDB container (not cloud!)
-      - MONGODB_URI=mongodb://urbangaon_admin:${MONGO_PASSWORD:-urbangaon_secure_2026}@mongodb:27017/urbangaon_todo?authSource=admin
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - JWT_SECRET=${JWT_SECRET}
-      - SMTP_HOST=${SMTP_HOST}
-      - SMTP_PORT=${SMTP_PORT}
-      - SMTP_SECURE=${SMTP_SECURE}
-      - SMTP_USER=${SMTP_USER}
-      - SMTP_PASS=${SMTP_PASS}
-      - SMTP_FROM=${SMTP_FROM}
-      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      # Points to the local internal MongoDB container
+      - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME:-urbangaon_admin}:${MONGO_PASSWORD:-urbangaon_secure_2026}@mongodb:27017/${MONGO_INITDB_DATABASE:-urbangaon_todo}?authSource=admin
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - JWT_SECRET=${JWT_SECRET:-urbangaon_nas_jwt_secret_key_2026_ds925}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-465}
+      - SMTP_SECURE=${SMTP_SECURE:-true}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - SMTP_FROM=${SMTP_FROM:-"UrbanGaon Executive Dispatcher" <alerts@urbangaon.com>}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
 
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 1024M
         reservations:
           memory: 256M
 
@@ -84,7 +93,27 @@ services:
         max-size: "10m"
         max-file: "5"
 
-# Persistent volume for MongoDB data
+  # ── Automated Auto-Updater (Watchtower) ────────────────────
+  # Automatically monitors and updates the app container when new builds are published
+  # If using pre-built images from Docker Hub or GHCR, uncomment this service:
+  # watchtower:
+  #   image: containrrr/watchtower
+  #   container_name: urbangaon-watchtower
+  #   restart: unless-stopped
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #   environment:
+  #     - WATCHTOWER_CLEANUP=true
+  #     - WATCHTOWER_POLL_INTERVAL=300
+  #     - WATCHTOWER_INCLUDE_STOPPED=false
+  #   command: urbangaon-todo
+
+# ── Isolated Internal Docker Network ─────────────────────────
+networks:
+  urbangaon-network:
+    driver: bridge
+
+# ── Persistent Storage Volume for MongoDB ───────────────────
 volumes:
   mongodb_data:
     driver: local

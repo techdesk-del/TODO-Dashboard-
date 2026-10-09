@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const taskId = searchParams.get('taskId');
     const actor = searchParams.get('actor');
-    const limit = parseInt(searchParams.get('limit') || '100', 10);
+    const limit = parseInt(searchParams.get('limit') || '1000', 10);
 
     const query: Record<string, unknown> = {};
     if (taskId) query['taskId'] = taskId;
