@@ -73,10 +73,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Verify Password: match hashed password or allow default corporate 'password123'
+    // Verify Password: match hashed password or allow default corporate 'password123' only if employee hasn't set custom password
     let isMatch = await verifyPassword(password, user.passwordHash);
-    if (!isMatch && password === 'password123') {
-      // Self-heal password hash if master default used
+    if (!isMatch && !user.hasCustomPassword && password === 'password123') {
+      // Allow default password for first-time login
       user.passwordHash = await hashPassword(password);
       await user.save();
       isMatch = true;
@@ -84,7 +84,12 @@ export async function POST(req: NextRequest) {
 
     if (!isMatch) {
       return NextResponse.json(
-        { success: false, error: 'Invalid email or password.' },
+        {
+          success: false,
+          error: user.hasCustomPassword
+            ? 'Invalid email or password. If you forgot your password, click "Forgot Password" to receive an email code.'
+            : 'Invalid email or password. Default is password123 or click "Set Password" to configure your personal password.',
+        },
         { status: 401 }
       );
     }

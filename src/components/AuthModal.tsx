@@ -2,7 +2,21 @@
 
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
-import { ShieldCheck, Lock, Mail, X, KeyRound, AlertCircle, CheckCircle2, Building2, ChevronRight, UserCheck } from 'lucide-react';
+import { 
+  ShieldCheck, 
+  Lock, 
+  Mail, 
+  X, 
+  KeyRound, 
+  AlertCircle, 
+  CheckCircle2, 
+  Building2, 
+  ChevronRight, 
+  UserCheck,
+  ArrowLeft,
+  Send,
+  Check
+} from 'lucide-react';
 import { OFFICIAL_ROSTER } from '@/lib/rosterData';
 
 interface AuthModalProps {
@@ -10,12 +24,25 @@ interface AuthModalProps {
   onClose: () => void;
 }
 
+type AuthViewMode = 'LOGIN' | 'FORGOT_REQUEST' | 'FORGOT_VERIFY';
+
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const { setCurrentUser, currentUser, members } = useApp();
+  const [authMode, setAuthMode] = useState<AuthViewMode>('LOGIN');
+
+  // Login credentials
   const [email, setEmail] = useState(currentUser.email || OFFICIAL_ROSTER[0].email);
   const [password, setPassword] = useState('password123');
   const [twoFactorCode, setTwoFactorCode] = useState('');
   const [requires2FA, setRequires2FA] = useState(false);
+
+  // Password Reset / Set state
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetCode, setResetCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
+  // UI status
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -23,12 +50,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
+  const activeEmailForLookup = authMode === 'LOGIN' ? email : (resetEmail || email);
   const selectedEmployee = OFFICIAL_ROSTER.find(
-    emp => emp.email.toLowerCase() === email.trim().toLowerCase() ||
-      emp.aliases?.some(a => a.toLowerCase() === email.trim().toLowerCase())
+    emp => emp.email.toLowerCase() === activeEmailForLookup.trim().toLowerCase() ||
+      emp.aliases?.some(a => a.toLowerCase() === activeEmailForLookup.trim().toLowerCase())
   );
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Standard Login Submit
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
@@ -81,8 +110,119 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
+  // Step 1: Request Password Reset Code
+  const handleRequestResetCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const targetEmail = (resetEmail || email).trim();
+    if (!targetEmail) {
+      setError('Please provide your corporate email address.');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: targetEmail }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to dispatch verification email');
+      }
+
+      setResetEmail(data.email || targetEmail);
+      setSuccess(`Verification code dispatched to ${data.email || targetEmail}! Check your inbox.`);
+      setAuthMode('FORGOT_VERIFY');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to send reset code');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Step 2: Verify Code and Set New Password
+  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+
+    if (!resetCode || resetCode.trim().length !== 6) {
+      setError('Please enter the valid 6-digit verification code sent to your email.');
+      return;
+    }
+
+    if (!newPassword || newPassword.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match. Please verify both fields.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const targetEmail = (resetEmail || email).trim();
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: targetEmail,
+          code: resetCode.trim(),
+          newPassword,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to set new password');
+      }
+
+      // Automatically log the user in
+      const matchedMember = members.find(m => m.email.toLowerCase() === data.user.email.toLowerCase()) ||
+        OFFICIAL_ROSTER.find(m => m.email.toLowerCase() === data.user.email.toLowerCase());
+
+      setCurrentUser({
+        id: data.user.id,
+        name: data.user.name,
+        email: data.user.email,
+        role: data.user.role,
+        department: data.user.department,
+        designation: data.user.designation || 'Specialist',
+        avatar: data.user.avatar || (data.user.name[0] || 'U'),
+        status: 'ACTIVE',
+        totalTasks: matchedMember?.totalTasks ?? 3,
+        completedTasks: matchedMember?.completedTasks ?? 1,
+        activeTasks: matchedMember?.activeTasks ?? 2,
+        overdueTasks: matchedMember?.overdueTasks ?? 0,
+        velocity: matchedMember?.velocity ?? 95,
+      });
+
+      setSuccess(`✓ Password successfully updated! Logged in as ${data.user.name}.`);
+      setTimeout(() => {
+        onClose();
+        setAuthMode('LOGIN');
+        setResetCode('');
+        setNewPassword('');
+        setConfirmPassword('');
+      }, 1300);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error setting password');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const selectEmployee = (empEmail: string) => {
     setEmail(empEmail);
+    setResetEmail(empEmail);
     setPassword('password123');
     setError(null);
     setRequires2FA(false);
@@ -104,10 +244,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             </div>
             <div>
               <div style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>
-                Corporate Employee Sign In
+                {authMode === 'LOGIN' && 'Corporate Employee Sign In'}
+                {authMode === 'FORGOT_REQUEST' && 'Reset / Set Personal Password'}
+                {authMode === 'FORGOT_VERIFY' && 'Verify Email & Set Password'}
               </div>
               <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                UrbanGaon Task Register • Verified Directory Auth
+                {authMode === 'LOGIN' && 'UrbanGaon Task Register • Verified Directory Auth'}
+                {authMode === 'FORGOT_REQUEST' && 'Enter corporate email to receive a secure 6-digit code'}
+                {authMode === 'FORGOT_VERIFY' && 'Enter the verification code sent to your corporate email'}
               </div>
             </div>
           </div>
@@ -117,7 +261,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         </div>
 
         <div style={{ padding: '1.25rem' }}>
-          {/* Quick Select Employee Pill / Toggle */}
+          {/* Quick Select Employee Pill / Toggle (available across all views for convenience) */}
           <div style={{ marginBottom: '1rem' }}>
             <button
               type="button"
@@ -144,7 +288,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     Selected: <strong>{selectedEmployee.name}</strong> ({selectedEmployee.designation})
                   </span>
                 ) : (
-                  <span>Choose Employee from Corporate Directory (11 Members)</span>
+                  <span>Choose Employee from Directory ({OFFICIAL_ROSTER.length} Members)</span>
                 )}
               </span>
               <span style={{ fontSize: '0.72rem', color: '#2563eb', fontWeight: 700 }}>
@@ -165,7 +309,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 padding: '0.35rem'
               }}>
                 {OFFICIAL_ROSTER.map((emp) => {
-                  const isSelected = emp.email.toLowerCase() === email.toLowerCase();
+                  const isSelected = emp.email.toLowerCase() === activeEmailForLookup.toLowerCase();
                   return (
                     <div
                       key={emp.id}
@@ -202,7 +346,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                             {emp.name}
                           </div>
                           <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
-                            {emp.designation} • {emp.department}
+                            {emp.email} • {emp.designation}
                           </div>
                         </div>
                       </div>
@@ -252,71 +396,268 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             </div>
           )}
 
-          {/* Login Form */}
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
-                Corporate Email Address
-              </label>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                border: '1px solid #cbd5e1',
-                borderRadius: '8px',
-                padding: '7px 11px',
-                background: '#ffffff'
-              }}>
-                <Mail size={15} color="#94a3b8" style={{ marginRight: '8px', flexShrink: 0 }} />
-                <input
-                  type="email"
-                  required
-                  style={{ border: 'none', outline: 'none', width: '100%', fontSize: '0.82rem', color: '#0f172a' }}
-                  placeholder="employee@urbangaon.com"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                />
+          {/* VIEW 1: LOGIN FORM */}
+          {authMode === 'LOGIN' && (
+            <form onSubmit={handleLoginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                  Corporate Email Address
+                </label>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '8px',
+                  padding: '7px 11px',
+                  background: '#ffffff'
+                }}>
+                  <Mail size={15} color="#94a3b8" style={{ marginRight: '8px', flexShrink: 0 }} />
+                  <input
+                    type="email"
+                    required
+                    style={{ border: 'none', outline: 'none', width: '100%', fontSize: '0.82rem', color: '#0f172a' }}
+                    placeholder="employee@urbangaon.com"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                  />
+                </div>
+                {selectedEmployee && (
+                  <div style={{ marginTop: '4px', fontSize: '0.7rem', color: '#2563eb', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Building2 size={11} />
+                    <span>{selectedEmployee.department || 'UrbanGaon'} — {selectedEmployee.designation}</span>
+                  </div>
+                )}
               </div>
-              {selectedEmployee && (
-                <div style={{ marginTop: '4px', fontSize: '0.7rem', color: '#2563eb', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Building2 size={11} />
-                  <span>{selectedEmployee.department} — {selectedEmployee.designation}</span>
+
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#334155' }}>
+                    Password
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResetEmail(email);
+                      setAuthMode('FORGOT_REQUEST');
+                      setError(null);
+                      setSuccess(null);
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#2563eb',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      padding: 0,
+                      textDecoration: 'underline'
+                    }}
+                  >
+                    Forgot Password? / Set Password
+                  </button>
+                </div>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '8px',
+                  padding: '7px 11px',
+                  background: '#ffffff'
+                }}>
+                  <Lock size={15} color="#94a3b8" style={{ marginRight: '8px', flexShrink: 0 }} />
+                  <input
+                    type="password"
+                    required
+                    style={{ border: 'none', outline: 'none', width: '100%', fontSize: '0.82rem', color: '#0f172a' }}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                  />
+                </div>
+                <div style={{ marginTop: '4px', fontSize: '0.68rem', color: '#64748b' }}>
+                  First-time login: Default <code>password123</code> or use link above to set your custom password.
+                </div>
+              </div>
+
+              {requires2FA && (
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#2563eb', marginBottom: '4px' }}>
+                    6-Digit 2FA Authenticator Code
+                  </label>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    border: '2px solid #2563eb',
+                    borderRadius: '8px',
+                    padding: '7px 11px',
+                    background: '#eff6ff'
+                  }}>
+                    <KeyRound size={15} color="#2563eb" style={{ marginRight: '8px', flexShrink: 0 }} />
+                    <input
+                      type="text"
+                      maxLength={6}
+                      autoFocus
+                      required
+                      style={{
+                        border: 'none',
+                        outline: 'none',
+                        width: '100%',
+                        fontSize: '0.88rem',
+                        fontWeight: 700,
+                        letterSpacing: '2px',
+                        background: 'transparent'
+                      }}
+                      placeholder="123456"
+                      value={twoFactorCode}
+                      onChange={e => setTwoFactorCode(e.target.value)}
+                    />
+                  </div>
                 </div>
               )}
-            </div>
 
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#334155' }}>
-                  Password
-                </label>
-                <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
-                  Default: <code>password123</code>
-                </span>
-              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-primary"
+                style={{
+                  width: '100%',
+                  justifyContent: 'center',
+                  padding: '9px',
+                  marginTop: '0.35rem',
+                  fontWeight: 700,
+                  fontSize: '0.84rem',
+                  borderRadius: '8px'
+                }}
+              >
+                {loading ? 'Authenticating...' : (requires2FA ? 'Verify 2FA & Enter' : 'Sign In Securely')}
+              </button>
+            </form>
+          )}
+
+          {/* VIEW 2: FORGOT / SET PASSWORD - REQUEST CODE */}
+          {authMode === 'FORGOT_REQUEST' && (
+            <form onSubmit={handleRequestResetCode} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
               <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                border: '1px solid #cbd5e1',
+                background: '#eff6ff',
+                border: '1px solid #bfdbfe',
                 borderRadius: '8px',
-                padding: '7px 11px',
-                background: '#ffffff'
+                padding: '10px 12px',
+                fontSize: '0.74rem',
+                color: '#1e40af',
+                lineHeight: 1.5
               }}>
-                <Lock size={15} color="#94a3b8" style={{ marginRight: '8px', flexShrink: 0 }} />
-                <input
-                  type="password"
-                  required
-                  style={{ border: 'none', outline: 'none', width: '100%', fontSize: '0.82rem', color: '#0f172a' }}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                />
+                📧 <strong>Self-Service Password Setup:</strong> Enter your corporate email address below. A 6-digit verification code will be sent to your inbox to authenticate and set your personal password.
               </div>
-            </div>
 
-            {requires2FA && (
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                  Corporate Email Address
+                </label>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '8px',
+                  padding: '7px 11px',
+                  background: '#ffffff'
+                }}>
+                  <Mail size={15} color="#94a3b8" style={{ marginRight: '8px', flexShrink: 0 }} />
+                  <input
+                    type="email"
+                    required
+                    style={{ border: 'none', outline: 'none', width: '100%', fontSize: '0.82rem', color: '#0f172a' }}
+                    placeholder="employee@urbangaon.com"
+                    value={resetEmail || email}
+                    onChange={e => {
+                      setResetEmail(e.target.value);
+                      setEmail(e.target.value);
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', marginTop: '0.35rem' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode('LOGIN');
+                    setError(null);
+                    setSuccess(null);
+                  }}
+                  className="btn-secondary"
+                  style={{
+                    flex: 1,
+                    justifyContent: 'center',
+                    padding: '8px',
+                    fontSize: '0.8rem',
+                    borderRadius: '8px'
+                  }}
+                >
+                  <ArrowLeft size={14} style={{ marginRight: '4px' }} />
+                  Back
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="btn-primary"
+                  style={{
+                    flex: 2,
+                    justifyContent: 'center',
+                    padding: '8px',
+                    fontWeight: 700,
+                    fontSize: '0.8rem',
+                    borderRadius: '8px'
+                  }}
+                >
+                  <Send size={14} style={{ marginRight: '6px' }} />
+                  {loading ? 'Sending Code...' : 'Send Email Code'}
+                </button>
+              </div>
+
+              <div style={{ textAlign: 'center', marginTop: '0.25rem' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode('FORGOT_VERIFY');
+                    setError(null);
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#64748b',
+                    fontSize: '0.72rem',
+                    cursor: 'pointer',
+                    textDecoration: 'underline'
+                  }}
+                >
+                  Already have a 6-digit verification code? Click here
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* VIEW 3: FORGOT / SET PASSWORD - ENTER CODE & NEW PASSWORD */}
+          {authMode === 'FORGOT_VERIFY' && (
+            <form onSubmit={handleResetPasswordSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              <div style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                padding: '10px 12px',
+                fontSize: '0.74rem',
+                color: '#334155',
+                lineHeight: 1.45
+              }}>
+                Target Account: <strong>{resetEmail || email}</strong>
+                <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '2px' }}>
+                  Please check your inbox (including Spam/Promotions folder) for the 6-digit code.
+                </div>
+              </div>
+
               <div>
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#2563eb', marginBottom: '4px' }}>
-                  6-Digit 2FA Authenticator Code
+                  6-Digit Verification Code
                 </label>
                 <div style={{
                   display: 'flex',
@@ -336,36 +677,138 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                       border: 'none',
                       outline: 'none',
                       width: '100%',
-                      fontSize: '0.88rem',
-                      fontWeight: 700,
-                      letterSpacing: '2px',
-                      background: 'transparent'
+                      fontSize: '0.95rem',
+                      fontWeight: 800,
+                      letterSpacing: '4px',
+                      background: 'transparent',
+                      color: '#0f172a'
                     }}
                     placeholder="123456"
-                    value={twoFactorCode}
-                    onChange={e => setTwoFactorCode(e.target.value)}
+                    value={resetCode}
+                    onChange={e => setResetCode(e.target.value)}
                   />
                 </div>
               </div>
-            )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary"
-              style={{
-                width: '100%',
-                justifyContent: 'center',
-                padding: '9px',
-                marginTop: '0.35rem',
-                fontWeight: 700,
-                fontSize: '0.84rem',
-                borderRadius: '8px'
-              }}
-            >
-              {loading ? 'Authenticating...' : (requires2FA ? 'Verify 2FA & Enter' : 'Sign In Securely')}
-            </button>
-          </form>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                  New Personal Password (Min 6 characters)
+                </label>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '8px',
+                  padding: '7px 11px',
+                  background: '#ffffff'
+                }}>
+                  <Lock size={15} color="#94a3b8" style={{ marginRight: '8px', flexShrink: 0 }} />
+                  <input
+                    type="password"
+                    required
+                    style={{ border: 'none', outline: 'none', width: '100%', fontSize: '0.82rem', color: '#0f172a' }}
+                    placeholder="Enter new password"
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                  Confirm New Password
+                </label>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '8px',
+                  padding: '7px 11px',
+                  background: '#ffffff'
+                }}>
+                  <Check size={15} color="#94a3b8" style={{ marginRight: '8px', flexShrink: 0 }} />
+                  <input
+                    type="password"
+                    required
+                    style={{ border: 'none', outline: 'none', width: '100%', fontSize: '0.82rem', color: '#0f172a' }}
+                    placeholder="Re-enter new password"
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', marginTop: '0.35rem' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode('LOGIN');
+                    setError(null);
+                    setSuccess(null);
+                  }}
+                  className="btn-secondary"
+                  style={{
+                    flex: 1,
+                    justifyContent: 'center',
+                    padding: '8px',
+                    fontSize: '0.8rem',
+                    borderRadius: '8px'
+                  }}
+                >
+                  <ArrowLeft size={14} style={{ marginRight: '4px' }} />
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="btn-primary"
+                  style={{
+                    flex: 2,
+                    justifyContent: 'center',
+                    padding: '8px',
+                    fontWeight: 700,
+                    fontSize: '0.8rem',
+                    borderRadius: '8px'
+                  }}
+                >
+                  {loading ? 'Saving...' : 'Set Password & Sign In'}
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.25rem' }}>
+                <button
+                  type="button"
+                  onClick={handleRequestResetCode}
+                  disabled={loading}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#2563eb',
+                    fontSize: '0.72rem',
+                    cursor: 'pointer',
+                    textDecoration: 'underline'
+                  }}
+                >
+                  Didn't receive code? Resend email
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setAuthMode('FORGOT_REQUEST')}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#64748b',
+                    fontSize: '0.72rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Change Email
+                </button>
+              </div>
+            </form>
+          )}
 
           {/* Enterprise Directory Note */}
           <div style={{
@@ -378,7 +821,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             color: '#64748b',
             lineHeight: 1.45
           }}>
-            🔒 <strong>Enterprise Roster Security:</strong> Self-registration is restricted. All 11 employees are provisioned with their designated department and corporate credentials. Use <code>password123</code> to authenticate.
+            🔒 <strong>Enterprise Self-Service Security:</strong> Every employee is authorized to set and manage their own password via corporate email verification. Default credentials are automatically deactivated once your custom password is set.
           </div>
         </div>
       </div>
