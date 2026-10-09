@@ -223,7 +223,7 @@ export default function Home() {
                 margin: '3rem auto',
                 boxShadow: '0 10px 25px rgba(217, 119, 6, 0.08)'
               }}>
-                <div style={{ fontSize: '2.8rem', marginBottom: '0.75rem' }}>👑🔒</div>
+                <div style={{ fontSize: '2.8rem', marginBottom: '0.75rem' }}>🔒</div>
                 <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#9a3412', marginBottom: '0.5rem' }}>
                   CEO Portal Access Restricted
                 </h2>
@@ -243,8 +243,74 @@ export default function Home() {
               </div>
             )
           )}
-          {activeView === 'admin_hr' && <AdminHrPortal />}
-          {activeView === 'team_view' && <ManagerTeamView />}
+          {activeView === 'admin_hr' && (
+            isCeo ? (
+              <AdminHrPortal />
+            ) : (
+              <div style={{
+                background: '#ffffff',
+                border: '1px solid #cbd5e1',
+                borderRadius: '12px',
+                padding: '2.5rem 1.5rem',
+                textAlign: 'center',
+                maxWidth: '520px',
+                margin: '3rem auto',
+                boxShadow: '0 10px 25px rgba(0,0,0,0.06)'
+              }}>
+                <div style={{ fontSize: '2.8rem', marginBottom: '0.75rem' }}>🔒</div>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1e293b', marginBottom: '0.5rem' }}>
+                  Admin & HR Portal Access Restricted
+                </h2>
+                <p style={{ fontSize: '0.84rem', color: '#64748b', lineHeight: 1.5, marginBottom: '1.25rem' }}>
+                  Organization administration is strictly reserved for <strong>Mr. Sukh Sagar Singh Bhati (CEO)</strong>.
+                  <br /><br />
+                  Logged in as: <strong>{currentUser.name}</strong> ({currentUser.designation})
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setActiveView('workspace')}
+                  className="btn-primary"
+                  style={{ padding: '8px 20px', fontSize: '0.82rem', margin: '0 auto', display: 'inline-flex' }}
+                >
+                  Return to My Workspace
+                </button>
+              </div>
+            )
+          )}
+          {activeView === 'team_view' && (
+            (isCeo || currentUser.role === 'MANAGER') ? (
+              <ManagerTeamView />
+            ) : (
+              <div style={{
+                background: '#ffffff',
+                border: '1px solid #cbd5e1',
+                borderRadius: '12px',
+                padding: '2.5rem 1.5rem',
+                textAlign: 'center',
+                maxWidth: '520px',
+                margin: '3rem auto',
+                boxShadow: '0 10px 25px rgba(0,0,0,0.06)'
+              }}>
+                <div style={{ fontSize: '2.8rem', marginBottom: '0.75rem' }}>🔒</div>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1e293b', marginBottom: '0.5rem' }}>
+                  Management Access Restricted
+                </h2>
+                <p style={{ fontSize: '0.84rem', color: '#64748b', lineHeight: 1.5, marginBottom: '1.25rem' }}>
+                  Team management view is restricted to Reporting Managers and CEO.
+                  <br /><br />
+                  Logged in as: <strong>{currentUser.name}</strong> ({currentUser.designation})
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setActiveView('workspace')}
+                  className="btn-primary"
+                  style={{ padding: '8px 20px', fontSize: '0.82rem', margin: '0 auto', display: 'inline-flex' }}
+                >
+                  Return to My Workspace
+                </button>
+              </div>
+            )
+          )}
           {activeView === 'audit_trail' && <AuditTrailModal />}
           {activeView === 'system_config' && <SystemConfigModal />}
           {activeView === 'workflow_manual' && (isCeo ? <WorkflowManualModal /> : null)}

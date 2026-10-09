@@ -3,12 +3,12 @@ import { parseSpeechOrTextCommand } from '@/lib/aiParser';
 
 export async function POST(request: Request) {
   try {
-    const { prompt } = await request.json();
+    const { prompt, currentUser } = await request.json();
     if (!prompt) {
       return NextResponse.json({ success: false, error: 'Prompt is required' }, { status: 400 });
     }
 
-    const parsed = parseSpeechOrTextCommand(prompt);
+    const parsed = parseSpeechOrTextCommand(prompt, currentUser);
     return NextResponse.json({
       success: true,
       extracted: parsed,

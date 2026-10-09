@@ -1,8 +1,9 @@
-import { ParsedVoiceEntity, TaskPriority } from '@/types';
+import { ParsedVoiceEntity, TaskPriority, TeamMember } from '@/types';
 import { INITIAL_MEMBERS } from './mockData';
 import { getTodayStr, getTomorrowStr } from './dateUtils';
+import { isCeoUser } from './rosterData';
 
-export function parseSpeechOrTextCommand(input: string): ParsedVoiceEntity {
+export function parseSpeechOrTextCommand(input: string, currentUser?: TeamMember): ParsedVoiceEntity {
   const startTime = performance.now();
   const text = input.trim();
   const lower = text.toLowerCase();
@@ -46,40 +47,47 @@ export function parseSpeechOrTextCommand(input: string): ParsedVoiceEntity {
   }
 
   // 4. Extract Assignee
-  let matchedAssignee = INITIAL_MEMBERS[0]; // default Mr. Sukh Sagar Singh Bhati (CEO)
+  // If user is a regular employee, tasks are STRICTLY locked to themselves (non-CEOs cannot delegate tasks to others)
+  const isCeo = currentUser ? isCeoUser(currentUser) : true;
+  let matchedAssignee: TeamMember = currentUser || INITIAL_MEMBERS[0];
   let bestScore = 0;
 
-  for (const member of INITIAL_MEMBERS) {
-    const memNameLower = member.name.toLowerCase();
-    const parts = memNameLower.split(' ').filter(p => !['mr.', 'mr', 'dr.', 'dr'].includes(p));
-    const deptLower = member.department.toLowerCase();
+  if (isCeo) {
+    for (const member of INITIAL_MEMBERS) {
+      const memNameLower = member.name.toLowerCase();
+      const parts = memNameLower.split(' ').filter(p => !['mr.', 'mr', 'dr.', 'dr'].includes(p));
+      const deptLower = member.department.toLowerCase();
 
-    // Check CEO keywords
-    if (member.role === 'SUPER_ADMIN' && (lower.includes('ceo') || lower.includes('bhati') || lower.includes('sukh sagar'))) {
-      matchedAssignee = member;
-      bestScore = 110;
-      break;
-    }
-
-    if (lower.includes(memNameLower)) {
-      matchedAssignee = member;
-      bestScore = 100;
-      break;
-    }
-
-    // Check individual name parts (e.g. "Ayaz", "Yudhister", "Pratap", "Utkarsh", "Kanchan", "Rekha", "Sharmila", "Satya")
-    for (const part of parts) {
-      if (part.length > 2 && lower.includes(part) && bestScore < 85) {
+      // Check CEO keywords
+      if (member.role === 'SUPER_ADMIN' && (lower.includes('ceo') || lower.includes('bhati') || lower.includes('sukh sagar'))) {
         matchedAssignee = member;
-        bestScore = 85;
+        bestScore = 110;
+        break;
+      }
+
+      if (lower.includes(memNameLower)) {
+        matchedAssignee = member;
+        bestScore = 100;
+        break;
+      }
+
+      // Check individual name parts (e.g. "Ayaz", "Yudhister", "Pratap", "Utkarsh", "Kanchan", "Rekha", "Sharmila", "Satya")
+      for (const part of parts) {
+        if (part.length > 2 && lower.includes(part) && bestScore < 85) {
+          matchedAssignee = member;
+          bestScore = 85;
+        }
+      }
+
+      // Check department keywords
+      if (lower.includes(deptLower) && bestScore < 60) {
+        matchedAssignee = member;
+        bestScore = 60;
       }
     }
-
-    // Check department keywords
-    if (lower.includes(deptLower) && bestScore < 60) {
-      matchedAssignee = member;
-      bestScore = 60;
-    }
+  } else if (currentUser) {
+    // Regular employee: locked to logged-in employee
+    matchedAssignee = currentUser;
   }
 
   // 5. Extract Title

@@ -199,7 +199,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                         </div>
                         <div>
                           <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f172a' }}>
-                            {emp.name} {emp.role === 'SUPER_ADMIN' && '👑'}
+                            {emp.name}
                           </div>
                           <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
                             {emp.designation} • {emp.department}

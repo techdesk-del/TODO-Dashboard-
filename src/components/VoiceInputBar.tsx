@@ -33,7 +33,7 @@ export const VoiceInputBar: React.FC = () => {
               .map((result: any) => result[0].transcript)
               .join('');
             setCurrentTranscription(transcript);
-            const parsed = parseSpeechOrTextCommand(transcript);
+            const parsed = parseSpeechOrTextCommand(transcript, currentUser);
             setExtractedData(parsed);
           };
 
@@ -51,11 +51,12 @@ export const VoiceInputBar: React.FC = () => {
         }
       }
     }
-  }, []);
+  }, [currentUser]);
 
   const parseWithGeminiOrLocal = async (text: string) => {
+    const isCeo = isCeoUser(currentUser);
     // 1. Instant local parsing (<5ms)
-    const local = parseSpeechOrTextCommand(text);
+    const local = parseSpeechOrTextCommand(text, currentUser);
     setExtractedData(local);
     setAiModelLabel('Local Parser (<180ms)');
 
@@ -69,7 +70,12 @@ export const VoiceInputBar: React.FC = () => {
       if (res.ok) {
         const json = await res.json();
         if (json.success && json.data) {
-          setExtractedData(json.data);
+          // If non-CEO, task MUST stay assigned to the logged-in employee (cannot delegate to other colleagues)
+          const finalAssignee = !isCeo ? currentUser.name : (json.data.assigneeName || currentUser.name);
+          setExtractedData({
+            ...json.data,
+            assigneeName: finalAssignee,
+          });
           setAiModelLabel(json.meta?.model || 'Google Gemini AI');
         }
       }
@@ -82,7 +88,11 @@ export const VoiceInputBar: React.FC = () => {
     setIsListening(true);
     setShowStreamModal(true);
 
-    const samplePrompt = "Schedule site inspection today at 5:00 PM assigned to Ayaz on high priority";
+    const isCeo = isCeoUser(currentUser);
+    // If CEO, sample illustrates delegation; if employee, sample creates deliverable for themselves
+    const samplePrompt = isCeo
+      ? "Schedule site inspection today at 5:00 PM assigned to Ayaz on high priority"
+      : `Schedule site inspection today at 5:00 PM on high priority`;
     setCurrentTranscription(samplePrompt);
     parseWithGeminiOrLocal(samplePrompt);
 
@@ -104,12 +114,12 @@ export const VoiceInputBar: React.FC = () => {
     soundEngine.playSuccessChime();
 
     // Parse immediately with deterministic entity extractor
-    const parsed = parseSpeechOrTextCommand(rawText);
+    const parsed = parseSpeechOrTextCommand(rawText, currentUser);
     const isCeo = isCeoUser(currentUser);
-    const explicitlyMatched = parsed.assigneeName
+    const explicitlyMatched = (isCeo && parsed.assigneeName)
       ? members.find(m => m.name.toLowerCase().includes(parsed.assigneeName.toLowerCase()))
       : null;
-    const targetMember = explicitlyMatched || (isCeo ? (members.find(m => m.role !== 'SUPER_ADMIN') || members[0]) : currentUser);
+    const targetMember = explicitlyMatched || currentUser;
 
     addTask({
       title: parsed.title,
@@ -147,10 +157,10 @@ export const VoiceInputBar: React.FC = () => {
     soundEngine.playSuccessChime();
 
     const isCeo = isCeoUser(currentUser);
-    const explicitlyMatched = extractedData.assigneeName
+    const explicitlyMatched = (isCeo && extractedData.assigneeName)
       ? members.find(m => m.name.toLowerCase().includes(extractedData.assigneeName.toLowerCase()))
       : null;
-    const targetMember = explicitlyMatched || (isCeo ? (members.find(m => m.role !== 'SUPER_ADMIN') || members[0]) : currentUser);
+    const targetMember = explicitlyMatched || currentUser;
 
     addTask({
       title: extractedData.title,
@@ -226,11 +236,11 @@ export const VoiceInputBar: React.FC = () => {
                 <span>LIVE LISTENING STREAM • Audio Processed in Real-Time</span>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+              <div className="stream-modal-header-meta">
+                <span className="stream-latency-label">
                   Latency: <strong>{extractedData?.latencyMs || 94}ms</strong> · Engine: <strong style={{ color: '#2563eb' }}>{aiModelLabel}</strong>
                 </span>
-                <button className="calendar-nav-btn" onClick={() => setShowStreamModal(false)}>
+                <button className="calendar-nav-btn" onClick={() => setShowStreamModal(false)} aria-label="Close dialog">
                   <X size={16} />
                 </button>
               </div>
@@ -289,12 +299,12 @@ export const VoiceInputBar: React.FC = () => {
             </div>
 
             {/* Confirmation Buttons */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
-              <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+            <div className="stream-modal-footer">
+              <span className="stream-modal-footer-meta">
                 Slide 6 Verification · Entity Extraction in <strong>{extractedData?.latencyMs || 94}ms</strong>
               </span>
 
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <div className="stream-modal-footer-actions">
                 <button
                   type="button"
                   className="btn-secondary"
@@ -308,7 +318,7 @@ export const VoiceInputBar: React.FC = () => {
                   onClick={handleConfirmAndSave}
                 >
                   <Check size={14} />
-                  Confirm & Sync to MongoDB Atlas
+                  <span>Confirm & Sync to MongoDB Atlas</span>
                 </button>
               </div>
             </div>

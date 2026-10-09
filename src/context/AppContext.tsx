@@ -416,17 +416,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       department: newTaskData.department || currentUser.department,
       project: newTaskData.project || 'Core Infrastructure',
       location: newTaskData.location || 'Bangalore HQ',
-      assignees: newTaskData.assignees || [
-        {
-          id: currentUser.id,
-          name: currentUser.name,
-          email: currentUser.email,
-          department: currentUser.department,
-          designation: currentUser.designation,
-          avatar: currentUser.avatar,
-          status: 'In Progress',
-        }
-      ],
+      assignees: (isCeoUser(currentUser) && newTaskData.assignees && newTaskData.assignees.length > 0)
+        ? newTaskData.assignees
+        : [
+            {
+              id: currentUser.id,
+              name: currentUser.name,
+              email: currentUser.email,
+              department: currentUser.department,
+              designation: currentUser.designation,
+              avatar: currentUser.avatar,
+              status: 'In Progress',
+            }
+          ],
       creator: {
         id: currentUser.id,
         name: currentUser.name,
@@ -624,6 +626,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const clearAllTasks = async () => {
+    if (!isCeoUser(currentUser)) {
+      alert("Access Restricted: Only CEO Mr. Sukh Sagar Singh Bhati has permission to wipe company deliverables.");
+      return;
+    }
+
     // Optimistically clear local state
     setTasks([]);
     try {
@@ -685,6 +692,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteTask = async (taskId: string) => {
+    if (!isCeoUser(currentUser)) {
+      alert("Access Restricted: Only CEO Mr. Sukh Sagar Singh Bhati has permission to permanently delete deliverables.");
+      return;
+    }
+
     const targetTask = tasks.find(t => t.id === taskId);
     deletedIdsRef.current.add(taskId);
 

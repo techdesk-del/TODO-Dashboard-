@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Task, TaskPriority, TaskStatus } from '@/types';
 import { useApp } from '@/context/AppContext';
+import { isCeoUser } from '@/lib/rosterData';
 import { 
   Clock, 
   User, 
@@ -32,9 +33,12 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
     reopenTask,
     deleteTask,
     members,
+    currentUser,
     systemConfig,
     setViewingAuditForTaskId
   } = useApp();
+
+  const isCeo = isCeoUser(currentUser);
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -85,6 +89,12 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
   };
 
   const handleSaveInline = () => {
+    if (!isCeo) {
+      alert("Access Restricted: Only CEO Mr. Sukh Sagar Singh Bhati has permission to edit deliverable details.");
+      setIsInlineEditing(false);
+      return;
+    }
+
     const selectedMember = members.find(m => m.id === editedAssigneeId) || members[1];
     const oldTime = task.time;
 
@@ -130,6 +140,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
 
   const handleConfirmReschedule = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isCeo) {
+      alert("Access Restricted: Only CEO Mr. Sukh Sagar Singh Bhati has permission to reschedule deliverables.");
+      setShowRescheduleModal(false);
+      return;
+    }
     updateTask(task.id, { scheduledDate: rescheduleDateInput }, `Rescheduled deliverable to ${rescheduleDateInput}`);
     setShowRescheduleModal(false);
   };
@@ -415,25 +430,31 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
         </div>
 
         <div className="task-actions-group">
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={() => setIsInlineEditing(true)}
-            title="Inline Edit Mode (Slide 8)"
-          >
-            <Edit3 size={13} color="#2563eb" />
-            Edit Task
-          </button>
+          {/* Executive Edit: CEO Only */}
+          {isCeo && (
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setIsInlineEditing(true)}
+              title="Executive Inline Edit (CEO Only)"
+            >
+              <Edit3 size={13} color="#2563eb" />
+              Edit Task
+            </button>
+          )}
 
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={() => setShowRescheduleModal(true)}
-            title="Reschedule Task Date"
-          >
-            <CalendarIcon size={13} color="#64748b" />
-            Reschedule
-          </button>
+          {/* Reschedule Date: CEO Only */}
+          {isCeo && (
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setShowRescheduleModal(true)}
+              title="Reschedule Task Date (CEO Only)"
+            >
+              <CalendarIcon size={13} color="#64748b" />
+              Reschedule
+            </button>
+          )}
 
           <button
             type="button"
@@ -465,15 +486,18 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
             <ShieldCheck size={13} color="#059669" />
           </button>
 
-          <button
-            type="button"
-            className="btn-secondary btn-delete-task"
-            onClick={() => setShowDeleteModal(true)}
-            title="Delete Deliverable (Permanent / Remove)"
-            style={{ padding: '0.4rem 0.5rem', color: '#dc2626', borderColor: '#fca5a5' }}
-          >
-            <Trash2 size={13} color="#dc2626" />
-          </button>
+          {/* Permanent Delete Deliverable: CEO Only */}
+          {isCeo && (
+            <button
+              type="button"
+              className="btn-secondary btn-delete-task"
+              onClick={() => setShowDeleteModal(true)}
+              title="Delete Deliverable (Permanent / CEO Only)"
+              style={{ padding: '0.4rem 0.5rem', color: '#dc2626', borderColor: '#fca5a5' }}
+            >
+              <Trash2 size={13} color="#dc2626" />
+            </button>
+          )}
 
           {isCompleted && (
             <button
@@ -726,6 +750,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
                 style={{ background: '#dc2626', borderColor: '#b91c1c', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
                 disabled={isDeleting}
                 onClick={async () => {
+                  if (!isCeo) {
+                    alert("Access Restricted: Only CEO Mr. Sukh Sagar Singh Bhati has permission to permanently delete tasks.");
+                    setShowDeleteModal(false);
+                    return;
+                  }
                   setIsDeleting(true);
                   await deleteTask(task.id);
                   setIsDeleting(false);

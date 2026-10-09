@@ -40,7 +40,7 @@ export const OFFICIAL_ROSTER: OfficialEmployeeConfig[] = [
     email: 'aakash.das@urbangaon.com',
     aliases: ['aakash@urbangaon.com', 'it@urbangaon.com', 'akash.das@urbangaon.com'],
     role: 'ADMIN',
-    department: 'AI & IT',
+    department: '',
     designation: 'AI & IT Officer',
     avatar: 'AD',
     totalTasks: 4,

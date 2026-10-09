@@ -296,7 +296,7 @@ export const Sidebar: React.FC = () => {
             </button>
           )}
 
-          {isTalentOrAdmin && (
+          {isCeo && (
             <button
               className={`nav-link-item ${activeView === 'admin_hr' ? 'active' : ''}`}
               onClick={() => { setActiveView('admin_hr'); closeSidebar(); }}

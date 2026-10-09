@@ -54,6 +54,10 @@ export const Header: React.FC = () => {
   ];
 
   const handleClearData = async () => {
+    if (!isCeo) {
+      alert("Access Restricted: Only CEO Mr. Sukh Sagar Singh Bhati can clear company deliverables.");
+      return;
+    }
     const isConfirmed = confirm(
       'Are you sure you want to clear ALL deliverables from MongoDB Atlas and local memory?\n\nThis will reset the board to 0 tasks so you can test with fresh data.'
     );
@@ -297,6 +301,11 @@ export const Header: React.FC = () => {
                 <div
                   key={opt.role}
                   onClick={() => {
+                    if (!isCeo) {
+                      alert("Access Restricted: Organizational role modifications are strictly restricted to CEO Mr. Sukh Sagar Singh Bhati.");
+                      setIsRoleMenuOpen(false);
+                      return;
+                    }
                     if (opt.role === 'SUPER_ADMIN' && currentUser.email !== 'ceo@urbangaon.com') {
                       alert("Access Restricted: Super Admin / CEO privileges require signing in as Mr. Sukh Sagar Singh Bhati (ceo@urbangaon.com).");
                       setIsAuthModalOpen(true);

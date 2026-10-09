@@ -1122,6 +1122,19 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
   padding-bottom: 0.6rem;
   flex-wrap: wrap;
   gap: 0.5rem;
+  width: 100%;
+}
+
+.stream-modal-header-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.stream-latency-label {
+  font-size: clamp(0.68rem, 2vw, 0.75rem);
+  color: #64748b;
 }
 
 .stream-live-pill {
@@ -1167,7 +1180,7 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
 /* Auto-fit entity grid: 4 → 2 → 1 naturally */
 .entity-grid-4 {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(135px, 100%), 1fr));
   gap: clamp(0.4rem, 2vw, 0.75rem);
 }
 
@@ -1184,6 +1197,31 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
 
 .entity-card-num { font-size: clamp(0.55rem, 1.5vw, 0.62rem); font-weight: 800; color: #2563eb; text-transform: uppercase; letter-spacing: 0.04em; }
 .entity-card-val { font-size: clamp(0.72rem, 2vw, 0.85rem); font-weight: 700; color: #0f172a; overflow-wrap: break-word; }
+
+/* Stream Modal Footer */
+.stream-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 0.85rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.stream-modal-footer-meta {
+  font-size: clamp(0.68rem, 2vw, 0.75rem);
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.stream-modal-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
 
 /* ------------------------------------------------------------------ */
 /* 14. CEO PORTAL                                                       */
@@ -1490,8 +1528,64 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
     justify-content: center;
   }
 
-  /* Stream modal full bleed padding */
-  .stream-modal-card { padding: clamp(0.75rem, 4vw, 1.25rem); }
+  /* Stream modal full bleed padding & responsive layout */
+  .stream-modal-card {
+    padding: clamp(0.75rem, 3.5vw, 1.25rem);
+    max-height: 92dvh;
+    border-radius: var(--radius-md);
+  }
+
+  .stream-live-pill {
+    font-size: 0.68rem;
+    white-space: normal;
+    padding: 0.2rem 0.5rem;
+  }
+
+  .stream-modal-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .stream-modal-header-meta {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .stream-modal-footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 0.65rem;
+  }
+
+  .stream-modal-footer-actions {
+    width: 100%;
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .stream-modal-footer-actions .btn-secondary {
+    flex: 0 0 auto;
+    min-width: 70px;
+    justify-content: center;
+    padding: 0.45rem 0.65rem;
+  }
+
+  .stream-modal-footer-actions .btn-primary {
+    flex: 1;
+    justify-content: center;
+    white-space: normal;
+    text-align: center;
+    padding: 0.45rem 0.65rem;
+    font-size: clamp(0.68rem, 2.8vw, 0.75rem);
+    min-height: 38px;
+    line-height: 1.2;
+  }
+
+  .stream-modal-footer-meta {
+    text-align: center;
+    font-size: 0.68rem;
+  }
 }
 
 /* ── ≤ 480px ────────────────────────────────────────────────────────── */
@@ -1519,6 +1613,17 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
   .bottom-task-bar {
     padding: clamp(0.5rem, 3vw, 0.65rem) clamp(0.5rem, 3vw, 0.85rem);
     gap: clamp(0.3rem, 2vw, 0.5rem);
+  }
+
+  @media (max-width: 390px) {
+    .stream-modal-footer-actions {
+      flex-direction: column-reverse;
+    }
+    .stream-modal-footer-actions .btn-secondary,
+    .stream-modal-footer-actions .btn-primary {
+      width: 100%;
+      justify-content: center;
+    }
   }
 }
 

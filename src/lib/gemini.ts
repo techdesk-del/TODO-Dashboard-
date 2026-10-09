@@ -93,7 +93,7 @@ Do NOT include markdown backticks or commentary, only raw JSON.`;
       scheduledDate: parsed.scheduledDate || '2026-09-15',
       time: parsed.time || '05:00 PM',
       priority: (parsed.priority || 'NORMAL') as 'URGENT' | 'HIGH' | 'NORMAL',
-      assigneeName: parsed.assigneeName || 'Ayaz',
+      assigneeName: parsed.assigneeName || 'Unassigned',
       department: parsed.department || 'Civil',
       latencyMs: Date.now() - t0,
       confidence: parsed.confidence || 0.98,
