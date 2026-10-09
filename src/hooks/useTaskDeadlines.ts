@@ -22,6 +22,7 @@ export function useTaskDeadlines() {
       setNotificationPermission(Notification.permission);
     }
   }, []);
+  
 
   const requestPermission = useCallback(async () => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
