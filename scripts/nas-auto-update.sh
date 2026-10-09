@@ -6,9 +6,21 @@
 
 PROJECT_DIR="/volume1/docker/urbangaon-todo"
 LOG_FILE="$PROJECT_DIR/deploy.log"
+LOCK_FILE="/tmp/nas_auto_update.lock"
 BRANCH="main"
 
+# Ensure docker and git paths are in PATH
+export PATH="/usr/local/bin:/usr/bin:/bin:/usr/syno/bin:$PATH"
+
+# Prevent concurrent builds
+if [ -f "$LOCK_FILE" ]; then
+  exit 0
+fi
+
 cd "$PROJECT_DIR" || exit 1
+
+# Prevent git dubious ownership error on Synology DSM
+git config --global --add safe.directory "$PROJECT_DIR" >/dev/null 2>&1
 
 # Timestamp logger
 log() {
@@ -19,11 +31,12 @@ log() {
 git fetch origin "$BRANCH" --quiet 2>> "$LOG_FILE"
 
 # Compare local commit with remote commit
-LOCAL_HASH=$(git rev-parse HEAD)
-REMOTE_HASH=$(git rev-parse origin/"$BRANCH")
+LOCAL_HASH=$(git rev-parse HEAD 2>/dev/null)
+REMOTE_HASH=$(git rev-parse origin/"$BRANCH" 2>/dev/null)
 
-if [ "$LOCAL_HASH" != "$REMOTE_HASH" ]; then
-  log "🚀 New commit detected on $BRANCH ($LOCAL_HASH -> $REMOTE_HASH). Starting deployment..."
+if [ -n "$REMOTE_HASH" ] && [ "$LOCAL_HASH" != "$REMOTE_HASH" ]; then
+  touch "$LOCK_FILE"
+  log "🚀 New commit detected on $BRANCH ($LOCAL_HASH -> $REMOTE_HASH). Starting auto-deployment..."
 
   # Pull latest code
   git pull origin "$BRANCH" >> "$LOG_FILE" 2>&1
@@ -42,7 +55,8 @@ if [ "$LOCAL_HASH" != "$REMOTE_HASH" ]; then
   docker image prune -f >> "$LOG_FILE" 2>&1
 
   log "✅ Deployment completed successfully! Running commit: $(git rev-parse --short HEAD)"
+  rm -f "$LOCK_FILE"
 else
-  # No changes detected; silent exit to avoid log bloating
+  # No changes detected; silent exit
   exit 0
 fi

@@ -90,7 +90,7 @@ export default function Home() {
                     </div>
                     <div>
                       <div className="sync-banner-title">
-                        Task Successfully Scheduled via Voice AI
+                        {bannerNotification.badge === 'AUTHENTICATED' ? 'Corporate Session Active' : 'Task Successfully Scheduled via Voice AI'}
                       </div>
                       <div className="sync-banner-subtitle">
                         {bannerNotification.message}

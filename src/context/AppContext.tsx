@@ -84,6 +84,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [dbStatus, setDbStatus] = useState<DBStatus>('connecting');
   const deletedIdsRef = useRef<Set<string>>(new Set());
 
+  // Auto-dismiss banner notifications after 4 seconds
+  useEffect(() => {
+    if (bannerNotification) {
+      const timer = setTimeout(() => {
+        setBannerNotification(null);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [bannerNotification]);
+
   // ── Sync with MongoDB Atlas & LocalStorage ───────────────────────
   const refreshFromDB = useCallback(async (isSilent = true) => {
     try {

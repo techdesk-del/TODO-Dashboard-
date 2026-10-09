@@ -29,9 +29,12 @@ export async function POST(req: NextRequest) {
 
     const cleanEmail = email.trim().toLowerCase();
     const officialEmp = findOfficialEmployeeByEmail(cleanEmail);
-    const lookupEmail = officialEmp ? officialEmp.email.toLowerCase() : cleanEmail;
 
-    let user = await UserModel.findOne({ email: lookupEmail });
+    let user = await UserModel.findOne(
+      officialEmp
+        ? { $or: [{ id: officialEmp.id }, { email: officialEmp.email.toLowerCase() }, { email: cleanEmail }] }
+        : { email: cleanEmail }
+    );
 
     // Auto-provision if user exists in official roster or Member directory but not yet in UserModel
     if (!user) {
@@ -51,7 +54,7 @@ export async function POST(req: NextRequest) {
           createdAt: new Date().toISOString(),
         });
       } else {
-        const member = await MemberModel.findOne({ email: lookupEmail });
+        const member = await MemberModel.findOne({ email: cleanEmail });
         if (member) {
           const defaultHash = await hashPassword('password123');
           user = await UserModel.create({
@@ -81,8 +84,9 @@ export async function POST(req: NextRequest) {
     const expiresMinutes = 15;
     const expiresDate = new Date(Date.now() + expiresMinutes * 60 * 1000);
 
+    // Save token directly on this exact existing employee account
     await UserModel.collection.updateOne(
-      { email: user.email },
+      { _id: user._id },
       {
         $set: {
           resetPasswordToken: resetCode,
@@ -91,20 +95,23 @@ export async function POST(req: NextRequest) {
       }
     );
 
-    // Dispatch email
+    // Dispatch email to target address requested for testing / notification
+    const targetDispatchEmail = cleanEmail.includes('@') ? cleanEmail : user.email;
+
     const emailResult = await sendPasswordResetEmail({
-      toEmail: user.email,
+      toEmail: targetDispatchEmail,
       toName: user.name,
       resetCode,
       expiresMinutes,
     });
 
-    console.log(`[Auth/ForgotPassword] ✓ Dispatched reset code to ${user.email} (MessageId: ${emailResult.messageId || 'ok'})`);
+    console.log(`[Auth/ForgotPassword] ✓ Dispatched reset code to ${targetDispatchEmail} for ${user.name} (${user.id})`);
 
     return NextResponse.json({
       success: true,
-      message: `Verification code sent to corporate email ${user.email}. Check your inbox.`,
-      email: user.email,
+      message: `Verification code sent to corporate email ${targetDispatchEmail}. Check your inbox.`,
+      email: cleanEmail,
+      accountEmail: user.email,
       name: user.name,
       isTestAccount: emailResult.isTestAccount,
       previewUrl: emailResult.previewUrl,

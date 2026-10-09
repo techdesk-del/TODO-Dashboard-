@@ -35,7 +35,11 @@ export async function POST(req: NextRequest) {
     const officialEmp = findOfficialEmployeeByEmail(cleanEmail);
     const lookupEmail = officialEmp ? officialEmp.email.toLowerCase() : cleanEmail;
 
-    const user = await UserModel.collection.findOne({ email: lookupEmail });
+    const user = await UserModel.collection.findOne(
+      officialEmp
+        ? { $or: [{ id: officialEmp.id }, { email: officialEmp.email.toLowerCase() }, { email: cleanEmail }] }
+        : { email: cleanEmail }
+    );
 
     if (!user) {
       return NextResponse.json(

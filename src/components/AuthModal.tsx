@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
 import { 
   ShieldCheck, 
@@ -27,12 +27,12 @@ interface AuthModalProps {
 type AuthViewMode = 'LOGIN' | 'FORGOT_REQUEST' | 'FORGOT_VERIFY';
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
-  const { setCurrentUser, currentUser, members } = useApp();
+  const { setCurrentUser, currentUser, members, setActiveView, setBannerNotification } = useApp();
   const [authMode, setAuthMode] = useState<AuthViewMode>('LOGIN');
 
   // Login credentials
-  const [email, setEmail] = useState(currentUser.email || OFFICIAL_ROSTER[0].email);
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState(currentUser?.email || OFFICIAL_ROSTER[0].email);
+  const [password, setPassword] = useState('');
   const [twoFactorCode, setTwoFactorCode] = useState('');
   const [requires2FA, setRequires2FA] = useState(false);
 
@@ -48,6 +48,42 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [success, setSuccess] = useState<string | null>(null);
   const [showRosterQuickPick, setShowRosterQuickPick] = useState(false);
 
+  // Ref to prevent timer overlap or auto-close when user is interacting
+  const closeTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const clearCloseTimer = () => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  };
+
+  const handleModalClose = () => {
+    clearCloseTimer();
+    setSuccess(null);
+    setError(null);
+    onClose();
+  };
+
+  // Reset transient error/success states and timers whenever modal opens
+  useEffect(() => {
+    if (isOpen) {
+      clearCloseTimer();
+      setSuccess(null);
+      setError(null);
+      setLoading(false);
+      setRequires2FA(false);
+      setShowRosterQuickPick(false);
+      setPassword('');
+      if (currentUser?.email) {
+        setEmail(currentUser.email);
+      }
+    }
+    return () => {
+      clearCloseTimer();
+    };
+  }, [isOpen, currentUser?.email]);
+
   if (!isOpen) return null;
 
   const activeEmailForLookup = authMode === 'LOGIN' ? email : (resetEmail || email);
@@ -59,6 +95,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   // Standard Login Submit
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    clearCloseTimer();
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -82,8 +119,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       }
 
       // Find matching member from local members list or fallback to official roster data
-      const matchedMember = members.find(m => m.email.toLowerCase() === data.user.email.toLowerCase()) ||
-        OFFICIAL_ROSTER.find(m => m.email.toLowerCase() === data.user.email.toLowerCase());
+      const matchedMember = members.find(m => m.id === data.user.id || m.email.toLowerCase() === data.user.email.toLowerCase()) ||
+        OFFICIAL_ROSTER.find(m => m.id === data.user.id || m.email.toLowerCase() === data.user.email.toLowerCase());
 
       setCurrentUser({
         id: data.user.id,
@@ -101,8 +138,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         velocity: matchedMember?.velocity ?? 95,
       });
 
-      setSuccess(`Authenticated as ${data.user.name} (${data.user.designation})!`);
-      setTimeout(() => onClose(), 1100);
+      // Immediately redirect to main workspace dashboard
+      setActiveView('workspace');
+      setBannerNotification({
+        message: `Welcome, ${data.user.name} (${data.user.designation})! Authenticated successfully.`,
+        badge: 'AUTHENTICATED',
+      });
+
+      // Close modal immediately
+      clearCloseTimer();
+      handleModalClose();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'An error occurred during authentication');
     } finally {
@@ -113,6 +158,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   // Step 1: Request Password Reset Code
   const handleRequestResetCode = async (e: React.FormEvent) => {
     e.preventDefault();
+    clearCloseTimer();
     const targetEmail = (resetEmail || email).trim();
     if (!targetEmail) {
       setError('Please provide your corporate email address.');
@@ -148,6 +194,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   // Step 2: Verify Code and Set New Password
   const handleResetPasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    clearCloseTimer();
     setError(null);
     setSuccess(null);
 
@@ -186,8 +233,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       }
 
       // Automatically log the user in
-      const matchedMember = members.find(m => m.email.toLowerCase() === data.user.email.toLowerCase()) ||
-        OFFICIAL_ROSTER.find(m => m.email.toLowerCase() === data.user.email.toLowerCase());
+      const matchedMember = members.find(m => m.id === data.user.id || m.email.toLowerCase() === data.user.email.toLowerCase()) ||
+        OFFICIAL_ROSTER.find(m => m.id === data.user.id || m.email.toLowerCase() === data.user.email.toLowerCase());
 
       setCurrentUser({
         id: data.user.id,
@@ -205,14 +252,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         velocity: matchedMember?.velocity ?? 95,
       });
 
-      setSuccess(`✓ Password successfully updated! Logged in as ${data.user.name}.`);
-      setTimeout(() => {
-        onClose();
-        setAuthMode('LOGIN');
-        setResetCode('');
-        setNewPassword('');
-        setConfirmPassword('');
-      }, 1300);
+      // Immediately redirect to main workspace dashboard
+      setActiveView('workspace');
+      setBannerNotification({
+        message: `Personal password configured successfully! Logged in as ${data.user.name}.`,
+        badge: 'AUTHENTICATED',
+      });
+
+      clearCloseTimer();
+      handleModalClose();
+      setAuthMode('LOGIN');
+      setResetCode('');
+      setNewPassword('');
+      setConfirmPassword('');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error setting password');
     } finally {
@@ -221,20 +273,32 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   };
 
   const selectEmployee = (empEmail: string) => {
+    clearCloseTimer();
     setEmail(empEmail);
     setResetEmail(empEmail);
-    setPassword('password123');
+    setPassword('');
     setError(null);
+    setSuccess(null);
     setRequires2FA(false);
     setShowRosterQuickPick(false);
   };
 
   return (
-    <div className="stream-overlay" onClick={onClose}>
+    <div 
+      className="stream-overlay" 
+      onClick={e => {
+        // Only close if clicking directly on the backdrop, not bubbling from card
+        if (e.target === e.currentTarget) {
+          handleModalClose();
+        }
+      }}
+    >
       <div 
         className="stream-modal-card" 
         style={{ maxWidth: '480px', width: '92vw', borderRadius: '14px', overflow: 'hidden' }} 
         onClick={e => e.stopPropagation()}
+        onMouseDown={e => e.stopPropagation()}
+        onMouseUp={e => e.stopPropagation()}
       >
         {/* Header */}
         <div className="stream-modal-header" style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #e2e8f0' }}>
@@ -255,7 +319,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               </div>
             </div>
           </div>
-          <button className="calendar-nav-btn" onClick={onClose} aria-label="Close modal">
+          <button className="calendar-nav-btn" onClick={handleModalClose} aria-label="Close modal">
             <X size={16} />
           </button>
         </div>
@@ -265,7 +329,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           <div style={{ marginBottom: '1rem' }}>
             <button
               type="button"
-              onClick={() => setShowRosterQuickPick(!showRosterQuickPick)}
+              onClick={() => {
+                clearCloseTimer();
+                setShowRosterQuickPick(!showRosterQuickPick);
+              }}
               style={{
                 width: '100%',
                 display: 'flex',
@@ -418,7 +485,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     style={{ border: 'none', outline: 'none', width: '100%', fontSize: '0.82rem', color: '#0f172a' }}
                     placeholder="employee@urbangaon.com"
                     value={email}
-                    onChange={e => setEmail(e.target.value)}
+                    onChange={e => {
+                      clearCloseTimer();
+                      setSuccess(null);
+                      setError(null);
+                      setEmail(e.target.value);
+                    }}
                   />
                 </div>
                 {selectedEmployee && (
@@ -437,6 +509,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   <button
                     type="button"
                     onClick={() => {
+                      clearCloseTimer();
                       setResetEmail(email);
                       setAuthMode('FORGOT_REQUEST');
                       setError(null);
@@ -469,13 +542,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     type="password"
                     required
                     style={{ border: 'none', outline: 'none', width: '100%', fontSize: '0.82rem', color: '#0f172a' }}
-                    placeholder="••••••••"
+                    placeholder="Enter password (default: password123)"
                     value={password}
-                    onChange={e => setPassword(e.target.value)}
+                    onChange={e => {
+                      clearCloseTimer();
+                      setSuccess(null);
+                      setError(null);
+                      setPassword(e.target.value);
+                    }}
                   />
                 </div>
                 <div style={{ marginTop: '4px', fontSize: '0.68rem', color: '#64748b' }}>
-                  First-time login: Default <code>password123</code> or use link above to set your custom password.
+                  Default password: <code>password123</code> (or use personal password set via email).
                 </div>
               </div>
 
@@ -509,7 +587,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                       }}
                       placeholder="123456"
                       value={twoFactorCode}
-                      onChange={e => setTwoFactorCode(e.target.value)}
+                      onChange={e => {
+                        clearCloseTimer();
+                        setTwoFactorCode(e.target.value);
+                      }}
                     />
                   </div>
                 </div>
@@ -569,6 +650,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     placeholder="employee@urbangaon.com"
                     value={resetEmail || email}
                     onChange={e => {
+                      clearCloseTimer();
                       setResetEmail(e.target.value);
                       setEmail(e.target.value);
                     }}
@@ -580,6 +662,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 <button
                   type="button"
                   onClick={() => {
+                    clearCloseTimer();
                     setAuthMode('LOGIN');
                     setError(null);
                     setSuccess(null);
@@ -619,8 +702,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 <button
                   type="button"
                   onClick={() => {
+                    clearCloseTimer();
                     setAuthMode('FORGOT_VERIFY');
                     setError(null);
+                    setSuccess(null);
                   }}
                   style={{
                     background: 'none',
@@ -685,7 +770,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     }}
                     placeholder="123456"
                     value={resetCode}
-                    onChange={e => setResetCode(e.target.value)}
+                    onChange={e => {
+                      clearCloseTimer();
+                      setResetCode(e.target.value);
+                    }}
                   />
                 </div>
               </div>
@@ -709,7 +797,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     style={{ border: 'none', outline: 'none', width: '100%', fontSize: '0.82rem', color: '#0f172a' }}
                     placeholder="Enter new password"
                     value={newPassword}
-                    onChange={e => setNewPassword(e.target.value)}
+                    onChange={e => {
+                      clearCloseTimer();
+                      setNewPassword(e.target.value);
+                    }}
                   />
                 </div>
               </div>
@@ -733,7 +824,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     style={{ border: 'none', outline: 'none', width: '100%', fontSize: '0.82rem', color: '#0f172a' }}
                     placeholder="Re-enter new password"
                     value={confirmPassword}
-                    onChange={e => setConfirmPassword(e.target.value)}
+                    onChange={e => {
+                      clearCloseTimer();
+                      setConfirmPassword(e.target.value);
+                    }}
                   />
                 </div>
               </div>
@@ -742,6 +836,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 <button
                   type="button"
                   onClick={() => {
+                    clearCloseTimer();
                     setAuthMode('LOGIN');
                     setError(null);
                     setSuccess(null);
@@ -795,7 +890,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
                 <button
                   type="button"
-                  onClick={() => setAuthMode('FORGOT_REQUEST')}
+                  onClick={() => {
+                    clearCloseTimer();
+                    setAuthMode('FORGOT_REQUEST');
+                  }}
                   style={{
                     background: 'none',
                     border: 'none',

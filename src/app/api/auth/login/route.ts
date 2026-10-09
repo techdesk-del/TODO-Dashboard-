@@ -30,7 +30,11 @@ export async function POST(req: NextRequest) {
     const officialEmp = findOfficialEmployeeByEmail(cleanEmail);
     const lookupEmail = officialEmp ? officialEmp.email.toLowerCase() : cleanEmail;
 
-    let user = await UserModel.findOne({ email: lookupEmail });
+    let user = await UserModel.findOne(
+      officialEmp
+        ? { $or: [{ id: officialEmp.id }, { email: officialEmp.email.toLowerCase() }, { email: cleanEmail }] }
+        : { email: cleanEmail }
+    );
 
     // Auto-provision if user is an official employee or exists in Member roster
     if (!user) {
