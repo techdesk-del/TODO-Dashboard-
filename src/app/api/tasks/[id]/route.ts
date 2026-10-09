@@ -40,7 +40,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     }
 
     // Broadcast instant real-time update to all connected devices worldwide
-    broadcastTaskMutation({ action: 'UPDATED', taskId: id });
+    broadcastTaskMutation({ action: 'UPDATED', taskId: id, taskTitle: (updated as { title?: string }).title || id });
 
     return NextResponse.json({ success: true, data: updated });
   } catch (err: unknown) {

@@ -112,7 +112,11 @@ export async function POST(req: NextRequest) {
     );
 
     // Broadcast instant real-time event to all connected devices worldwide
-    broadcastTaskMutation({ action: 'CREATED', taskId: task?.id || body.id });
+    broadcastTaskMutation({
+      action: 'CREATED',
+      taskId: task?.id || body.id,
+      taskTitle: (task as { title?: string })?.title || body.title,
+    });
 
     return NextResponse.json({
       success:  true,

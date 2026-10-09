@@ -486,18 +486,16 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
             <ShieldCheck size={13} color="#059669" />
           </button>
 
-          {/* Permanent Delete Deliverable: CEO Only */}
-          {isCeo && (
-            <button
-              type="button"
-              className="btn-secondary btn-delete-task"
-              onClick={() => setShowDeleteModal(true)}
-              title="Delete Deliverable (Permanent / CEO Only)"
-              style={{ padding: '0.4rem 0.5rem', color: '#dc2626', borderColor: '#fca5a5' }}
-            >
-              <Trash2 size={13} color="#dc2626" />
-            </button>
-          )}
+          {/* Delete Deliverable */}
+          <button
+            type="button"
+            className="btn-secondary btn-delete-task"
+            onClick={() => setShowDeleteModal(true)}
+            title="Delete Deliverable"
+            style={{ padding: '0.4rem 0.5rem', color: '#dc2626', borderColor: '#fca5a5' }}
+          >
+            <Trash2 size={13} color="#dc2626" />
+          </button>
 
           {isCompleted && (
             <button
@@ -750,11 +748,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
                 style={{ background: '#dc2626', borderColor: '#b91c1c', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
                 disabled={isDeleting}
                 onClick={async () => {
-                  if (!isCeo) {
-                    alert("Access Restricted: Only CEO Mr. Sukh Sagar Singh Bhati has permission to permanently delete tasks.");
-                    setShowDeleteModal(false);
-                    return;
-                  }
                   setIsDeleting(true);
                   await deleteTask(task.id);
                   setIsDeleting(false);

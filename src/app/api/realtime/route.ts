@@ -26,7 +26,7 @@ export const revalidate = 0;
 // Vercel serverless max duration (Pro: 300s, Hobby: 30s)
 // We stream for up to 25s then close; client auto-reconnects.
 const MAX_STREAM_DURATION_MS = 25000;
-const POLL_INTERVAL_MS = 2000;
+const POLL_INTERVAL_MS = 1000;
 
 export async function GET(req: NextRequest) {
   const encoder = new TextEncoder();
@@ -37,7 +37,8 @@ export async function GET(req: NextRequest) {
   const stream = new ReadableStream({
     async start(controller) {
       let isAborted = false;
-      let lastChangeAt = connectedAt;
+      let lastTaskUpdatedAt = connectedAt;
+      let lastAuditDeletedAt = connectedAt;
 
       // Helper to send SSE events
       const send = (event: string, data: unknown) => {
@@ -80,7 +81,7 @@ export async function GET(req: NextRequest) {
         return;
       }
 
-      // 3. Polling loop — check for new/updated tasks since lastChangeAt
+      // 3. Polling loop — check for new/updated tasks since last sync
       const startTime = Date.now();
 
       while (!isAborted && (Date.now() - startTime) < MAX_STREAM_DURATION_MS) {
@@ -89,17 +90,20 @@ export async function GET(req: NextRequest) {
         if (isAborted) break;
 
         try {
-          // 1. Check for tasks created or updated in MongoDB since lastChangeAt
-          const changed = await TaskModel.findOne({
-            updatedAt: { $gt: lastChangeAt },
+          // 1. Check for tasks created or updated in MongoDB since lastTaskUpdatedAt
+          const changedTasks = await TaskModel.find({
+            updatedAt: { $gt: lastTaskUpdatedAt },
           })
-            .sort({ updatedAt: -1 })
+            .sort({ updatedAt: 1 })
+            .limit(25)
             .select('id updatedAt status title')
             .lean()
             .exec();
 
-          if (changed && changed.updatedAt) {
-            lastChangeAt = changed.updatedAt;
+          for (const changed of changedTasks) {
+            if (changed.updatedAt && changed.updatedAt > lastTaskUpdatedAt) {
+              lastTaskUpdatedAt = changed.updatedAt;
+            }
             send('task_mutation', {
               action: 'UPDATED',
               taskId: changed.id,
@@ -110,18 +114,21 @@ export async function GET(req: NextRequest) {
             });
           }
 
-          // 2. Check for tasks deleted in MongoDB since lastChangeAt
-          const deletedEntry = await AuditLogModel.findOne({
+          // 2. Check for tasks deleted in MongoDB since lastAuditDeletedAt
+          const deletedEntries = await AuditLogModel.find({
             action: 'DELETED',
-            timestamp: { $gt: lastChangeAt },
+            timestamp: { $gt: lastAuditDeletedAt },
           })
-            .sort({ timestamp: -1 })
+            .sort({ timestamp: 1 })
+            .limit(25)
             .select('taskId taskTitle timestamp')
             .lean()
             .exec();
 
-          if (deletedEntry && deletedEntry.timestamp) {
-            lastChangeAt = deletedEntry.timestamp;
+          for (const deletedEntry of deletedEntries) {
+            if (deletedEntry.timestamp && deletedEntry.timestamp > lastAuditDeletedAt) {
+              lastAuditDeletedAt = deletedEntry.timestamp;
+            }
             send('task_mutation', {
               action: 'DELETED',
               taskId: deletedEntry.taskId,

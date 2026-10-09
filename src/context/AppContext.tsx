@@ -121,7 +121,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               !t.title?.toLowerCase().includes('mobile simulator') &&
               t.id !== 'task-1790071325492'
             );
-            return [...pending, ...cleanServerTasks];
+            const nextList = [...pending, ...cleanServerTasks];
+
+            // Fast shallow check to preserve React focus and avoid unnecessary re-renders
+            if (
+              prev.length === nextList.length &&
+              prev.every((p, i) => {
+                const n = nextList[i];
+                return n && p.id === n.id && p.status === n.status && p.updatedAt === n.updatedAt && p.title === n.title;
+              })
+            ) {
+              return prev;
+            }
+
+            return nextList;
           });
           setDbStatus('connected');
           return;
@@ -296,6 +309,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             try {
               localStorage.removeItem('urbangaon_tasks_v2');
             } catch {}
+          } else if (data?.action === 'CREATED' && data.task) {
+            setTasks(prev => {
+              if (prev.some(t => t.id === data.task.id)) return prev;
+              const updated = [data.task, ...prev];
+              try {
+                localStorage.setItem('urbangaon_tasks_v2', JSON.stringify(updated));
+              } catch {}
+              return updated;
+            });
+          } else if (data?.action === 'UPDATED' && data.taskId && data.updates) {
+            setTasks(prev => {
+              const updated = prev.map(t => t.id === data.taskId ? { ...t, ...data.updates } : t);
+              try {
+                localStorage.setItem('urbangaon_tasks_v2', JSON.stringify(updated));
+              } catch {}
+              return updated;
+            });
           } else {
             if (isMounted) refreshFromDB(true);
           }
@@ -461,6 +491,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTasks(prev => [task, ...prev]);
     setSelectedDate(createdDate);
 
+    // Broadcast immediately to all open tabs on same browser
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const bc = new BroadcastChannel('urbangaon_task_sync');
+        bc.postMessage({ action: 'CREATED', task });
+        bc.close();
+      }
+    } catch {}
+
     // Sync to MongoDB Atlas API with confirmation
     fetch('/api/tasks', {
       method: 'POST',
@@ -504,6 +543,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (t.id !== taskId) return t;
       return { ...t, ...updates, isJustAdded: false, updatedAt: new Date().toISOString() };
     }));
+
+    // Broadcast immediately to all open tabs on same browser
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const bc = new BroadcastChannel('urbangaon_task_sync');
+        bc.postMessage({ action: 'UPDATED', taskId, updates });
+        bc.close();
+      }
+    } catch {}
 
     // Sync to MongoDB Atlas API
     fetch(`/api/tasks/${taskId}`, {
@@ -702,11 +750,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteTask = async (taskId: string) => {
-    if (!isCeoUser(currentUser)) {
-      alert("Access Restricted: Only CEO Mr. Sukh Sagar Singh Bhati has permission to permanently delete deliverables.");
-      return;
-    }
-
     const targetTask = tasks.find(t => t.id === taskId);
     deletedIdsRef.current.add(taskId);
 
