@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Task, TaskPriority, TaskStatus } from '@/types';
 import { useApp } from '@/context/AppContext';
 import { isCeoUser } from '@/lib/rosterData';
@@ -72,7 +72,32 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
   const [holdReasonInput, setHoldReasonInput] = useState('');
   const [showEscalateModal, setShowEscalateModal] = useState(false);
   const [escalateReasonInput, setEscalateReasonInput] = useState('');
-  const [escalateTargetLeader, setEscalateTargetLeader] = useState('Akash Das (Director)');
+  const [escalateTargetLeader, setEscalateTargetLeader] = useState('Mr. Sukh Sagar Singh Bhati (CEO)');
+
+  // Escalation Target Leaders: Strictly CEO Mr. Sukh Sagar Singh Bhati and Talent Team members
+  const escalationLeaders = useMemo(() => {
+    const list: string[] = ['Mr. Sukh Sagar Singh Bhati (CEO)'];
+
+    // Add active Talent team members dynamically from roster/members
+    const talentMembers = activeMembers.filter(m => 
+      !isCeoUser(m) && (
+        (m.department && (m.department.toLowerCase().includes('talent') || m.department.toLowerCase().includes('hr'))) ||
+        (m.designation && (m.designation.toLowerCase().includes('talent') || m.designation.toLowerCase().includes('hr')))
+      )
+    );
+
+    if (talentMembers.length > 0) {
+      talentMembers.forEach(tm => {
+        list.push(`${tm.name} (${tm.designation})`);
+      });
+    } else {
+      list.push('Dr. Rekha Pareek (Talent Acquisition & HR Lead)');
+      list.push('Dr. Sharmila Yadav (Talent Management & Development Lead)');
+      list.push('Satya Singh (Talent Operations Specialist)');
+    }
+
+    return list;
+  }, [activeMembers]);
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [rescheduleDateInput, setRescheduleDateInput] = useState(task.scheduledDate);
   const [showReopenModal, setShowReopenModal] = useState(false);
@@ -584,9 +609,16 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
                   value={escalateTargetLeader}
                   onChange={e => setEscalateTargetLeader(e.target.value)}
                 >
-                  <option value="Akash Das (Director & CEO)">Akash Das (Director & CEO)</option>
-                  <option value="Engineering Head">Engineering Head</option>
-                  <option value="Talent & Operations Lead">Talent & Operations Lead</option>
+                  <optgroup label="Executive Leadership">
+                    <option value="Mr. Sukh Sagar Singh Bhati (CEO)">
+                      Mr. Sukh Sagar Singh Bhati (CEO)
+                    </option>
+                  </optgroup>
+                  <optgroup label="Talent & People Operations">
+                    {escalationLeaders.filter(l => l !== 'Mr. Sukh Sagar Singh Bhati (CEO)').map(leader => (
+                      <option key={leader} value={leader}>{leader}</option>
+                    ))}
+                  </optgroup>
                 </select>
               </div>
 

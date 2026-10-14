@@ -9,6 +9,7 @@
  */
 
 import { parseSpeechOrTextCommand } from './aiParser';
+import { getTodayStr } from './dateUtils';
 import type { ParsedVoiceEntity } from '@/types';
 
 export async function extractTaskWithGemini(
@@ -42,13 +43,14 @@ export async function extractTaskWithGemini(
       });
     }
 
+    const todayRef = getTodayStr();
     const systemPrompt = `You are UrbanGaon's Executive Task Entity Extraction Engine.
 Extract the enterprise task details from the provided input (audio or text transcript).
-Today's reference date is 2026-09-15 (Tuesday).
+Today's reference date is ${todayRef}.
 Return ONLY a valid JSON object matching this exact schema:
 {
   "title": string (clean task title without conversational filler),
-  "scheduledDate": string (YYYY-MM-DD format, e.g. 2026-09-15 for today, 2026-09-16 for tomorrow),
+  "scheduledDate": string (YYYY-MM-DD format, e.g. ${todayRef} for today),
   "time": string (e.g. "05:00 PM", "11:00 AM"),
   "priority": string ("URGENT", "HIGH", or "NORMAL"),
   "assigneeName": string (e.g. "Ayaz", "Yudhister Tiwari", "Mr. Sukh Sagar Singh Bhati", "Pratap", or "Unassigned"),
@@ -90,7 +92,7 @@ Do NOT include markdown backticks or commentary, only raw JSON.`;
 
     return {
       title: parsed.title || prompt || 'New Untitled Task',
-      scheduledDate: parsed.scheduledDate || '2026-09-15',
+      scheduledDate: parsed.scheduledDate || todayRef,
       time: parsed.time || '05:00 PM',
       priority: (parsed.priority || 'NORMAL') as 'URGENT' | 'HIGH' | 'NORMAL',
       assigneeName: parsed.assigneeName || 'Unassigned',

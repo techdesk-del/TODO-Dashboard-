@@ -93,23 +93,26 @@ export function parseSpeechOrTextCommand(input: string, currentUser?: TeamMember
   // 5. Extract Title
   // Clean command filler phrases like "schedule", "create task", "add task", "today at ...", "assigned to ..."
   let cleanedTitle = text
-    .replace(/^schedule\s+/i, '')
-    .replace(/^add\s+(?:task\s+)?/i, '')
-    .replace(/^create\s+(?:task\s+)?/i, '')
+    .replace(/^(?:please\s+)?(?:schedule|add\s+task|create\s+task|add|create)\s+/i, '')
     .replace(/\b(?:today|tomorrow|yesterday)\b/gi, '')
     .replace(/\bat\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)\b/gi, '')
     .replace(/\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b/gi, '')
     .replace(/\bassigned\s+to\s+[^.,\n]+/i, '')
-    .replace(/\bwith\s+[^.,\n]+/i, '')
     .replace(/\bon\s+(?:high|urgent|normal)\s+priority/i, '')
     .replace(/\b(?:high|urgent|normal)\s+priority/i, '')
+    .replace(/\s{2,}/g, ' ')
     .trim();
 
+  // If cleaning stripped away too much or resulted in empty string, always fallback to user's real input!
+  if (!cleanedTitle || cleanedTitle.length < 2) {
+    cleanedTitle = text.trim();
+  }
+
   // Capitalize properly if needed
-  if (!cleanedTitle || cleanedTitle.length < 3) {
-    cleanedTitle = 'Database Migration (v12 to v14)';
-  } else {
+  if (cleanedTitle.length > 0) {
     cleanedTitle = cleanedTitle.charAt(0).toUpperCase() + cleanedTitle.slice(1);
+  } else {
+    cleanedTitle = 'New Operational Task';
   }
 
   const endTime = performance.now();

@@ -118,25 +118,27 @@ export const CeoPortal: React.FC = () => {
         <div className="kpi-stat-card">
           <span className="kpi-title">TOTAL ACTIVE TASKS</span>
           <span className="kpi-value">{totalTasksCount} Tasks</span>
-          <span className="kpi-subtext">⚡ 8 added today via Voice AI</span>
+          <span className="kpi-subtext">⚡ Active deliverables</span>
         </div>
 
         <div className="kpi-stat-card">
           <span className="kpi-title">TEAM SPRINT VELOCITY</span>
           <span className="kpi-value">{sprintVelocity}</span>
-          <span className="kpi-subtext">🚀 On schedule for Friday cutover</span>
+          <span className="kpi-subtext">🚀 Completion rate</span>
         </div>
 
         <div className="kpi-stat-card">
           <span className="kpi-title">PENDING BLOCKERS</span>
           <span className="kpi-value" style={{ color: '#c2410c' }}>{pendingBlockersCount} Items</span>
-          <span className="kpi-subtext warning">⚠️ Database Migration & Proposal</span>
+          <span className={`kpi-subtext ${pendingBlockersCount > 0 ? 'warning' : ''}`}>
+            {pendingBlockersCount > 0 ? '⚠️ Requires leadership attention' : '✓ Zero critical blockers'}
+          </span>
         </div>
 
         <div className="kpi-stat-card">
-          <span className="kpi-title">COMPLETED THIS WEEK</span>
+          <span className="kpi-title">COMPLETED TASKS</span>
           <span className="kpi-value" style={{ color: '#15803d' }}>{completedThisWeekCount} Tasks</span>
-          <span className="kpi-subtext">✓ 100% verified integrity</span>
+          <span className="kpi-subtext">✓ Verified integrity</span>
         </div>
       </div>
 

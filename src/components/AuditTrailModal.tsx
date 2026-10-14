@@ -1,9 +1,22 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { AuditLogEntry } from '@/types';
-import { ShieldCheck, Download, Search, Filter, X, FileSpreadsheet, Lock, CheckCircle2 } from 'lucide-react';
+import { 
+  ShieldCheck, 
+  Download, 
+  Search, 
+  Filter, 
+  X, 
+  FileSpreadsheet, 
+  Lock, 
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
+} from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 export const AuditTrailModal: React.FC = () => {
@@ -16,6 +29,8 @@ export const AuditTrailModal: React.FC = () => {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterAction, setFilterAction] = useState<string>('ALL');
+  const [pageSize, setPageSize] = useState<number>(25);
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
   // Filter logs based on search term and selected action
   const filteredLogs = auditLogs.filter(log => {
@@ -41,6 +56,33 @@ export const AuditTrailModal: React.FC = () => {
     }
     return true;
   });
+
+  // Reset to page 1 whenever filters, search, task scope or page size changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterAction, viewingAuditForTaskId, pageSize]);
+
+  // Pagination metrics
+  const totalRecords = filteredLogs.length;
+  const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
+  const activePage = Math.min(Math.max(1, currentPage), totalPages);
+
+  const startIndex = (activePage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalRecords);
+  const currentRecords = filteredLogs.slice(startIndex, endIndex);
+
+  const getPaginationRange = (current: number, total: number): (number | string)[] => {
+    if (total <= 7) {
+      return Array.from({ length: total }, (_, i) => i + 1);
+    }
+    if (current <= 4) {
+      return [1, 2, 3, 4, 5, '...', total];
+    }
+    if (current >= total - 3) {
+      return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+    }
+    return [1, '...', current - 1, current, current + 1, '...', total];
+  };
 
   // RFC 4180 compliant CSV field escaping
   const escapeCsvField = (val: unknown): string => {
@@ -373,7 +415,7 @@ export const AuditTrailModal: React.FC = () => {
             borderRadius: '6px',
             fontWeight: 700
           }}>
-            Showing {filteredLogs.length} Verified Entries
+            {totalRecords > 0 ? `Showing ${startIndex + 1}–${endIndex} of ${totalRecords} Entries (Page ${activePage} of ${totalPages})` : '0 Verified Entries'}
           </span>
         </div>
       </div>
@@ -393,14 +435,15 @@ export const AuditTrailModal: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredLogs.map((log, idx) => {
+            {currentRecords.map((log, idx) => {
               const badgeStyle = getActionBadgeStyle(log.action);
-              const checksum = computeAuditHash(log, idx + 1);
+              const globalIdx = startIndex + idx + 1;
+              const checksum = computeAuditHash(log, globalIdx);
 
               return (
                 <tr key={log.id}>
                   <td style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>
-                    {idx + 1}
+                    {globalIdx}
                   </td>
                   <td>
                     <div style={{ fontWeight: 700, fontSize: '0.78rem' }}>{log.actor}</div>
@@ -471,6 +514,179 @@ export const AuditTrailModal: React.FC = () => {
         {filteredLogs.length === 0 && (
           <div style={{ padding: '2.5rem', textAlign: 'center', color: '#94a3b8' }}>
             No audit records found matching criteria.
+          </div>
+        )}
+      </div>
+
+      {/* Enterprise Pagination Bar */}
+      <div style={{
+        background: '#ffffff',
+        border: '1px solid #e2e8f0',
+        borderRadius: '8px',
+        padding: '0.65rem 1rem',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '0.75rem'
+      }}>
+        {/* Left: Range and Rows per Page Selector */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <div style={{ fontSize: '0.76rem', color: '#475569', fontWeight: 600 }}>
+            {totalRecords > 0 ? (
+              <>
+                Showing <strong style={{ color: '#0f172a' }}>{startIndex + 1}</strong> to{' '}
+                <strong style={{ color: '#0f172a' }}>{endIndex}</strong> of{' '}
+                <strong style={{ color: '#0f172a' }}>{totalRecords}</strong> entries
+              </>
+            ) : (
+              'Showing 0 entries'
+            )}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>Rows per page:</span>
+            <select
+              className="form-select"
+              style={{ padding: '0.2rem 0.5rem', fontSize: '0.74rem', fontWeight: 700, width: 'auto' }}
+              value={pageSize}
+              onChange={e => setPageSize(Number(e.target.value))}
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+              <option value={200}>200</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Right: Page Navigation Controls */}
+        {totalPages > 1 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+            {/* First Page */}
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={activePage === 1}
+              onClick={() => setCurrentPage(1)}
+              style={{
+                padding: '0.3rem 0.55rem',
+                fontSize: '0.72rem',
+                opacity: activePage === 1 ? 0.45 : 1,
+                cursor: activePage === 1 ? 'not-allowed' : 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '2px'
+              }}
+              title="First Page"
+            >
+              <ChevronsLeft size={13} />
+              <span>First</span>
+            </button>
+
+            {/* Previous Page */}
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={activePage === 1}
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              style={{
+                padding: '0.3rem 0.55rem',
+                fontSize: '0.72rem',
+                opacity: activePage === 1 ? 0.45 : 1,
+                cursor: activePage === 1 ? 'not-allowed' : 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '2px'
+              }}
+              title="Previous Page"
+            >
+              <ChevronLeft size={13} />
+              <span>Prev</span>
+            </button>
+
+            {/* Numbered Page Buttons */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+              {getPaginationRange(activePage, totalPages).map((p, pIdx) => {
+                if (p === '...') {
+                  return (
+                    <span
+                      key={`dots-${pIdx}`}
+                      style={{ padding: '0.2rem 0.4rem', fontSize: '0.72rem', color: '#94a3b8', userSelect: 'none' }}
+                    >
+                      •••
+                    </span>
+                  );
+                }
+                const pageNum = p as number;
+                const isCurrent = pageNum === activePage;
+                return (
+                  <button
+                    key={pageNum}
+                    type="button"
+                    onClick={() => setCurrentPage(pageNum)}
+                    style={{
+                      minWidth: '28px',
+                      height: '28px',
+                      padding: '0 6px',
+                      fontSize: '0.72rem',
+                      fontWeight: isCurrent ? 800 : 600,
+                      borderRadius: '6px',
+                      border: isCurrent ? '1px solid #2563eb' : '1px solid #cbd5e1',
+                      background: isCurrent ? '#2563eb' : '#ffffff',
+                      color: isCurrent ? '#ffffff' : '#334155',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Next Page */}
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={activePage === totalPages}
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              style={{
+                padding: '0.3rem 0.55rem',
+                fontSize: '0.72rem',
+                opacity: activePage === totalPages ? 0.45 : 1,
+                cursor: activePage === totalPages ? 'not-allowed' : 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '2px'
+              }}
+              title="Next Page"
+            >
+              <span>Next</span>
+              <ChevronRight size={13} />
+            </button>
+
+            {/* Last Page */}
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={activePage === totalPages}
+              onClick={() => setCurrentPage(totalPages)}
+              style={{
+                padding: '0.3rem 0.55rem',
+                fontSize: '0.72rem',
+                opacity: activePage === totalPages ? 0.45 : 1,
+                cursor: activePage === totalPages ? 'not-allowed' : 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '2px'
+              }}
+              title="Last Page"
+            >
+              <span>Last</span>
+              <ChevronsRight size={13} />
+            </button>
           </div>
         )}
       </div>
