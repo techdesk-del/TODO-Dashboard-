@@ -45,9 +45,9 @@ services:
     container_name: urbangaon-todo
     restart: unless-stopped
 
-    # Accessible on NAS LAN / Synology Reverse Proxy
+    # Accessible on NAS LAN (Port 3050)
     ports:
-      - "${APP_PORT:-3000}:3000"
+      - "3050:3000"
 
     # Wait for MongoDB container healthcheck to pass
     depends_on:
@@ -71,7 +71,7 @@ services:
       - SMTP_USER=${SMTP_USER:-}
       - SMTP_PASS=${SMTP_PASS:-}
       - SMTP_FROM=${SMTP_FROM:-"UrbanGaon Executive Dispatcher" <alerts@urbangaon.com>}
-      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:3050}
 
     deploy:
       resources:

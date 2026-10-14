@@ -27,6 +27,17 @@ log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"
 }
 
+# Auto-link to GitHub repo if deployed from ZIP extraction
+if [ ! -d ".git" ]; then
+  log "📦 Initial setup: Linking ZIP deployment to GitHub repository..."
+  git init >> "$LOG_FILE" 2>&1
+  git remote add origin "https://github.com/techdesk-del/TODO-Dashboard-.git" >> "$LOG_FILE" 2>&1
+  git fetch origin "$BRANCH" >> "$LOG_FILE" 2>&1
+  git reset --mixed origin/"$BRANCH" >> "$LOG_FILE" 2>&1
+  git branch -M "$BRANCH" >> "$LOG_FILE" 2>&1
+  log "✓ Successfully linked to GitHub repository ($BRANCH)."
+fi
+
 # Fetch remote changes without merging
 git fetch origin "$BRANCH" --quiet 2>> "$LOG_FILE"
 

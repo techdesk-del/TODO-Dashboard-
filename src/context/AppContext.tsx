@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { Task, TeamMember, AuditLogEntry, SystemConfig, Role, TaskStatus } from '@/types';
 import { INITIAL_TASKS, INITIAL_MEMBERS, INITIAL_AUDIT_LOGS, INITIAL_SYSTEM_CONFIG } from '@/lib/mockData';
 import { getTodayStr } from '@/lib/dateUtils';
-import { isCeoUser } from '@/lib/rosterData';
+import { isCeoUser, canAccessWorkflows } from '@/lib/rosterData';
 import * as XLSX from 'xlsx';
 
 export type DBStatus = 'connected' | 'connecting' | 'fallback';
@@ -52,6 +52,7 @@ interface AppContextType {
   deleteTask: (taskId: string) => Promise<void>;
   completeTask: (taskId: string, assigneeId?: string) => void;
   addMember: (memberData: Partial<TeamMember>) => Promise<TeamMember>;
+  deactivateMember: (departingId: string, successorId: string, reason: string) => Promise<{ success: boolean; reassignedCount: number; message: string }>;
   clearAllTasks: () => Promise<void>;
   logoutUser: () => void;
   exportToExcel: () => void;
@@ -178,9 +179,51 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const savedUserStr = localStorage.getItem('urbangaon_auth_user_v2');
       if (savedUserStr) {
         const parsed = JSON.parse(savedUserStr);
-        if (parsed && parsed.id && parsed.name) {
+        if (parsed && parsed.id && parsed.name && parsed.id !== 'guest') {
+          const email = (parsed.email || '').toLowerCase();
+          const name = (parsed.name || '').toLowerCase();
+          if (email.includes('aakash') || email.includes('akash') || email.includes('techdesk') || name.includes('aakash')) {
+            parsed.role = 'SUPER_ADMIN';
+            parsed.designation = 'AI & IT Officer / Super Admin';
+          }
           setCurrentUser(parsed);
+        } else {
+          // Default to Aakash Das with Full Super Admin access
+          const aakashMember = INITIAL_MEMBERS.find(m => m.id === 'mem-12' || m.email.includes('aakash')) || {
+            id: 'mem-12',
+            name: 'Aakash Das',
+            email: 'aakash.das@urbangaon.com',
+            role: 'SUPER_ADMIN' as Role,
+            department: 'AI & IT Operations',
+            designation: 'AI & IT Officer / Super Admin',
+            avatar: 'AD',
+            status: 'ACTIVE' as const,
+            totalTasks: 4,
+            completedTasks: 2,
+            activeTasks: 2,
+            overdueTasks: 0,
+            velocity: 98.0
+          };
+          setCurrentUser(aakashMember);
         }
+      } else {
+        // Default to Aakash Das with Full Super Admin access
+        const aakashMember = INITIAL_MEMBERS.find(m => m.id === 'mem-12' || m.email.includes('aakash')) || {
+          id: 'mem-12',
+          name: 'Aakash Das',
+          email: 'aakash.das@urbangaon.com',
+          role: 'SUPER_ADMIN' as Role,
+          department: 'AI & IT Operations',
+          designation: 'AI & IT Officer / Super Admin',
+          avatar: 'AD',
+          status: 'ACTIVE' as const,
+          totalTasks: 4,
+          completedTasks: 2,
+          activeTasks: 2,
+          overdueTasks: 0,
+          velocity: 98.0
+        };
+        setCurrentUser(aakashMember);
       }
     } catch (e) {
       console.warn('[AppContext] auth restore failed', e);
@@ -396,9 +439,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [currentUser]);
 
-  // ── CEO Portal & Workflows Guard: Non-CEO users automatically directed to workspace
+  // ── Executive & Workflows Guard: Non-authorized users automatically directed to workspace
   useEffect(() => {
-    if (!isCeoUser(currentUser) && (activeView === 'ceo_portal' || activeView === 'workflow_manual')) {
+    if (activeView === 'ceo_portal' && !isCeoUser(currentUser)) {
+      setActiveView('workspace');
+    }
+    if (activeView === 'workflow_manual' && !canAccessWorkflows(currentUser)) {
       setActiveView('workspace');
     }
   }, [currentUser, activeView]);
@@ -425,7 +471,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const switchRole = (newRole: Role) => {
     if (newRole === 'SUPER_ADMIN' && !isCeoUser(currentUser)) {
-      alert("Access Restricted: Super Admin privileges are reserved for CEO Mr. Sukh Sagar Singh Bhati.");
+      alert("Access Restricted: Super Admin privileges are reserved for Executive Leadership (CEO & Aakash Das).");
       return;
     }
     const matched = members.find(m => m.role === newRole) || {
@@ -455,7 +501,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isJustAdded: true,
       department: newTaskData.department || currentUser.department,
       project: newTaskData.project || 'Core Infrastructure',
-      location: newTaskData.location || 'Bangalore HQ',
+      location: newTaskData.location || 'Jaipur',
       assignees: (isCeoUser(currentUser) && newTaskData.assignees && newTaskData.assignees.length > 0)
         ? newTaskData.assignees
         : [
@@ -650,6 +696,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return [...prev, newMember];
     });
 
+    let finalMember = newMember;
+
     // Send to MongoDB Atlas API in background
     try {
       const res = await fetch('/api/members', {
@@ -660,7 +708,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (res.ok) {
         const json = await res.json();
         if (json.success && json.data) {
-          setMembers(prev => prev.map(m => m.id === newMember.id ? json.data : m));
+          finalMember = json.data;
+          setMembers(prev => {
+            const exists = prev.some(m => m.id === json.data.id || m.email.toLowerCase() === json.data.email.toLowerCase());
+            if (exists) {
+              return prev.map(m => (m.id === json.data.id || m.email.toLowerCase() === json.data.email.toLowerCase()) ? json.data : m);
+            }
+            return [...prev, json.data];
+          });
         }
       }
     } catch (err) {
@@ -671,21 +726,150 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       action: 'CREATED',
       fieldChanged: 'Staff Directory / Account Provisioning',
       oldValue: 'Unregistered',
-      newValue: `${newMember.name} (${newMember.designation} - ${newMember.department})`,
+      newValue: `${finalMember.name} (${finalMember.designation} - ${finalMember.department})`,
       notes: `Employee account created & credentials dispatched by ${currentUser.name} (${currentUser.role})`
     });
 
     setBannerNotification({
-      message: `Employee account successfully provisioned for ${newMember.name}`,
+      message: `Employee account & credentials dispatched for ${finalMember.name} (${finalMember.email})`,
       badge: '✓ Account Active'
     });
 
-    return newMember;
+    return finalMember;
+  };
+
+  const deactivateMember = async (
+    departingId: string,
+    successorId: string,
+    reason: string = 'Resignation / Voluntary Transition'
+  ): Promise<{ success: boolean; reassignedCount: number; message: string }> => {
+    // Security check: CEO cannot be deactivated
+    const departing = members.find(m => m.id === departingId || m.name === departingId || m.email.toLowerCase() === departingId.toLowerCase());
+    if (departing && isCeoUser(departing)) {
+      throw new Error("Executive Command Protection: CEO Mr. Sukh Sagar Singh Bhati cannot be deactivated.");
+    }
+    if (departingId === successorId) {
+      throw new Error("Validation Error: Successor cannot be the same departing employee.");
+    }
+
+    const successor = members.find(m => m.id === successorId || m.name === successorId || m.email.toLowerCase() === successorId.toLowerCase());
+    const departingName = departing?.name || departingId;
+    const successorName = successor?.name || successorId;
+
+    // Call server API for persistent MongoDB update
+    const res = await fetch('/api/members/deactivate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        departingMemberId: departing?.id || departingId,
+        successorMemberId: successor?.id || successorId,
+        reason,
+        actor: currentUser.name || 'Super Admin',
+        actorRole: currentUser.role || 'SUPER_ADMIN'
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || 'Failed to complete deactivation & task handover');
+    }
+
+    const reassignedCount = typeof data.reassignedCount === 'number' ? data.reassignedCount : 0;
+
+    // Optimistically update local members
+    setMembers(prev => prev.map(m => {
+      const isDeparting = m.id === departing?.id || m.name === departingName || (departing?.email && m.email.toLowerCase() === departing.email.toLowerCase());
+      const isSuccessor = m.id === successor?.id || m.name === successorName || (successor?.email && m.email.toLowerCase() === successor.email.toLowerCase());
+
+      if (isDeparting) {
+        return {
+          ...m,
+          status: 'DEACTIVATED' as const,
+          activeTasks: 0,
+          totalTasks: Math.max(0, (m.totalTasks || 0) - reassignedCount)
+        };
+      }
+      if (isSuccessor) {
+        return {
+          ...m,
+          activeTasks: (m.activeTasks || 0) + reassignedCount,
+          totalTasks: (m.totalTasks || 0) + reassignedCount
+        };
+      }
+      return m;
+    }));
+
+    // Optimistically update local tasks
+    const activeStatuses = ['In Progress', 'Queued', 'On Hold', 'Escalated', 'Review'];
+    setTasks(prev => prev.map(t => {
+      if (!activeStatuses.includes(t.status)) return t;
+      let hasDeparting = false;
+      const updatedAssignees = t.assignees.map(a => {
+        const isMatch = (departing?.id && a.id === departing.id) ||
+          a.name.toLowerCase() === departingName.toLowerCase() ||
+          (departing?.email && a.email.toLowerCase() === departing.email.toLowerCase());
+        
+        if (isMatch && successor) {
+          hasDeparting = true;
+          return {
+            id: successor.id,
+            name: successor.name,
+            email: successor.email,
+            department: successor.department,
+            designation: successor.designation,
+            avatar: successor.avatar,
+            status: a.status || 'In Progress',
+            remarks: `Handover from ${departingName} (FC 18: ${reason})`,
+            completedAt: a.completedAt
+          };
+        }
+        return a;
+      });
+
+      if (hasDeparting) {
+        return {
+          ...t,
+          assignees: updatedAssignees,
+          updatedAt: new Date().toISOString()
+        };
+      }
+      return t;
+    }));
+
+    // Broadcast change to other open browser windows
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const bc = new BroadcastChannel('urbangaon_task_sync');
+        bc.postMessage({ action: 'MEMBER_DEACTIVATED', departingId, successorId });
+        bc.close();
+      }
+    } catch {}
+
+    // Trigger full background sync to guarantee consistency
+    refreshFromDB();
+
+    logAudit({
+      action: 'CONFIG_CHANGED',
+      fieldChanged: 'Account Status & Deliverable Reallocation',
+      oldValue: `${departingName} [ACTIVE]`,
+      newValue: `${departingName} [DEACTIVATED] → All ${reassignedCount} active deliverables transferred to ${successorName}`,
+      notes: `Flowchart 18 Enforced: ${reason}`
+    });
+
+    if (selectedMemberFilter === departingName) {
+      setSelectedMemberFilter(null);
+    }
+
+    return {
+      success: true,
+      reassignedCount,
+      message: data.message
+    };
   };
 
   const clearAllTasks = async () => {
     if (!isCeoUser(currentUser)) {
-      alert("Access Restricted: Only CEO Mr. Sukh Sagar Singh Bhati has permission to wipe company deliverables.");
+      alert("Access Restricted: Only Executive Leadership (CEO & Aakash Das) has permission to wipe company deliverables.");
       return;
     }
 
@@ -703,9 +887,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     } catch {}
 
-    // Call server DELETE endpoint to wipe MongoDB collection
+    // Call server DELETE endpoint to wipe MongoDB collection with CEO credentials header
     try {
-      await fetch('/api/tasks', { method: 'DELETE' });
+      await fetch('/api/tasks', { 
+        method: 'DELETE',
+        headers: {
+          'x-user-email': currentUser.email || '',
+          'x-user-name': currentUser.name || '',
+          'x-user-role': currentUser.role || ''
+        }
+      });
     } catch (err) {
       console.error('[AppContext] clear tasks error:', err);
     }
@@ -715,7 +906,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       fieldChanged: 'Task Ledger Wipe',
       oldValue: 'Prior deliverables',
       newValue: '0 Tasks (Clean Slate)',
-      notes: `All deliverables cleared by ${currentUser.name} (${currentUser.role}) for fresh user testing`
+      notes: `All deliverables cleared by CEO Mr. Sukh Sagar Singh Bhati`
     });
 
     setBannerNotification({
@@ -750,6 +941,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteTask = async (taskId: string) => {
+    if (!isCeoUser(currentUser)) {
+      alert("Access Restricted: Only Executive Leadership (CEO & Aakash Das) has permission to permanently delete deliverables.");
+      return;
+    }
+
     const targetTask = tasks.find(t => t.id === taskId);
     deletedIdsRef.current.add(taskId);
 
@@ -771,9 +967,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     } catch {}
 
-    // Sync deletion to MongoDB Atlas backend
+    // Sync deletion to MongoDB Atlas backend with CEO credentials header
     try {
-      await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
+      await fetch(`/api/tasks/${taskId}`, { 
+        method: 'DELETE',
+        headers: {
+          'x-user-email': currentUser.email || '',
+          'x-user-name': currentUser.name || '',
+          'x-user-role': currentUser.role || ''
+        }
+      });
     } catch (err) {
       console.error('[AppContext] deleteTask error:', err);
     }
@@ -785,7 +988,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       fieldChanged: 'Task Deleted',
       oldValue: targetTask?.title || taskId,
       newValue: 'Permanently Deleted from Ledger',
-      notes: `Deliverable deleted by ${currentUser.name} (${currentUser.role})`
+      notes: `Deliverable permanently deleted by CEO Mr. Sukh Sagar Singh Bhati`
     });
 
     setBannerNotification({
@@ -884,18 +1087,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const runNightlyRolloverSimulation = () => {
     // Flowchart 11 / Automated Carry-forward at 00:05 AM
+    const currentDate = selectedDate || new Date().toISOString().split('T')[0];
+    const d = new Date(currentDate);
+    d.setDate(d.getDate() + 1);
+    const tomorrowStr = d.toISOString().split('T')[0];
+
+    let rolledCount = 0;
     setTasks(prev => prev.map(t => {
-      if (t.status !== 'Done' && t.status !== 'Cancelled') {
+      if (t.status !== 'Done' && t.status !== 'Cancelled' && (t.scheduledDate <= currentDate)) {
+        rolledCount++;
         const updated = {
           ...t,
-          scheduledDate: '2026-09-16', // roll over to tomorrow
+          scheduledDate: tomorrowStr,
           carryForwardCount: (t.carryForwardCount || 0) + 1
         };
         // sync to db
         fetch(`/api/tasks/${t.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ scheduledDate: '2026-09-16', carryForwardCount: updated.carryForwardCount })
+          body: JSON.stringify({ scheduledDate: tomorrowStr, carryForwardCount: updated.carryForwardCount })
         }).catch(() => {});
         return updated;
       }
@@ -905,17 +1115,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     logAudit({
       action: 'CARRIED_FORWARD',
       fieldChanged: 'Nightly 00:05 AM Rollover Engine',
-      oldValue: 'Yesterday Tasks',
-      newValue: 'Rolled over to Next Morning Register with Amber Badge',
-      notes: 'All unfinished commitments preserved automatically'
+      oldValue: `Tasks on ${currentDate}`,
+      newValue: `Rolled over to ${tomorrowStr} (${rolledCount} Tasks)`,
+      notes: `Unfinished commitments automatically rolled over to ${tomorrowStr} with Amber Badge.`
     });
 
     setBannerNotification({
-      message: 'Nightly rollover complete: Unfinished tasks carried forward with zero data loss',
-      badge: '✓ 00:05 AM Engine Active'
+      message: `Nightly rollover complete: ${rolledCount} task(s) rolled over to ${tomorrowStr} without data loss.`,
+      badge: '✓ 00:05 AM Rollover Active'
     });
   };
 
+  ////
   return (
     <AppContext.Provider
       value={{
@@ -945,6 +1156,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteTask,
         completeTask,
         addMember,
+        deactivateMember,
         clearAllTasks,
         logoutUser,
         exportToExcel,

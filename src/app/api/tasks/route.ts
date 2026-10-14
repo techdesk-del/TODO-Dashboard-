@@ -131,11 +131,14 @@ export async function POST(req: NextRequest) {
 }
 
 /* ── DELETE /api/tasks (Clear all deliverables for fresh testing) ── */
-export async function DELETE() {
+export async function DELETE(req: NextRequest) {
   try {
     await connectDB();
+    const callerName = req.headers.get('x-user-name') || 'Mr. Sukh Sagar Singh Bhati';
+    const callerRole = (req.headers.get('x-user-role') as 'SUPER_ADMIN' | 'ADMIN' | 'MANAGER' | 'EMPLOYEE') || 'SUPER_ADMIN';
+
     const result = await TaskModel.deleteMany({});
-    console.log(`[API/tasks DELETE] Cleared ${result.deletedCount} tasks from MongoDB Atlas`);
+    console.log(`[API/tasks DELETE] Cleared ${result.deletedCount} tasks from MongoDB Atlas by ${callerName}`);
 
     // Reset tombstone set
     globalDeletedTaskIds.clear();
@@ -149,11 +152,11 @@ export async function DELETE() {
       fieldChanged: 'Task Ledger Wipe',
       oldValue: `${result.deletedCount} tasks`,
       newValue: '0 tasks',
-      actor: 'System / User',
-      actorRole: 'SUPER_ADMIN',
-      ipAddress: '127.0.0.1',
-      deviceInfo: 'System Engine',
-      notes: `Cleared ${result.deletedCount} tasks from MongoDB Atlas`,
+      actor: callerName,
+      actorRole: callerRole,
+      ipAddress: req.headers.get('x-forwarded-for') || '127.0.0.1',
+      deviceInfo: req.headers.get('user-agent') || 'System Engine',
+      notes: `Cleared ${result.deletedCount} tasks from MongoDB Atlas by CEO Mr. Sukh Sagar Singh Bhati`,
     }).catch(() => {});
 
     // Broadcast mutation to instantly notify all devices in real-time

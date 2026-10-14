@@ -1,24 +1,29 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
+import { isCeoUser } from '@/lib/rosterData';
 import { Task, TeamMember } from '@/types';
 import { Users, Layers, ArrowRightLeft, Check, AlertTriangle, Clock, Eye, RotateCcw, X, Trash2 } from 'lucide-react';
 
 export const ManagerTeamView: React.FC = () => {
-  const { members, tasks, updateTask, reopenTask, deleteTask } = useApp();
+  const { members, tasks, updateTask, reopenTask, deleteTask, currentUser } = useApp();
+  const isCeo = isCeoUser(currentUser);
   const [selectedMemberId, setSelectedMemberId] = useState<string>('ALL');
+
+  // Active members excluding deactivated staff
+  const activeMembers = useMemo(() => members.filter(m => m.status !== 'DEACTIVATED'), [members]);
 
   // Workload rebalancing modal
   const [taskToReassign, setTaskToReassign] = useState<Task | null>(null);
-  const [newAssigneeId, setNewAssigneeId] = useState<string>(members[0]?.id || '');
+  const [newAssigneeId, setNewAssigneeId] = useState<string>(activeMembers[0]?.id || members[0]?.id || '');
 
   // Manager Reopen Modal
   const [taskToReopen, setTaskToReopen] = useState<Task | null>(null);
   const [managerReopenReason, setManagerReopenReason] = useState<string>('');
 
   const isAllMembers = selectedMemberId === 'ALL';
-  const selectedMember = isAllMembers ? null : (members.find(m => m.id === selectedMemberId) || members[0]);
+  const selectedMember = isAllMembers ? null : (activeMembers.find(m => m.id === selectedMemberId) || activeMembers[0]);
 
   const memberTasks = isAllMembers
     ? tasks
@@ -26,6 +31,11 @@ export const ManagerTeamView: React.FC = () => {
 
   const handleConfirmReassignment = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isCeo) {
+      alert("Access Restricted: Only CEO Mr. Sukh Sagar Singh Bhati has authorization to reassign deliverables.");
+      setTaskToReassign(null);
+      return;
+    }
     if (!taskToReassign) return;
     const targetMember = members.find(m => m.id === newAssigneeId) || members[0];
 
@@ -115,7 +125,7 @@ export const ManagerTeamView: React.FC = () => {
             <div className="avatar-circle" style={{ width: '30px', height: '30px', background: '#2563eb', color: '#fff', fontWeight: 700 }}>ALL</div>
             <div>
               <div style={{ fontWeight: 800, fontSize: '0.85rem' }}>Entire Department</div>
-              <div style={{ fontSize: '0.68rem', color: '#64748b' }}>{members.length} Total Staff</div>
+              <div style={{ fontSize: '0.68rem', color: '#64748b' }}>{activeMembers.length} Active Staff</div>
             </div>
           </div>
 
@@ -135,7 +145,7 @@ export const ManagerTeamView: React.FC = () => {
           </div>
         </div>
 
-        {members.map(member => {
+        {activeMembers.map(member => {
           const isSelected = member.id === selectedMemberId;
           const assigned = tasks.filter(t => t.assignees.some(a => a.id === member.id || a.name.includes(member.name))).length;
           const completed = tasks.filter(t => t.status === 'Done' && t.assignees.some(a => a.id === member.id || a.name.includes(member.name))).length;
@@ -266,15 +276,18 @@ export const ManagerTeamView: React.FC = () => {
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                        <button
-                          className="btn-secondary"
-                          style={{ padding: '0.3rem 0.6rem', fontSize: '0.72rem' }}
-                          onClick={() => setTaskToReassign(t)}
-                          title="Reassign to another colleague (FC 19/22)"
-                        >
-                          <ArrowRightLeft size={12} />
-                          Rebalance
-                        </button>
+                        {/* Rebalance / Reassign Deliverable (Strictly CEO Only) */}
+                        {isCeo && (
+                          <button
+                            className="btn-secondary"
+                            style={{ padding: '0.3rem 0.6rem', fontSize: '0.72rem' }}
+                            onClick={() => setTaskToReassign(t)}
+                            title="Reassign to another colleague (CEO Action Only)"
+                          >
+                            <ArrowRightLeft size={12} />
+                            Rebalance
+                          </button>
+                        )}
 
                         {canReopen && (
                           <button
@@ -297,18 +310,21 @@ export const ManagerTeamView: React.FC = () => {
                           </button>
                         )}
 
-                        <button
-                          className="btn-secondary btn-delete-task"
-                          style={{ padding: '0.3rem 0.6rem', fontSize: '0.72rem', color: '#dc2626', borderColor: '#fca5a5' }}
-                          onClick={() => {
-                            if (window.confirm(`Are you sure you want to delete deliverable "${t.title}"?`)) {
-                              deleteTask(t.id);
-                            }
-                          }}
-                          title="Delete deliverable"
-                        >
-                          <Trash2 size={12} color="#dc2626" />
-                        </button>
+                        {/* Delete Deliverable (Strictly CEO Mr. Sukh Sagar Singh Bhati Only) */}
+                        {isCeo && (
+                          <button
+                            className="btn-secondary btn-delete-task"
+                            style={{ padding: '0.3rem 0.6rem', fontSize: '0.72rem', color: '#dc2626', borderColor: '#fca5a5' }}
+                            onClick={() => {
+                              if (window.confirm(`CEO Action: Are you sure you want to delete deliverable "${t.title}"?`)) {
+                                deleteTask(t.id);
+                              }
+                            }}
+                            title="Delete deliverable (CEO Only)"
+                          >
+                            <Trash2 size={12} color="#dc2626" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -344,7 +360,7 @@ export const ManagerTeamView: React.FC = () => {
                   value={newAssigneeId}
                   onChange={e => setNewAssigneeId(e.target.value)}
                 >
-                  {members.map(m => (
+                  {activeMembers.map(m => (
                     <option key={m.id} value={m.id}>
                       {m.name} ({m.department} - {m.designation})
                     </option>

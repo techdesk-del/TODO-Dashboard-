@@ -2,11 +2,41 @@
 
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
-import { BookOpen, Check, Search, ShieldCheck, ChevronRight } from 'lucide-react';
+import { BookOpen, Check, Search, ShieldCheck, ChevronRight, Lock } from 'lucide-react';
+import { canAccessWorkflows } from '@/lib/rosterData';
 
 export const WorkflowManualModal: React.FC = () => {
-  const { setActiveView } = useApp();
+  const { setActiveView, currentUser } = useApp();
   const [searchFilter, setSearchFilter] = useState('');
+
+  if (!canAccessWorkflows(currentUser)) {
+    return (
+      <div style={{
+        background: '#ffffff',
+        border: '1px solid #fecaca',
+        borderRadius: '10px',
+        padding: '2.5rem',
+        textAlign: 'center',
+        maxWidth: '520px',
+        margin: '2rem auto'
+      }}>
+        <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>🔒</div>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#991b1b', marginBottom: '0.5rem' }}>
+          Access Restricted: CEO & Talent Team Only
+        </h3>
+        <p style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: '1.25rem', lineHeight: 1.5 }}>
+          The 28 Verified Technical Workflows Manual is confidential and restricted exclusively to the <strong>CEO</strong> and the <strong>Talent & HR Team</strong>.
+        </p>
+        <button
+          type="button"
+          className="btn-primary"
+          onClick={() => setActiveView('workspace')}
+        >
+          Return to Workspace
+        </button>
+      </div>
+    );
+  }
 
   const workflows = [
     { num: 1, name: 'Sign-Up / Invitation Landing Page', phase: 'Phase 1: Account Onboarding', role: 'Public / All Staff', outcome: 'User chooses to redeem invitation, request access, or sign in directly.' },

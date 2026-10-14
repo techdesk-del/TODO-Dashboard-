@@ -16,7 +16,7 @@ export const INITIAL_TASKS: Task[] = [
     isJustAdded: true,
     department: 'Civil',
     project: 'Core Infrastructure',
-    location: 'Bangalore HQ',
+    location: 'Jaipur',
     assignees: [
       {
         id: 'mem-4',
@@ -54,7 +54,7 @@ export const INITIAL_TASKS: Task[] = [
     progressPercent: 70,
     department: 'Sales',
     project: 'Enterprise Expansion',
-    location: 'Bangalore HQ',
+    location: 'Jaipur',
     assignees: [
       {
         id: 'mem-2',
@@ -86,7 +86,7 @@ export const INITIAL_TASKS: Task[] = [
     progressPercent: 40,
     department: 'Accounts',
     project: 'Operations & Facilities',
-    location: 'Bangalore HQ',
+    location: 'Jaipur',
     assignees: [
       {
         id: 'mem-6',
@@ -118,7 +118,7 @@ export const INITIAL_TASKS: Task[] = [
     progressPercent: 100,
     department: 'Legal Team',
     project: 'Compliance & Contracts',
-    location: 'Bangalore HQ',
+    location: 'Jaipur',
     assignees: [
       {
         id: 'mem-5',
@@ -153,7 +153,7 @@ export const INITIAL_TASKS: Task[] = [
     progressPercent: 60,
     department: 'Purchase Department',
     project: 'Core Infrastructure',
-    location: 'Bangalore HQ',
+    location: 'Jaipur',
     assignees: [
       {
         id: 'mem-7',
@@ -185,7 +185,7 @@ export const INITIAL_TASKS: Task[] = [
     progressPercent: 30,
     department: 'Talent Team',
     project: 'Enterprise Expansion',
-    location: 'Bangalore HQ',
+    location: 'Jaipur',
     assignees: [
       {
         id: 'mem-9',
@@ -217,7 +217,7 @@ export const INITIAL_TASKS: Task[] = [
     progressPercent: 100,
     department: 'Admin Desk',
     project: 'Operations & Facilities',
-    location: 'Bangalore HQ',
+    location: 'Jaipur',
     assignees: [
       {
         id: 'mem-8',
@@ -252,7 +252,7 @@ export const INITIAL_TASKS: Task[] = [
     progressPercent: 50,
     department: 'Sales',
     project: 'Enterprise Expansion',
-    location: 'Bangalore HQ',
+    location: 'Jaipur',
     assignees: [
       {
         id: 'mem-3',
@@ -284,7 +284,7 @@ export const INITIAL_TASKS: Task[] = [
     progressPercent: 45,
     department: 'Talent Team',
     project: 'Enterprise Expansion',
-    location: 'Bangalore HQ',
+    location: 'Jaipur',
     assignees: [
       {
         id: 'mem-10',
@@ -316,7 +316,7 @@ export const INITIAL_TASKS: Task[] = [
     progressPercent: 20,
     department: 'Talent Team',
     project: 'Operations & Facilities',
-    location: 'Bangalore HQ',
+    location: 'Jaipur',
     assignees: [
       {
         id: 'mem-11',
@@ -348,7 +348,7 @@ export const INITIAL_TASKS: Task[] = [
     progressPercent: 100,
     department: 'Sales',
     project: 'Enterprise Expansion',
-    location: 'Bangalore HQ',
+    location: 'Jaipur',
     assignees: [
       {
         id: 'mem-2',
@@ -381,7 +381,7 @@ export const INITIAL_TASKS: Task[] = [
     progressPercent: 90,
     department: 'AI & IT',
     project: 'Core Infrastructure',
-    location: 'Bangalore HQ',
+    location: 'Jaipur',
     assignees: [
       {
         id: 'mem-12',
@@ -483,22 +483,16 @@ export const INITIAL_SYSTEM_CONFIG: SystemConfig = {
       'Compliance & Contracts'
     ],
     departments: [
-      'Leadership & CEO Desk',
-      'AI & IT',
-      'Sales',
       'Civil',
-      'Legal Team',
-      'Accounts',
-      'Purchase Department',
-      'Admin Desk',
-      'Talent Team'
+      'Sales',
+      'AI & IT',
+      'Talent',
+      'Purchase',
+      'Legal',
+      'Accounts'
     ],
     locations: [
-      'Bangalore HQ',
-      'Site Operations',
-      'Delhi Hub',
-      'Corporate Office',
-      'Virtual / Remote'
+      'Jaipur'
     ]
   }
 };

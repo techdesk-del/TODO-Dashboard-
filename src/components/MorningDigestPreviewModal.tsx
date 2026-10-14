@@ -5,7 +5,7 @@ import { useApp } from '@/context/AppContext';
 import { Mail, Clock, AlertCircle, Calendar as CalendarIcon, X, Check } from 'lucide-react';
 
 export const MorningDigestPreviewModal: React.FC = () => {
-  const { showMorningDigestModal, setShowMorningDigestModal, currentUser, tasks } = useApp();
+  const { showMorningDigestModal, setShowMorningDigestModal, currentUser, tasks, selectedDate } = useApp();
   const [isSending, setIsSending] = useState(false);
   const [sendResult, setSendResult] = useState<{ success: boolean; message: string; previewUrl?: string | null } | null>(null);
 
@@ -16,7 +16,7 @@ export const MorningDigestPreviewModal: React.FC = () => {
       const res = await fetch('/api/reminders/digest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: currentUser.email, name: currentUser.name }),
+        body: JSON.stringify({ email: currentUser.email, name: currentUser.name, force: true }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to dispatch email');
@@ -39,14 +39,16 @@ export const MorningDigestPreviewModal: React.FC = () => {
 
   if (!showMorningDigestModal) return null;
 
+  const todayStr = selectedDate || new Date().toISOString().split('T')[0];
+
   // Filter tasks for the logged in user
   const userTasks = tasks.filter(t => 
     t.assignees.some(a => a.id === currentUser.id || a.name.toLowerCase().includes(currentUser.name.toLowerCase()))
   );
 
-  const overdueTasks = userTasks.filter(t => t.scheduledDate < '2026-09-15' && t.status !== 'Done');
-  const todayTasks = userTasks.filter(t => t.scheduledDate === '2026-09-15' && t.status !== 'Done');
-  const upcomingTasks = userTasks.filter(t => t.scheduledDate > '2026-09-15' && t.status !== 'Done');
+  const overdueTasks = userTasks.filter(t => t.scheduledDate < todayStr && t.status !== 'Done');
+  const todayTasks = userTasks.filter(t => t.scheduledDate === todayStr && t.status !== 'Done');
+  const upcomingTasks = userTasks.filter(t => t.scheduledDate > todayStr && t.status !== 'Done');
 
   return (
     <div className="stream-overlay" onClick={() => setShowMorningDigestModal(false)}>

@@ -48,7 +48,7 @@ export function parseSpeechOrTextCommand(input: string, currentUser?: TeamMember
 
   // 4. Extract Assignee
   // If user is a regular employee, tasks are STRICTLY locked to themselves (non-CEOs cannot delegate tasks to others)
-  const isCeo = currentUser ? isCeoUser(currentUser) : true;
+  const isCeo = currentUser ? isCeoUser(currentUser) : false;
   let matchedAssignee: TeamMember = currentUser || INITIAL_MEMBERS[0];
   let bestScore = 0;
 

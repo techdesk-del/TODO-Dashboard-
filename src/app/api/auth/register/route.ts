@@ -8,6 +8,7 @@ import connectDB from '@/lib/db';
 import { UserModel } from '@/models/User';
 import { MemberModel } from '@/models/Member';
 import { hashPassword, signJwtToken } from '@/lib/auth';
+import { sendWelcomeCredentialsEmail } from '@/lib/email';
 
 export async function POST(req: NextRequest) {
   try {
@@ -72,6 +73,18 @@ export async function POST(req: NextRequest) {
       name: user.name,
       role: user.role,
       department: user.department,
+    });
+
+    // Dispatch welcome credentials email
+    sendWelcomeCredentialsEmail({
+      toEmail: user.email,
+      toName: user.name,
+      department: user.department,
+      designation: user.designation,
+      role: user.role,
+      initialPassword: password,
+    }).catch(err => {
+      console.warn('[API/register] Welcome email dispatch note:', err);
     });
 
     const response = NextResponse.json({

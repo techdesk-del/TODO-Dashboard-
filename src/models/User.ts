@@ -21,6 +21,8 @@ export interface IUser {
   hasCustomPassword?: boolean;
   resetPasswordToken?: string;
   resetPasswordExpires?: Date;
+  isDeactivated?: boolean;
+  status?: string;
   createdAt: string;
 }
 
@@ -39,6 +41,8 @@ const UserSchema = new Schema<IUser>(
     hasCustomPassword:    { type: Boolean, default: false },
     resetPasswordToken:   { type: String },
     resetPasswordExpires: { type: Date },
+    isDeactivated:        { type: Boolean, default: false },
+    status:               { type: String, default: 'ACTIVE' },
     createdAt:            { type: String, default: () => new Date().toISOString() },
   },
   { timestamps: false, versionKey: false, strict: false }

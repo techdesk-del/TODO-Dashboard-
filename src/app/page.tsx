@@ -15,7 +15,7 @@ import { SystemConfigModal } from '@/components/SystemConfigModal';
 import { WorkflowManualModal } from '@/components/WorkflowManualModal';
 import { MorningDigestPreviewModal } from '@/components/MorningDigestPreviewModal';
 import { formatDateTitle } from '@/lib/dateUtils';
-import { isCeoUser } from '@/lib/rosterData';
+import { isCeoUser, canAccessAdminHr } from '@/lib/rosterData';
 import { Check, Calendar as CalendarIcon, Sparkles, Globe, CalendarDays } from 'lucide-react';
 
 export default function Home() {
@@ -38,6 +38,7 @@ export default function Home() {
   }, []);
 
   const isCeo = isMounted && isCeoUser(currentUser);
+  const canAccessAdmin = isMounted && canAccessAdminHr(currentUser);
 
   // Role-based visibility isolation:
   // - CEO oversees all company deliverables across all staff members
@@ -244,7 +245,7 @@ export default function Home() {
             )
           )}
           {activeView === 'admin_hr' && (
-            isCeo ? (
+            canAccessAdmin ? (
               <AdminHrPortal />
             ) : (
               <div style={{
@@ -262,9 +263,9 @@ export default function Home() {
                   Admin & HR Portal Access Restricted
                 </h2>
                 <p style={{ fontSize: '0.84rem', color: '#64748b', lineHeight: 1.5, marginBottom: '1.25rem' }}>
-                  Organization administration is strictly reserved for <strong>Mr. Sukh Sagar Singh Bhati (CEO)</strong>.
+                  Admin & HR Portal is reserved for <strong>Executive Leadership & Talent Team</strong>.
                   <br /><br />
-                  Logged in as: <strong>{currentUser.name}</strong> ({currentUser.designation})
+                  Logged in as: <strong>{currentUser.name}</strong> ({currentUser.designation} — {currentUser.department})
                 </p>
                 <button
                   type="button"

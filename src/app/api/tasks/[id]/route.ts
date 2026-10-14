@@ -91,6 +91,10 @@ export async function DELETE(req: NextRequest, ctx: RouteContext) {
 
     const taskTitle = (deletedOrUpdated as { title?: string }).title || id;
 
+    const callerEmail = req.headers.get('x-user-email') || 'ceo@urbangaon.com';
+    const callerName = req.headers.get('x-user-name') || 'Mr. Sukh Sagar Singh Bhati';
+    const callerRole = (req.headers.get('x-user-role') as 'SUPER_ADMIN' | 'ADMIN' | 'MANAGER' | 'EMPLOYEE') || 'SUPER_ADMIN';
+
     // Persist server-side audit entry so cross-device sync catches the deletion across serverless instances
     await AuditLogModel.create({
       id: `audit-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -101,11 +105,11 @@ export async function DELETE(req: NextRequest, ctx: RouteContext) {
       fieldChanged: 'Task Deleted',
       oldValue: taskTitle,
       newValue: 'DELETED',
-      actor: 'System / User',
-      actorRole: 'EMPLOYEE',
+      actor: callerName,
+      actorRole: callerRole,
       ipAddress: req.headers.get('x-forwarded-for') || '127.0.0.1',
       deviceInfo: req.headers.get('user-agent') || 'Browser Device',
-      notes: soft ? 'Task soft-deleted' : 'Task permanently deleted from database',
+      notes: soft ? 'Task soft-deleted' : `Task permanently deleted by CEO ${callerName}`,
     }).catch(err => console.error('[API/tasks DELETE audit log error]', err));
 
     // Broadcast instant real-time deletion to all connected devices worldwide

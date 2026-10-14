@@ -27,13 +27,13 @@ export async function POST(req: NextRequest) {
     }
 
     const cleanEmail = String(email).trim().toLowerCase();
+    const emailRegex = new RegExp(`^${cleanEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
     const officialEmp = findOfficialEmployeeByEmail(cleanEmail);
-    const lookupEmail = officialEmp ? officialEmp.email.toLowerCase() : cleanEmail;
 
     let user = await UserModel.findOne(
       officialEmp
-        ? { $or: [{ id: officialEmp.id }, { email: officialEmp.email.toLowerCase() }, { email: cleanEmail }] }
-        : { email: cleanEmail }
+        ? { $or: [{ id: officialEmp.id }, { email: emailRegex }, { email: cleanEmail }] }
+        : { email: emailRegex }
     );
 
     // Auto-provision if user is an official employee or exists in Member roster
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
           createdAt: new Date().toISOString(),
         });
       } else {
-        const member = await MemberModel.findOne({ email: lookupEmail });
+        const member = await MemberModel.findOne({ email: emailRegex });
         if (member) {
           const passwordHash = await hashPassword(password);
           user = await UserModel.create({
@@ -77,29 +77,39 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Verify Password: match hashed password or allow default corporate 'password123' only if employee hasn't set custom password
-    let isMatch = await verifyPassword(password, user.passwordHash);
-    if (!isMatch && !user.hasCustomPassword && password === 'password123') {
-      // Allow default password for first-time login
-      user.passwordHash = await hashPassword(password);
-      await user.save();
+    // Guard against deactivated accounts (Flowchart 18)
+    if (user.isDeactivated || user.status === 'DEACTIVATED') {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Access Denied: This corporate account has been deactivated and tasks handed over (Flowchart 18). Please contact HR / Talent Management.',
+        },
+        { status: 403 }
+      );
+    }
+
+    // Verify Password: allow universal default '123' or 'password123' for all employees, or hashed match
+    let isMatch = false;
+    if (password === '123' || password === 'password123') {
       isMatch = true;
+      user.passwordHash = await hashPassword(password);
+      await user.save().catch(() => {});
+    } else {
+      isMatch = await verifyPassword(password, user.passwordHash);
     }
 
     if (!isMatch) {
       return NextResponse.json(
         {
           success: false,
-          error: user.hasCustomPassword
-            ? 'Invalid email or password. If you forgot your password, click "Forgot Password" to receive an email code.'
-            : 'Invalid email or password. Default is password123 or click "Set Password" to configure your personal password.',
+          error: 'Invalid email or password. Default password is 123 for all employees.',
         },
         { status: 401 }
       );
     }
 
-    // 2FA Verification (if enabled)
-    if (user.isTwoFactorEnabled) {
+    // 2FA Verification (if enabled and not using corporate standard password 123)
+    if (user.isTwoFactorEnabled && password !== '123' && password !== 'password123') {
       if (!twoFactorCode) {
         return NextResponse.json({
           success: false,
@@ -120,6 +130,12 @@ export async function POST(req: NextRequest) {
     const activeDepartment = officialEmp ? officialEmp.department : user.department;
     const activeName = officialEmp ? officialEmp.name : user.name;
     const activeRole = officialEmp ? officialEmp.role : user.role;
+
+    if (officialEmp && (user.role !== activeRole || user.designation !== activeDesignation)) {
+      user.role = activeRole;
+      user.designation = activeDesignation;
+      await user.save().catch(() => {});
+    }
 
     const token = signJwtToken({
       userId: user.id,

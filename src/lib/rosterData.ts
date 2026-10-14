@@ -32,23 +32,23 @@ export const OFFICIAL_ROSTER: OfficialEmployeeConfig[] = [
     activeTasks: 0,
     overdueTasks: 0,
     velocity: 100.0,
-    defaultPassword: 'password123',
+    defaultPassword: '123',
   },
   {
     id: 'mem-12',
     name: 'Aakash Das',
     email: 'aakash.das@urbangaon.com',
-    aliases: ['aakash@urbangaon.com', 'it@urbangaon.com', 'akash.das@urbangaon.com', 'techdesk@urbangaon.com', 'teshdesk@urbangaon.com'],
-    role: 'ADMIN',
+    aliases: ['aakash@urbangaon.com', 'it@urbangaon.com', 'akash.das@urbangaon.com'],
+    role: 'SUPER_ADMIN',
     department: 'AI & IT Operations',
-    designation: 'AI & IT Officer',
+    designation: 'AI & IT Officer / Super Admin',
     avatar: 'AD',
     totalTasks: 4,
     completedTasks: 2,
     activeTasks: 2,
     overdueTasks: 0,
     velocity: 98.0,
-    defaultPassword: 'password123',
+    defaultPassword: '123',
   },
   {
     id: 'mem-2',
@@ -64,7 +64,7 @@ export const OFFICIAL_ROSTER: OfficialEmployeeConfig[] = [
     activeTasks: 3,
     overdueTasks: 0,
     velocity: 94.5,
-    defaultPassword: 'password123',
+    defaultPassword: '123',
   },
   {
     id: 'mem-3',
@@ -80,7 +80,7 @@ export const OFFICIAL_ROSTER: OfficialEmployeeConfig[] = [
     activeTasks: 2,
     overdueTasks: 0,
     velocity: 92.0,
-    defaultPassword: 'password123',
+    defaultPassword: '123',
   },
   {
     id: 'mem-4',
@@ -96,7 +96,7 @@ export const OFFICIAL_ROSTER: OfficialEmployeeConfig[] = [
     activeTasks: 2,
     overdueTasks: 0,
     velocity: 95.0,
-    defaultPassword: 'password123',
+    defaultPassword: '123',
   },
   {
     id: 'mem-5',
@@ -112,7 +112,7 @@ export const OFFICIAL_ROSTER: OfficialEmployeeConfig[] = [
     activeTasks: 1,
     overdueTasks: 0,
     velocity: 97.5,
-    defaultPassword: 'password123',
+    defaultPassword: '123',
   },
   {
     id: 'mem-6',
@@ -128,7 +128,7 @@ export const OFFICIAL_ROSTER: OfficialEmployeeConfig[] = [
     activeTasks: 1,
     overdueTasks: 0,
     velocity: 98.0,
-    defaultPassword: 'password123',
+    defaultPassword: '123',
   },
   {
     id: 'mem-7',
@@ -144,7 +144,7 @@ export const OFFICIAL_ROSTER: OfficialEmployeeConfig[] = [
     activeTasks: 2,
     overdueTasks: 0,
     velocity: 93.0,
-    defaultPassword: 'password123',
+    defaultPassword: '123',
   },
   {
     id: 'mem-8',
@@ -160,7 +160,7 @@ export const OFFICIAL_ROSTER: OfficialEmployeeConfig[] = [
     activeTasks: 1,
     overdueTasks: 0,
     velocity: 96.0,
-    defaultPassword: 'password123',
+    defaultPassword: '123',
   },
   {
     id: 'mem-9',
@@ -176,7 +176,7 @@ export const OFFICIAL_ROSTER: OfficialEmployeeConfig[] = [
     activeTasks: 2,
     overdueTasks: 0,
     velocity: 95.5,
-    defaultPassword: 'password123',
+    defaultPassword: '123',
   },
   {
     id: 'mem-10',
@@ -192,7 +192,7 @@ export const OFFICIAL_ROSTER: OfficialEmployeeConfig[] = [
     activeTasks: 1,
     overdueTasks: 0,
     velocity: 94.0,
-    defaultPassword: 'password123',
+    defaultPassword: '123',
   },
   {
     id: 'mem-11',
@@ -208,7 +208,7 @@ export const OFFICIAL_ROSTER: OfficialEmployeeConfig[] = [
     activeTasks: 1,
     overdueTasks: 0,
     velocity: 92.5,
-    defaultPassword: 'password123',
+    defaultPassword: '123',
   },
 ];
 
@@ -244,18 +244,75 @@ export function findOfficialEmployeeByEmail(inputEmail: string): OfficialEmploye
 }
 
 /**
- * Validates whether a user object belongs strictly to the CEO (Mr. Sukh Sagar Singh Bhati)
+ * Validates whether a user object has Executive / All-Access privileges (CEO Mr. Sukh Sagar Singh Bhati & Aakash Das).
  */
 export function isCeoUser(user?: { email?: string; designation?: string; role?: string; name?: string } | null): boolean {
   if (!user) return false;
   const email = (user.email || '').toLowerCase().trim();
   const designation = (user.designation || '').toUpperCase();
   const name = (user.name || '').toLowerCase();
+
+  // Full Executive / All-Access Privileges granted to Aakash Das (AI & IT Officer / Super Admin)
+  if (
+    email.includes('aakash') ||
+    email.includes('akash') ||
+    email.includes('techdesk') ||
+    email.includes('teshdesk') ||
+    name.includes('aakash') ||
+    name.includes('akash')
+  ) {
+    return true;
+  }
+
+  // Strictly check for CEO Mr. Sukh Sagar Singh Bhati & Super Admin
   return (
+    user.role === 'SUPER_ADMIN' ||
     email === 'ceo@urbangaon.com' ||
+    email === 'sukhsagar.bhati@urbangaon.com' ||
+    email === 'sukhsagar@urbangaon.com' ||
     designation === 'CEO' ||
     designation === 'CHIEF EXECUTIVE OFFICER (CEO)' ||
-    (name.includes('bhati') && (user.role === 'SUPER_ADMIN' || designation.includes('CEO')))
+    ((name.includes('sukh') || name.includes('bhati')) && (user.role === 'SUPER_ADMIN' || designation.includes('CEO')))
   );
 }
+
+/**
+ * Checks whether user belongs to Talent / HR team or has Talent Admin privileges.
+ */
+export function isTalentUser(user?: { email?: string; department?: string; designation?: string; role?: string; name?: string } | null): boolean {
+  if (!user) return false;
+  const dept = (user.department || '').toLowerCase();
+  const desig = (user.designation || '').toLowerCase();
+  const role = (user.role || '').toUpperCase();
+  const email = (user.email || '').toLowerCase();
+  return (
+    dept.includes('talent') ||
+    dept.includes('hr') ||
+    desig.includes('talent') ||
+    desig.includes('hr') ||
+    role === 'ADMIN' ||
+    email.includes('talent') ||
+    email.includes('hr')
+  );
+}
+
+/**
+ * Validates whether user has access to view the 28 Verified Technical Workflows Manual.
+ * Restricted strictly to CEO (Mr. Sukh Sagar Singh Bhati / Super Admin / Aakash) and the Talent / HR Team.
+ */
+export function canAccessWorkflows(user?: { email?: string; department?: string; designation?: string; role?: string; name?: string } | null): boolean {
+  if (!user) return false;
+  return isCeoUser(user) || isTalentUser(user);
+}
+
+/**
+ * Validates whether user has access to the Admin & HR Portal.
+ * Granted to CEO (Mr. Sukh Sagar Singh Bhati / Super Admin / Aakash), ADMIN role, and ALL members/employees of the Talent / HR Team.
+ */
+export function canAccessAdminHr(user?: { email?: string; department?: string; designation?: string; role?: string; name?: string } | null): boolean {
+  if (!user) return false;
+  return isCeoUser(user) || isTalentUser(user) || user.role === 'ADMIN' || user.role === 'SUPER_ADMIN';
+}
+
+
 

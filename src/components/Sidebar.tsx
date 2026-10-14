@@ -18,7 +18,7 @@ import {
   CalendarDays
 } from 'lucide-react';
 import { getTodayStr, getTomorrowStr, formatDateDisplay } from '@/lib/dateUtils';
-import { isCeoUser } from '@/lib/rosterData';
+import { isCeoUser, canAccessWorkflows, canAccessAdminHr } from '@/lib/rosterData';
 import { AuthModal } from './AuthModal';
 
 export const Sidebar: React.FC = () => {
@@ -65,7 +65,8 @@ export const Sidebar: React.FC = () => {
   const isCeo = isMounted && isCeoUser(currentUser);
   const isAdmin = isMounted && (isCeo || currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN');
   const isManager = isMounted && (isAdmin || currentUser.role === 'MANAGER');
-  const isTalentOrAdmin = isMounted && (isAdmin || (currentUser.department && (currentUser.department.toLowerCase().includes('talent') || currentUser.department.toLowerCase().includes('admin'))));
+  const isTalentOrAdmin = isMounted && canAccessAdminHr(currentUser);
+  const canViewFlows = isMounted && canAccessWorkflows(currentUser);
 
   const userVisibleTasks = isCeo
     ? tasks.filter(t => t.status !== 'Cancelled')
@@ -124,6 +125,10 @@ export const Sidebar: React.FC = () => {
   };
 
   const handleClearData = async () => {
+    if (!isCeo) {
+      alert("Access Restricted: Only CEO Mr. Sukh Sagar Singh Bhati can clear company deliverables.");
+      return;
+    }
     const isConfirmed = confirm(
       'Are you sure you want to clear ALL deliverables from MongoDB Atlas and local memory?\n\nThis will reset the board to 0 tasks so you can test with fresh data.'
     );
@@ -296,7 +301,7 @@ export const Sidebar: React.FC = () => {
             </button>
           )}
 
-          {isCeo && (
+          {isTalentOrAdmin && (
             <button
               className={`nav-link-item ${activeView === 'admin_hr' ? 'active' : ''}`}
               onClick={() => { setActiveView('admin_hr'); closeSidebar(); }}
@@ -336,7 +341,7 @@ export const Sidebar: React.FC = () => {
             </button>
           )}
 
-          {isCeo && (
+          {canViewFlows && (
             <button
               className={`nav-link-item ${activeView === 'workflow_manual' ? 'active' : ''}`}
               onClick={() => { setActiveView('workflow_manual'); closeSidebar(); }}
@@ -388,12 +393,13 @@ export const Sidebar: React.FC = () => {
             </div>
           )}
 
-          {isAdmin && (
+          {/* Clear All Data Button (Strictly CEO Mr. Sukh Sagar Singh Bhati Only) */}
+          {isCeo && (
             <button
               className="btn-secondary"
               style={{ width: '100%', justifyContent: 'center', fontSize: '0.72rem', color: '#dc2626', borderColor: '#fca5a5', background: '#fef2f2', gap: '6px' }}
               onClick={handleClearData}
-              title="Clear all tasks from MongoDB to start with fresh data (Admin / CEO Only)"
+              title="Clear all tasks from MongoDB to start with fresh data (CEO Sukh Sagar ji Only)"
             >
               <Trash2 size={13} color="#dc2626" />
               <span>Clear All Data ({tasks.length})</span>

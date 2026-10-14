@@ -15,9 +15,11 @@ import {
   UserCheck,
   ArrowLeft,
   Send,
-  Check
+  Check,
+  Search
 } from 'lucide-react';
 import { OFFICIAL_ROSTER } from '@/lib/rosterData';
+import { Role, TeamMember } from '@/types';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -32,7 +34,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
   // Login credentials
   const [email, setEmail] = useState(currentUser?.email || OFFICIAL_ROSTER[0].email);
-  const [password, setPassword] = useState('');
+  const [password, setPassword] = useState('123');
   const [twoFactorCode, setTwoFactorCode] = useState('');
   const [requires2FA, setRequires2FA] = useState(false);
 
@@ -47,6 +49,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showRosterQuickPick, setShowRosterQuickPick] = useState(false);
+  const [rosterSearch, setRosterSearch] = useState('');
+  const [extraMembers, setExtraMembers] = useState<TeamMember[]>([]);
 
   // Ref to prevent timer overlap or auto-close when user is interacting
   const closeTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -65,7 +69,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     onClose();
   };
 
-  // Reset transient error/success states and timers whenever modal opens
+  // Reset transient error/success states, timers, and fetch latest members whenever modal opens
   useEffect(() => {
     if (isOpen) {
       clearCloseTimer();
@@ -74,20 +78,117 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       setLoading(false);
       setRequires2FA(false);
       setShowRosterQuickPick(false);
-      setPassword('');
+      setRosterSearch('');
+      setPassword('123');
       if (currentUser?.email) {
         setEmail(currentUser.email);
       }
+
+      // Fetch latest roster from MongoDB Atlas to guarantee freshly created employees are displayed
+      fetch(`/api/members?_t=${Date.now()}`, { cache: 'no-store' })
+        .then(res => res.json())
+        .then(json => {
+          if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+            setExtraMembers(json.data);
+          }
+        })
+        .catch(() => {});
     }
     return () => {
       clearCloseTimer();
     };
   }, [isOpen, currentUser?.email]);
 
+  // Unified dynamic directory combining live members from database and roster
+  const allDirectoryMembers = React.useMemo(() => {
+    const list: Array<{
+      id: string;
+      name: string;
+      email: string;
+      role: Role;
+      department: string;
+      designation: string;
+      avatar: string;
+      aliases?: string[];
+      totalTasks?: number;
+      completedTasks?: number;
+      activeTasks?: number;
+      overdueTasks?: number;
+      velocity?: number;
+    }> = [];
+
+    const seenEmails = new Set<string>();
+
+    // 1. Add all members from live app state & latest API fetch (excluding deactivated employees!)
+    const combinedLiveMembers = [...(Array.isArray(members) ? members : []), ...extraMembers];
+
+    // Collect all deactivated emails to completely suppress them from directory quick-pick
+    const deactivatedEmails = new Set<string>();
+    for (const m of combinedLiveMembers) {
+      if (m?.email && (m.status === 'DEACTIVATED' || (m as any).isDeactivated)) {
+        deactivatedEmails.add(m.email.toLowerCase().trim());
+      }
+    }
+
+    for (const m of combinedLiveMembers) {
+      if (!m || !m.email) continue;
+      const cleanEmail = m.email.toLowerCase().trim();
+      if (seenEmails.has(cleanEmail)) continue;
+      // Suppress deactivated employees
+      if (deactivatedEmails.has(cleanEmail) || m.status === 'DEACTIVATED' || (m as any).isDeactivated) {
+        continue;
+      }
+      seenEmails.add(cleanEmail);
+
+      const officialMatch = OFFICIAL_ROSTER.find(
+        o => o.email.toLowerCase() === cleanEmail || o.id === m.id
+      );
+
+      list.push({
+        id: m.id,
+        name: m.name,
+        email: m.email,
+        role: m.role || 'EMPLOYEE',
+        department: m.department || 'General',
+        designation: m.designation || 'Specialist',
+        avatar: m.avatar || (m.name ? m.name.slice(0, 2).toUpperCase() : 'EM'),
+        aliases: officialMatch?.aliases,
+        totalTasks: m.totalTasks ?? 0,
+        completedTasks: m.completedTasks ?? 0,
+        activeTasks: m.activeTasks ?? 0,
+        overdueTasks: m.overdueTasks ?? 0,
+        velocity: m.velocity ?? 100,
+      });
+    }
+
+    // 2. Also ensure official roster defaults are included if not present and not deactivated
+    for (const o of OFFICIAL_ROSTER) {
+      const cleanEmail = o.email.toLowerCase().trim();
+      if (deactivatedEmails.has(cleanEmail)) continue;
+      if (!seenEmails.has(cleanEmail)) {
+        seenEmails.add(cleanEmail);
+        list.push(o);
+      }
+    }
+
+    return list;
+  }, [members, extraMembers]);
+
+  const filteredDirectoryMembers = React.useMemo(() => {
+    if (!rosterSearch.trim()) return allDirectoryMembers;
+    const q = rosterSearch.toLowerCase().trim();
+    return allDirectoryMembers.filter(m =>
+      m.name.toLowerCase().includes(q) ||
+      m.email.toLowerCase().includes(q) ||
+      (m.designation && m.designation.toLowerCase().includes(q)) ||
+      (m.department && m.department.toLowerCase().includes(q))
+    );
+  }, [allDirectoryMembers, rosterSearch]);
+
   if (!isOpen) return null;
 
   const activeEmailForLookup = authMode === 'LOGIN' ? email : (resetEmail || email);
-  const selectedEmployee = OFFICIAL_ROSTER.find(
+  const selectedEmployee = allDirectoryMembers.find(
     emp => emp.email.toLowerCase() === activeEmailForLookup.trim().toLowerCase() ||
       emp.aliases?.some(a => a.toLowerCase() === activeEmailForLookup.trim().toLowerCase())
   );
@@ -118,8 +219,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         throw new Error(data.error || 'Authentication failed');
       }
 
-      // Find matching member from local members list or fallback to official roster data
-      const matchedMember = members.find(m => m.id === data.user.id || m.email.toLowerCase() === data.user.email.toLowerCase()) ||
+      // Find matching member from unified directory, local members list, or official roster data
+      const matchedMember = allDirectoryMembers.find(m => m.id === data.user.id || m.email.toLowerCase() === data.user.email.toLowerCase()) ||
+        members.find(m => m.id === data.user.id || m.email.toLowerCase() === data.user.email.toLowerCase()) ||
         OFFICIAL_ROSTER.find(m => m.id === data.user.id || m.email.toLowerCase() === data.user.email.toLowerCase());
 
       setCurrentUser({
@@ -233,7 +335,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       }
 
       // Automatically log the user in
-      const matchedMember = members.find(m => m.id === data.user.id || m.email.toLowerCase() === data.user.email.toLowerCase()) ||
+      const matchedMember = allDirectoryMembers.find(m => m.id === data.user.id || m.email.toLowerCase() === data.user.email.toLowerCase()) ||
+        members.find(m => m.id === data.user.id || m.email.toLowerCase() === data.user.email.toLowerCase()) ||
         OFFICIAL_ROSTER.find(m => m.id === data.user.id || m.email.toLowerCase() === data.user.email.toLowerCase());
 
       setCurrentUser({
@@ -276,11 +379,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     clearCloseTimer();
     setEmail(empEmail);
     setResetEmail(empEmail);
-    setPassword('');
+    setPassword('123');
     setError(null);
     setSuccess(null);
     setRequires2FA(false);
     setShowRosterQuickPick(false);
+    setRosterSearch('');
   };
 
   return (
@@ -355,7 +459,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     Selected: <strong>{selectedEmployee.name}</strong> ({selectedEmployee.designation})
                   </span>
                 ) : (
-                  <span>Choose Employee from Directory ({OFFICIAL_ROSTER.length} Members)</span>
+                  <span>Choose Employee from Directory ({allDirectoryMembers.length} Members)</span>
                 )}
               </span>
               <span style={{ fontSize: '0.72rem', color: '#2563eb', fontWeight: 700 }}>
@@ -367,7 +471,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             {showRosterQuickPick && (
               <div style={{
                 marginTop: '0.5rem',
-                maxHeight: '190px',
+                maxHeight: '220px',
                 overflowY: 'auto',
                 border: '1px solid #e2e8f0',
                 borderRadius: '8px',
@@ -375,7 +479,30 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
                 padding: '0.35rem'
               }}>
-                {OFFICIAL_ROSTER.map((emp) => {
+                {/* Search Filter */}
+                <div style={{ padding: '0.2rem 0.3rem 0.4rem 0.3rem', borderBottom: '1px solid #f1f5f9', marginBottom: '0.35rem' }}>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <Search size={13} style={{ position: 'absolute', left: '8px', color: '#94a3b8' }} />
+                    <input
+                      type="text"
+                      placeholder="Search by name, email or department..."
+                      value={rosterSearch}
+                      onChange={e => setRosterSearch(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.35rem 0.5rem 0.35rem 1.65rem',
+                        fontSize: '0.74rem',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '6px',
+                        outline: 'none',
+                        background: '#f8fafc'
+                      }}
+                      onClick={e => e.stopPropagation()}
+                    />
+                  </div>
+                </div>
+
+                {filteredDirectoryMembers.map((emp) => {
                   const isSelected = emp.email.toLowerCase() === activeEmailForLookup.toLowerCase();
                   return (
                     <div
@@ -393,34 +520,46 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                         transition: 'background 0.15s ease',
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
                         <div style={{
-                          width: '26px',
-                          height: '26px',
+                          width: '28px',
+                          height: '28px',
                           borderRadius: '50%',
-                          background: emp.role === 'SUPER_ADMIN' ? '#dbeafe' : '#f1f5f9',
-                          color: emp.role === 'SUPER_ADMIN' ? '#1e40af' : '#475569',
+                          background: emp.role === 'SUPER_ADMIN' ? '#dbeafe' : emp.role === 'ADMIN' ? '#fef3c7' : emp.role === 'MANAGER' ? '#f3e8ff' : '#f1f5f9',
+                          color: emp.role === 'SUPER_ADMIN' ? '#1e40af' : emp.role === 'ADMIN' ? '#92400e' : emp.role === 'MANAGER' ? '#6b21a8' : '#475569',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           fontSize: '0.7rem',
                           fontWeight: 800,
+                          flexShrink: 0
                         }}>
                           {emp.avatar}
                         </div>
-                        <div>
-                          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f172a' }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {emp.name}
                           </div>
-                          <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
+                          <div style={{ fontSize: '0.67rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {emp.email} • {emp.designation}
                           </div>
                         </div>
                       </div>
-                      <ChevronRight size={13} color="#94a3b8" />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                        <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '1px 5px', borderRadius: '4px', background: '#f1f5f9', color: '#475569' }}>
+                          {emp.department}
+                        </span>
+                        <ChevronRight size={13} color="#94a3b8" />
+                      </div>
                     </div>
                   );
                 })}
+
+                {filteredDirectoryMembers.length === 0 && (
+                  <div style={{ padding: '1rem', textAlign: 'center', fontSize: '0.74rem', color: '#94a3b8' }}>
+                    No corporate employees match &ldquo;{rosterSearch}&rdquo;
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -542,7 +681,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     type="password"
                     required
                     style={{ border: 'none', outline: 'none', width: '100%', fontSize: '0.82rem', color: '#0f172a' }}
-                    placeholder="Enter password (default: password123)"
+                    placeholder="Enter password (default: 123)"
                     value={password}
                     onChange={e => {
                       clearCloseTimer();
@@ -553,7 +692,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   />
                 </div>
                 <div style={{ marginTop: '4px', fontSize: '0.68rem', color: '#64748b' }}>
-                  Default password: <code>password123</code> (or use personal password set via email).
+                  Default password: <code>123</code> (or password123).
                 </div>
               </div>
 

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
+import { isCeoUser } from '@/lib/rosterData';
 import { Task, TeamMember } from '@/types';
 import { 
   FileText, 
@@ -12,10 +13,10 @@ import {
   TrendingUp, 
   Clock, 
   AlertOctagon, 
-  CheckCircle,
-  Filter,
-  UserCheck,
-  Trash2
+  CheckCircle, 
+  Filter, 
+  UserCheck, 
+  Trash2 
 } from 'lucide-react';
 
 export const CeoPortal: React.FC = () => {
@@ -27,13 +28,19 @@ export const CeoPortal: React.FC = () => {
     exportToExcel,
     setViewingAuditForTaskId,
     setActiveView,
-    deleteTask
+    deleteTask,
+    currentUser
   } = useApp();
+
+  const isCeo = isCeoUser(currentUser);
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
+  // Active members excluding deactivated staff
+  const activeMembers = members.filter(m => m.status !== 'DEACTIVATED');
+
   // Active member for drilldown
-  const activeMember = members.find(m => m.name === selectedMemberFilter) || null;
+  const activeMember = activeMembers.find(m => m.name === selectedMemberFilter) || null;
 
   // Filter tasks based on member selection
   const displayedTasks = activeMember
@@ -142,14 +149,16 @@ export const CeoPortal: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '0.85rem',
         position: 'relative'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1 }}>
-          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', flex: '1 1 300px' }}>
+          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
             👥 FILTER DELIVERABLES BY TEAM MEMBER:
           </div>
 
-          <div style={{ position: 'relative', width: '360px' }}>
+          <div style={{ position: 'relative', flex: '1 1 240px', maxWidth: '360px' }}>
             <button
               type="button"
               className="btn-secondary"
@@ -201,7 +210,7 @@ export const CeoPortal: React.FC = () => {
                   <span className="filter-badge-count">{totalTasksCount} Tasks</span>
                 </div>
 
-                {members.map(member => (
+                {activeMembers.map(member => (
                   <div
                     key={member.id}
                     onClick={() => {
@@ -405,19 +414,21 @@ export const CeoPortal: React.FC = () => {
                       <ShieldCheck size={13} color="#059669" />
                       View Audit
                     </button>
-                    <button
-                      type="button"
-                      className="btn-secondary btn-delete-task"
-                      onClick={() => {
-                        if (window.confirm(`CEO Action: Are you sure you want to delete deliverable "${task.title}"?`)) {
-                          deleteTask(task.id);
-                        }
-                      }}
-                      style={{ padding: '0.35rem 0.5rem', fontSize: '0.72rem', color: '#dc2626', borderColor: '#fca5a5' }}
-                      title="Delete Deliverable"
-                    >
-                      <Trash2 size={13} color="#dc2626" />
-                    </button>
+                    {isCeo && (
+                      <button
+                        type="button"
+                        className="btn-secondary btn-delete-task"
+                        onClick={() => {
+                          if (window.confirm(`CEO Action: Are you sure you want to delete deliverable "${task.title}"?`)) {
+                            deleteTask(task.id);
+                          }
+                        }}
+                        style={{ padding: '0.35rem 0.5rem', fontSize: '0.72rem', color: '#dc2626', borderColor: '#fca5a5' }}
+                        title="Delete Deliverable (CEO Sukh Sagar ji Only)"
+                      >
+                        <Trash2 size={13} color="#dc2626" />
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>

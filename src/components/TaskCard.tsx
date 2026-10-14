@@ -43,15 +43,29 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const activeMembers = members.filter(m => m.status !== 'DEACTIVATED');
+
   const [isInlineEditing, setIsInlineEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState(task.title);
+  const [editedScheduledDate, setEditedScheduledDate] = useState(task.scheduledDate);
   const [editedTime, setEditedTime] = useState(task.time);
-  const [editedAssigneeId, setEditedAssigneeId] = useState(task.assignees[0]?.id || members[1].id);
+  const [editedAssigneeId, setEditedAssigneeId] = useState(task.assignees[0]?.id || activeMembers[0]?.id || members[0]?.id || '');
   const [editedPriority, setEditedPriority] = useState<TaskPriority>(task.priority);
-  const [editedProject, setEditedProject] = useState(task.project || 'Core Infrastructure');
-  const [editedDepartment, setEditedDepartment] = useState(task.department || 'Product & Tech');
-  const [editedLocation, setEditedLocation] = useState(task.location || 'Bangalore HQ');
+  const [editedDepartment, setEditedDepartment] = useState(task.department || 'AI & IT');
+  const [editedLocation, setEditedLocation] = useState('Jaipur');
   const [editedRemarks, setEditedRemarks] = useState(task.assignees[0]?.remarks || '');
+
+  const handleStartEdit = () => {
+    setEditedTitle(task.title);
+    setEditedScheduledDate(task.scheduledDate);
+    setEditedTime(task.time);
+    setEditedAssigneeId(task.assignees[0]?.id || members[0]?.id || '');
+    setEditedPriority(task.priority);
+    setEditedDepartment(task.department || 'Product & Tech');
+    setEditedLocation('Jaipur');
+    setEditedRemarks(task.assignees[0]?.remarks || '');
+    setIsInlineEditing(true);
+  };
 
   // Modals for Hold, Escalate & Reopen
   const [showHoldModal, setShowHoldModal] = useState(false);
@@ -89,35 +103,36 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
   };
 
   const handleSaveInline = () => {
-    if (!isCeo) {
-      alert("Access Restricted: Only CEO Mr. Sukh Sagar Singh Bhati has permission to edit deliverable details.");
-      setIsInlineEditing(false);
-      return;
-    }
-
-    const selectedMember = members.find(m => m.id === editedAssigneeId) || members[1];
-    const oldTime = task.time;
+    // Assigned to feature: strictly exclusive to CEO Mr. Sukh Sagar Singh Bhati
+    const selectedMember = members.find(m => m.id === editedAssigneeId) || members[0];
+    const updatedAssignees = isCeo
+      ? [
+          {
+            id: selectedMember.id,
+            name: selectedMember.name,
+            email: selectedMember.email,
+            department: editedDepartment,
+            designation: selectedMember.designation,
+            avatar: selectedMember.avatar,
+            status: task.status,
+            remarks: editedRemarks,
+          }
+        ]
+      : task.assignees.map(a => ({
+          ...a,
+          department: editedDepartment,
+          remarks: editedRemarks || a.remarks,
+        }));
 
     updateTask(task.id, {
       title: editedTitle,
+      scheduledDate: editedScheduledDate,
       time: editedTime,
       priority: editedPriority,
-      project: editedProject,
       department: editedDepartment,
-      location: editedLocation,
-      assignees: [
-        {
-          id: selectedMember.id,
-          name: selectedMember.name,
-          email: selectedMember.email,
-          department: editedDepartment,
-          designation: selectedMember.designation,
-          avatar: selectedMember.avatar,
-          status: task.status,
-          remarks: editedRemarks,
-        }
-      ]
-    }, `Inline task edit: time updated to ${editedTime}, project: ${editedProject}, location: ${editedLocation}`);
+      location: 'Jaipur',
+      assignees: updatedAssignees,
+    }, `Inline task edit: title updated to "${editedTitle}", date: ${editedScheduledDate}, time: ${editedTime}`);
 
     setIsInlineEditing(false);
   };
@@ -140,11 +155,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
 
   const handleConfirmReschedule = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isCeo) {
-      alert("Access Restricted: Only CEO Mr. Sukh Sagar Singh Bhati has permission to reschedule deliverables.");
-      setShowRescheduleModal(false);
-      return;
-    }
+    if (!rescheduleDateInput) return;
     updateTask(task.id, { scheduledDate: rescheduleDateInput }, `Rescheduled deliverable to ${rescheduleDateInput}`);
     setShowRescheduleModal(false);
   };
@@ -186,6 +197,16 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
           </div>
 
           <div className="form-field-group">
+            <label className="form-field-label">Scheduled Date</label>
+            <input
+              type="date"
+              className="form-input"
+              value={editedScheduledDate}
+              onChange={(e) => setEditedScheduledDate(e.target.value)}
+            />
+          </div>
+
+          <div className="form-field-group">
             <label className="form-field-label">Time (Updated)</label>
             <input
               type="text"
@@ -196,20 +217,23 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
             />
           </div>
 
-          <div className="form-field-group">
-            <label className="form-field-label">Assigned To</label>
-            <select
-              className="form-select"
-              value={editedAssigneeId}
-              onChange={(e) => setEditedAssigneeId(e.target.value)}
-            >
-              {members.map(m => (
-                <option key={m.id} value={m.id}>
-                  {m.name} ({m.department})
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Assigned To - Strictly Visible and Accessible to CEO Only */}
+          {isCeo && (
+            <div className="form-field-group">
+              <label className="form-field-label">Assigned To</label>
+              <select
+                className="form-select"
+                value={editedAssigneeId}
+                onChange={(e) => setEditedAssigneeId(e.target.value)}
+              >
+                {activeMembers.map(m => (
+                  <option key={m.id} value={m.id}>
+                    {m.name} ({m.department})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="form-field-group">
             <label className="form-field-label">Priority</label>
@@ -225,41 +249,26 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
           </div>
 
           <div className="form-field-group">
-            <label className="form-field-label">Project (Master List)</label>
-            <select
-              className="form-select"
-              value={editedProject}
-              onChange={(e) => setEditedProject(e.target.value)}
-            >
-              {(systemConfig?.masterLists?.projects || ['Core Infrastructure', 'Enterprise Expansion', 'Growth Strategy Q3']).map(p => (
-                <option key={p} value={p}>{p}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-field-group">
             <label className="form-field-label">Department (Master List)</label>
             <select
               className="form-select"
               value={editedDepartment}
               onChange={(e) => setEditedDepartment(e.target.value)}
             >
-              {(systemConfig?.masterLists?.departments || ['DevOps & DB', 'Product & Tech', 'Frontend Engineering', 'Design & UI', 'Sales & Growth', 'Finance']).map(d => (
+              {(systemConfig?.masterLists?.departments || ['Civil', 'Sales', 'AI & IT', 'Talent', 'Purchase', 'Legal', 'Accounts']).map(d => (
                 <option key={d} value={d}>{d}</option>
               ))}
             </select>
           </div>
 
           <div className="form-field-group">
-            <label className="form-field-label">Location (Master List)</label>
+            <label className="form-field-label">Location</label>
             <select
               className="form-select"
               value={editedLocation}
               onChange={(e) => setEditedLocation(e.target.value)}
             >
-              {(systemConfig?.masterLists?.locations || ['Bangalore HQ', 'Mumbai Office', 'Remote India', 'Delhi NCR Branch']).map(l => (
-                <option key={l} value={l}>{l}</option>
-              ))}
+              <option value="Jaipur">Jaipur</option>
             </select>
           </div>
 
@@ -280,16 +289,19 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
             👉 CLICK HERE TO SAVE <ArrowRight size={14} />
           </div>
 
-          <button
-            type="button"
-            className="btn-secondary btn-delete-task"
-            onClick={() => setShowDeleteModal(true)}
-            style={{ color: '#dc2626', borderColor: '#fca5a5' }}
-            title="Delete this deliverable"
-          >
-            <Trash2 size={13} color="#dc2626" />
-            Delete
-          </button>
+          {/* CEO-Only Delete Button */}
+          {isCeo && (
+            <button
+              type="button"
+              className="btn-secondary btn-delete-task"
+              onClick={() => setShowDeleteModal(true)}
+              style={{ color: '#dc2626', borderColor: '#fca5a5' }}
+              title="Delete this deliverable (CEO Sukh Sagar ji only)"
+            >
+              <Trash2 size={13} color="#dc2626" />
+              Delete
+            </button>
+          )}
 
           <button
             type="button"
@@ -430,31 +442,31 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
         </div>
 
         <div className="task-actions-group">
-          {/* Executive Edit: CEO Only */}
-          {isCeo && (
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => setIsInlineEditing(true)}
-              title="Executive Inline Edit (CEO Only)"
-            >
-              <Edit3 size={13} color="#2563eb" />
-              Edit Task
-            </button>
-          )}
+          {/* Edit Task Button */}
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={handleStartEdit}
+            title="Edit Task Details"
+            style={{ color: '#2563eb', borderColor: '#bfdbfe', background: '#eff6ff' }}
+          >
+            <Edit3 size={13} color="#2563eb" />
+            Edit Task
+          </button>
 
-          {/* Reschedule Date: CEO Only */}
-          {isCeo && (
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => setShowRescheduleModal(true)}
-              title="Reschedule Task Date (CEO Only)"
-            >
-              <CalendarIcon size={13} color="#64748b" />
-              Reschedule
-            </button>
-          )}
+          {/* Reschedule Date Button */}
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => {
+              setRescheduleDateInput(task.scheduledDate);
+              setShowRescheduleModal(true);
+            }}
+            title="Reschedule Task Date"
+          >
+            <CalendarIcon size={13} color="#64748b" />
+            Reschedule
+          </button>
 
           <button
             type="button"
@@ -486,16 +498,18 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
             <ShieldCheck size={13} color="#059669" />
           </button>
 
-          {/* Delete Deliverable */}
-          <button
-            type="button"
-            className="btn-secondary btn-delete-task"
-            onClick={() => setShowDeleteModal(true)}
-            title="Delete Deliverable"
-            style={{ padding: '0.4rem 0.5rem', color: '#dc2626', borderColor: '#fca5a5' }}
-          >
-            <Trash2 size={13} color="#dc2626" />
-          </button>
+          {/* Delete Deliverable (Strictly CEO Only) */}
+          {isCeo && (
+            <button
+              type="button"
+              className="btn-secondary btn-delete-task"
+              onClick={() => setShowDeleteModal(true)}
+              title="Delete Deliverable (CEO Sukh Sagar ji only)"
+              style={{ padding: '0.4rem 0.5rem', color: '#dc2626', borderColor: '#fca5a5' }}
+            >
+              <Trash2 size={13} color="#dc2626" />
+            </button>
+          )}
 
           {isCompleted && (
             <button
@@ -748,6 +762,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
                 style={{ background: '#dc2626', borderColor: '#b91c1c', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
                 disabled={isDeleting}
                 onClick={async () => {
+                  if (!isCeo) {
+                    alert("Access Restricted: Only CEO Mr. Sukh Sagar Singh Bhati has permission to permanently delete deliverables.");
+                    setShowDeleteModal(false);
+                    return;
+                  }
                   setIsDeleting(true);
                   await deleteTask(task.id);
                   setIsDeleting(false);
@@ -755,7 +774,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
                 }}
               >
                 <Trash2 size={13} />
-                {isDeleting ? 'Deleting...' : 'Yes, Delete Task'}
+                {isDeleting ? 'Deleting...' : 'Yes, Delete Task (CEO)'}
               </button>
             </div>
           </div>

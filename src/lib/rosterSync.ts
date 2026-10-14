@@ -18,7 +18,7 @@ export async function syncOfficialRosterToDB(): Promise<void> {
 
   try {
     await connectDB();
-    const defaultPasswordHash = await hashPassword('password123');
+    const defaultPasswordHash = await hashPassword('123');
 
     for (const emp of OFFICIAL_ROSTER) {
       // 1. Sync MemberModel

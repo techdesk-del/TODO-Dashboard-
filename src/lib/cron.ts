@@ -12,6 +12,7 @@ import { TaskModel } from '@/models/Task';
 import { AuditLogModel } from '@/models/AuditLog';
 
 import { getTodayStr } from './dateUtils';
+import { isNonWorkingDay } from './holidayData';
 
 interface CronCache {
   isInitialized: boolean;
@@ -68,6 +69,12 @@ export function initServerCron() {
   // 1. Morning Digest Dispatch at 08:30 AM every day
   cron.schedule('30 8 * * *', async () => {
     try {
+      const today = getTodayStr();
+      const nonWorking = isNonWorkingDay(today);
+      if (nonWorking.isNonWorking) {
+        console.log(`[Cron 08:30 AM] Suppressed: Today is ${nonWorking.reason} (Policy FY 2026-27 Approved by Mr. Sukh Sagar Singh)`);
+        return;
+      }
       console.log('[Cron 08:30 AM] Triggering automated morning digest...');
       const host = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
       await fetch(`${host}/api/reminders/digest`, { method: 'POST' });

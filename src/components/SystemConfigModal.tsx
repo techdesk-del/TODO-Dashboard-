@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
-import { Sliders, Shield, Mail, Database, RotateCcw, Check, Plus, Trash2 } from 'lucide-react';
+import { Sliders, Shield, Mail, Database, RotateCcw, Check, Plus, Trash2, Building2 } from 'lucide-react';
 
 export const SystemConfigModal: React.FC = () => {
   const { systemConfig, updateSystemConfig } = useApp();
@@ -44,6 +44,26 @@ export const SystemConfigModal: React.FC = () => {
       masterLists: {
         ...systemConfig.masterLists,
         projects: systemConfig.masterLists.projects.filter(p => p !== item)
+      }
+    });
+  };
+
+  const handleAddDept = () => {
+    if (!newDept.trim()) return;
+    updateSystemConfig({
+      masterLists: {
+        ...systemConfig.masterLists,
+        departments: [...systemConfig.masterLists.departments, newDept.trim()]
+      }
+    });
+    setNewDept('');
+  };
+
+  const handleRemoveDept = (item: string) => {
+    updateSystemConfig({
+      masterLists: {
+        ...systemConfig.masterLists,
+        departments: systemConfig.masterLists.departments.filter(d => d !== item)
       }
     });
   };
@@ -220,6 +240,65 @@ export const SystemConfigModal: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleRemoveProject(item)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
+                >
+                  <Trash2 size={12} />
+                </button>
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Master Metadata Hygiene (Departments) */}
+        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '1.25rem' }}>
+          <h3 style={{ fontSize: '0.95rem', fontWeight: 800, marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Building2 size={16} color="#2563eb" />
+            Master Department List
+          </h3>
+          <p style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '0.75rem' }}>
+            Central enterprise departments for role assignment and task classification.
+          </p>
+
+          <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.85rem' }}>
+            <input
+              type="text"
+              className="composer-input"
+              style={{ fontSize: '0.8rem', padding: '0.4rem 0.65rem' }}
+              placeholder="Add new department..."
+              value={newDept}
+              onChange={e => setNewDept(e.target.value)}
+            />
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={handleAddDept}
+              style={{ padding: '0.4rem 0.75rem' }}
+            >
+              <Plus size={14} />
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', maxHeight: '180px', overflowY: 'auto' }}>
+            {systemConfig.masterLists.departments.map(item => (
+              <span
+                key={item}
+                style={{
+                  background: '#eff6ff',
+                  border: '1px solid #bfdbfe',
+                  borderRadius: '6px',
+                  padding: '0.25rem 0.55rem',
+                  fontSize: '0.72rem',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  color: '#1e40af'
+                }}
+              >
+                {item}
+                <button
+                  type="button"
+                  onClick={() => handleRemoveDept(item)}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
                 >
                   <Trash2 size={12} />

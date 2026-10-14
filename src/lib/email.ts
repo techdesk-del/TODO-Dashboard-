@@ -297,3 +297,170 @@ export async function sendPasswordResetEmail(opts: SendPasswordResetOptions) {
     previewUrl,
   };
 }
+
+export interface SendWelcomeEmailOptions {
+  toEmail: string;
+  toName: string;
+  department: string;
+  designation: string;
+  role: string;
+  initialPassword?: string;
+  loginUrl?: string;
+}
+
+export function generateWelcomeEmailHtml(opts: SendWelcomeEmailOptions): string {
+  const {
+    toName,
+    toEmail,
+    department,
+    designation,
+    role,
+    initialPassword = '123',
+    loginUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000',
+  } = opts;
+
+  const roleLabel =
+    role === 'ADMIN'
+      ? 'Admin / Talent HR'
+      : role === 'MANAGER'
+      ? 'Reporting Manager'
+      : 'Employee / Staff';
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0f172a; color: #1e293b; margin: 0; padding: 24px 12px; }
+    .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15); }
+    .header { background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #2563eb 100%); padding: 32px 24px; color: #ffffff; text-align: center; }
+    .brand { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+    .subhead { font-size: 13px; color: #93c5fd; margin-top: 6px; font-weight: 500; }
+    .content { padding: 32px 28px; }
+    .greeting { font-size: 16px; margin-bottom: 16px; line-height: 1.6; color: #1e293b; }
+    .intro-text { font-size: 14px; color: #475569; line-height: 1.6; margin-bottom: 24px; }
+    .credentials-card { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 20px; margin: 20px 0; }
+    .card-title { font-size: 12px; font-weight: 800; color: #1e3a8a; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 14px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
+    .password-badge { background: #e0e7ff; color: #3730a3; padding: 3px 10px; border-radius: 4px; font-family: monospace; font-size: 15px; font-weight: 800; }
+    .cta-container { text-align: center; margin: 28px 0 20px 0; }
+    .cta-btn { display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff !important; text-decoration: none; font-weight: 700; font-size: 14px; padding: 12px 28px; border-radius: 8px; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.35); }
+    .instructions { background: #f0fdf4; border-left: 4px solid #16a34a; border-radius: 6px; padding: 14px 16px; margin: 20px 0; font-size: 13px; color: #14532d; line-height: 1.5; }
+    .warning { font-size: 12px; color: #64748b; border-top: 1px solid #f1f5f9; padding-top: 18px; margin-top: 24px; line-height: 1.5; }
+    .footer { background: #f8fafc; padding: 18px 24px; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="brand">UrbanGaon Task Register</div>
+      <div class="subhead">Enterprise Identity & Access Management • Welcome Credentials</div>
+    </div>
+    <div class="content">
+      <div class="greeting">
+        Welcome to UrbanGaon, <strong>${toName}</strong>! 🎉
+      </div>
+      <div class="intro-text">
+        Your official corporate account has been provisioned on the UrbanGaon Executive Task Register platform. Below are your official onboarding credentials:
+      </div>
+
+      <div class="credentials-card">
+        <div class="card-title">Corporate Profile & Credentials</div>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr style="border-bottom: 1px dashed #e2e8f0;">
+            <td style="padding: 8px 0; color: #64748b; font-size: 13px; font-weight: 600;">Full Legal Name:</td>
+            <td style="padding: 8px 0; color: #0f172a; font-size: 13px; font-weight: 700; text-align: right;">${toName}</td>
+          </tr>
+          <tr style="border-bottom: 1px dashed #e2e8f0;">
+            <td style="padding: 8px 0; color: #64748b; font-size: 13px; font-weight: 600;">Corporate Email:</td>
+            <td style="padding: 8px 0; color: #2563eb; font-size: 13px; font-weight: 700; text-align: right;">${toEmail}</td>
+          </tr>
+          <tr style="border-bottom: 1px dashed #e2e8f0;">
+            <td style="padding: 8px 0; color: #64748b; font-size: 13px; font-weight: 600;">Master Department:</td>
+            <td style="padding: 8px 0; color: #0f172a; font-size: 13px; font-weight: 700; text-align: right;">${department}</td>
+          </tr>
+          <tr style="border-bottom: 1px dashed #e2e8f0;">
+            <td style="padding: 8px 0; color: #64748b; font-size: 13px; font-weight: 600;">Official Designation:</td>
+            <td style="padding: 8px 0; color: #0f172a; font-size: 13px; font-weight: 700; text-align: right;">${designation}</td>
+          </tr>
+          <tr style="border-bottom: 1px dashed #e2e8f0;">
+            <td style="padding: 8px 0; color: #64748b; font-size: 13px; font-weight: 600;">Access Role Tier:</td>
+            <td style="padding: 8px 0; color: #0f172a; font-size: 13px; font-weight: 700; text-align: right;">${roleLabel}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #64748b; font-size: 13px; font-weight: 600;">Initial Universal Password:</td>
+            <td style="padding: 8px 0; text-align: right;">
+              <span class="password-badge">${initialPassword}</span>
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="cta-container">
+        <a href="${loginUrl}" class="cta-btn" target="_blank">Access UrbanGaon Workspace</a>
+      </div>
+
+      <div class="instructions">
+        <strong>📋 Getting Started:</strong>
+        <ol style="margin: 8px 0 0 0; padding-left: 20px;">
+          <li>Click the button above to navigate to the UrbanGaon sign-in portal.</li>
+          <li>Enter your corporate email (<strong>${toEmail}</strong>) and temporary password <code>${initialPassword}</code>.</li>
+          <li>For security, you may change your password anytime via the self-service <strong>Forgot Password</strong> OTP flow.</li>
+        </ol>
+      </div>
+
+      <div class="warning">
+        🔒 <strong>Confidentiality Notice:</strong> This email contains sensitive enterprise credentials. Do not forward or share these details. If you did not expect this communication or require technical assistance, contact the UrbanGaon IT Operations Desk at <a href="mailto:techdesk@urbangaon.com" style="color: #2563eb;">techdesk@urbangaon.com</a>.
+      </div>
+    </div>
+    <div class="footer">
+      UrbanGaon Corporate Platform • Flowchart 9 & 13 Compliance • Automated Enterprise Dispatcher
+    </div>
+  </div>
+</body>
+</html>
+  `;
+}
+
+export async function sendWelcomeCredentialsEmail(opts: SendWelcomeEmailOptions) {
+  let { transporter, isTestAccount } = await createEmailTransporter();
+  const html = generateWelcomeEmailHtml(opts);
+  const from = process.env.SMTP_FROM || '"UrbanGaon Executive Dispatcher" <techdesk@urbangaon.com>';
+
+  let info;
+  try {
+    info = await transporter.sendMail({
+      from,
+      to: opts.toEmail,
+      subject: `🎉 Welcome to UrbanGaon — Official Credentials & Account Provisioned (${opts.toName})`,
+      html,
+    });
+  } catch (sendErr) {
+    console.warn('[Live SMTP failed, falling back to Ethereal Mailbox]:', sendErr);
+    const testAccount = await nodemailer.createTestAccount();
+    const fallbackTransporter = nodemailer.createTransport({
+      host: 'smtp.ethereal.email',
+      port: 587,
+      secure: false,
+      auth: { user: testAccount.user, pass: testAccount.pass },
+      connectionTimeout: 8000,
+    });
+    isTestAccount = true;
+    info = await fallbackTransporter.sendMail({
+      from,
+      to: opts.toEmail,
+      subject: `🎉 Welcome to UrbanGaon — Official Credentials & Account Provisioned (${opts.toName})`,
+      html,
+    });
+  }
+
+  const previewUrl = isTestAccount ? nodemailer.getTestMessageUrl(info) : null;
+  console.log(`[Email] Welcome credentials email dispatched to ${opts.toEmail} (messageId: ${info.messageId}, isTest: ${isTestAccount})`);
+
+  return {
+    success: true,
+    messageId: info.messageId,
+    isTestAccount,
+    previewUrl,
+  };
+}

@@ -72,8 +72,9 @@ export const VoiceInputBar: React.FC = () => {
     // Parse immediately with deterministic entity extractor
     const parsed = parseSpeechOrTextCommand(rawText, currentUser);
     const isCeo = isCeoUser(currentUser);
+    const activeMembers = members.filter(m => m.status !== 'DEACTIVATED');
     const explicitlyMatched = (isCeo && parsed.assigneeName)
-      ? members.find(m => m.name.toLowerCase().includes(parsed.assigneeName.toLowerCase()))
+      ? activeMembers.find(m => m.name.toLowerCase().includes(parsed.assigneeName.toLowerCase()))
       : null;
     const targetMember = explicitlyMatched || currentUser;
 
@@ -114,8 +115,9 @@ export const VoiceInputBar: React.FC = () => {
 
     const parsed = parseSpeechOrTextCommand(rawText, currentUser);
     const isCeo = isCeoUser(currentUser);
+    const activeMembers = members.filter(m => m.status !== 'DEACTIVATED');
     const explicitlyMatched = (isCeo && parsed.assigneeName)
-      ? members.find(m => m.name.toLowerCase().includes(parsed.assigneeName.toLowerCase()))
+      ? activeMembers.find(m => m.name.toLowerCase().includes(parsed.assigneeName.toLowerCase()))
       : null;
     const targetMember = explicitlyMatched || currentUser;
 
