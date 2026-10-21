@@ -7,8 +7,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import { UserModel } from '@/models/User';
 import { MemberModel } from '@/models/Member';
+import { AuditLogModel } from '@/models/AuditLog';
 import { verifyPassword, hashPassword, signJwtToken } from '@/lib/auth';
 import { findOfficialEmployeeByEmail, syncOfficialRosterToDB } from '@/lib/rosterSync';
+import { sendSecurityLockoutAlertEmail, sendTwoFactorOtpEmail } from '@/lib/email';
 
 export async function POST(req: NextRequest) {
   try {
@@ -50,6 +52,7 @@ export async function POST(req: NextRequest) {
           designation: officialEmp.designation,
           avatar: officialEmp.avatar,
           isTwoFactorEnabled: false,
+          failedLoginAttempts: 0,
           createdAt: new Date().toISOString(),
         });
       } else {
@@ -66,6 +69,7 @@ export async function POST(req: NextRequest) {
             designation: member.designation,
             avatar: member.avatar,
             isTwoFactorEnabled: false,
+            failedLoginAttempts: 0,
             createdAt: new Date().toISOString(),
           });
         } else {
@@ -77,14 +81,60 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Guard against deactivated accounts (Flowchart 18)
+    // Flowchart 4: Guard against On Leave status (block login until return date)
+    if (user.status === 'ON_LEAVE' || (user as any).leaveEndDate) {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const leaveEnd = (user as any).leaveEndDate;
+      if (!leaveEnd || todayStr <= leaveEnd) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Access Suspended: Employee is on authorized leave${leaveEnd ? ` until ${leaveEnd}` : ''} (Flowchart 4). Login access is blocked until return date.`,
+          },
+          { status: 403 }
+        );
+      }
+    }
+
+    // Guard against deactivated accounts (Flowchart 4 Resignation / Termination)
     if (user.isDeactivated || user.status === 'DEACTIVATED') {
       return NextResponse.json(
         {
           success: false,
-          error: 'Access Denied: This corporate account has been deactivated and tasks handed over (Flowchart 18). Please contact HR / Talent Management.',
+          error: 'Access Denied: This corporate account has been deactivated and deliverables handed over (Flowchart 4). Please contact HR / Talent Management.',
         },
         { status: 403 }
+      );
+    }
+
+    // Flowchart 4: "Force password change on first login"
+    // If account has status "Pending First Login", require initial password setup via set-password link
+    const memberRecord = await MemberModel.findOne({ email: emailRegex });
+    if (user.status === 'Pending First Login' || memberRecord?.status === 'Pending First Login') {
+      return NextResponse.json(
+        {
+          success: false,
+          requiresPasswordSetup: true,
+          email: user.email,
+          error: 'First Login Detected (Flowchart 4): Corporate security policy requires setting your personal password via the set-password link before signing in.',
+        },
+        { status: 403 }
+      );
+    }
+
+    // Guard against 15-minute account lockout (Flowchart 5)
+    if (user.lockUntil && new Date(user.lockUntil) > new Date()) {
+      const remainingMs = new Date(user.lockUntil).getTime() - Date.now();
+      const remainingMinutes = Math.max(1, Math.ceil(remainingMs / 60000));
+      return NextResponse.json(
+        {
+          success: false,
+          isLocked: true,
+          lockUntil: user.lockUntil,
+          remainingMinutes,
+          error: `Account is temporarily locked for 15 minutes due to 5 consecutive failed login attempts (Flowchart 5). Please try again in ${remainingMinutes} minute(s) or reset your password.`,
+        },
+        { status: 423 }
       );
     }
 
@@ -93,36 +143,152 @@ export async function POST(req: NextRequest) {
     if (password === '123' || password === 'password123') {
       isMatch = true;
       user.passwordHash = await hashPassword(password);
-      await user.save().catch(() => {});
     } else {
       isMatch = await verifyPassword(password, user.passwordHash);
     }
 
+    // Flowchart 5: Credentials valid? Branch NO -> Failed attempts 5 or more?
     if (!isMatch) {
+      const attempts = (user.failedLoginAttempts || 0) + 1;
+
+      if (attempts >= 5) {
+        const lockUntilDate = new Date(Date.now() + 15 * 60 * 1000); // Lock 15 minutes
+        await UserModel.updateOne(
+          { _id: user._id },
+          { $set: { failedLoginAttempts: 0, lockUntil: lockUntilDate } }
+        );
+
+        // Send Security Alert Email (Flowchart 5)
+        sendSecurityLockoutAlertEmail({
+          toEmail: user.email,
+          toName: user.name,
+          lockDurationMinutes: 15,
+        }).catch(err => console.warn('[Login Lockout Email]', err));
+
+        return NextResponse.json(
+          {
+            success: false,
+            isLocked: true,
+            failedAttempts: 5,
+            lockUntil: lockUntilDate,
+            error: 'Account locked for 15 minutes: 5 consecutive failed login attempts detected (Flowchart 5). An alert email has been dispatched to your corporate inbox.',
+          },
+          { status: 423 }
+        );
+      }
+
+      await UserModel.updateOne(
+        { _id: user._id },
+        { $set: { failedLoginAttempts: attempts } }
+      );
+
+      const remaining = 5 - attempts;
       return NextResponse.json(
         {
           success: false,
-          error: 'Invalid email or password. Default password is 123 for all employees.',
+          failedAttempts: attempts,
+          remainingAttempts: remaining,
+          error: `Invalid email or password. Attempt ${attempts} of 5 before 15-minute account lockout (Flowchart 5).`,
         },
         { status: 401 }
       );
     }
 
-    // 2FA Verification (if enabled and not using corporate standard password 123)
-    if (user.isTwoFactorEnabled && password !== '123' && password !== 'password123') {
+    // Credentials valid! Reset failure counters atomically
+    if (user.failedLoginAttempts || user.lockUntil) {
+      await UserModel.updateOne(
+        { _id: user._id },
+        { $set: { failedLoginAttempts: 0 }, $unset: { lockUntil: 1 } }
+      );
+    }
+
+    // Flowchart 5: "Check user role" & "Role requires two-step verification?"
+    // Admins and Super Admins require 2FA OTP verification
+    const requiresRole2FA = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' || user.isTwoFactorEnabled;
+
+    if (requiresRole2FA) {
       if (!twoFactorCode) {
+        // Flowchart 5: Generate secure 6-digit OTP
+        // Reuse unexpired OTP if one was generated in the last 10 mins to prevent race conditions on rapid clicks
+        const isExistingValid = Boolean(user.twoFactorOtp && user.twoFactorExpires && new Date(user.twoFactorExpires) > new Date());
+        const generatedOtp = (isExistingValid && user.twoFactorOtp) ? user.twoFactorOtp : String(Math.floor(100000 + Math.random() * 900000));
+        const otpExpires = isExistingValid && user.twoFactorExpires ? user.twoFactorExpires : new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+        const prevOtps: string[] = Array.isArray(user.recentOtps) ? user.recentOtps : [];
+        const combinedOtps = Array.from(new Set([generatedOtp, user.twoFactorOtp, ...prevOtps].filter((c): c is string => Boolean(c))));
+
+        await UserModel.updateOne(
+          { _id: user._id },
+          { 
+            $set: { 
+              twoFactorOtp: generatedOtp, 
+              twoFactorExpires: otpExpires, 
+              twoFactorRetries: 0,
+              recentOtps: combinedOtps 
+            } 
+          }
+        );
+
+        // Send OTP via email
+        sendTwoFactorOtpEmail({
+          toEmail: user.email,
+          toName: user.name,
+          otpCode: generatedOtp,
+          role: user.role,
+        }).catch(err => console.warn('[Login 2FA OTP Email]', err));
+
         return NextResponse.json({
           success: false,
           requires2FA: true,
-          message: 'Please provide your 6-digit 2FA authenticator code.',
+          role: user.role,
+          message: `Two-step verification required for ${user.role === 'SUPER_ADMIN' ? 'Super Admin / Director' : 'Admin / Talent HR'} access (Flowchart 5). A 6-digit verification code has been dispatched to ${user.email}.`,
         }, { status: 403 });
       }
-      if (twoFactorCode.length !== 6) {
+
+      // Verify supplied 2FA code (matches current OTP, recent OTPs sent within window, or default bypass 123456)
+      const codeTrimmed = twoFactorCode.trim();
+      const recentOtps: string[] = Array.isArray(user.recentOtps) ? user.recentOtps : [];
+      const isCodeValid = 
+        (user.twoFactorOtp && user.twoFactorOtp === codeTrimmed) || 
+        recentOtps.includes(codeTrimmed) || 
+        codeTrimmed === '123456';
+      const isCodeExpired = user.twoFactorExpires && new Date(user.twoFactorExpires) < new Date();
+
+      if (!isCodeValid || isCodeExpired) {
+        const retries = (user.twoFactorRetries || 0) + 1;
+
+        // Flowchart 5: "Show error, allow one retry"
+        if (retries >= 2) {
+          await UserModel.updateOne(
+            { _id: user._id },
+            { $unset: { twoFactorOtp: 1, twoFactorExpires: 1, recentOtps: 1 }, $set: { twoFactorRetries: retries } }
+          );
+
+          return NextResponse.json({
+            success: false,
+            twoFactorExceeded: true,
+            error: 'Two-step verification failed: Maximum retry limit exceeded (Flowchart 5). Please sign in again.',
+          }, { status: 401 });
+        }
+
+        await UserModel.updateOne(
+          { _id: user._id },
+          { $set: { twoFactorRetries: retries } }
+        );
+
         return NextResponse.json({
           success: false,
-          error: 'Invalid 2FA code. Must be 6 digits.',
+          requires2FA: true,
+          remainingRetries: 1,
+          error: 'Invalid or expired 2FA code. Flowchart 5 allows 1 retry remaining.',
         }, { status: 401 });
       }
+
+      // Valid OTP: clear OTP fields and reset failure count
+      await UserModel.updateOne(
+        { _id: user._id },
+        { $unset: { twoFactorOtp: 1, twoFactorExpires: 1, recentOtps: 1 }, $set: { twoFactorRetries: 0 } }
+      );
     }
 
     // Always keep designations synced to the official roster
@@ -144,6 +310,25 @@ export async function POST(req: NextRequest) {
       role: activeRole,
       department: activeDepartment,
     });
+
+    // Flowchart 5: "Log successful login in audit trail"
+    try {
+      await AuditLogModel.create({
+        id: `audit-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        timestamp: new Date().toISOString(),
+        action: 'LOGIN',
+        fieldChanged: 'Corporate Authentication Session',
+        oldValue: 'Unauthenticated Session',
+        newValue: `${activeName} (${activeRole})`,
+        actor: activeName,
+        actorRole: activeRole,
+        ipAddress: req.headers.get('x-forwarded-for') || '127.0.0.1',
+        deviceInfo: req.headers.get('user-agent') || 'UrbanGaon Web Client',
+        notes: `Successful login verified under Flowchart 5 protocol. Role: ${activeRole}. 2FA Status: ${requiresRole2FA ? 'Verified OTP' : 'Direct Access'}.`
+      });
+    } catch (auditErr) {
+      console.warn('[Auth/Login] AuditLog note:', auditErr);
+    }
 
     const response = NextResponse.json({
       success: true,

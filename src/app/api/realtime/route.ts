@@ -17,6 +17,7 @@
 import { NextRequest } from 'next/server';
 import connectDB from '@/lib/db';
 import { TaskModel } from '@/models/Task';
+import { MemberModel } from '@/models/Member';
 import { AuditLogModel } from '@/models/AuditLog';
 import { realtimeEmitter, REALTIME_EVENTS } from '@/lib/events';
 
@@ -39,6 +40,7 @@ export async function GET(req: NextRequest) {
       let isAborted = false;
       let lastTaskUpdatedAt = connectedAt;
       let lastAuditDeletedAt = connectedAt;
+      let lastMemberUpdatedAt = connectedAt;
 
       // Helper to send SSE events
       const send = (event: string, data: unknown) => {
@@ -58,10 +60,16 @@ export async function GET(req: NextRequest) {
       };
       realtimeEmitter.on(REALTIME_EVENTS.TASK_MUTATION, onServerMutation);
 
+      const onServerMemberMutation = (payload: unknown) => {
+        send('member_mutation', payload);
+      };
+      realtimeEmitter.on(REALTIME_EVENTS.MEMBER_MUTATION, onServerMemberMutation);
+
       // Handle client disconnect
       req.signal.addEventListener('abort', () => {
         isAborted = true;
         realtimeEmitter.off(REALTIME_EVENTS.TASK_MUTATION, onServerMutation);
+        realtimeEmitter.off(REALTIME_EVENTS.MEMBER_MUTATION, onServerMemberMutation);
       });
 
       // 1. Greet the client
@@ -138,6 +146,31 @@ export async function GET(req: NextRequest) {
             });
           }
 
+          // 3. Check for members created or updated/deactivated in MongoDB
+          const changedMembers = await MemberModel.find({
+            updatedAt: { $gt: lastMemberUpdatedAt },
+          })
+            .sort({ updatedAt: 1 })
+            .limit(20)
+            .lean()
+            .exec();
+
+          for (const cm of changedMembers) {
+            const memberObj = cm as any;
+            if (memberObj.updatedAt && memberObj.updatedAt > lastMemberUpdatedAt) {
+              lastMemberUpdatedAt = memberObj.updatedAt;
+            }
+            send('member_mutation', {
+              action: memberObj.status === 'DEACTIVATED' ? 'DEACTIVATED' : 'UPDATED',
+              memberId: memberObj.id,
+              memberName: memberObj.name,
+              memberEmail: memberObj.email,
+              status: memberObj.status,
+              timestamp: Date.now(),
+              source: 'mongodb-changedetect',
+            });
+          }
+
           // Send heartbeat every poll tick to keep connection alive
           if (!isAborted) {
             try {
@@ -161,6 +194,7 @@ export async function GET(req: NextRequest) {
       // 4. Stream duration reached — signal client to reconnect
       if (!isAborted) {
         realtimeEmitter.off(REALTIME_EVENTS.TASK_MUTATION, onServerMutation);
+        realtimeEmitter.off(REALTIME_EVENTS.MEMBER_MUTATION, onServerMemberMutation);
         send('reconnect', { reason: 'stream-cycle', reconnectAfterMs: 100 });
         try {
           controller.close();

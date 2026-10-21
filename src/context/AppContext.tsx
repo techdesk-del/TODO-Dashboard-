@@ -4,7 +4,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { Task, TeamMember, AuditLogEntry, SystemConfig, Role, TaskStatus } from '@/types';
 import { INITIAL_TASKS, INITIAL_MEMBERS, INITIAL_AUDIT_LOGS, INITIAL_SYSTEM_CONFIG } from '@/lib/mockData';
 import { getTodayStr } from '@/lib/dateUtils';
-import { isCeoUser, canAccessWorkflows } from '@/lib/rosterData';
+import { isCeoUser, canAccessAdminHr, canAccessWorkflows } from '@/lib/rosterData';
+import { computeMultiAssigneeStatus } from '@/lib/multiAssignee';
 import * as XLSX from 'xlsx';
 
 export type DBStatus = 'connected' | 'connecting' | 'fallback';
@@ -47,12 +48,31 @@ interface AppContextType {
   updateTask: (taskId: string, updates: Partial<Task>, note?: string) => void;
   holdTask: (taskId: string, reason: string) => void;
   escalateTask: (taskId: string, reason: string, seniorLeader: string) => void;
+  seniorAdviseTask: (taskId: string, advisoryComment: string) => void;
+  seniorReassignTask: (taskId: string, newAssigneeId: string, notes?: string) => void;
+  seniorResolveTask: (taskId: string, resolutionNote: string) => void;
+  seniorReturnTask: (taskId: string, returnReason: string) => void;
+  checkAndAutoEscalateSlaBreachedTasks: () => number;
   reopenTask: (taskId: string, reason: string) => void;
   cancelTask: (taskId: string, reason: string) => void;
   deleteTask: (taskId: string) => Promise<void>;
   completeTask: (taskId: string, assigneeId?: string) => void;
+  updateAssigneeStatus: (taskId: string, assigneeId: string, status: TaskStatus, remarks?: string) => void;
+  reassignOrCloseAssignee: (taskId: string, oldAssigneeId: string, action: 'reassign' | 'close', newAssigneeId?: string, notes?: string) => void;
   addMember: (memberData: Partial<TeamMember>) => Promise<TeamMember>;
-  deactivateMember: (departingId: string, successorId: string, reason: string) => Promise<{ success: boolean; reassignedCount: number; message: string }>;
+  updateMember: (memberId: string, updates: Partial<TeamMember>, reason?: string) => Promise<{ success: boolean; member?: TeamMember; error?: string }>;
+  deactivateMember: (
+    departingId: string,
+    successorId: string,
+    reason: string,
+    deactivationType?: 'Resignation' | 'Termination' | 'Long leave',
+    dates?: {
+      lastWorkingDay?: string;
+      effectiveDate?: string;
+      leaveStartDate?: string;
+      leaveEndDate?: string;
+    }
+  ) => Promise<{ success: boolean; reassignedCount: number; message: string }>;
   clearAllTasks: () => Promise<void>;
   logoutUser: () => void;
   exportToExcel: () => void;
@@ -62,9 +82,15 @@ interface AppContextType {
   setViewingAuditForTaskId: (taskId: string | null) => void;
   showMorningDigestModal: boolean;
   setShowMorningDigestModal: (show: boolean) => void;
+  isCreateTaskModalOpen: boolean;
+  setIsCreateTaskModalOpen: (open: boolean) => void;
+  isExportModalOpen: boolean;
+  setIsExportModalOpen: (open: boolean) => void;
   runNightlyRolloverSimulation: () => void;
   dbStatus: DBStatus;
   refreshFromDB: () => Promise<void>;
+  refreshMembersFromDB: () => Promise<void>;
+  logAudit: (entry: Omit<AuditLogEntry, 'id' | 'timestamp' | 'actor' | 'actorRole' | 'ipAddress' | 'deviceInfo'> & Partial<AuditLogEntry>) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -82,6 +108,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [viewingAuditForTaskId, setViewingAuditForTaskId] = useState<string | null>(null);
   const [showMorningDigestModal, setShowMorningDigestModal] = useState(false);
+  const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [dbStatus, setDbStatus] = useState<DBStatus>('connecting');
   const deletedIdsRef = useRef<Set<string>>(new Set());
 
@@ -96,7 +124,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [bannerNotification]);
 
   // ── Sync with MongoDB Atlas & LocalStorage ───────────────────────
+  const refreshMembersFromDB = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/members?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache, no-store' },
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          setMembers(json.data);
+        }
+      }
+    } catch (e) {
+      console.warn('[AppContext] members refresh failed', e);
+    }
+  }, []);
+
   const refreshFromDB = useCallback(async (isSilent = true) => {
+    refreshMembersFromDB();
     try {
       const res = await fetch(`/api/tasks?_t=${Date.now()}`, {
         cache: 'no-store',
@@ -116,13 +162,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               const ageMs = t.createdAt ? (now - new Date(t.createdAt).getTime()) : 999999;
               return ageMs < 4000;
             });
-            const cleanServerTasks = json.data.filter((t: Task) => 
-              !deletedIdsRef.current.has(t.id) &&
-              t.status !== 'Cancelled' && 
-              !t.title?.toLowerCase().includes('mobile simulator') &&
-              t.id !== 'task-1790071325492'
-            );
-            const nextList = [...pending, ...cleanServerTasks];
+
+            // Deduplicate to guarantee absolute unique IDs across server and local pending tasks
+            const uniqueMap = new Map<string, Task>();
+            json.data.forEach((t: Task) => {
+              if (
+                t &&
+                t.id &&
+                !deletedIdsRef.current.has(t.id) &&
+                t.status !== 'Cancelled' &&
+                !t.title?.toLowerCase().includes('mobile simulator') &&
+                t.id !== 'task-1790071325492'
+              ) {
+                uniqueMap.set(t.id, t);
+              }
+            });
+
+            pending.forEach((t: Task) => {
+              if (t && t.id && !uniqueMap.has(t.id)) {
+                uniqueMap.set(t.id, t);
+              }
+            });
+
+            const nextList = Array.from(uniqueMap.values());
+
+            // Strict FIFO Chronological: Starting task at top (1), subsequent tasks follow in sequence (2, 3, 4...)
+            nextList.sort((a, b) => {
+              const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+              const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+              if (timeA !== timeB) return timeA - timeB;
+              return a.id.localeCompare(b.id);
+            });
 
             // Fast shallow check to preserve React focus and avoid unnecessary re-renders
             if (
@@ -145,7 +215,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch {
       if (!isSilent) setDbStatus('fallback');
     }
-  }, []);
+  }, [refreshMembersFromDB]);
 
   // ── Load persisted data / fetch from API on mount
   useEffect(() => {
@@ -154,13 +224,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const savedTasks = localStorage.getItem('urbangaon_tasks_v2');
       if (savedTasks) {
         const parsed = JSON.parse(savedTasks);
-        const cleaned = Array.isArray(parsed)
-          ? parsed.filter((t: Task) => 
-              t.id !== 'task-1790071325492' && 
-              !t.title?.toLowerCase().includes('mobile simulator') && 
-              t.status !== 'Cancelled'
-            )
-          : [];
+        const uniqueSavedMap = new Map<string, Task>();
+        if (Array.isArray(parsed)) {
+          for (const item of parsed) {
+            if (
+              item && 
+              item.id && 
+              item.id !== 'task-1790071325492' &&
+              !item.title?.toLowerCase().includes('mobile simulator') &&
+              item.status !== 'Cancelled'
+            ) {
+              uniqueSavedMap.set(item.id, {
+                ...item,
+                isJustAdded: Boolean(item.isJustAdded && item.createdAt && (Date.now() - new Date(item.createdAt).getTime() < 60000))
+              });
+            }
+          }
+        }
+        const cleaned = Array.from(uniqueSavedMap.values()).sort((a: Task, b: Task) => {
+          const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          if (timeA !== timeB) return timeA - timeB;
+          return a.id.localeCompare(b.id);
+        });
         setTasks(cleaned);
         localStorage.setItem('urbangaon_tasks_v2', JSON.stringify(cleaned));
       }
@@ -185,14 +271,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (email.includes('aakash') || email.includes('akash') || email.includes('techdesk') || name.includes('aakash')) {
             parsed.role = 'SUPER_ADMIN';
             parsed.designation = 'AI & IT Officer / Super Admin';
+            parsed.email = 'techdesk@urbangaon.com';
+            localStorage.setItem('urbangaon_auth_user_v2', JSON.stringify(parsed));
           }
           setCurrentUser(parsed);
         } else {
           // Default to Aakash Das with Full Super Admin access
-          const aakashMember = INITIAL_MEMBERS.find(m => m.id === 'mem-12' || m.email.includes('aakash')) || {
+          const aakashMember = INITIAL_MEMBERS.find(m => m.id === 'mem-12' || m.email.includes('techdesk') || m.email.includes('aakash')) || {
             id: 'mem-12',
             name: 'Aakash Das',
-            email: 'aakash.das@urbangaon.com',
+            email: 'techdesk@urbangaon.com',
             role: 'SUPER_ADMIN' as Role,
             department: 'AI & IT Operations',
             designation: 'AI & IT Officer / Super Admin',
@@ -208,10 +296,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       } else {
         // Default to Aakash Das with Full Super Admin access
-        const aakashMember = INITIAL_MEMBERS.find(m => m.id === 'mem-12' || m.email.includes('aakash')) || {
+        const aakashMember = INITIAL_MEMBERS.find(m => m.id === 'mem-12' || m.email.includes('techdesk') || m.email.includes('aakash')) || {
           id: 'mem-12',
           name: 'Aakash Das',
-          email: 'aakash.das@urbangaon.com',
+          email: 'techdesk@urbangaon.com',
           role: 'SUPER_ADMIN' as Role,
           department: 'AI & IT Operations',
           designation: 'AI & IT Officer / Super Admin',
@@ -283,7 +371,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const data = JSON.parse(e.data);
             console.log('[Realtime SSE] Cross-device mutation:', data.taskTitle || data.taskId, data.action);
 
-            if (data.action === 'DELETED' && data.taskId) {
+            if (data.action === 'CREATED' && data.task) {
+              setTasks(prev => {
+                if (prev.some(t => t.id === data.task.id)) {
+                  return prev.map(t => t.id === data.task.id ? { ...data.task, isJustAdded: t.isJustAdded } : t);
+                }
+                const updated = [...prev, data.task].sort((a, b) => {
+                  const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                  const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                  if (timeA !== timeB) return timeA - timeB;
+                  return a.id.localeCompare(b.id);
+                });
+                try {
+                  localStorage.setItem('urbangaon_tasks_v2', JSON.stringify(updated));
+                } catch {}
+                return updated;
+              });
+              setBannerNotification({
+                message: `New deliverable "${data.taskTitle || data.task.title}" synced live across team`,
+                badge: '⚡ Realtime Synced'
+              });
+              return;
+            } else if (data.action === 'UPDATED' && data.taskId) {
+              setTasks(prev => {
+                const updated = prev.map(t => {
+                  if (t.id === data.taskId) {
+                    return data.task ? data.task : { ...t, ...data.updates };
+                  }
+                  return t;
+                });
+                try {
+                  localStorage.setItem('urbangaon_tasks_v2', JSON.stringify(updated));
+                } catch {}
+                return updated;
+              });
+              return;
+            } else if (data.action === 'DELETED' && data.taskId) {
               deletedIdsRef.current.add(data.taskId);
               setTasks(prev => {
                 const updated = prev.filter(t => t.id !== data.taskId);
@@ -296,14 +419,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 message: `Deliverable "${data.taskTitle || data.taskId}" was deleted across connected devices`,
                 badge: '⚡ Realtime Synced'
               });
+              return;
             } else if (data.action === 'DELETED_ALL') {
               setTasks([]);
               try {
                 localStorage.removeItem('urbangaon_tasks_v2');
               } catch {}
+              return;
             }
           } catch {}
           if (isMounted) refreshFromDB(true);
+        });
+
+        // Server detected a member update/deactivation in MongoDB → update immediately
+        eventSource.addEventListener('member_mutation', (e) => {
+          try {
+            const data = JSON.parse(e.data);
+            if (data.action === 'DEACTIVATED') {
+              setMembers(prev => prev.map(m => {
+                const isMatch = m.id === data.memberId ||
+                  (data.memberEmail && m.email.toLowerCase() === data.memberEmail.toLowerCase()) ||
+                  (data.memberName && m.name.toLowerCase() === data.memberName.toLowerCase());
+                return isMatch ? { ...m, status: 'DEACTIVATED' as const, activeTasks: 0 } : m;
+              }));
+            }
+          } catch {}
+          if (isMounted) {
+            refreshMembersFromDB();
+            refreshFromDB(true);
+          }
         });
 
         // Server says stream cycle ended → reconnect immediately (no delay)
@@ -355,7 +499,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           } else if (data?.action === 'CREATED' && data.task) {
             setTasks(prev => {
               if (prev.some(t => t.id === data.task.id)) return prev;
-              const updated = [data.task, ...prev];
+              const updated = [...prev, data.task].sort((a, b) => {
+                const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                if (timeA !== timeB) return timeA - timeB;
+                return a.id.localeCompare(b.id);
+              });
               try {
                 localStorage.setItem('urbangaon_tasks_v2', JSON.stringify(updated));
               } catch {}
@@ -369,6 +518,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               } catch {}
               return updated;
             });
+          } else if (data?.action === 'MEMBER_DEACTIVATED') {
+            setMembers(prev => prev.map(m => {
+              const isMatch = m.id === data.departingId ||
+                (data.departingEmail && m.email.toLowerCase() === data.departingEmail.toLowerCase()) ||
+                (data.departingName && m.name.toLowerCase() === data.departingName.toLowerCase());
+              return isMatch ? { ...m, status: 'DEACTIVATED' as const, activeTasks: 0 } : m;
+            }));
+            refreshMembersFromDB();
+            refreshFromDB(true);
           } else {
             if (isMounted) refreshFromDB(true);
           }
@@ -376,11 +534,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     } catch {}
 
-    // Heartbeat poll every 1.5 seconds — the guaranteed cross-device sync safety net.
-    // Even if SSE is unavailable (network/proxy issues), this catches all changes.
+    // Heartbeat poll every 6 seconds as a guaranteed cross-device sync safety net.
+    // SSE pushes instant mutations (<50ms), heartbeat handles edge network reconnects without overloading the server.
     const heartbeatTimer = setInterval(() => {
       if (isMounted) refreshFromDB(true);
-    }, 1500);
+    }, 6000);
 
     // Instant sync when: tab is focused again OR phone screen is unlocked
     const onTabActive = () => {
@@ -439,9 +597,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [currentUser]);
 
-  // ── Executive & Workflows Guard: Non-authorized users automatically directed to workspace
+  // ── Executive & Role Guards: Non-authorized users automatically directed to workspace silently
   useEffect(() => {
     if (activeView === 'ceo_portal' && !isCeoUser(currentUser)) {
+      setActiveView('workspace');
+    }
+    if (activeView === 'admin_hr' && !canAccessAdminHr(currentUser)) {
+      setActiveView('workspace');
+    }
+    if (activeView === 'team_view' && !(isCeoUser(currentUser) || currentUser.role === 'MANAGER')) {
+      setActiveView('workspace');
+    }
+    if (activeView === 'audit_trail' && !(isCeoUser(currentUser) || currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN')) {
+      setActiveView('workspace');
+    }
+    if (activeView === 'system_config' && !(isCeoUser(currentUser) || currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN')) {
       setActiveView('workspace');
     }
     if (activeView === 'workflow_manual' && !canAccessWorkflows(currentUser)) {
@@ -491,19 +661,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addTask = (newTaskData: Partial<Task>): Task => {
     const createdDate = newTaskData.scheduledDate || selectedDate;
     const task: Task = {
-      id: newTaskData.id || `task-${Date.now()}`,
+      id: newTaskData.id || `task-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       title: newTaskData.title || 'New Untitled Task',
+      description: newTaskData.description || '',
       scheduledDate: createdDate,
-      time: newTaskData.time || '05:00 PM',
+      time: newTaskData.time || '09:00 AM',
       priority: newTaskData.priority || 'NORMAL',
-      status: newTaskData.status || 'Queued',
+      status: newTaskData.status || 'Not Started',
       progressPercent: 0,
       isJustAdded: true,
       department: newTaskData.department || currentUser.department,
       project: newTaskData.project || 'Core Infrastructure',
       location: newTaskData.location || 'Jaipur',
-      assignees: (isCeoUser(currentUser) && newTaskData.assignees && newTaskData.assignees.length > 0)
-        ? newTaskData.assignees
+      notes: newTaskData.notes || '',
+      pastDueReason: newTaskData.pastDueReason || '',
+      inputMethod: newTaskData.inputMethod || 'Type',
+      assignees: (newTaskData.assignees && newTaskData.assignees.length > 0)
+        ? newTaskData.assignees.map(a => ({
+            ...a,
+            status: a.status || 'Not Started',
+          }))
         : [
             {
               id: currentUser.id,
@@ -512,10 +689,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               department: currentUser.department,
               designation: currentUser.designation,
               avatar: currentUser.avatar,
-              status: 'In Progress',
+              status: 'Not Started',
             }
           ],
-      creator: {
+      creator: newTaskData.creator || {
         id: currentUser.id,
         name: currentUser.name,
         email: currentUser.email,
@@ -524,7 +701,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       aiMetadata: newTaskData.aiMetadata || {
         rawTranscript: newTaskData.title,
         extractionLatencyMs: 94,
-        source: 'voice_whisper',
+        source: 'manual',
         confidenceScore: 0.99
       },
       createdAt: new Date().toISOString(),
@@ -533,9 +710,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     deletedIdsRef.current.delete(task.id);
 
-    // Optimistic state update
-    setTasks(prev => [task, ...prev]);
+    // Optimistic state update in strict top-to-bottom chronological sequence (deduplicated)
+    setTasks(prev => {
+      const map = new Map<string, Task>();
+      prev.forEach(t => map.set(t.id, t));
+      map.set(task.id, task);
+      const updated = Array.from(map.values()).sort((a, b) => {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        if (timeA !== timeB) return timeA - timeB;
+        return a.id.localeCompare(b.id);
+      });
+      return updated;
+    });
     setSelectedDate(createdDate);
+
+    // Auto-expire 'Just Added' status after 10 seconds locally
+    setTimeout(() => {
+      setTasks(prev => prev.map(t => t.id === task.id ? { ...t, isJustAdded: false } : t));
+    }, 10000);
 
     // Broadcast immediately to all open tabs on same browser
     try {
@@ -584,17 +777,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateTask = (taskId: string, updates: Partial<Task>, note?: string) => {
+    // Flowchart A: If edited by Admin or Super Admin, set editedByAdmin = true
+    const isAdmin = currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN';
+    const effectiveUpdates: Partial<Task> = (isAdmin && updates.editedByAdmin === undefined)
+      ? { ...updates, editedByAdmin: true }
+      : updates;
+
     // Optimistic UI update
     setTasks(prev => prev.map(t => {
       if (t.id !== taskId) return t;
-      return { ...t, ...updates, isJustAdded: false, updatedAt: new Date().toISOString() };
+      return { ...t, ...effectiveUpdates, isJustAdded: false, updatedAt: new Date().toISOString() };
     }));
 
     // Broadcast immediately to all open tabs on same browser
     try {
       if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
         const bc = new BroadcastChannel('urbangaon_task_sync');
-        bc.postMessage({ action: 'UPDATED', taskId, updates });
+        bc.postMessage({ action: 'UPDATED', taskId, updates: effectiveUpdates });
         bc.close();
       }
     } catch {}
@@ -603,7 +802,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     fetch(`/api/tasks/${taskId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates)
+      body: JSON.stringify({
+        ...effectiveUpdates,
+        actor: currentUser.name,
+        actorRole: currentUser.role,
+      })
     })
       .then(async res => {
         if (!res.ok) {
@@ -618,10 +821,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       taskId,
       taskTitle: oldTask?.title || 'Task',
       action: 'UPDATED',
-      fieldChanged: Object.keys(updates).join(', '),
-      oldValue: oldTask ? JSON.stringify(updates).slice(0, 50) : '',
-      newValue: JSON.stringify(updates).slice(0, 50),
-      notes: note || 'Task properties updated'
+      fieldChanged: Object.keys(effectiveUpdates).join(', '),
+      oldValue: oldTask ? JSON.stringify(effectiveUpdates).slice(0, 50) : '',
+      newValue: JSON.stringify(effectiveUpdates).slice(0, 50),
+      notes: note || (isAdmin ? 'Admin updated task (Flowchart A)' : 'Task properties updated')
     });
   };
 
@@ -630,11 +833,165 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const escalateTask = (taskId: string, reason: string, seniorLeader: string) => {
+    const leaderMember = members.find(m => m.name.toLowerCase() === seniorLeader.toLowerCase() || m.id === seniorLeader);
     updateTask(taskId, {
       status: 'Escalated',
       escalationReason: reason,
-      escalatedTo: seniorLeader
-    }, `Escalated to ${seniorLeader}: "${reason}"`);
+      escalatedTo: seniorLeader,
+      escalatedToId: leaderMember?.id,
+      escalatedAt: new Date().toISOString(),
+      escalationSlaHours: 24,
+      autoEscalatedToManager: false,
+      originalAssigneeNotified: true
+    }, `Escalated to senior ${seniorLeader}: "${reason}"`);
+
+    logAudit({
+      taskId,
+      action: 'ESCALATED',
+      fieldChanged: 'Task Escalated to Senior',
+      oldValue: 'In Progress / Pending',
+      newValue: `Escalated to ${seniorLeader}`,
+      notes: `Deliverable escalated to ${seniorLeader} with documented reason: "${reason}". SLA clock active (24h).`
+    });
+
+    setBannerNotification({
+      message: `Escalated to ${seniorLeader}. Instant notification dispatched.`,
+      badge: '🚨 Escalated'
+    });
+  };
+
+  // Flowchart 3: Senior Action 1 — Advise: Add advisory comment, return task to In Progress
+  const seniorAdviseTask = (taskId: string, advisoryComment: string) => {
+    updateTask(taskId, {
+      status: 'In Progress',
+      seniorAdvisoryComment: advisoryComment,
+      originalAssigneeNotified: true
+    }, `Senior Advisory: "${advisoryComment}"`);
+
+    logAudit({
+      taskId,
+      action: 'UPDATED',
+      fieldChanged: 'Senior Advisory Comment Provided',
+      oldValue: 'Escalated',
+      newValue: 'In Progress',
+      notes: `Senior leader provided advisory guidance: "${advisoryComment}". Returned to original assignee (Flowchart 3).`
+    });
+
+    setBannerNotification({
+      message: 'Advisory guidance posted. Deliverable returned to original assignee as In Progress.',
+      badge: '✓ Advisory Dispatched'
+    });
+  };
+
+  // Flowchart 3: Senior Action 2 — Reassign: Select new assignee and reassign task
+  const seniorReassignTask = (taskId: string, newAssigneeId: string, notes?: string) => {
+    const targetMember = members.find(m => m.id === newAssigneeId);
+    if (!targetMember) return;
+
+    updateTask(taskId, {
+      status: 'In Progress',
+      assignees: [{
+        id: targetMember.id,
+        name: targetMember.name,
+        email: targetMember.email,
+        department: targetMember.department,
+        designation: targetMember.designation,
+        avatar: targetMember.avatar,
+        status: 'In Progress'
+      }],
+      originalAssigneeNotified: true
+    }, `Senior Reassignment to ${targetMember.name}: ${notes || 'Workload reassignment'}`);
+
+    logAudit({
+      taskId,
+      action: 'REASSIGNED',
+      fieldChanged: 'Senior Reassignment',
+      oldValue: 'Escalated',
+      newValue: `Reassigned to ${targetMember.name}`,
+      notes: `Senior leader reassigned deliverable to ${targetMember.name}. Original assignee notified (Flowchart 3).`
+    });
+
+    setBannerNotification({
+      message: `Deliverable reassigned to ${targetMember.name}. All parties notified.`,
+      badge: '✓ Task Reassigned'
+    });
+  };
+
+  // Flowchart 3: Senior Action 3 — Resolve: Mark Completed with resolution note
+  const seniorResolveTask = (taskId: string, resolutionNote: string) => {
+    updateTask(taskId, {
+      status: 'Done',
+      progressPercent: 100,
+      seniorResolutionNote: resolutionNote,
+      originalAssigneeNotified: true
+    }, `Senior Resolved: "${resolutionNote}"`);
+
+    logAudit({
+      taskId,
+      action: 'UPDATED',
+      fieldChanged: 'Senior Resolution',
+      oldValue: 'Escalated',
+      newValue: 'Done (100%)',
+      notes: `Senior leader resolved escalated deliverable: "${resolutionNote}". Original assignee notified (Flowchart 3).`
+    });
+
+    setBannerNotification({
+      message: 'Escalated deliverable resolved and marked Done (100%).',
+      badge: '✓ Escalation Resolved'
+    });
+  };
+
+  // Flowchart 3: Senior Action 4 — Return: Return task to original assignee with reason
+  const seniorReturnTask = (taskId: string, returnReason: string) => {
+    updateTask(taskId, {
+      status: 'In Progress',
+      seniorReturnReason: returnReason,
+      originalAssigneeNotified: true
+    }, `Returned by Senior: "${returnReason}"`);
+
+    logAudit({
+      taskId,
+      action: 'UPDATED',
+      fieldChanged: 'Senior Returned Task with Reason',
+      oldValue: 'Escalated',
+      newValue: 'In Progress',
+      notes: `Senior returned task to assignee with reason: "${returnReason}". Original assignee notified (Flowchart 3).`
+    });
+
+    setBannerNotification({
+      message: 'Deliverable returned to original assignee with documented instructions.',
+      badge: '↩️ Returned to Assignee'
+    });
+  };
+
+  // Flowchart 3: No action within SLA — Auto-escalate to reporting manager
+  const checkAndAutoEscalateSlaBreachedTasks = (): number => {
+    const now = Date.now();
+    let escalatedCount = 0;
+    tasks.forEach(t => {
+      if (t.status === 'Escalated' && t.escalatedAt && !t.autoEscalatedToManager) {
+        const slaHours = t.escalationSlaHours || 24;
+        const diffMs = now - new Date(t.escalatedAt).getTime();
+        const diffHours = diffMs / (1000 * 60 * 60);
+        if (diffHours >= slaHours) {
+          escalatedCount++;
+          updateTask(t.id, {
+            autoEscalatedToManager: true,
+            notes: `[SLA Breached - ${diffHours.toFixed(1)}h elapsed]: Auto-escalated to Reporting Manager and Admin.`
+          }, 'Auto-escalated to Reporting Manager due to Senior SLA timeout');
+
+          logAudit({
+            taskId: t.id,
+            action: 'ESCALATED',
+            fieldChanged: 'SLA Auto-Escalation to Reporting Manager',
+            oldValue: `Escalated to Senior (${t.escalatedTo})`,
+            newValue: 'Auto-Escalated to Reporting Manager & Admin',
+            notes: `Senior SLA limit of ${slaHours}h exceeded without action. Automatically escalated to Reporting Manager and Admin (Flowchart 3).`
+          });
+        }
+      }
+    });
+    return escalatedCount;
   };
 
   const reopenTask = (taskId: string, reason: string) => {
@@ -643,7 +1000,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: 'In Progress',
       progressPercent: 50,
       holdReason: undefined,
-      cancellationReason: undefined
+      cancellationReason: undefined,
+      editedByAdmin: true,
     }, `Reopened by Management: "${reason}"`);
 
     logAudit({
@@ -672,17 +1030,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .slice(0, 2);
 
     const cleanEmail = memberData.email?.trim().toLowerCase() || `staff.${Date.now()}@urbangaon.com`;
-    const newId = memberData.id || `usr-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const assignedEmpId = memberData.employeeId || memberData.id || `EMP-${Math.floor(1000 + Math.random() * 9000)}`;
 
     const newMember: TeamMember = {
-      id: newId,
+      id: assignedEmpId,
+      employeeId: assignedEmpId,
       name: rawName,
       email: cleanEmail,
+      phone: memberData.phone || '',
       role: memberData.role || 'EMPLOYEE',
       designation: memberData.designation || 'Specialist',
       department: memberData.department || 'Product & Tech',
+      managerId: memberData.managerId,
+      manager: memberData.manager,
+      managerEmail: memberData.managerEmail,
       avatar: initials,
-      status: memberData.status || 'ACTIVE',
+      status: memberData.status || 'Pending First Login',
       totalTasks: 0,
       completedTasks: 0,
       activeTasks: 0,
@@ -690,58 +1053,131 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       velocity: 100,
     };
 
-    // Optimistic UI update
-    setMembers(prev => {
-      if (prev.some(m => m.email.toLowerCase() === cleanEmail)) return prev;
-      return [...prev, newMember];
+    // Send to MongoDB Atlas API
+    const res = await fetch('/api/members', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...newMember,
+        actor: currentUser.name || 'Admin / Talent HR',
+        actorRole: currentUser.role || 'ADMIN',
+      }),
     });
 
-    let finalMember = newMember;
-
-    // Send to MongoDB Atlas API in background
-    try {
-      const res = await fetch('/api/members', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newMember),
-      });
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success && json.data) {
-          finalMember = json.data;
-          setMembers(prev => {
-            const exists = prev.some(m => m.id === json.data.id || m.email.toLowerCase() === json.data.email.toLowerCase());
-            if (exists) {
-              return prev.map(m => (m.id === json.data.id || m.email.toLowerCase() === json.data.email.toLowerCase()) ? json.data : m);
-            }
-            return [...prev, json.data];
-          });
-        }
-      }
-    } catch (err) {
-      console.error('[Members] MongoDB sync error:', err);
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || !json.success) {
+      throw new Error(json.error || 'Failed to create employee record');
     }
+
+    const finalMember = json.data || newMember;
+    setMembers(prev => {
+      const exists = prev.some(m => m.id === finalMember.id || m.email.toLowerCase() === finalMember.email.toLowerCase());
+      if (exists) {
+        return prev.map(m => (m.id === finalMember.id || m.email.toLowerCase() === finalMember.email.toLowerCase()) ? finalMember : m);
+      }
+      return [...prev, finalMember];
+    });
 
     logAudit({
       action: 'CREATED',
-      fieldChanged: 'Staff Directory / Account Provisioning',
+      fieldChanged: 'Employee Provisioning (Flowchart: Create Employee)',
       oldValue: 'Unregistered',
-      newValue: `${finalMember.name} (${finalMember.designation} - ${finalMember.department})`,
-      notes: `Employee account created & credentials dispatched by ${currentUser.name} (${currentUser.role})`
+      newValue: `${finalMember.name} (${finalMember.designation} - ${finalMember.department}) [${finalMember.status}]`,
+      notes: `Employee record created in status "${finalMember.status}" & one-time set-password link dispatched by ${currentUser.name} (${currentUser.role})`
     });
 
     setBannerNotification({
-      message: `Employee account & credentials dispatched for ${finalMember.name} (${finalMember.email})`,
-      badge: '✓ Account Active'
+      message: `Employee ${finalMember.name} provisioned in status "${finalMember.status}". One-time set-password invitation dispatched.`,
+      badge: '✓ Pending First Login'
     });
 
     return finalMember;
   };
 
+  const updateMember = async (
+    memberId: string,
+    updates: Partial<TeamMember>,
+    reason?: string
+  ): Promise<{ success: boolean; member?: TeamMember; error?: string }> => {
+    try {
+      const res = await fetch('/api/members', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: memberId,
+          ...updates,
+          reason,
+          actor: currentUser.name || 'Admin / Talent HR',
+          actorRole: currentUser.role || 'ADMIN',
+        }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Failed to update employee details.');
+      }
+
+      const updatedMember = json.data as TeamMember;
+
+      // Update members in state
+      setMembers(prev => prev.map(m => m.id === memberId ? { ...m, ...updatedMember } : m));
+
+      // If current user is being updated, sync current user
+      if (currentUser.id === memberId) {
+        const synced = { ...currentUser, ...updatedMember };
+        setCurrentUser(synced);
+        try {
+          localStorage.setItem('urbangaon_auth_user_v2', JSON.stringify(synced));
+        } catch {}
+      }
+
+      // If email was updated, sync task assignees in local state
+      if (updates.email) {
+        setTasks(prev => prev.map(t => {
+          let hasChange = false;
+          const newAssignees = t.assignees.map(a => {
+            if (a.id === memberId) {
+              hasChange = true;
+              return { ...a, email: updates.email!, name: updates.name || a.name };
+            }
+            return a;
+          });
+          return hasChange ? { ...t, assignees: newAssignees } : t;
+        }));
+      }
+
+      logAudit({
+        action: 'UPDATED',
+        fieldChanged: updates.email ? `Employee Email (${updatedMember.name})` : `Employee Profile (${updatedMember.name})`,
+        oldValue: updates.email ? (members.find(m => m.id === memberId)?.email || '') : 'Profile Details',
+        newValue: updates.email ? updates.email : JSON.stringify(updates),
+        notes: reason || `Updated employee details for ${updatedMember.name} by ${currentUser.name}`
+      });
+
+      setBannerNotification({
+        message: json.message || `Employee ${updatedMember.name} updated successfully.`,
+        badge: '✓ Employee Updated'
+      });
+
+      return { success: true, member: updatedMember };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Update failed.';
+      console.error('[AppContext] updateMember error:', msg);
+      return { success: false, error: msg };
+    }
+  };
+
   const deactivateMember = async (
     departingId: string,
     successorId: string,
-    reason: string = 'Resignation / Voluntary Transition'
+    reason: string = 'Resignation / Voluntary Transition',
+    deactivationType: 'Resignation' | 'Termination' | 'Long leave' = 'Resignation',
+    dates?: {
+      lastWorkingDay?: string;
+      effectiveDate?: string;
+      leaveStartDate?: string;
+      leaveEndDate?: string;
+    }
   ): Promise<{ success: boolean; reassignedCount: number; message: string }> => {
     // Security check: CEO cannot be deactivated
     const departing = members.find(m => m.id === departingId || m.name === departingId || m.email.toLowerCase() === departingId.toLowerCase());
@@ -764,6 +1200,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         departingMemberId: departing?.id || departingId,
         successorMemberId: successor?.id || successorId,
         reason,
+        deactivationType,
+        lastWorkingDay: dates?.lastWorkingDay,
+        effectiveDate: dates?.effectiveDate,
+        leaveStartDate: dates?.leaveStartDate,
+        leaveEndDate: dates?.leaveEndDate,
         actor: currentUser.name || 'Super Admin',
         actorRole: currentUser.role || 'SUPER_ADMIN'
       })
@@ -775,16 +1216,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const reassignedCount = typeof data.reassignedCount === 'number' ? data.reassignedCount : 0;
+    const isLongLeave = deactivationType === 'Long leave';
+    const newStatus = isLongLeave ? ('ON_LEAVE' as const) : ('DEACTIVATED' as const);
 
-    // Optimistically update local members
+    // Optimistically update local members for all matching duplicate records
     setMembers(prev => prev.map(m => {
-      const isDeparting = m.id === departing?.id || m.name === departingName || (departing?.email && m.email.toLowerCase() === departing.email.toLowerCase());
-      const isSuccessor = m.id === successor?.id || m.name === successorName || (successor?.email && m.email.toLowerCase() === successor.email.toLowerCase());
+      const isDeparting = m.id === departing?.id || 
+        m.id === departingId || 
+        m.name.toLowerCase() === departingName.toLowerCase() || 
+        (departing?.email && m.email.toLowerCase() === departing.email.toLowerCase());
+      const isSuccessor = m.id === successor?.id || 
+        m.id === successorId || 
+        m.name.toLowerCase() === successorName.toLowerCase() || 
+        (successor?.email && m.email.toLowerCase() === successor.email.toLowerCase());
 
       if (isDeparting) {
         return {
           ...m,
-          status: 'DEACTIVATED' as const,
+          status: newStatus,
           activeTasks: 0,
           totalTasks: Math.max(0, (m.totalTasks || 0) - reassignedCount)
         };
@@ -819,7 +1268,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             designation: successor.designation,
             avatar: successor.avatar,
             status: a.status || 'In Progress',
-            remarks: `Handover from ${departingName} (FC 18: ${reason})`,
+            remarks: `Handover from ${departingName} (Flowchart 4: ${reason})`,
             completedAt: a.completedAt
           };
         }
@@ -840,20 +1289,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
         const bc = new BroadcastChannel('urbangaon_task_sync');
-        bc.postMessage({ action: 'MEMBER_DEACTIVATED', departingId, successorId });
+        bc.postMessage({ 
+          action: 'MEMBER_DEACTIVATED', 
+          departingId, 
+          departingName, 
+          departingEmail: departing?.email, 
+          successorId 
+        });
         bc.close();
       }
     } catch {}
 
     // Trigger full background sync to guarantee consistency
-    refreshFromDB();
+    await refreshMembersFromDB();
+    await refreshFromDB();
 
     logAudit({
       action: 'CONFIG_CHANGED',
-      fieldChanged: 'Account Status & Deliverable Reallocation',
+      fieldChanged: 'Account Status & Deliverable Reallocation (Flowchart 4)',
       oldValue: `${departingName} [ACTIVE]`,
-      newValue: `${departingName} [DEACTIVATED] → All ${reassignedCount} active deliverables transferred to ${successorName}`,
-      notes: `Flowchart 18 Enforced: ${reason}`
+      newValue: `${departingName} [${newStatus}] → All ${reassignedCount} active deliverables transferred to ${successorName}`,
+      notes: `Flowchart 4 Enforced: Type=${deactivationType}. Handover to ${successorName}. ${reassignedCount} tasks reassigned. Audit history preserved.`
     });
 
     if (selectedMemberFilter === departingName) {
@@ -920,6 +1376,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.removeItem('urbangaon_auth_user_v2');
     } catch {}
     setCurrentUser(GUEST_USER);
+    setActiveView('workspace');
     logAudit({
       action: 'LOGIN',
       fieldChanged: 'Auth Session / Logout',
@@ -1001,43 +1458,173 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
 
-    // Multi-assignee fairness check (Flowchart 8)
+    // Multi-assignee fairness check & status resolution (Flowchart 8)
+    const effectiveAssigneeId = assigneeId || (task.assignees.some(a => a.id === currentUser.id) ? currentUser.id : undefined);
+
     const updatedAssignees = task.assignees.map(a => {
-      if (!assigneeId || a.id === assigneeId) {
+      if (!effectiveAssigneeId || a.id === effectiveAssigneeId) {
         return { ...a, status: 'Done' as TaskStatus, completedAt: new Date().toISOString() };
       }
       return a;
     });
 
-    const allFinished = updatedAssignees.every(a => a.status === 'Done');
-    const newStatus: TaskStatus = allFinished ? 'Done' : 'In Progress';
-    const newProgress = allFinished ? 100 : Math.min(90, (task.progressPercent || 50) + 20);
+    const comp = computeMultiAssigneeStatus({
+      ...task,
+      assignees: updatedAssignees,
+    });
 
     updateTask(taskId, {
       assignees: updatedAssignees,
-      status: newStatus,
-      progressPercent: newProgress
-    }, allFinished ? 'Deliverable fully completed by all assignees' : `Assignee finished individual component`);
+      status: comp.status,
+      progressPercent: comp.progressPercent
+    }, comp.status === 'Done' ? 'Deliverable fully completed by all assignees' : `Assignee finished individual component (${comp.progressText})`);
+
+    logAudit({
+      taskId,
+      taskTitle: task.title,
+      action: 'STATUS_CHANGE',
+      fieldChanged: effectiveAssigneeId ? `Assignee Completed: ${effectiveAssigneeId}` : 'Task Completed',
+      oldValue: task.status,
+      newValue: `${comp.status} (${comp.progressText})`,
+      notes: `Updated status under Flowchart 8 Multi-Assignee Task Flow.`
+    });
+  };
+
+  const updateAssigneeStatus = (taskId: string, assigneeId: string, status: TaskStatus, remarks?: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const updatedAssignees = task.assignees.map(a => {
+      if (a.id === assigneeId) {
+        return {
+          ...a,
+          status,
+          remarks: remarks !== undefined ? remarks : a.remarks,
+          completedAt: status === 'Done' ? new Date().toISOString() : a.completedAt,
+        };
+      }
+      return a;
+    });
+
+    const targetAssignee = task.assignees.find(a => a.id === assigneeId);
+    const comp = computeMultiAssigneeStatus({
+      ...task,
+      assignees: updatedAssignees,
+    });
+
+    updateTask(taskId, {
+      assignees: updatedAssignees,
+      status: comp.status,
+      progressPercent: comp.progressPercent,
+    }, `Assignee ${targetAssignee?.name || assigneeId} updated status to "${status}" (Overall: ${comp.status}, ${comp.progressText})`);
+
+    logAudit({
+      taskId,
+      taskTitle: task.title,
+      action: 'STATUS_CHANGE',
+      fieldChanged: `Assignee Status: ${targetAssignee?.name || assigneeId}`,
+      oldValue: targetAssignee?.status || 'Unknown',
+      newValue: `${status} (Overall Task Status: ${comp.status} - ${comp.progressText})`,
+      notes: remarks || `Status updated under Flowchart 8 Multi-Assignee lifecycle.`
+    });
+  };
+
+  const reassignOrCloseAssignee = (taskId: string, oldAssigneeId: string, action: 'reassign' | 'close', newAssigneeId?: string, notes?: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const oldAssignee = task.assignees.find(a => a.id === oldAssigneeId);
+    let updatedAssignees = [...task.assignees];
+
+    if (action === 'reassign' && newAssigneeId) {
+      const newMember = members.find(m => m.id === newAssigneeId);
+      if (!newMember) return;
+      updatedAssignees = updatedAssignees.map(a => {
+        if (a.id === oldAssigneeId) {
+          return {
+            id: newMember.id,
+            name: newMember.name,
+            email: newMember.email,
+            department: newMember.department,
+            designation: newMember.designation,
+            avatar: newMember.avatar || newMember.name.slice(0, 2).toUpperCase(),
+            status: 'Not Started' as TaskStatus,
+            remarks: notes ? `Reassigned from ${oldAssignee?.name || 'predecessor'}: ${notes}` : `Reassigned from ${oldAssignee?.name || 'predecessor'}`,
+          };
+        }
+        return a;
+      });
+    } else if (action === 'close') {
+      updatedAssignees = updatedAssignees.map(a => {
+        if (a.id === oldAssigneeId) {
+          return {
+            ...a,
+            status: 'Cancelled' as TaskStatus,
+            remarks: notes || 'Assignee departed/resigned; individual deliverable component closed with management waiver.',
+          };
+        }
+        return a;
+      });
+    }
+
+    const comp = computeMultiAssigneeStatus({
+      ...task,
+      assignees: updatedAssignees,
+    });
+
+    const noteText = action === 'reassign'
+      ? `Reassigned ${oldAssignee?.name} to new colleague (Notes: ${notes || 'Staff shift'})`
+      : `Closed deliverable component for ${oldAssignee?.name} (Notes: ${notes || 'Staff departure/resignation'})`;
+
+    updateTask(taskId, {
+      assignees: updatedAssignees,
+      status: comp.status,
+      progressPercent: comp.progressPercent,
+    }, noteText);
+
+    logAudit({
+      taskId,
+      taskTitle: task.title,
+      action: action === 'reassign' ? 'REASSIGNED' : 'UPDATED',
+      fieldChanged: `Assignee Management: ${oldAssignee?.name}`,
+      oldValue: `${oldAssignee?.name} (${oldAssignee?.status})`,
+      newValue: action === 'reassign' ? `Reassigned to new member` : `Component closed (Cancelled)`,
+      notes: notes || noteText,
+    });
+
+    setBannerNotification({
+      message: noteText,
+      badge: '✓ ASSIGNEE UPDATED'
+    });
   };
 
   const exportToExcel = () => {
     // Standard 2-sheet enterprise workbook (Flowchart 14)
     // Sheet 1: Task Register Details
-    const taskRows = tasks.map(t => ({
-      'Task ID': t.id,
-      'Title': t.title,
-      'Scheduled Date': t.scheduledDate,
-      'Time': t.time,
-      'Priority': t.priority,
-      'Status': t.status,
-      'Progress %': t.progressPercent || 0,
-      'Assignee(s)': t.assignees.map(a => a.name).join(', '),
-      'Department': t.department,
-      'Project': t.project || '',
-      'Hold / Escalation Reason': t.holdReason || t.escalationReason || '',
-      'Created By': t.creator.name,
-      'Last Updated': t.updatedAt
-    }));
+    const taskRows = tasks
+      .slice()
+      .sort((a, b) => {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        if (timeA !== timeB) return timeA - timeB;
+        return a.id.localeCompare(b.id);
+      })
+      .map((t, idx) => ({
+        '#': idx + 1,
+        'Task ID': t.id,
+        'Title': t.title,
+        'Scheduled Date': t.scheduledDate,
+        'Time': t.time,
+        'Priority': t.priority,
+        'Status': t.status,
+        'Progress %': t.progressPercent || 0,
+        'Assignee(s)': t.assignees.map(a => a.name).join(', '),
+        'Department': t.department,
+        'Project': t.project || '',
+        'Hold / Escalation Reason': t.holdReason || t.escalationReason || '',
+        'Created By': t.creator.name,
+        'Last Updated': t.updatedAt
+      }));
 
     // Sheet 2: Executive Summary & Ratios (FC 11)
     const totalTasks = tasks.length;
@@ -1151,11 +1738,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateTask,
         holdTask,
         escalateTask,
+        seniorAdviseTask,
+        seniorReassignTask,
+        seniorResolveTask,
+        seniorReturnTask,
+        checkAndAutoEscalateSlaBreachedTasks,
         reopenTask,
         cancelTask,
         deleteTask,
         completeTask,
+        updateAssigneeStatus,
+        reassignOrCloseAssignee,
         addMember,
+        updateMember,
         deactivateMember,
         clearAllTasks,
         logoutUser,
@@ -1166,9 +1761,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setViewingAuditForTaskId,
         showMorningDigestModal,
         setShowMorningDigestModal,
+        isCreateTaskModalOpen,
+        setIsCreateTaskModalOpen,
+        isExportModalOpen,
+        setIsExportModalOpen,
         runNightlyRolloverSimulation,
         dbStatus,
-        refreshFromDB
+        refreshFromDB,
+        refreshMembersFromDB,
+        logAudit
       }}
     >
       {children}

@@ -6,7 +6,6 @@ import {
   Moon, 
   ChevronDown, 
   Check, 
-  Compass, 
   Menu, 
   X as XIcon, 
   Bell, 
@@ -14,19 +13,27 @@ import {
   LogIn, 
   LogOut, 
   Trash2,
-  CalendarDays
+  CalendarDays,
+  Zap,
+  AlertTriangle,
+  Clock,
+  FileSpreadsheet
 } from 'lucide-react';
 import { AuthModal } from './AuthModal';
 import { useTaskDeadlines } from '@/hooks/useTaskDeadlines';
-import { formatDateDisplay, formatDateShort } from '@/lib/dateUtils';
-import { isCeoUser, canAccessWorkflows } from '@/lib/rosterData';
+import { formatDateDisplay, formatDateShort, getTodayStr } from '@/lib/dateUtils';
+import { isCeoUser } from '@/lib/rosterData';
 
 export const Header: React.FC = () => {
   const {
     currentUser,
     switchRole,
     selectedDate,
+    setSelectedDate,
     setShowMorningDigestModal,
+    setIsCreateTaskModalOpen,
+    isExportModalOpen,
+    setIsExportModalOpen,
     runNightlyRolloverSimulation,
     setActiveView,
     activeView,
@@ -34,33 +41,61 @@ export const Header: React.FC = () => {
     setIsMobileNavOpen,
     clearAllTasks,
     logoutUser,
+    updateTask,
     tasks
   } = useApp();
 
   const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
+  const [isOpsMenuOpen, setIsOpsMenuOpen] = useState(false);
+  const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const roleMenuRef = useRef<HTMLDivElement>(null);
-  const { notificationPermission, requestPermission } = useTaskDeadlines();
+  const opsMenuRef = useRef<HTMLDivElement>(null);
+  const notificationMenuRef = useRef<HTMLDivElement>(null);
+  const { notificationPermission, requestPermission, overdueTasks, dueSoonTasks, pendingCount } = useTaskDeadlines();
 
   useEffect(() => {
     setIsMounted(true);
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      if (
+        searchParams.get('invite') ||
+        searchParams.get('invitation') ||
+        searchParams.get('code') ||
+        searchParams.get('mode') ||
+        searchParams.get('action') ||
+        searchParams.get('auth') ||
+        searchParams.get('login')
+      ) {
+        setIsAuthModalOpen(true);
+      }
+    }
   }, []);
 
   // Close dropdown on outside click or Esc
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (roleMenuRef.current && !roleMenuRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (roleMenuRef.current && !roleMenuRef.current.contains(target)) {
         setIsRoleMenuOpen(false);
+      }
+      if (opsMenuRef.current && !opsMenuRef.current.contains(target)) {
+        setIsOpsMenuOpen(false);
+      }
+      if (notificationMenuRef.current && !notificationMenuRef.current.contains(target)) {
+        setIsNotificationCenterOpen(false);
       }
     };
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setIsRoleMenuOpen(false);
+        setIsOpsMenuOpen(false);
+        setIsNotificationCenterOpen(false);
       }
     };
 
-    if (isRoleMenuOpen) {
+    if (isRoleMenuOpen || isOpsMenuOpen || isNotificationCenterOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       document.addEventListener('keydown', handleKeyDown);
     }
@@ -68,7 +103,7 @@ export const Header: React.FC = () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isRoleMenuOpen]);
+  }, [isRoleMenuOpen, isOpsMenuOpen, isNotificationCenterOpen]);
 
   // Formats user name intelligently instead of just showing "Mr."
   const getDisplayName = (name?: string) => {
@@ -112,7 +147,6 @@ export const Header: React.FC = () => {
   const isGuest = !isMounted || currentUser.id === 'guest';
   const isCeo = isMounted && isCeoUser(currentUser);
   const isAdmin = isMounted && (isCeo || currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN');
-  const canViewFlows = isMounted && canAccessWorkflows(currentUser);
 
   return (
     <header className="app-header">
@@ -164,70 +198,529 @@ export const Header: React.FC = () => {
           <span className="date-pill-compact">{formatDateShort(selectedDate)}</span>
         </div>
 
-        {/* Clear Data Button (Strictly CEO Mr. Sukh Sagar Singh Bhati Only) */}
-        {isCeo && (
-          <button
-            onClick={handleClearData}
-            className="btn-secondary"
-            title="Clear all tasks from MongoDB to test with fresh data (CEO Sukh Sagar ji Only)"
-            style={{
-              padding: 'clamp(0.28rem,1.5vw,0.35rem) clamp(0.4rem,2vw,0.65rem)',
-              color: '#dc2626',
-              borderColor: '#fca5a5',
-              background: '#fef2f2'
-            }}
-          >
-            <Trash2 size={13} color="#dc2626" />
-            <span className="nav-btn-text-full">Clear Data ({tasks.length})</span>
-            <span className="nav-btn-text-compact">Clear ({tasks.length})</span>
-          </button>
-        )}
+        {/* Flowchart 6: Add Task Action Button */}
+        <button
+          type="button"
+          onClick={() => setIsCreateTaskModalOpen(true)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '6px 12px',
+            background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: '6px',
+            fontSize: '0.78rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            boxShadow: '0 2px 4px rgba(37, 99, 235, 0.25)',
+            whiteSpace: 'nowrap',
+            transition: 'all 0.15s ease',
+          }}
+          title="Add New Deliverable / Task (Flowchart 6)"
+        >
+          <span style={{ fontSize: '0.85rem' }}>➕</span>
+          <span>Add Task</span>
+        </button>
 
-        {/* Executive Actions strictly restricted to CEO */}
+        {/* Flowchart E / 14: Enterprise Multi-Sheet Excel Export */}
+        <button
+          type="button"
+          onClick={() => setIsExportModalOpen(true)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '6px 11px',
+            borderRadius: '6px',
+            fontSize: '0.78rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+            color: '#15803d',
+            background: '#f0fdf4',
+            border: '1px solid #bbf7d0',
+            transition: 'all 0.15s ease',
+            boxShadow: '0 1px 2px rgba(16, 185, 129, 0.1)',
+          }}
+          title="Export Deliverables to Excel (Flowchart 14)"
+        >
+          <FileSpreadsheet size={14} color="#16a34a" />
+          <span>Export</span>
+        </button>
+
+        {/* Executive Ops Dropdown (Strictly CEO & Super Admin Only) */}
         {isCeo && (
-          <>
+          <div ref={opsMenuRef} style={{ position: 'relative' }}>
             <button
-              onClick={() => setShowMorningDigestModal(true)}
+              type="button"
+              onClick={() => setIsOpsMenuOpen(!isOpsMenuOpen)}
               className="btn-secondary"
-              title="FC 13: Simulated 08:30 AM Morning Email Digest (CEO Only)"
-              style={{ padding: 'clamp(0.28rem,1.5vw,0.35rem) clamp(0.4rem,2vw,0.65rem)' }}
+              style={{
+                width: '32px',
+                height: '32px',
+                padding: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: isOpsMenuOpen ? '#eff6ff' : '#ffffff',
+                borderColor: isOpsMenuOpen ? '#2563eb' : '#cbd5e1',
+                borderRadius: '6px',
+                transition: 'all 0.15s ease',
+                cursor: 'pointer',
+                boxShadow: isOpsMenuOpen ? '0 0 0 2px rgba(37,99,235,0.15)' : 'none'
+              }}
+              title="Automated Enterprise Engines (08:30 AM Digest, 00:05 AM Rollover & Data Reset)"
+              aria-expanded={isOpsMenuOpen}
+              aria-haspopup="true"
             >
-              <Mail size={14} color="#2563eb" />
-              <span className="nav-btn-text-full">8:30 Digest</span>
-              <span className="nav-btn-text-compact">Digest</span>
+              <Zap size={15} color="#2563eb" fill={isOpsMenuOpen ? '#2563eb' : 'none'} />
             </button>
 
-            <button
-              onClick={runNightlyRolloverSimulation}
-              className="btn-secondary"
-              title="FC 11: Simulated 00:05 AM Midnight Carry-Forward (CEO Only)"
-              style={{ padding: 'clamp(0.28rem,1.5vw,0.35rem) clamp(0.4rem,2vw,0.65rem)' }}
-            >
-              <Moon size={14} color="#8b5cf6" />
-              <span className="nav-btn-text-full">Rollover</span>
-              <span className="nav-btn-text-compact">Rollover</span>
-            </button>
+            {isOpsMenuOpen && (
+              <div 
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 6px)',
+                  right: 0,
+                  width: '320px',
+                  maxWidth: 'calc(100vw - 20px)',
+                  background: '#ffffff',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '12px',
+                  boxShadow: '0 16px 36px -4px rgba(15, 23, 42, 0.16), 0 4px 12px rgba(0,0,0,0.06)',
+                  zIndex: 100,
+                  padding: '8px',
+                  overflow: 'hidden'
+                }}
+              >
+                {/* Header: Live Cron Status */}
+                <div style={{
+                  padding: '8px 10px 10px',
+                  borderBottom: '1px solid #f1f5f9',
+                  marginBottom: '6px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#64748b' }}>
+                      Automated System Engines
+                    </span>
+                    <span style={{ 
+                      fontSize: '0.65rem', 
+                      fontWeight: 700, 
+                      color: '#16a34a', 
+                      background: '#f0fdf4', 
+                      padding: '2px 6px', 
+                      borderRadius: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+                      Daemon Active
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: '#64748b', lineHeight: 1.3 }}>
+                    FC 11 (00:05 Rollover) & FC 13 (08:30 Digest) background schedulers
+                  </div>
+                </div>
 
-          </>
+                {/* Option 1: 08:30 AM Morning Digest */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowMorningDigestModal(true);
+                    setIsOpsMenuOpen(false);
+                  }}
+                  style={{
+                    width: '100%',
+                    textAlign: 'left',
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    border: '1px solid transparent',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '10px',
+                    transition: 'background 0.15s ease',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = '#f8fafc';
+                    e.currentTarget.style.borderColor = '#e2e8f0';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.borderColor = 'transparent';
+                  }}
+                >
+                  <div style={{ 
+                    padding: '6px', 
+                    borderRadius: '8px', 
+                    background: '#eff6ff', 
+                    color: '#2563eb',
+                    marginTop: '2px' 
+                  }}>
+                    <Mail size={15} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0f172a' }}>
+                        Morning Email Digest
+                      </span>
+                      <span style={{ fontSize: '0.65rem', fontWeight: 600, color: '#2563eb', background: '#eff6ff', padding: '1px 5px', borderRadius: '4px' }}>
+                        08:30 AM
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '2px', lineHeight: 1.3 }}>
+                      Simulate & preview portfolio email briefing (FC 13)
+                    </div>
+                  </div>
+                </button>
+
+                {/* Option 2: 00:05 AM Midnight Carry-Forward Rollover */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    runNightlyRolloverSimulation();
+                    setIsOpsMenuOpen(false);
+                  }}
+                  style={{
+                    width: '100%',
+                    textAlign: 'left',
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    border: '1px solid transparent',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '10px',
+                    transition: 'background 0.15s ease',
+                    marginTop: '2px'
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = '#f8fafc';
+                    e.currentTarget.style.borderColor = '#e2e8f0';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.borderColor = 'transparent';
+                  }}
+                >
+                  <div style={{ 
+                    padding: '6px', 
+                    borderRadius: '8px', 
+                    background: '#f5f3ff', 
+                    color: '#7c3aed',
+                    marginTop: '2px' 
+                  }}>
+                    <Moon size={15} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0f172a' }}>
+                        Midnight Rollover
+                      </span>
+                      <span style={{ fontSize: '0.65rem', fontWeight: 600, color: '#7c3aed', background: '#f5f3ff', padding: '1px 5px', borderRadius: '4px' }}>
+                        00:05 AM
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '2px', lineHeight: 1.3 }}>
+                      Auto-roll unfinished tasks to today with count++ (FC 11)
+                    </div>
+                  </div>
+                </button>
+
+                {/* Divider */}
+                <div style={{ height: '1px', background: '#e2e8f0', margin: '6px 4px' }} />
+
+                {/* Option 3: Clear Deliverables Data */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsOpsMenuOpen(false);
+                    handleClearData();
+                  }}
+                  style={{
+                    width: '100%',
+                    textAlign: 'left',
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    border: '1px solid transparent',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '10px',
+                    transition: 'background 0.15s ease',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = '#fef2f2';
+                    e.currentTarget.style.borderColor = '#fecaca';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.borderColor = 'transparent';
+                  }}
+                >
+                  <div style={{ 
+                    padding: '6px', 
+                    borderRadius: '8px', 
+                    background: '#fee2e2', 
+                    color: '#dc2626',
+                    marginTop: '2px' 
+                  }}>
+                    <Trash2 size={15} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#dc2626' }}>
+                        Reset Deliverables
+                      </span>
+                      <span style={{ fontSize: '0.65rem', fontWeight: 600, color: '#b91c1c', background: '#fee2e2', padding: '1px 5px', borderRadius: '4px' }}>
+                        {tasks.length} tasks
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: '#991b1b', marginTop: '2px', lineHeight: 1.3 }}>
+                      Clear company tasks to test with fresh data (CEO only)
+                    </div>
+                  </div>
+                </button>
+
+                {/* Footer Policy Badge */}
+                <div style={{
+                  padding: '6px 10px 4px',
+                  marginTop: '4px',
+                  background: '#f8fafc',
+                  borderRadius: '6px',
+                  fontSize: '0.65rem',
+                  color: '#64748b',
+                  textAlign: 'center'
+                }}>
+                  🛡️ Zero spam policy • Auto-suppressed on Sundays & Holidays
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
-        {/* 28 Workflows Manual (Strictly CEO & Talent Team Only) */}
-        {canViewFlows && (
+        {/* Real-Time Notification Bell & Pending Alert Center */}
+        <div ref={notificationMenuRef} style={{ position: 'relative' }}>
           <button
-            onClick={() => setActiveView('workflow_manual')}
+            type="button"
+            onClick={() => setIsNotificationCenterOpen(!isNotificationCenterOpen)}
             className="btn-secondary"
             style={{
-              padding: 'clamp(0.28rem,1.5vw,0.35rem) clamp(0.4rem,2vw,0.65rem)',
-              background: activeView === 'workflow_manual' ? '#eff6ff' : undefined,
-              borderColor: activeView === 'workflow_manual' ? '#bfdbfe' : undefined
+              width: '32px',
+              height: '32px',
+              padding: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: isNotificationCenterOpen ? '#fee2e2' : (pendingCount > 0 ? '#fff1f2' : '#ffffff'),
+              borderColor: isNotificationCenterOpen ? '#dc2626' : (pendingCount > 0 ? '#fca5a5' : '#cbd5e1'),
+              borderRadius: '6px',
+              transition: 'all 0.15s ease',
+              cursor: 'pointer',
+              position: 'relative',
+              boxShadow: pendingCount > 0 ? '0 0 0 2px rgba(239, 68, 68, 0.25)' : 'none'
             }}
-            title="28 Flowcharts Executive Manual (CEO & Talent Team Only)"
+            title={pendingCount > 0 ? `${pendingCount} Pending Overdue Deliverables Awaiting Action` : 'Notification Center'}
+            aria-expanded={isNotificationCenterOpen}
+            aria-haspopup="true"
           >
-            <Compass size={14} color="#d97706" />
-            <span className="nav-btn-text-full">Flows</span>
-            <span className="nav-btn-text-compact">Flows</span>
+            <Bell size={15} color={pendingCount > 0 ? '#dc2626' : '#64748b'} />
+            {pendingCount > 0 && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '-4px',
+                  right: '-4px',
+                  background: '#dc2626',
+                  color: 'white',
+                  fontSize: '0.62rem',
+                  fontWeight: 800,
+                  borderRadius: '10px',
+                  minWidth: '16px',
+                  height: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '0 3px',
+                  border: '2px solid #ffffff',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                }}
+              >
+                {pendingCount}
+              </span>
+            )}
           </button>
-        )}
+
+          {isNotificationCenterOpen && (
+            <div 
+              style={{
+                position: 'absolute',
+                top: 'calc(100% + 6px)',
+                right: 0,
+                width: '360px',
+                maxWidth: 'calc(100vw - 20px)',
+                background: '#ffffff',
+                border: '1px solid #cbd5e1',
+                borderRadius: '12px',
+                boxShadow: '0 16px 36px -4px rgba(15, 23, 42, 0.16), 0 4px 12px rgba(0,0,0,0.06)',
+                zIndex: 100,
+                padding: '10px',
+                overflow: 'hidden'
+              }}
+            >
+              {/* Header */}
+              <div style={{
+                padding: '4px 6px 8px',
+                borderBottom: '1px solid #f1f5f9',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <div>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Bell size={14} color="#dc2626" />
+                    Pending Notifications
+                  </div>
+                  <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
+                    Real-time overdue alerts & deadline reminders
+                  </div>
+                </div>
+                {pendingCount > 0 ? (
+                  <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#be123c', background: '#ffe4e6', padding: '2px 8px', borderRadius: '12px' }}>
+                    {pendingCount} Overdue
+                  </span>
+                ) : (
+                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#16a34a', background: '#f0fdf4', padding: '2px 8px', borderRadius: '12px' }}>
+                    All Clear ✓
+                  </span>
+                )}
+              </div>
+
+              {/* Action Banner for Overdue Tasks */}
+              {pendingCount > 0 && (
+                <div style={{
+                  margin: '8px 0',
+                  padding: '8px',
+                  background: '#fff1f2',
+                  border: '1px solid #fecdd3',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '8px'
+                }}>
+                  <div style={{ fontSize: '0.72rem', color: '#9f1239', fontWeight: 600 }}>
+                    {pendingCount} task(s) awaiting completion from past dates.
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const today = getTodayStr();
+                      overdueTasks.forEach(t => {
+                        updateTask(t.id, { scheduledDate: today }, `Batch rescheduled to today (${today}) via Notification Center`);
+                      });
+                      setSelectedDate(today);
+                      setActiveView('workspace');
+                      setIsNotificationCenterOpen(false);
+                    }}
+                    style={{
+                      background: '#e11d48',
+                      color: 'white',
+                      border: 'none',
+                      padding: '4px 8px',
+                      borderRadius: '5px',
+                      fontSize: '0.68rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    Reschedule All to Today
+                  </button>
+                </div>
+              )}
+
+              {/* Overdue Items List */}
+              <div style={{ maxHeight: '240px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {overdueTasks.map((task, idx) => (
+                  <div
+                    key={`${task.id}-${idx}`}
+                    onClick={() => {
+                      setSelectedDate(task.scheduledDate);
+                      setActiveView('workspace');
+                      setIsNotificationCenterOpen(false);
+                    }}
+                    style={{
+                      padding: '8px',
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      transition: 'background 0.15s ease'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
+                    onMouseLeave={e => e.currentTarget.style.background = '#f8fafc'}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {task.title}
+                      </span>
+                      <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#dc2626', background: '#fee2e2', padding: '1px 5px', borderRadius: '4px', whiteSpace: 'nowrap' }}>
+                        {task.scheduledDate}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.68rem', color: '#64748b', marginTop: '3px' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                        <Clock size={11} /> {task.time}
+                      </span>
+                      <span>• Priority: <strong>{task.priority}</strong></span>
+                    </div>
+                  </div>
+                ))}
+
+                {pendingCount === 0 && (
+                  <div style={{ padding: '1.5rem', textAlign: 'center', color: '#64748b', fontSize: '0.75rem' }}>
+                    🎉 No overdue pending deliverables. All tasks are up to date!
+                  </div>
+                )}
+              </div>
+
+              {/* Push Permission Toggle in Footer */}
+              {notificationPermission !== 'granted' && (
+                <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #f1f5f9' }}>
+                  <button
+                    type="button"
+                    onClick={requestPermission}
+                    style={{
+                      width: '100%',
+                      background: '#eff6ff',
+                      color: '#2563eb',
+                      border: '1px solid #bfdbfe',
+                      padding: '6px 10px',
+                      borderRadius: '6px',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <Bell size={13} />
+                    Enable Desktop Push Notifications
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Explicit Sign In / Log In Button */}
         {isGuest ? (

@@ -21,6 +21,12 @@ export interface IUser {
   hasCustomPassword?: boolean;
   resetPasswordToken?: string;
   resetPasswordExpires?: Date;
+  failedLoginAttempts?: number;
+  lockUntil?: Date;
+  twoFactorOtp?: string;
+  twoFactorExpires?: Date;
+  twoFactorRetries?: number;
+  recentOtps?: string[];
   isDeactivated?: boolean;
   status?: string;
   createdAt: string;
@@ -41,6 +47,12 @@ const UserSchema = new Schema<IUser>(
     hasCustomPassword:    { type: Boolean, default: false },
     resetPasswordToken:   { type: String },
     resetPasswordExpires: { type: Date },
+    failedLoginAttempts:  { type: Number, default: 0 },
+    lockUntil:            { type: Date },
+    twoFactorOtp:         { type: String },
+    twoFactorExpires:     { type: Date },
+    twoFactorRetries:     { type: Number, default: 0 },
+    recentOtps:           { type: [String], default: [] },
     isDeactivated:        { type: Boolean, default: false },
     status:               { type: String, default: 'ACTIVE' },
     createdAt:            { type: String, default: () => new Date().toISOString() },
@@ -48,8 +60,8 @@ const UserSchema = new Schema<IUser>(
   { timestamps: false, versionKey: false, strict: false }
 );
 
-// If model was cached previously without the new resetPassword fields, clear it
-if (mongoose.models.User && !mongoose.models.User.schema.paths.resetPasswordToken) {
+// If model was cached previously without the new lockout fields, clear it
+if (mongoose.models.User && (!mongoose.models.User.schema.paths.failedLoginAttempts || !mongoose.models.User.schema.paths.lockUntil)) {
   delete (mongoose.models as Record<string, unknown>).User;
 }
 

@@ -386,7 +386,7 @@ export const INITIAL_TASKS: Task[] = [
       {
         id: 'mem-12',
         name: 'Aakash Das',
-        email: 'aakash.das@urbangaon.com',
+        email: 'techdesk@urbangaon.com',
         department: 'AI & IT',
         designation: 'AI & IT Officer',
         avatar: 'AD',
@@ -467,10 +467,36 @@ export const INITIAL_AUDIT_LOGS: AuditLogEntry[] = [
 export const INITIAL_SYSTEM_CONFIG: SystemConfig = {
   emailScheduleTime: '08:30 AM',
   workingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+  holidaysActive: true,
   lockoutThreshold: 5,
   lockoutDurationMinutes: 15,
+  sessionTimeoutMinutes: 60,
+  passwordRules: {
+    minLength: 8,
+    requireSpecialChars: true,
+    requireNumbers: true
+  },
   retentionDays: 365,
+  auditRetentionDays: 730,
   versionBaseline: 'v2.4.0-Production',
+  previousVersionBaseline: 'v2.3.9-Stable',
+  requireDualSuperAdminApproval: false,
+  rolePermissions: {
+    SUPER_ADMIN: ['read', 'write', 'delete', 'export_all', 'export_audit', 'config_edit'],
+    ADMIN: ['read', 'write', 'export_all', 'reassign_team'],
+    MANAGER: ['read', 'write_team', 'reopen_team', 'reassign_team'],
+    EMPLOYEE: ['read_own', 'write_own', 'export_own']
+  },
+  customStatuses: [
+    { label: 'Blocked by Vendor', mappedTo: 'On Hold', color: '#f59e0b' },
+    { label: 'Client Feedback Pending', mappedTo: 'On Hold', color: '#d97706' },
+    { label: 'In Senior Review', mappedTo: 'In Progress', color: '#3b82f6' }
+  ],
+  exportRoles: {
+    canExportAllTasks: ['ADMIN', 'SUPER_ADMIN'],
+    canExportAuditLogs: ['SUPER_ADMIN'],
+    canExportReports: ['ADMIN', 'SUPER_ADMIN', 'MANAGER']
+  },
   masterLists: {
     projects: [
       'Core Infrastructure',
@@ -493,6 +519,9 @@ export const INITIAL_SYSTEM_CONFIG: SystemConfig = {
     ],
     locations: [
       'Jaipur'
+    ],
+    directReportingLines: [
+      { manager: 'Sukh Sagar Singh Bhati', reportees: ['Vipin Sharma', 'Mayank Sharma', 'Vikram Singh'] }
     ]
   }
 };

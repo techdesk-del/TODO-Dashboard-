@@ -21,7 +21,12 @@ export async function syncOfficialRosterToDB(): Promise<void> {
     const defaultPasswordHash = await hashPassword('123');
 
     for (const emp of OFFICIAL_ROSTER) {
-      // 1. Sync MemberModel
+      // 1. Sync MemberModel without overwriting existing deactivation or on-leave status
+      const existingMember = await MemberModel.findOne({ id: emp.id });
+      const currentStatus = (existingMember?.status === 'DEACTIVATED' || existingMember?.status === 'ON_LEAVE')
+        ? existingMember.status
+        : (existingMember?.status || 'ACTIVE');
+
       await MemberModel.findOneAndUpdate(
         { id: emp.id },
         {
@@ -32,7 +37,7 @@ export async function syncOfficialRosterToDB(): Promise<void> {
             designation: emp.designation,
             department: emp.department,
             avatar: emp.avatar,
-            status: 'ACTIVE',
+            status: currentStatus,
             totalTasks: emp.totalTasks,
             completedTasks: emp.completedTasks,
             activeTasks: emp.activeTasks,

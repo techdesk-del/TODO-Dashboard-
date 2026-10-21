@@ -42,10 +42,16 @@ export const CeoPortal: React.FC = () => {
   // Active member for drilldown
   const activeMember = activeMembers.find(m => m.name === selectedMemberFilter) || null;
 
-  // Filter tasks based on member selection
-  const displayedTasks = activeMember
+  // Filter tasks based on member selection and sort chronologically top-to-bottom
+  const displayedTasks = (activeMember
     ? tasks.filter(t => t.assignees.some(a => a.name.toLowerCase().includes(activeMember.name.toLowerCase()) || a.id === activeMember.id))
-    : tasks;
+    : tasks
+  ).slice().sort((a, b) => {
+    const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    if (timeA !== timeB) return timeA - timeB;
+    return a.id.localeCompare(b.id);
+  });
 
   // KPIs dynamically computed from live task register
   const totalTasksCount = displayedTasks.length;
@@ -343,10 +349,15 @@ export const CeoPortal: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {displayedTasks.map(task => (
-              <tr key={task.id}>
+            {displayedTasks.map((task, idx) => (
+              <tr key={`${task.id}-${idx}`}>
                 <td>
-                  <div style={{ fontWeight: 700, color: '#0f172a' }}>{task.title}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span className="task-sequence-badge" style={{ fontSize: '0.7rem' }}>
+                      #{idx + 1}
+                    </span>
+                    <div style={{ fontWeight: 700, color: '#0f172a' }}>{task.title}</div>
+                  </div>
                   {task.project && (
                     <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
                       Project: {task.project}

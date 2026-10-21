@@ -53,14 +53,15 @@ const TaskSchema = new Schema<Task>(
   {
     id:            { type: String, required: true, unique: true, index: true },
     title:         { type: String, required: true, trim: true, maxlength: 500 },
+    description:   { type: String, trim: true },
     scheduledDate: { type: String, required: true },   // YYYY-MM-DD
     time:          { type: String, required: true },   // '05:00 PM'
     priority:      { type: String, required: true, enum: ['URGENT', 'HIGH', 'NORMAL'] },
     status:        {
       type: String,
       required: true,
-      enum: ['Queued', 'In Progress', 'Review', 'Done', 'On Hold', 'Escalated', 'Cancelled'],
-      default: 'Queued',
+      enum: ['Not Started', 'Queued', 'In Progress', 'Review', 'Done', 'On Hold', 'Escalated', 'Cancelled', 'Partially Completed', 'Pending Notice'],
+      default: 'Not Started',
     },
     assignees:          { type: [AssigneeSchema], default: [] },
     creator:            { type: CreatorSchema, required: true },
@@ -69,12 +70,24 @@ const TaskSchema = new Schema<Task>(
     location:           { type: String },
     progressPercent:    { type: Number, min: 0, max: 100 },
     isJustAdded:        { type: Boolean, default: false },
+    pastDueReason:      { type: String },
+    notes:              { type: String },
+    inputMethod:        { type: String, enum: ['Speak', 'Type'], default: 'Type' },
     holdReason:         { type: String },
     escalationReason:   { type: String },
     escalatedTo:        { type: String },
+    escalatedToId:      { type: String },
+    escalatedAt:        { type: String },
+    escalationSlaHours: { type: Number, default: 24 },
+    autoEscalatedToManager: { type: Boolean, default: false },
+    seniorAdvisoryComment:  { type: String },
+    seniorResolutionNote:   { type: String },
+    seniorReturnReason:     { type: String },
+    originalAssigneeNotified: { type: Boolean, default: false },
     cancellationReason: { type: String },
     carryForwardCount:  { type: Number, default: 0 },
     aiMetadata:         { type: AiMetaSchema },
+    editedByAdmin:      { type: Boolean, default: false },
     createdAt:          { type: String },
     updatedAt:          { type: String },
   },
@@ -85,16 +98,20 @@ const TaskSchema = new Schema<Task>(
   }
 );
 
-/* ── Compound Indexes ────────────────────────────────────────────── */
+/* ── High-Performance Indexes for 100+ Concurrent Employees ── */
+TaskSchema.index({ createdAt: 1 });                          // High-speed chronological sequence sorting
+TaskSchema.index({ updatedAt: -1 });                         // Real-time delta sync & SSE queries
+TaskSchema.index({ scheduledDate: 1, createdAt: 1 });         // Date + chronological lookup
 TaskSchema.index({ scheduledDate: 1, status: 1 });          // Calendar + status filter
-TaskSchema.index({ 'assignees.id': 1, scheduledDate: 1 });  // CEO member drilldown
+TaskSchema.index({ 'assignees.id': 1, scheduledDate: 1 });  // Member drilldown
 TaskSchema.index({ 'creator.id': 1,  scheduledDate: 1 });   // Personal workspace
-TaskSchema.index({ priority: 1, status: 1, scheduledDate: 1 }); // Priority board
 TaskSchema.index({ department: 1, scheduledDate: 1 });       // Dept view
 
 /* ── Model (with HMR guard) ──────────────────────────────────────── */
+if (mongoose.models && mongoose.models.Task) {
+  delete mongoose.models.Task;
+}
 export const TaskModel: Model<Task> =
-  (mongoose.models.Task as Model<Task>) ||
   mongoose.model<Task>('Task', TaskSchema);
 
 export default TaskModel;

@@ -41,10 +41,18 @@ export function isTaskDeleted(id: string): boolean {
 
 export const REALTIME_EVENTS = {
   TASK_MUTATION: 'TASK_MUTATION',
+  MEMBER_MUTATION: 'MEMBER_MUTATION',
   AUDIT_LOG: 'AUDIT_LOG',
 } as const;
 
-export function broadcastTaskMutation(payload: { action: 'CREATED' | 'UPDATED' | 'DELETED' | 'DELETED_ALL'; taskId: string; taskTitle?: string; source?: string }) {
+export function broadcastTaskMutation(payload: {
+  action: 'CREATED' | 'UPDATED' | 'DELETED' | 'DELETED_ALL';
+  taskId: string;
+  taskTitle?: string;
+  task?: unknown;
+  updates?: unknown;
+  source?: string;
+}) {
   try {
     realtimeEmitter.emit(REALTIME_EVENTS.TASK_MUTATION, {
       ...payload,
@@ -54,3 +62,22 @@ export function broadcastTaskMutation(payload: { action: 'CREATED' | 'UPDATED' |
     console.error('[Realtime Broadcast Error]', err);
   }
 }
+
+export function broadcastMemberMutation(payload: {
+  action: 'CREATED' | 'UPDATED' | 'DEACTIVATED';
+  memberId: string;
+  memberName?: string;
+  memberEmail?: string;
+  status?: string;
+  member?: unknown;
+}) {
+  try {
+    realtimeEmitter.emit(REALTIME_EVENTS.MEMBER_MUTATION, {
+      ...payload,
+      timestamp: Date.now(),
+    });
+  } catch (err) {
+    console.error('[Realtime Member Broadcast Error]', err);
+  }
+}
+

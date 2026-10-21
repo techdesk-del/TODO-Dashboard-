@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useApp } from '@/context/AppContext';
 import { isCeoUser } from '@/lib/rosterData';
 import { TeamMember, Task, TaskStatus } from '@/types';
@@ -27,43 +27,103 @@ import {
   Trash2,
   User,
   Phone,
-  Key,
   Building2,
   ArrowRight,
   AlertCircle,
   FileText,
-  ShieldAlert
+  ShieldAlert,
+  BarChart3,
+  Edit3,
+  ArrowRightLeft,
+  FileSpreadsheet,
+  Eye,
+  Download,
+  CheckSquare,
+  Square,
+  ChevronDown
 } from 'lucide-react';
 
 import { OFFICIAL_HOLIDAYS_2026_27, HOLIDAY_METADATA } from '@/lib/holidayData';
+import { generateMultiSheetExcelWorkbook, downloadWorkbook } from '@/lib/exportUtils';
+import { getTodayStr } from '@/lib/dateUtils';
 
 export const AdminHrPortal: React.FC = () => {
-  const { members, tasks, updateTask, reopenTask, deleteTask, addMember, deactivateMember, currentUser, systemConfig } = useApp();
+  const { members, tasks, updateTask, reopenTask, deleteTask, addMember, updateMember, deactivateMember, currentUser, systemConfig, logAudit } = useApp();
   const isCeo = isCeoUser(currentUser);
 
-  const [activeTab, setActiveTab] = useState<'oversight' | 'create_user' | 'pending_approvals' | 'deactivation' | 'holidays'>('oversight');
+  const [activeTab, setActiveTab] = useState<'oversight' | 'reports' | 'create_user' | 'pending_approvals' | 'deactivation' | 'holidays' | 'directory'>('oversight');
   const [selectedUserForOversight, setSelectedUserForOversight] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [searchFilter, setSearchFilter] = useState<string>('');
 
+  // Flowchart A: Search-as-you-type, Dept & Manager Filters, Interventions
+  const [departmentFilterForOversight, setDepartmentFilterForOversight] = useState<string>('ALL');
+  const [managerFilterForOversight, setManagerFilterForOversight] = useState<string>('ALL');
+  const [userSearchQuery, setUserSearchQuery] = useState<string>('');
+  const [isUserDropdownOpen, setIsUserDropdownOpen] = useState<boolean>(false);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
+  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
+  const [editStatus, setEditStatus] = useState<TaskStatus>('In Progress');
+  const [editReason, setEditReason] = useState<string>('');
+  const [editRemarks, setEditRemarks] = useState<string>('');
+  const [taskToView, setTaskToView] = useState<Task | null>(null);
+  const [showBulkReassignModal, setShowBulkReassignModal] = useState<boolean>(false);
+  const [bulkReassignTargetMemberId, setBulkReassignTargetMemberId] = useState<string>('');
+
+  // Flowchart B (Flowchart 11: Admin - Reports and Performance Ratio)
+  const [reportType, setReportType] = useState<'USER_WISE' | 'PERFORMANCE_RATIO' | 'PENDING' | 'ESCALATED' | 'ON_HOLD' | 'DEPARTMENT'>('PERFORMANCE_RATIO');
+  const [reportSelectedEmployeeId, setReportSelectedEmployeeId] = useState<string>('');
+  const [reportStartDate, setReportStartDate] = useState<string>('');
+  const [reportEndDate, setReportEndDate] = useState<string>('');
+  const [reportPendingStatus, setReportPendingStatus] = useState<string>('ALL');
+  const [reportDepartment, setReportDepartment] = useState<string>('ALL');
+
   // Reopen Task Modal State
   const [taskToReopen, setTaskToReopen] = useState<Task | null>(null);
   const [reopenReason, setReopenReason] = useState<string>('');
+
+  // Flowchart: Staff Directory & Corporate Email Configuration
+  const [memberToEditEmail, setMemberToEditEmail] = useState<TeamMember | null>(null);
+  const [newEmailInput, setNewEmailInput] = useState<string>('');
+  const [emailChangeReason, setEmailChangeReason] = useState<string>('');
+  const [isUpdatingEmail, setIsUpdatingEmail] = useState<boolean>(false);
+  const [emailUpdateError, setEmailUpdateError] = useState<string | null>(null);
+
+  // Directory filter state
+  const [directorySearchQuery, setDirectorySearchQuery] = useState<string>('');
+  const [directoryDeptFilter, setDirectoryDeptFilter] = useState<string>('ALL');
+  const [directoryStatusFilter, setDirectoryStatusFilter] = useState<string>('ALL');
   
-  // Direct Invite Form state (FC 9)
+  // Flowchart: Employee Provisioning (Admin Dashboard -> Create Employee)
   const [newUserName, setNewUserName] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
+  const [emailExistsError, setEmailExistsError] = useState<string | null>(null);
   const [newUserPhone, setNewUserPhone] = useState('');
+  const [newUserEmployeeId, setNewUserEmployeeId] = useState('');
   const [newUserDept, setNewUserDept] = useState('');
   const [newUserDesignation, setNewUserDesignation] = useState('');
-  const [newUserRole, setNewUserRole] = useState<'EMPLOYEE' | 'MANAGER' | 'ADMIN' | ''>('');
+  const [newUserReportingManagerId, setNewUserReportingManagerId] = useState('');
+  const [newUserRole, setNewUserRole] = useState<'EMPLOYEE' | 'MANAGER' | 'ADMIN'>('EMPLOYEE');
   const [inviteSuccessMsg, setInviteSuccessMsg] = useState<string | null>(null);
+  const [provisionedDetails, setProvisionedDetails] = useState<{
+    employeeId: string;
+    code: string;
+    link: string;
+    email: string;
+    name: string;
+  } | null>(null);
   const [isSubmittingUser, setIsSubmittingUser] = useState(false);
 
-  // Deactivation Handover state (Flowchart 18)
+  // Deactivation Handover state (Flowchart 4 & 18)
+  const [deactivationSubTab, setDeactivationSubTab] = useState<'form' | 'archive'>('form');
   const [departingMemberId, setDepartingMemberId] = useState<string>('');
   const [successorMemberId, setSuccessorMemberId] = useState<string>('');
-  const [deactivationReason, setDeactivationReason] = useState<string>('Resignation / Voluntary Transition');
+  const [deactivationType, setDeactivationType] = useState<'Resignation' | 'Termination' | 'Long leave'>('Resignation');
+  const [lastWorkingDay, setLastWorkingDay] = useState<string>(getTodayStr());
+  const [effectiveDate, setEffectiveDate] = useState<string>(getTodayStr());
+  const [leaveStartDate, setLeaveStartDate] = useState<string>(getTodayStr());
+  const [leaveEndDate, setLeaveEndDate] = useState<string>('');
+  const [deactivationReason, setDeactivationReason] = useState<string>('Resignation');
   const [handoverNotes, setHandoverNotes] = useState<string>('');
   const [handoverAcknowledged, setHandoverAcknowledged] = useState(false);
   const [isDeactivating, setIsDeactivating] = useState(false);
@@ -71,18 +131,39 @@ export const AdminHrPortal: React.FC = () => {
 
   // Active vs Deactivated members
   const activeMembers = useMemo(() => {
-    return members.filter(m => m.status !== 'DEACTIVATED');
+    return members.filter(m => m && m.status !== 'DEACTIVATED' && (m as any).isDeactivated !== true);
+  }, [members]);
+
+  const deactivatedMembers = useMemo(() => {
+    return members.filter(m => m && (m.status === 'DEACTIVATED' || (m as any).isDeactivated === true));
   }, [members]);
 
   // Offboardable active members (excluding deactivated staff and CEO)
   const offboardableMembers = useMemo(() => {
-    return activeMembers.filter(m => !isCeoUser(m));
+    const list = activeMembers.filter(m => !isCeoUser(m) && m.status !== 'DEACTIVATED' && (m as any).isDeactivated !== true);
+    // Deduplicate by clean email and name so duplicate records don't appear repeatedly
+    const seen = new Set<string>();
+    const unique: TeamMember[] = [];
+    for (const m of list) {
+      const key = (m.email || m.name || m.id).toLowerCase().trim();
+      if (!seen.has(key)) {
+        seen.add(key);
+        unique.push(m);
+      }
+    }
+    return unique;
+  }, [activeMembers]);
+
+  // Flowchart: Reporting Managers (Managers, Admins, Super Admin/CEO)
+  const reportingManagers = useMemo(() => {
+    return activeMembers.filter(m => m.role === 'MANAGER' || m.role === 'ADMIN' || m.role === 'SUPER_ADMIN' || isCeoUser(m));
   }, [activeMembers]);
 
   // Derived current departing and successor members
   const departingMember = useMemo(() => {
     if (departingMemberId) {
-      return offboardableMembers.find(m => m.id === departingMemberId) || offboardableMembers[0] || null;
+      const found = offboardableMembers.find(m => m.id === departingMemberId);
+      if (found) return found;
     }
     return offboardableMembers[0] || null;
   }, [departingMemberId, offboardableMembers]);
@@ -116,32 +197,214 @@ export const AdminHrPortal: React.FC = () => {
     phone: string;
     department: string;
     designation: string;
-    manager: string;
+    reason?: string;
+    manager?: string;
     appliedAt: string;
   }>>([]);
   const [approvalBanner, setApprovalBanner] = useState<string | null>(null);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [isFetchingRequests, setIsFetchingRequests] = useState(false);
 
-  // Calculate filtered deliverables
-  const isAllUsers = selectedUserForOversight === 'ALL';
-  const targetOversightMember = isAllUsers ? null : members.find(m => m.name === selectedUserForOversight);
+  // Flowchart 3: Request Details & Verification Modal State
+  const [selectedRequestForReview, setSelectedRequestForReview] = useState<{
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    department: string;
+    designation: string;
+    reason?: string;
+    manager?: string;
+    appliedAt: string;
+  } | null>(null);
+  const [verifyDept, setVerifyDept] = useState('');
+  const [verifyDesignation, setVerifyDesignation] = useState('');
+  const [verifyManager, setVerifyManager] = useState('');
+  const [verifyManagerEmail, setVerifyManagerEmail] = useState('');
+  const [verifyEmployeeId, setVerifyEmployeeId] = useState('');
 
-  const baseTasks = isAllUsers
-    ? tasks
-    : tasks.filter(t => t.assignees.some(a => a.name.toLowerCase().includes(selectedUserForOversight.toLowerCase())));
+  // Flowchart 3: Rejection Reason Modal State
+  const [rejectionModalRequest, setRejectionModalRequest] = useState<{
+    id: string;
+    name: string;
+    email: string;
+  } | null>(null);
+  const [rejectionInputReason, setRejectionInputReason] = useState('');
 
-  const filteredTasks = baseTasks.filter(t => {
-    // Status filter
-    if (statusFilter !== 'ALL' && t.status !== statusFilter) return false;
-    // Search query filter
-    if (searchFilter.trim()) {
-      const q = searchFilter.toLowerCase();
-      const matchTitle = t.title.toLowerCase().includes(q);
-      const matchProject = (t.project || '').toLowerCase().includes(q);
-      const matchAssignee = t.assignees.some(a => a.name.toLowerCase().includes(q));
-      if (!matchTitle && !matchProject && !matchAssignee) return false;
+  const openRequestReview = (req: typeof pendingRequests[0]) => {
+    setSelectedRequestForReview(req);
+    setVerifyDept(req.department || 'General Staff');
+    setVerifyDesignation(req.designation || 'Specialist');
+    setVerifyManager(req.manager || 'Dr. Rekha Pareek');
+    setVerifyManagerEmail('rekha.pareek@urbangaon.com');
+    setVerifyEmployeeId(`EMP-${Math.floor(1000 + Math.random() * 9000)}`);
+  };
+
+  // Fetch live pending self sign-up requests from MongoDB Atlas (FC 2 & 3)
+  const fetchPendingRequests = useCallback(async (quiet = false) => {
+    if (!quiet) setIsFetchingRequests(true);
+    try {
+      const res = await fetch(`/api/auth/request-access?_t=${Date.now()}`, { cache: 'no-store' });
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        setPendingRequests(json.data);
+      }
+    } catch (e) {
+      console.error('[AdminHrPortal] failed fetching pending requests', e);
+    } finally {
+      if (!quiet) setIsFetchingRequests(false);
     }
-    return true;
-  });
+  }, []);
+
+  // Real-time synchronization via BroadcastChannel ('urbangaon_auth_sync') and background polling
+  useEffect(() => {
+    fetchPendingRequests(false);
+
+    let bc: BroadcastChannel | null = null;
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        bc = new BroadcastChannel('urbangaon_auth_sync');
+        bc.onmessage = (event) => {
+          const msg = event.data;
+          if (!msg || !msg.action) return;
+
+          if (msg.action === 'REQUEST_SUBMITTED' && msg.request) {
+            setPendingRequests(prev => {
+              if (prev.some(r => r.id === msg.request.id || r.email?.toLowerCase() === msg.request.email?.toLowerCase())) {
+                return prev;
+              }
+              return [msg.request, ...prev];
+            });
+          } else if (msg.action === 'REQUEST_RESOLVED' && msg.id) {
+            setPendingRequests(prev => prev.filter(r => r.id !== msg.id));
+          } else if (msg.action === 'REQUEST_RESTORE' && msg.request) {
+            setPendingRequests(prev => {
+              if (prev.some(r => r.id === msg.request.id)) return prev;
+              return [msg.request, ...prev];
+            });
+          }
+        };
+      }
+    } catch {}
+
+    // Real-time heartbeat poll every 4 seconds to guarantee sync across different devices/browsers
+    const interval = setInterval(() => {
+      fetchPendingRequests(true);
+    }, 4000);
+
+    return () => {
+      clearInterval(interval);
+      bc?.close();
+    };
+  }, [fetchPendingRequests]);
+
+  // Flowchart A: Calculate filtered deliverables with Department and Reporting Manager filters
+  const isAllUsers = selectedUserForOversight === 'ALL';
+  const targetOversightMember = isAllUsers ? null : members.find(m => m.name === selectedUserForOversight || m.id === selectedUserForOversight);
+
+  // Filter members list based on department and manager filters for oversight combobox
+  const oversightFilteredMembers = useMemo(() => {
+    return activeMembers.filter(m => {
+      if (departmentFilterForOversight !== 'ALL' && m.department !== departmentFilterForOversight) {
+        return false;
+      }
+      if (managerFilterForOversight !== 'ALL') {
+        const mgr = reportingManagers.find(rm => rm.name === managerFilterForOversight || rm.id === managerFilterForOversight);
+        const matchMgrId = m.managerId && mgr && m.managerId === mgr.id;
+        const matchMgrName = m.manager && mgr && m.manager.toLowerCase().includes(mgr.name.toLowerCase());
+        if (!matchMgrId && !matchMgrName) return false;
+      }
+      return true;
+    });
+  }, [activeMembers, departmentFilterForOversight, managerFilterForOversight, reportingManagers]);
+
+  // Search-as-you-type member matching
+  const searchMatchedMembers = useMemo(() => {
+    if (!userSearchQuery.trim()) return oversightFilteredMembers;
+    const q = userSearchQuery.toLowerCase();
+    return oversightFilteredMembers.filter(m => 
+      m.name.toLowerCase().includes(q) ||
+      m.email.toLowerCase().includes(q) ||
+      (m.employeeId && m.employeeId.toLowerCase().includes(q)) ||
+      m.department.toLowerCase().includes(q) ||
+      (m.designation && m.designation.toLowerCase().includes(q))
+    );
+  }, [oversightFilteredMembers, userSearchQuery]);
+
+  // Filtered members for directory tab
+  const filteredDirectoryMembers = useMemo(() => {
+    return members.filter(m => {
+      if (directoryDeptFilter !== 'ALL' && m.department !== directoryDeptFilter) return false;
+      if (directoryStatusFilter !== 'ALL' && (m.status || 'ACTIVE') !== directoryStatusFilter) return false;
+      if (directorySearchQuery.trim()) {
+        const q = directorySearchQuery.toLowerCase();
+        return (
+          m.name.toLowerCase().includes(q) ||
+          m.email.toLowerCase().includes(q) ||
+          (m.employeeId && m.employeeId.toLowerCase().includes(q)) ||
+          m.department.toLowerCase().includes(q) ||
+          (m.designation && m.designation.toLowerCase().includes(q)) ||
+          m.role.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+  }, [members, directoryDeptFilter, directoryStatusFilter, directorySearchQuery]);
+
+  const baseTasks = useMemo(() => {
+    return tasks.filter(t => {
+      // 1. Department filter
+      if (departmentFilterForOversight !== 'ALL' && t.department !== departmentFilterForOversight) {
+        return false;
+      }
+
+      // 2. Reporting Manager filter (matches tasks where assignees report to manager)
+      if (managerFilterForOversight !== 'ALL') {
+        const mgr = reportingManagers.find(rm => rm.name === managerFilterForOversight || rm.id === managerFilterForOversight);
+        const hasManagedAssignee = t.assignees.some(a => {
+          const staffMember = members.find(m => m.id === a.id || m.email.toLowerCase() === (a.email || '').toLowerCase());
+          if (!staffMember) return false;
+          return (staffMember.managerId && mgr && staffMember.managerId === mgr.id) ||
+                 (staffMember.manager && mgr && staffMember.manager.toLowerCase().includes(mgr.name.toLowerCase()));
+        });
+        if (!hasManagedAssignee) return false;
+      }
+
+      // 3. User filter
+      if (!isAllUsers) {
+        const targetName = targetOversightMember?.name || selectedUserForOversight;
+        const matchesUser = t.assignees.some(a => 
+          a.name.toLowerCase().includes(targetName.toLowerCase()) ||
+          (targetOversightMember?.email && (a.email || '').toLowerCase() === targetOversightMember.email.toLowerCase())
+        );
+        if (!matchesUser) return false;
+      }
+
+      return true;
+    });
+  }, [tasks, departmentFilterForOversight, managerFilterForOversight, isAllUsers, targetOversightMember, selectedUserForOversight, reportingManagers, members]);
+
+  const filteredTasks = useMemo(() => {
+    return baseTasks.filter(t => {
+      // Status filter
+      if (statusFilter !== 'ALL' && t.status !== statusFilter) return false;
+      // Search query filter
+      if (searchFilter.trim()) {
+        const q = searchFilter.toLowerCase();
+        const matchTitle = t.title.toLowerCase().includes(q);
+        const matchProject = (t.project || '').toLowerCase().includes(q);
+        const matchAssignee = t.assignees.some(a => a.name.toLowerCase().includes(q));
+        if (!matchTitle && !matchProject && !matchAssignee) return false;
+      }
+      return true;
+    }).slice().sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      if (timeA !== timeB) return timeA - timeB;
+      return a.id.localeCompare(b.id);
+    });
+  }, [baseTasks, statusFilter, searchFilter]);
 
   // KPI calculations
   const totalMonitored = baseTasks.length;
@@ -150,70 +413,508 @@ export const AdminHrPortal: React.FC = () => {
   const onHoldCount = baseTasks.filter(t => t.status === 'On Hold').length;
   const escalatedCount = baseTasks.filter(t => t.status === 'Escalated').length;
 
+  // Flowchart B: Calculate metrics using written formulas
+  const reportMetrics = useMemo(() => {
+    let filtered = tasks;
+
+    if (reportType === 'USER_WISE') {
+      if (reportSelectedEmployeeId) {
+        const targetMember = members.find(m => m.id === reportSelectedEmployeeId);
+        const name = (targetMember?.name || '').toLowerCase();
+        filtered = tasks.filter(t => t.assignees.some(a => a.id === reportSelectedEmployeeId || a.name.toLowerCase().includes(name)));
+      }
+    } else if (reportType === 'PERFORMANCE_RATIO') {
+      if (reportStartDate) filtered = filtered.filter(t => t.scheduledDate >= reportStartDate);
+      if (reportEndDate) filtered = filtered.filter(t => t.scheduledDate <= reportEndDate);
+    } else if (reportType === 'PENDING') {
+      filtered = filtered.filter(t => t.status !== 'Done' && t.status !== 'Cancelled');
+      if (reportPendingStatus !== 'ALL') {
+        filtered = filtered.filter(t => t.status === reportPendingStatus);
+      }
+    } else if (reportType === 'ESCALATED') {
+      filtered = filtered.filter(t => t.status === 'Escalated' || Boolean(t.escalationReason));
+    } else if (reportType === 'ON_HOLD') {
+      filtered = filtered.filter(t => t.status === 'On Hold' || Boolean(t.holdReason));
+    } else if (reportType === 'DEPARTMENT') {
+      if (reportDepartment !== 'ALL') {
+        filtered = filtered.filter(t => t.department === reportDepartment);
+      }
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const totalCount = filtered.length;
+    const completedTasks = filtered.filter(t => t.status === 'Done');
+    const totalCompleted = completedTasks.length;
+
+    // Written Formula: Late completion count = completed after scheduled date
+    const lateCompleted = completedTasks.filter(t => {
+      const completionDate = (t.updatedAt || '').split('T')[0] || t.scheduledDate;
+      return completionDate > t.scheduledDate;
+    });
+    const onTimeCompleted = completedTasks.filter(t => {
+      const completionDate = (t.updatedAt || '').split('T')[0] || t.scheduledDate;
+      return completionDate <= t.scheduledDate;
+    });
+
+    // Written Formula: Timely completion ratio = (onTimeCompleted / totalCompleted) * 100%
+    const timelyCompletionRatio = totalCompleted > 0
+      ? ((onTimeCompleted.length / totalCompleted) * 100).toFixed(1) + '%'
+      : '100.0%';
+
+    // Written Formula: Pending with reason categorized vs Pending without reason
+    const pendingTasks = filtered.filter(t => t.status !== 'Done' && t.status !== 'Cancelled');
+    const pendingWithReason = pendingTasks.filter(t => Boolean(t.holdReason || t.escalationReason || t.pastDueReason));
+    const pendingWithoutReason = pendingTasks.filter(t => !Boolean(t.holdReason || t.escalationReason || t.pastDueReason) && t.scheduledDate < todayStr);
+
+    // Written Formula: Escalated count & On-hold count
+    const fcEscalatedCount = filtered.filter(t => t.status === 'Escalated' || Boolean(t.escalationReason)).length;
+    const fcOnHoldCount = filtered.filter(t => t.status === 'On Hold' || Boolean(t.holdReason)).length;
+
+    // Written Formula: Reschedule count per person
+    const rescheduleMap: Record<string, number> = {};
+    filtered.forEach(t => {
+      const resched = t.carryForwardCount || 0;
+      if (resched > 0) {
+        t.assignees.forEach(a => {
+          rescheduleMap[a.name] = (rescheduleMap[a.name] || 0) + resched;
+        });
+      }
+    });
+
+    return {
+      filtered,
+      totalCount,
+      totalCompleted,
+      lateCompletedCount: lateCompleted.length,
+      onTimeCompletedCount: onTimeCompleted.length,
+      timelyCompletionRatio,
+      pendingCount: pendingTasks.length,
+      pendingWithReasonCount: pendingWithReason.length,
+      pendingWithoutReasonCount: pendingWithoutReason.length,
+      escalatedCount: fcEscalatedCount,
+      onHoldCount: fcOnHoldCount,
+      rescheduleMap
+    };
+  }, [tasks, members, reportType, reportSelectedEmployeeId, reportStartDate, reportEndDate, reportPendingStatus, reportDepartment]);
+
+  // Flowchart A: Admin Actions (Edit, Bulk Reassign, Export)
+  const handleConfirmEditTask = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!taskToEdit) return;
+
+    const updates: Partial<Task> = {
+      status: editStatus,
+      notes: editRemarks.trim() || taskToEdit.notes,
+      editedByAdmin: true,
+    };
+    if (editStatus === 'On Hold') {
+      updates.holdReason = editReason.trim() || 'Admin placed on hold';
+    } else if (editStatus === 'Escalated') {
+      updates.escalationReason = editReason.trim() || 'Admin escalated';
+    }
+
+    updateTask(taskToEdit.id, updates, `Admin modified task: status=${editStatus}`);
+
+    logAudit({
+      taskId: taskToEdit.id,
+      taskTitle: taskToEdit.title,
+      action: 'UPDATED',
+      fieldChanged: 'Status, Reason & Remarks (Admin Intervention)',
+      oldValue: `Status: ${taskToEdit.status}`,
+      newValue: `Status: ${editStatus}, Reason: ${editReason || 'N/A'}`,
+      notes: `Admin oversight intervention (Flowchart A). Remarks: ${editRemarks || 'None'}`
+    });
+
+    setTaskToEdit(null);
+  };
+
+  const handleConfirmBulkReassign = () => {
+    if (selectedTaskIds.length === 0 || !bulkReassignTargetMemberId) return;
+    const targetMember = members.find(m => m.id === bulkReassignTargetMemberId);
+    if (!targetMember) return;
+
+    selectedTaskIds.forEach(tId => {
+      const task = tasks.find(t => t.id === tId);
+      if (!task) return;
+
+      const newAssignee = {
+        id: targetMember.id,
+        name: targetMember.name,
+        email: targetMember.email,
+        department: targetMember.department,
+        designation: targetMember.designation,
+        avatar: targetMember.avatar,
+        status: task.status,
+      };
+
+      updateTask(task.id, {
+        assignees: [newAssignee],
+        editedByAdmin: true
+      }, `Admin bulk reassigned task to ${targetMember.name}`);
+
+      logAudit({
+        taskId: task.id,
+        taskTitle: task.title,
+        action: 'REASSIGNED',
+        fieldChanged: 'Assignee Reassignment',
+        oldValue: task.assignees.map(a => a.name).join(', '),
+        newValue: targetMember.name,
+        notes: `Bulk reassigned by Admin (Flowchart A). New Assignee: ${targetMember.name} (${targetMember.email})`
+      });
+    });
+
+    setSelectedTaskIds([]);
+    setShowBulkReassignModal(false);
+    setBulkReassignTargetMemberId('');
+  };
+
+  const handleExportCurrentEmployeeTasks = () => {
+    const tasksToExport = filteredTasks;
+    const { workbook, filename } = generateMultiSheetExcelWorkbook({
+      tasks: tasksToExport,
+      currentUser,
+      filterOpts: {
+        exportType: 'USER_WISE',
+        selectedUserName: selectedUserForOversight,
+      }
+    });
+    downloadWorkbook(workbook, filename);
+    logAudit({
+      action: 'EXPORTED',
+      fieldChanged: 'Employee Tasks Excel Export',
+      newValue: `${filename} (${tasksToExport.length} tasks)`,
+      notes: `Admin exported deliverables for ${selectedUserForOversight} (Flowchart A)`
+    });
+  };
+
+  const handleExportReportExcel = () => {
+    const { filtered, timelyCompletionRatio } = reportMetrics;
+    const { workbook } = generateMultiSheetExcelWorkbook({
+      tasks: filtered,
+      currentUser,
+      filterOpts: {
+        exportType: 'WHOLE_TASKS',
+      }
+    });
+    downloadWorkbook(workbook, `UrbanGaon_Report_${reportType.toLowerCase()}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    logAudit({
+      action: 'EXPORTED',
+      fieldChanged: 'Executive Report & Performance Ratios Export',
+      newValue: `${filtered.length} deliverables exported (Timely Ratio: ${timelyCompletionRatio})`,
+      notes: `Flowchart B Report Export (${reportType}) with written formula metrics`
+    });
+  };
+
   const handleCreateEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newUserName.trim() || !newUserEmail.trim()) {
-      alert('Full legal name and official email are required.');
+    setEmailExistsError(null);
+    setInviteSuccessMsg(null);
+    setProvisionedDetails(null);
+
+    const cleanEmail = newUserEmail.trim().toLowerCase();
+    const cleanName = newUserName.trim();
+    const cleanPhone = newUserPhone.trim();
+    const cleanId = (newUserEmployeeId.trim() || `EMP-${Math.floor(1000 + Math.random() * 9000)}`);
+
+    if (!cleanName) {
+      alert('Full legal name is required.');
+      return;
+    }
+    if (!cleanEmail) {
+      alert('Official corporate email is required.');
+      return;
+    }
+
+    // Flowchart: Decision Diamond: Email already exists?
+    const emailExists = members.some(m => m.email.toLowerCase() === cleanEmail);
+    if (emailExists) {
+      setEmailExistsError(`Email already exists: An employee account with email "${cleanEmail}" is already registered. Please enter a unique corporate email address.`);
+      return;
+    }
+
+    // Unique Employee ID check
+    const idExists = members.some(m => m.id === cleanId || m.employeeId === cleanId);
+    if (idExists) {
+      alert(`Employee ID "${cleanId}" is already assigned to another employee. Please assign a unique employee ID.`);
+      return;
+    }
+
+    if (!cleanPhone) {
+      alert('Phone number is required.');
       return;
     }
     if (!newUserDept) {
-      alert('Please select a Master Department.');
+      alert('Please select a Master Department from dropdown.');
       return;
     }
-    if (!newUserRole) {
-      alert('Please select an Initial Access Role Tier.');
+    if (!newUserDesignation.trim()) {
+      alert('Please enter an official designation.');
       return;
     }
+    if (!newUserReportingManagerId) {
+      alert('Please select a Reporting Manager.');
+      return;
+    }
+
+    const selectedManager = members.find(m => m.id === newUserReportingManagerId);
 
     setIsSubmittingUser(true);
     try {
+      // Flowchart Steps:
+      // - Assign unique employee ID
+      // - Select Department from dropdown
+      // - Enter designation
+      // - Select reporting manager
+      // - Set role as Employee
+      // - Generate one-time set-password link
+      // - Send set-password email to employee
+      // - Employee record created in status Pending First Login
+      // - Audit log entry created
       const created = await addMember({
-        name: newUserName.trim(),
-        email: newUserEmail.trim(),
+        id: cleanId,
+        employeeId: cleanId,
+        name: cleanName,
+        email: cleanEmail,
+        phone: cleanPhone,
         department: newUserDept,
         designation: newUserDesignation.trim(),
-        role: (newUserRole || 'EMPLOYEE') as 'EMPLOYEE' | 'MANAGER' | 'ADMIN',
+        role: 'EMPLOYEE',
+        managerId: selectedManager?.id,
+        manager: selectedManager?.name,
+        managerEmail: selectedManager?.email,
+        status: 'Pending First Login',
       });
 
-      setInviteSuccessMsg(`✓ Official account active for ${created.name} (${created.id}). Welcome credentials dispatched to ${created.email}!`);
+      // Obtain generated one-time link and code
+      let invCode = '';
+      let setPwdLink = '';
+      try {
+        const invRes = await fetch('/api/auth/invitation/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: cleanName,
+            email: cleanEmail,
+            role: 'EMPLOYEE',
+            department: newUserDept,
+            designation: newUserDesignation.trim(),
+            invitedBy: currentUser.name || 'Admin / Talent HR',
+          })
+        });
+        const invData = await invRes.json();
+        if (invData.success && invData.invitation) {
+          invCode = invData.invitation.code;
+          const host = window.location.origin;
+          setPwdLink = `${host}/?inviteCode=${invCode}&email=${encodeURIComponent(cleanEmail)}`;
+        }
+      } catch {}
+
+      setInviteSuccessMsg(`✓ Employee record created for ${cleanName} in status "Pending First Login". One-time set-password link dispatched!`);
+      setProvisionedDetails({
+        employeeId: cleanId,
+        code: invCode,
+        link: setPwdLink,
+        email: cleanEmail,
+        name: cleanName,
+      });
+
       setNewUserName('');
       setNewUserEmail('');
+      setEmailExistsError(null);
       setNewUserPhone('');
+      setNewUserEmployeeId(`EMP-${Math.floor(1000 + Math.random() * 9000)}`);
       setNewUserDept('');
       setNewUserDesignation('');
-      setNewUserRole('');
-      setTimeout(() => setInviteSuccessMsg(null), 6000);
-    } catch (err) {
-      console.error('Create employee failed', err);
+      setNewUserReportingManagerId('');
+      setNewUserRole('EMPLOYEE');
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to provision employee';
+      if (errorMsg.toLowerCase().includes('email already exists')) {
+        setEmailExistsError(errorMsg);
+      } else {
+        alert(errorMsg);
+      }
     } finally {
       setIsSubmittingUser(false);
     }
   };
 
-  const handleApproveRequest = async (req: typeof pendingRequests[0]) => {
+  const handleApproveRequest = async (
+    req: typeof pendingRequests[0],
+    overrides?: {
+      department?: string;
+      designation?: string;
+      manager?: string;
+      managerEmail?: string;
+      employeeId?: string;
+    }
+  ) => {
+    if (approvingId || rejectingId) return;
+    setApprovingId(req.id);
+    setSelectedRequestForReview(null);
+
+    // 1. Instant Optimistic UI: remove row immediately from pending queue with zero lag
+    setPendingRequests(prev => prev.filter(r => r.id !== req.id));
+
+    // 2. Broadcast instant removal across all open browser tabs in real-time
     try {
-      const created = await addMember({
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const bc = new BroadcastChannel('urbangaon_auth_sync');
+        bc.postMessage({ action: 'REQUEST_RESOLVED', id: req.id });
+        bc.close();
+      }
+    } catch {}
+
+    const deptToAssign = overrides?.department || verifyDept || req.department || 'General Staff';
+    const desigToAssign = overrides?.designation || verifyDesignation || req.designation || 'Specialist';
+    const mgrToAssign = overrides?.manager || verifyManager || req.manager || 'Talent Management Desk';
+    const mgrEmailToAssign = overrides?.managerEmail || verifyManagerEmail;
+    const empIdToAssign = overrides?.employeeId || verifyEmployeeId || `EMP-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    // 3. Instant feedback banner
+    setApprovalBanner(`⏳ Approving ${req.name} (Assigned ID: ${empIdToAssign}). Provisioning status: Pending First Login...`);
+
+    try {
+      const patchRes = await fetch(`/api/auth/request-access/${encodeURIComponent(req.id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'APPROVE',
+          role: 'EMPLOYEE',
+          reviewedBy: currentUser.name || 'Admin / Talent HR',
+          department: deptToAssign,
+          designation: desigToAssign,
+          manager: mgrToAssign,
+          managerEmail: mgrEmailToAssign,
+          employeeId: empIdToAssign,
+        }),
+      });
+      const patchData = await patchRes.json().catch(() => ({}));
+
+      if (!patchRes.ok || !patchData.success) {
+        throw new Error(patchData.error || 'Server approval failed');
+      }
+
+      const codeMsg = patchData.invitationCode ? ` Official Invitation Code Issued: [${patchData.invitationCode}].` : '';
+      setApprovalBanner(`✓ Account approved for ${req.name} (${req.email}). ID: [${empIdToAssign}]. Status: Pending First Login.${codeMsg} One-time activation link dispatched.`);
+      setTimeout(() => setApprovalBanner(null), 10000);
+
+      // Audit log entry created on client
+      try {
+        logAudit({
+          action: 'APPROVAL',
+          fieldChanged: 'Sign-Up Request Approval (Flowchart 3)',
+          oldValue: `Pending Request: ${req.email}`,
+          newValue: `Approved ID: ${empIdToAssign} (Pending First Login)`,
+          notes: `Admin ${currentUser.name} approved access request for ${req.name}. Assigned ${empIdToAssign}, Dept: ${deptToAssign}.`
+        });
+      } catch {}
+
+      // Async background sync with AppContext member cache
+      addMember({
+        id: empIdToAssign,
         name: req.name,
         email: req.email,
-        department: req.department,
-        designation: req.designation,
-        role: 'EMPLOYEE'
-      });
+        department: deptToAssign,
+        designation: desigToAssign,
+        role: 'EMPLOYEE',
+        status: 'Pending First Login'
+      }).catch(e => console.warn('[AdminHrPortal] Background member roster sync:', e));
 
-      setPendingRequests(prev => prev.filter(r => r.id !== req.id));
-      setApprovalBanner(`✓ Account approved for ${created.name} (${created.id}). Direct access provisioned to MongoDB Atlas!`);
-      setTimeout(() => setApprovalBanner(null), 5000);
     } catch (err) {
       console.error('Approval failed', err);
+      // Rollback on failure
+      setPendingRequests(prev => {
+        if (prev.some(r => r.id === req.id)) return prev;
+        return [req, ...prev];
+      });
+      // Broadcast rollback
+      try {
+        if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+          const bc = new BroadcastChannel('urbangaon_auth_sync');
+          bc.postMessage({ action: 'REQUEST_RESTORE', request: req });
+          bc.close();
+        }
+      } catch {}
+      setApprovalBanner(`⚠️ Failed to approve ${req.name}: ${err instanceof Error ? err.message : 'Network error'}. Request restored.`);
+      setTimeout(() => setApprovalBanner(null), 8000);
+    } finally {
+      setApprovingId(null);
     }
   };
 
-  const handleRejectRequest = (id: string, name: string) => {
-    const reason = prompt(`Enter mandatory written rejection reason for ${name}:`);
-    if (reason) {
-      setPendingRequests(prev => prev.filter(r => r.id !== id));
-      setApprovalBanner(`Applicant ${name} rejected. Formal rejection email recorded.`);
-      setTimeout(() => setApprovalBanner(null), 4000);
+  const handleRejectRequest = async (id: string, name: string, documentedReason?: string) => {
+    if (approvingId || rejectingId) return;
+    let reason = documentedReason;
+    if (!reason || !reason.trim()) {
+      const promptReason = prompt(`Enter mandatory written rejection reason for ${name} (Flowchart 3):`);
+      if (!promptReason || !promptReason.trim()) return;
+      reason = promptReason.trim();
+    }
+
+    setRejectingId(id);
+    setSelectedRequestForReview(null);
+    setRejectionModalRequest(null);
+    const existingReq = pendingRequests.find(r => r.id === id);
+
+    // Instant optimistic removal
+    setPendingRequests(prev => prev.filter(r => r.id !== id));
+
+    // Broadcast instant removal across tabs
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const bc = new BroadcastChannel('urbangaon_auth_sync');
+        bc.postMessage({ action: 'REQUEST_RESOLVED', id });
+        bc.close();
+      }
+    } catch {}
+
+    setApprovalBanner(`Applicant ${name} rejected. Formal notification email dispatching...`);
+
+    try {
+      const res = await fetch(`/api/auth/request-access/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'REJECT',
+          reason: reason.trim(),
+          reviewedBy: currentUser.name || 'Admin / Talent HR',
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Server error recording rejection');
+      }
+
+      // Audit log entry created on client
+      try {
+        logAudit({
+          action: 'REJECTED',
+          fieldChanged: 'Sign-Up Request Rejection (Flowchart 3)',
+          oldValue: `Pending Request: ${name}`,
+          newValue: `Rejected ("${reason.trim()}")`,
+          notes: `Admin ${currentUser.name} rejected access request for ${name}. Reason: "${reason.trim()}". Rejection email dispatched.`
+        });
+      } catch {}
+
+      setApprovalBanner(`✓ Rejection recorded for ${name}. Rejection email dispatched with documented rationale.`);
+      setTimeout(() => setApprovalBanner(null), 6000);
+    } catch (err) {
+      console.error('Rejection failed', err);
+      if (existingReq) {
+        setPendingRequests(prev => [existingReq, ...prev]);
+        try {
+          if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+            const bc = new BroadcastChannel('urbangaon_auth_sync');
+            bc.postMessage({ action: 'REQUEST_RESTORE', request: existingReq });
+            bc.close();
+          }
+        } catch {}
+      }
+      setApprovalBanner(`⚠️ Could not reject ${name}: ${err instanceof Error ? err.message : 'Network error'}.`);
+      setTimeout(() => setApprovalBanner(null), 8000);
+    } finally {
+      setRejectingId(null);
     }
   };
 
@@ -257,19 +958,36 @@ export const AdminHrPortal: React.FC = () => {
     setDeactivationError(null);
 
     try {
-      const fullReason = handoverNotes.trim()
-        ? `${deactivationReason} — Notes: ${handoverNotes.trim()}`
-        : deactivationReason;
+      const dateInfo = deactivationType === 'Resignation'
+        ? `Last Working Day: ${lastWorkingDay}`
+        : deactivationType === 'Termination'
+          ? `Effective Date: ${effectiveDate}`
+          : `Leave: ${leaveStartDate} to ${leaveEndDate || 'Indefinite'}`;
 
-      await deactivateMember(departingMember.id, successorMember.id, fullReason);
+      const fullReason = `${deactivationType} (${dateInfo})${handoverNotes.trim() ? ` — Notes: ${handoverNotes.trim()}` : ''}`;
+
+      await deactivateMember(
+        departingMember.id,
+        successorMember.id,
+        fullReason,
+        deactivationType,
+        {
+          lastWorkingDay: deactivationType === 'Resignation' ? lastWorkingDay : undefined,
+          effectiveDate: deactivationType === 'Termination' ? effectiveDate : undefined,
+          leaveStartDate: deactivationType === 'Long leave' ? leaveStartDate : undefined,
+          leaveEndDate: deactivationType === 'Long leave' ? leaveEndDate : undefined,
+        }
+      );
 
       setHandoverAcknowledged(false);
       setHandoverNotes('');
-      // Automatically advance to the next active non-CEO employee
-      const nextDeparting = activeMembers.find(m => m.id !== departingMember.id && !isCeoUser(m));
-      if (nextDeparting) {
-        setDepartingMemberId(nextDeparting.id);
-      }
+      // Automatically advance to the next active non-CEO employee that is NOT the departing person
+      const nextDeparting = offboardableMembers.find(m => 
+        m.id !== departingMember.id && 
+        m.name.toLowerCase() !== departingMember.name.toLowerCase() && 
+        (departingMember.email ? m.email.toLowerCase() !== departingMember.email.toLowerCase() : true)
+      );
+      setDepartingMemberId(nextDeparting ? nextDeparting.id : (offboardableMembers[0]?.id || ''));
     } catch (err: unknown) {
       setDeactivationError(err instanceof Error ? err.message : 'Deactivation failed.');
     } finally {
@@ -321,11 +1039,22 @@ export const AdminHrPortal: React.FC = () => {
           <span>Task Monitoring</span>
         </button>
         <button
+          className={`admin-portal-tab-pill ${activeTab === 'reports' ? 'active' : ''}`}
+          onClick={() => setActiveTab('reports')}
+          style={{
+            color: activeTab === 'reports' ? '#1e40af' : undefined,
+            background: activeTab === 'reports' ? '#dbeafe' : undefined,
+          }}
+        >
+          <BarChart3 size={14} />
+          <span>Reports &amp; Ratios (FC 11)</span>
+        </button>
+        <button
           className={`admin-portal-tab-pill ${activeTab === 'create_user' ? 'active' : ''}`}
           onClick={() => setActiveTab('create_user')}
         >
           <UserPlus size={14} />
-          <span>Create Account</span>
+          <span>Create Employee</span>
         </button>
         <button
           className={`admin-portal-tab-pill ${activeTab === 'pending_approvals' ? 'active' : ''}`}
@@ -339,7 +1068,7 @@ export const AdminHrPortal: React.FC = () => {
           onClick={() => setActiveTab('deactivation')}
         >
           <UserX size={14} />
-          <span>Deactivation & Handover</span>
+          <span>Deactivation &amp; Handover</span>
         </button>
         <button
           className={`admin-portal-tab-pill ${activeTab === 'holidays' ? 'active' : ''}`}
@@ -352,51 +1081,240 @@ export const AdminHrPortal: React.FC = () => {
           <Sparkles size={14} />
           <span>Company Holidays</span>
         </button>
+        <button
+          className={`admin-portal-tab-pill ${activeTab === 'directory' ? 'active' : ''}`}
+          onClick={() => setActiveTab('directory')}
+          style={{
+            color: activeTab === 'directory' ? '#0369a1' : undefined,
+            background: activeTab === 'directory' ? '#e0f2fe' : undefined
+          }}
+        >
+          <Mail size={14} />
+          <span>Staff Directory &amp; Email Config</span>
+        </button>
       </div>
 
-      {/* Tab 1: User Oversight & Company-wide Monitoring (FC 10) */}
+      {/* Tab 1: User Oversight & Company-wide Monitoring (Flowchart A) */}
       {activeTab === 'oversight' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {/* Controls Bar: Employee Filter & Search */}
-          <div className="admin-filter-bar">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', flex: '1 1 300px', minWidth: 0 }}>
-              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#1e40af', whiteSpace: 'nowrap' }}>
-                MONITORING SCOPE:
-              </span>
-              <select
-                className="form-select"
-                style={{ flex: 1, minWidth: '220px', maxWidth: '420px', fontWeight: 700 }}
-                value={selectedUserForOversight}
-                onChange={e => setSelectedUserForOversight(e.target.value)}
-              >
-                <option value="ALL">🏢 ALL EMPLOYEES — Full Company Overview ({tasks.length} Deliverables)</option>
-                {activeMembers.map(m => (
-                  <option key={m.id} value={m.name}>
-                    👤 {m.name} — {m.designation} ({tasks.filter(t => t.assignees.some(a => a.name.toLowerCase().includes(m.name.toLowerCase()))).length} Tasks)
-                  </option>
-                ))}
-              </select>
+          {/* Controls Bar: Search-as-you-type Combobox, Dept Filter, Manager Filter & Export */}
+          <div className="admin-filter-bar" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', flex: 1 }}>
+                {/* 1. Flowchart A: "Click Select User dropdown with search-as-you-type" */}
+                <div style={{ position: 'relative', minWidth: '260px', flex: '1 1 280px' }}>
+                  <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 800, color: '#1e40af', marginBottom: '2px' }}>
+                    SELECT EMPLOYEE (SEARCH-AS-YOU-TYPE):
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <Search size={14} style={{ position: 'absolute', left: '10px', top: '10px', color: '#64748b' }} />
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder={selectedUserForOversight === 'ALL' ? 'Type to search staff by name, email, ID...' : `Current: ${selectedUserForOversight}`}
+                      value={userSearchQuery}
+                      onChange={e => {
+                        setUserSearchQuery(e.target.value);
+                        setIsUserDropdownOpen(true);
+                      }}
+                      onFocus={() => setIsUserDropdownOpen(true)}
+                      style={{ paddingLeft: '30px', fontSize: '0.75rem', height: '34px', width: '100%' }}
+                    />
+                    {isUserDropdownOpen && (
+                      <div style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 4px)',
+                        left: 0,
+                        right: 0,
+                        maxHeight: '260px',
+                        overflowY: 'auto',
+                        background: '#ffffff',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '8px',
+                        boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+                        zIndex: 100,
+                        padding: '4px'
+                      }}>
+                        <div
+                          style={{
+                            padding: '6px 10px',
+                            fontSize: '0.74rem',
+                            fontWeight: 800,
+                            color: '#1e40af',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            background: selectedUserForOversight === 'ALL' ? '#eff6ff' : 'transparent'
+                          }}
+                          onClick={() => {
+                            setSelectedUserForOversight('ALL');
+                            setUserSearchQuery('');
+                            setIsUserDropdownOpen(false);
+                          }}
+                        >
+                          🏢 ALL EMPLOYEES — Full Company Overview ({tasks.length} Deliverables)
+                        </div>
+                        {searchMatchedMembers.map(m => (
+                          <div
+                            key={m.id}
+                            style={{
+                              padding: '6px 10px',
+                              fontSize: '0.73rem',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              background: selectedUserForOversight === m.name ? '#eff6ff' : 'transparent'
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
+                            onMouseLeave={e => e.currentTarget.style.background = selectedUserForOversight === m.name ? '#eff6ff' : 'transparent'}
+                            onClick={() => {
+                              setSelectedUserForOversight(m.name);
+                              setUserSearchQuery('');
+                              setIsUserDropdownOpen(false);
+                            }}
+                          >
+                            <div>
+                              <div style={{ fontWeight: 700, color: '#0f172a' }}>{m.name}</div>
+                              <div style={{ fontSize: '0.65rem', color: '#64748b' }}>
+                                {m.designation || 'Staff'} • {m.department} {m.employeeId ? `• ${m.employeeId}` : ''}
+                              </div>
+                            </div>
+                            <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: '#f8fafc', color: '#2563eb' }}>
+                              {tasks.filter(t => t.assignees.some(a => a.name.toLowerCase().includes(m.name.toLowerCase()))).length} tasks
+                            </span>
+                          </div>
+                        ))}
+                        {searchMatchedMembers.length === 0 && (
+                          <div style={{ padding: '8px 10px', fontSize: '0.72rem', color: '#94a3b8' }}>
+                            No staff found matching &ldquo;{userSearchQuery}&rdquo;
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 2. Flowchart A: "Filter by department or reporting manager" */}
+                <div style={{ minWidth: '180px', flex: '1 1 180px' }}>
+                  <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 800, color: '#475569', marginBottom: '2px' }}>
+                    🏢 DEPARTMENT FILTER:
+                  </label>
+                  <select
+                    className="form-select"
+                    style={{ fontSize: '0.75rem', height: '34px', width: '100%', fontWeight: 600 }}
+                    value={departmentFilterForOversight}
+                    onChange={e => setDepartmentFilterForOversight(e.target.value)}
+                  >
+                    <option value="ALL">All 7 Departments</option>
+                    {(systemConfig?.masterLists?.departments || [
+                      'Executive Management',
+                      'AI & IT Operations',
+                      'Full-Stack Engineering',
+                      'Product & UI/UX',
+                      'Talent HR & People',
+                      'Marketing & Growth',
+                      'Client Success & Support',
+                      'Finance & Compliance'
+                    ]).map(dept => (
+                      <option key={dept} value={dept}>{dept}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ minWidth: '180px', flex: '1 1 180px' }}>
+                  <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 800, color: '#475569', marginBottom: '2px' }}>
+                    👔 REPORTING MANAGER FILTER:
+                  </label>
+                  <select
+                    className="form-select"
+                    style={{ fontSize: '0.75rem', height: '34px', width: '100%', fontWeight: 600 }}
+                    value={managerFilterForOversight}
+                    onChange={e => setManagerFilterForOversight(e.target.value)}
+                  >
+                    <option value="ALL">All Reporting Managers</option>
+                    {reportingManagers.map(mgr => (
+                      <option key={mgr.id} value={mgr.name}>
+                        {mgr.name} ({mgr.role})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* 3. Flowchart A: "Export that employee's task to Excel" */}
+              <div style={{ alignSelf: 'flex-end' }}>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={handleExportCurrentEmployeeTasks}
+                  style={{
+                    background: '#059669',
+                    borderColor: '#047857',
+                    padding: '0.45rem 0.85rem',
+                    fontSize: '0.74rem',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                  title="Export filtered employee tasks to multi-sheet Excel (Flowchart A)"
+                >
+                  <FileSpreadsheet size={14} />
+                  Export Employee Tasks (.xlsx)
+                </button>
+              </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', flex: '1 1 240px', minWidth: 0 }}>
-              <div style={{ position: 'relative', flex: 1, minWidth: '180px' }}>
-                <Search size={14} style={{ position: 'absolute', left: '10px', top: '10px', color: '#94a3b8' }} />
+            {/* Sub-bar: Search deliverable filter & Selected user summary */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.6rem', borderTop: '1px solid #f1f5f9', paddingTop: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: '220px' }}>
+                <Search size={14} color="#94a3b8" />
                 <input
                   type="text"
                   className="form-input"
-                  placeholder="Filter deliverables or assignees..."
+                  placeholder="Filter deliverables by title, project, assignee..."
                   value={searchFilter}
                   onChange={e => setSearchFilter(e.target.value)}
-                  style={{ paddingLeft: '32px', fontSize: '0.75rem', height: '34px', width: '100%', boxSizing: 'border-box' }}
+                  style={{ fontSize: '0.75rem', height: '30px', width: '100%' }}
                 />
               </div>
 
-              {!isAllUsers && targetOversightMember && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.75rem', color: '#64748b', flexShrink: 0 }}>
-                  <span>Dept: <strong>{targetOversightMember.department}</strong></span>
-                  <span>Velocity: <strong style={{ color: '#2563eb' }}>{targetOversightMember.velocity}%</strong></span>
-                </div>
-              )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.72rem', color: '#475569', flexWrap: 'wrap' }}>
+                <span>Scope: <strong>{selectedUserForOversight === 'ALL' ? 'Company-Wide' : selectedUserForOversight}</strong></span>
+                {departmentFilterForOversight !== 'ALL' && <span>• Dept: <strong>{departmentFilterForOversight}</strong></span>}
+                {managerFilterForOversight !== 'ALL' && <span>• Manager: <strong>{managerFilterForOversight}</strong></span>}
+                <span>• Showing <strong>{filteredTasks.length}</strong> tasks</span>
+                {targetOversightMember && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMemberToEditEmail(targetOversightMember);
+                      setNewEmailInput(targetOversightMember.email);
+                      setEmailChangeReason('');
+                      setEmailUpdateError(null);
+                    }}
+                    style={{
+                      marginLeft: '0.4rem',
+                      fontSize: '0.72rem',
+                      color: '#0284c7',
+                      background: '#f0f9ff',
+                      border: '1px solid #bae6fd',
+                      borderRadius: '4px',
+                      padding: '2px 8px',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontWeight: 700
+                    }}
+                    title="Change official email for selected employee"
+                  >
+                    <Mail size={12} />
+                    Edit Email ({targetOversightMember.email})
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -424,45 +1342,124 @@ export const AdminHrPortal: React.FC = () => {
             </div>
           </div>
 
-          {/* Status Filter Tabs */}
-          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-            {['ALL', 'In Progress', 'Done', 'On Hold', 'Escalated', 'Queued'].map(st => (
-              <button
-                key={st}
-                className={`btn-secondary ${statusFilter === st ? 'active' : ''}`}
-                style={{ padding: '0.3rem 0.7rem', fontSize: '0.72rem', fontWeight: statusFilter === st ? 700 : 500 }}
-                onClick={() => setStatusFilter(st)}
-              >
-                {st === 'ALL' ? 'All Statuses' : st}
-              </button>
-            ))}
+          {/* Status Filter Tabs & Bulk Actions Controls */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+              {['ALL', 'In Progress', 'Done', 'On Hold', 'Escalated', 'Queued'].map(st => (
+                <button
+                  key={st}
+                  className={`btn-secondary ${statusFilter === st ? 'active' : ''}`}
+                  style={{ padding: '0.3rem 0.7rem', fontSize: '0.72rem', fontWeight: statusFilter === st ? 700 : 500 }}
+                  onClick={() => setStatusFilter(st)}
+                >
+                  {st === 'ALL' ? 'All Statuses' : st}
+                </button>
+              ))}
+            </div>
+
+            {/* Bulk Actions Button (Flowchart A: "Select multiple tasks and choose new assignee") */}
+            {selectedTaskIds.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#1e40af' }}>
+                  {selectedTaskIds.length} tasks selected
+                </span>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  style={{ background: '#1d4ed8', padding: '0.35rem 0.75rem', fontSize: '0.74rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  onClick={() => setShowBulkReassignModal(true)}
+                >
+                  <ArrowRightLeft size={13} />
+                  Bulk Reassign Tasks (Flowchart A)
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  style={{ padding: '0.35rem 0.65rem', fontSize: '0.74rem' }}
+                  onClick={() => setSelectedTaskIds([])}
+                >
+                  Deselect All
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Deliverables Oversight Table */}
+          {/* Deliverables Oversight Table (Flowchart A: Row view with status, project, due date) */}
           <div className="enterprise-table-wrapper">
             <table className="enterprise-table">
               <thead>
                 <tr>
-                  <th style={{ minWidth: '220px' }}>Deliverable Title & Project</th>
+                  <th style={{ width: '38px', textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
+                      checked={filteredTasks.length > 0 && selectedTaskIds.length === filteredTasks.length}
+                      onChange={e => {
+                        if (e.target.checked) {
+                          setSelectedTaskIds(filteredTasks.map(t => t.id));
+                        } else {
+                          setSelectedTaskIds([]);
+                        }
+                      }}
+                      title="Select all tasks for bulk reassignment"
+                    />
+                  </th>
+                  <th style={{ minWidth: '220px' }}>Deliverable Title &amp; Project</th>
                   <th style={{ minWidth: '160px', whiteSpace: 'nowrap' }}>Assignee(s)</th>
-                  <th style={{ minWidth: '135px', whiteSpace: 'nowrap' }}>Scheduled Date & Time</th>
+                  <th style={{ minWidth: '135px', whiteSpace: 'nowrap' }}>Scheduled Date &amp; Time</th>
                   <th style={{ minWidth: '90px', textAlign: 'center', whiteSpace: 'nowrap' }}>Priority</th>
-                  <th style={{ minWidth: '120px', whiteSpace: 'nowrap' }}>Status & Progress</th>
-                  <th style={{ minWidth: '180px', whiteSpace: 'nowrap' }}>Managerial Interventions (FC 10)</th>
+                  <th style={{ minWidth: '120px', whiteSpace: 'nowrap' }}>Status &amp; Progress</th>
+                  <th style={{ minWidth: '220px', whiteSpace: 'nowrap' }}>Admin Actions (Flowchart A)</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredTasks.map(t => {
+                {filteredTasks.map((t, idx) => {
                   const isDone = t.status === 'Done';
                   const isOnHold = t.status === 'On Hold';
                   const isCancelled = t.status === 'Cancelled';
                   const canReopen = isDone || isOnHold || isCancelled;
+                  const isSelected = selectedTaskIds.includes(t.id);
+                  const isEditedByAdmin = t.editedByAdmin || (t.notes && t.notes.toLowerCase().includes('edited by admin'));
 
                   return (
-                    <tr key={t.id}>
+                    <tr key={t.id} style={{ background: isSelected ? '#eff6ff' : undefined }}>
+                      <td style={{ textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={e => {
+                            if (e.target.checked) {
+                              setSelectedTaskIds(prev => [...prev, t.id]);
+                            } else {
+                              setSelectedTaskIds(prev => prev.filter(id => id !== t.id));
+                            }
+                          }}
+                        />
+                      </td>
                       <td>
-                        <div style={{ fontWeight: 700, color: '#0f172a' }}>{t.title}</div>
-                        <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          <span className="task-sequence-badge" style={{ fontSize: '0.7rem' }}>
+                            #{idx + 1}
+                          </span>
+                          <div style={{ fontWeight: 700, color: '#0f172a' }}>{t.title}</div>
+                          {/* Flowchart A: "Show edited by Admin tag on the task" */}
+                          {isEditedByAdmin && (
+                            <span style={{
+                              background: '#eff6ff',
+                              color: '#1d4ed8',
+                              border: '1px solid #bfdbfe',
+                              fontSize: '0.65rem',
+                              fontWeight: 800,
+                              padding: '1px 6px',
+                              borderRadius: '4px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px'
+                            }} title="Modified under Admin Task Oversight">
+                              🛡️ Edited by Admin
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '2px' }}>
                           Project: {t.project || 'General Operations'} • {t.department}
                         </div>
                         {t.holdReason && (
@@ -523,68 +1520,77 @@ export const AdminHrPortal: React.FC = () => {
                           </div>
                         )}
                       </td>
+                      {/* Flowchart A: Admin Actions (Edit, Reopen, View Only) */}
                       <td style={{ whiteSpace: 'nowrap' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'nowrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'nowrap' }}>
+                          {/* 1. Edit Action */}
                           <button
+                            type="button"
                             className="btn-secondary"
-                            style={{ padding: '0.3rem 0.55rem', fontSize: '0.7rem', whiteSpace: 'nowrap' }}
+                            style={{ padding: '0.28rem 0.55rem', fontSize: '0.7rem', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
                             onClick={() => {
-                              const newTime = prompt('Modify task scheduled time:', t.time);
-                              if (newTime) updateTask(t.id, { time: newTime }, 'Admin modified task time');
+                              setTaskToEdit(t);
+                              setEditStatus(t.status);
+                              setEditReason(t.holdReason || t.escalationReason || '');
+                              setEditRemarks(t.notes || '');
                             }}
+                            title="Edit status, reason, notes and remarks (Flowchart A)"
                           >
-                            Modify
+                            <Edit3 size={11} />
+                            Edit
                           </button>
 
-                          {canReopen ? (
+                          {/* 2. Reopen Action */}
+                          {canReopen && (
                             <button
+                              type="button"
                               className="btn-primary"
                               style={{
-                                padding: '0.3rem 0.6rem',
+                                padding: '0.28rem 0.55rem',
                                 fontSize: '0.7rem',
                                 background: '#1e40af',
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '4px',
+                                gap: '3px',
                                 whiteSpace: 'nowrap'
                               }}
                               onClick={() => {
                                 setTaskToReopen(t);
                                 setReopenReason('');
                               }}
-                              title="Reopen task with mandatory management justification (FC 10)"
-                            >
-                              <RotateCcw size={12} />
-                              Reopen
-                            </button>
-                          ) : (
-                            <button
-                              className="btn-secondary"
-                              style={{ padding: '0.3rem 0.55rem', fontSize: '0.7rem', whiteSpace: 'nowrap' }}
-                              onClick={() => {
-                                setTaskToReopen(t);
-                                setReopenReason('');
-                              }}
-                              title="Administrative Reopen Intervention"
+                              title="Reopen completed task (Flowchart A)"
                             >
                               <RotateCcw size={11} />
                               Reopen
                             </button>
                           )}
 
-                          {/* Delete Deliverable (Strictly CEO Mr. Sukh Sagar Singh Bhati Only) */}
+                          {/* 3. View Only Action */}
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            style={{ padding: '0.28rem 0.55rem', fontSize: '0.7rem', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                            onClick={() => setTaskToView(t)}
+                            title="See task details, status, notes and reasons (Flowchart A)"
+                          >
+                            <Eye size={11} />
+                            View
+                          </button>
+
+                          {/* CEO Delete */}
                           {isCeo && (
                             <button
+                              type="button"
                               className="btn-secondary btn-delete-task"
-                              style={{ padding: '0.3rem 0.55rem', fontSize: '0.7rem', color: '#dc2626', borderColor: '#fca5a5', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                              style={{ padding: '0.28rem 0.45rem', fontSize: '0.7rem', color: '#dc2626', borderColor: '#fca5a5' }}
                               onClick={() => {
                                 if (window.confirm(`CEO Action: Are you sure you want to permanently delete "${t.title}"?`)) {
                                   deleteTask(t.id);
                                 }
                               }}
-                              title="Delete Deliverable (CEO Sukh Sagar ji Only)"
+                              title="Delete Deliverable (CEO Only)"
                             >
-                              <Trash2 size={12} color="#dc2626" />
+                              <Trash2 size={11} color="#dc2626" />
                             </button>
                           )}
                         </div>
@@ -604,7 +1610,596 @@ export const AdminHrPortal: React.FC = () => {
         </div>
       )}
 
-      {/* Tab 2: Create Employee Login / Direct Invitation (FC 9) */}
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      {/* FLOWCHART B (FLOWCHART 11): ADMIN - REPORTS AND PERFORMANCE RATIO    */}
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'reports' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {/* Reports Header & "Which Report?" Selector */}
+          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: '1px solid #f1f5f9' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div style={{ background: '#eff6ff', padding: '0.5rem', borderRadius: '8px' }}>
+                  <BarChart3 size={20} color="#2563eb" />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                    Reports &amp; Performance Ratios (Flowchart 11)
+                  </h3>
+                  <div style={{ fontSize: '0.73rem', color: '#64748b' }}>
+                    Calculates metrics using official written formulas • Executive charts, trends &amp; multi-sheet export
+                  </div>
+                </div>
+              </div>
+
+              {/* Flowchart 11: Export to Excel with task-summary sheet */}
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={handleExportReportExcel}
+                style={{
+                  background: '#059669',
+                  borderColor: '#047857',
+                  padding: '0.45rem 0.9rem',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+                title="Download to Excel with task-summary sheet (Flowchart 11)"
+              >
+                <Download size={14} />
+                Download to Excel (Summary Sheet)
+              </button>
+            </div>
+
+            {/* Flowchart 11 Decision Diamond: "Which report?" */}
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#334155', marginBottom: '6px' }}>
+                WHICH REPORT? (FLOWCHART 11 SELECTION):
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.45rem' }}>
+                {[
+                  { id: 'PERFORMANCE_RATIO', label: 'Performance Ratio', desc: 'Date range & velocity' },
+                  { id: 'USER_WISE', label: 'User-wise Tasks', desc: 'Select employee' },
+                  { id: 'PENDING', label: 'Pending Tasks', desc: 'Filter by status' },
+                  { id: 'ESCALATED', label: 'Escalated Tasks', desc: 'Leadership escalations' },
+                  { id: 'ON_HOLD', label: 'On-Hold Tasks', desc: 'With hold reasons' },
+                  { id: 'DEPARTMENT', label: 'Team or Dept', desc: '7 master departments' },
+                ].map(r => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    className={`btn-secondary ${reportType === r.id ? 'active' : ''}`}
+                    style={{
+                      padding: '0.5rem 0.6rem',
+                      fontSize: '0.74rem',
+                      fontWeight: reportType === r.id ? 800 : 500,
+                      background: reportType === r.id ? '#eff6ff' : '#ffffff',
+                      borderColor: reportType === r.id ? '#3b82f6' : '#cbd5e1',
+                      color: reportType === r.id ? '#1d4ed8' : '#334155',
+                      textAlign: 'left',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '2px'
+                    }}
+                    onClick={() => setReportType(r.id as any)}
+                  >
+                    <span>{r.label}</span>
+                    <span style={{ fontSize: '0.62rem', opacity: 0.75 }}>{r.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Filter controls based on "Which report?" */}
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+              {reportType === 'USER_WISE' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: '240px' }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#334155' }}>Select Employee:</span>
+                  <select
+                    className="form-select"
+                    style={{ flex: 1, fontSize: '0.75rem', fontWeight: 600 }}
+                    value={reportSelectedEmployeeId}
+                    onChange={e => setReportSelectedEmployeeId(e.target.value)}
+                  >
+                    <option value="">All Employees ({members.length})</option>
+                    {members.map(m => (
+                      <option key={m.id} value={m.id}>
+                        {m.name} — {m.designation || 'Staff'} ({m.department})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {reportType === 'PERFORMANCE_RATIO' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#334155' }}>From:</span>
+                    <input
+                      type="date"
+                      className="form-input"
+                      style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                      value={reportStartDate}
+                      onChange={e => setReportStartDate(e.target.value)}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#334155' }}>To:</span>
+                    <input
+                      type="date"
+                      className="form-input"
+                      style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                      value={reportEndDate}
+                      onChange={e => setReportEndDate(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {reportType === 'PENDING' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1 }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#334155' }}>Filter Pending Status:</span>
+                  <select
+                    className="form-select"
+                    style={{ fontSize: '0.75rem', fontWeight: 600 }}
+                    value={reportPendingStatus}
+                    onChange={e => setReportPendingStatus(e.target.value)}
+                  >
+                    <option value="ALL">All Pending (In Progress, Queued, On Hold, Escalated)</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Queued">Queued</option>
+                    <option value="On Hold">On Hold</option>
+                    <option value="Escalated">Escalated</option>
+                  </select>
+                </div>
+              )}
+
+              {reportType === 'DEPARTMENT' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1 }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#334155' }}>Select Department:</span>
+                  <select
+                    className="form-select"
+                    style={{ fontSize: '0.75rem', fontWeight: 600 }}
+                    value={reportDepartment}
+                    onChange={e => setReportDepartment(e.target.value)}
+                  >
+                    <option value="ALL">All Departments</option>
+                    {(systemConfig?.masterLists?.departments || [
+                      'Executive Management',
+                      'AI & IT Operations',
+                      'Full-Stack Engineering',
+                      'Product & UI/UX',
+                      'Talent HR & People',
+                      'Marketing & Growth',
+                      'Client Success & Support',
+                      'Finance & Compliance'
+                    ]).map(d => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#2563eb', marginLeft: 'auto' }}>
+                Scope: {reportMetrics.totalCount} Deliverables Analyzed
+              </span>
+            </div>
+          </div>
+
+          {/* Flowchart 11: Calculate metrics using written formulas (Cards Grid) */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.65rem' }}>
+            {/* 1. Timely completion ratio */}
+            <div style={{ background: '#ffffff', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '0.75rem 1rem' }}>
+              <div style={{ fontSize: '0.66rem', fontWeight: 800, color: '#166534', textTransform: 'uppercase' }}>
+                TIMELY COMPLETION RATIO
+              </div>
+              <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#15803d', marginTop: '2px' }}>
+                {reportMetrics.timelyCompletionRatio}
+              </div>
+              <div style={{ fontSize: '0.66rem', color: '#64748b', marginTop: '2px' }}>
+                Formula: (On-time Done / Total Done) * 100
+              </div>
+            </div>
+
+            {/* 2. Late completion count */}
+            <div style={{ background: '#ffffff', border: '1px solid #fed7aa', borderRadius: '8px', padding: '0.75rem 1rem' }}>
+              <div style={{ fontSize: '0.66rem', fontWeight: 800, color: '#9a3412', textTransform: 'uppercase' }}>
+                LATE COMPLETION COUNT
+              </div>
+              <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#c2410c', marginTop: '2px' }}>
+                {reportMetrics.lateCompletedCount}
+              </div>
+              <div style={{ fontSize: '0.66rem', color: '#64748b', marginTop: '2px' }}>
+                Completed after scheduled date
+              </div>
+            </div>
+
+            {/* 3. Pending with reason categorized */}
+            <div style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0.75rem 1rem' }}>
+              <div style={{ fontSize: '0.66rem', fontWeight: 800, color: '#334155', textTransform: 'uppercase' }}>
+                PENDING (WITH REASON)
+              </div>
+              <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0f172a', marginTop: '2px' }}>
+                {reportMetrics.pendingWithReasonCount}
+              </div>
+              <div style={{ fontSize: '0.66rem', color: '#64748b', marginTop: '2px' }}>
+                Documented hold / escalation reason
+              </div>
+            </div>
+
+            {/* 4. Pending without reason */}
+            <div style={{ background: '#ffffff', border: '1px solid #fecaca', borderRadius: '8px', padding: '0.75rem 1rem' }}>
+              <div style={{ fontSize: '0.66rem', fontWeight: 800, color: '#991b1b', textTransform: 'uppercase' }}>
+                PENDING (WITHOUT REASON)
+              </div>
+              <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#dc2626', marginTop: '2px' }}>
+                {reportMetrics.pendingWithoutReasonCount}
+              </div>
+              <div style={{ fontSize: '0.66rem', color: '#64748b', marginTop: '2px' }}>
+                Overdue with no reason documented
+              </div>
+            </div>
+
+            {/* 5. Escalated count */}
+            <div style={{ background: '#ffffff', border: '1px solid #fca5a5', borderRadius: '8px', padding: '0.75rem 1rem' }}>
+              <div style={{ fontSize: '0.66rem', fontWeight: 800, color: '#b91c1c', textTransform: 'uppercase' }}>
+                ESCALATED COUNT
+              </div>
+              <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#b91c1c', marginTop: '2px' }}>
+                {reportMetrics.escalatedCount}
+              </div>
+              <div style={{ fontSize: '0.66rem', color: '#64748b', marginTop: '2px' }}>
+                Escalated to senior leadership
+              </div>
+            </div>
+
+            {/* 6. On-hold count */}
+            <div style={{ background: '#ffffff', border: '1px solid #fde68a', borderRadius: '8px', padding: '0.75rem 1rem' }}>
+              <div style={{ fontSize: '0.66rem', fontWeight: 800, color: '#b45309', textTransform: 'uppercase' }}>
+                ON-HOLD COUNT
+              </div>
+              <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#d97706', marginTop: '2px' }}>
+                {reportMetrics.onHoldCount}
+              </div>
+              <div style={{ fontSize: '0.66rem', color: '#64748b', marginTop: '2px' }}>
+                Deliverables in paused state
+              </div>
+            </div>
+          </div>
+
+          {/* Flowchart 11: Display report on screen with charts and trends */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
+            {/* Visual Trends Breakdown Bar */}
+            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1rem' }}>
+              <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.85rem', fontWeight: 800, color: '#0f172a' }}>
+                📊 Operational Distribution
+              </h4>
+              <div style={{ display: 'flex', height: '14px', borderRadius: '6px', overflow: 'hidden', background: '#f1f5f9', marginBottom: '0.75rem' }}>
+                <div style={{ width: `${reportMetrics.totalCount ? (reportMetrics.totalCompleted / reportMetrics.totalCount) * 100 : 0}%`, background: '#22c55e' }} title={`Completed: ${reportMetrics.totalCompleted}`} />
+                <div style={{ width: `${reportMetrics.totalCount ? (reportMetrics.pendingCount / reportMetrics.totalCount) * 100 : 0}%`, background: '#3b82f6' }} title={`Pending: ${reportMetrics.pendingCount}`} />
+                <div style={{ width: `${reportMetrics.totalCount ? (reportMetrics.onHoldCount / reportMetrics.totalCount) * 100 : 0}%`, background: '#f59e0b' }} title={`On Hold: ${reportMetrics.onHoldCount}`} />
+                <div style={{ width: `${reportMetrics.totalCount ? (reportMetrics.escalatedCount / reportMetrics.totalCount) * 100 : 0}%`, background: '#ef4444' }} title={`Escalated: ${reportMetrics.escalatedCount}`} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '0.72rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e' }} />
+                  <span>Done: <strong>{reportMetrics.totalCompleted}</strong></span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3b82f6' }} />
+                  <span>Pending: <strong>{reportMetrics.pendingCount}</strong></span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f59e0b' }} />
+                  <span>On Hold: <strong>{reportMetrics.onHoldCount}</strong></span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444' }} />
+                  <span>Escalated: <strong>{reportMetrics.escalatedCount}</strong></span>
+                </div>
+              </div>
+            </div>
+
+            {/* Reschedule Count Per Person Leaderboard */}
+            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1rem' }}>
+              <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.85rem', fontWeight: 800, color: '#0f172a' }}>
+                🔄 Reschedule Count Per Person
+              </h4>
+              <div style={{ maxHeight: '110px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {Object.entries(reportMetrics.rescheduleMap).length === 0 ? (
+                  <div style={{ fontSize: '0.75rem', color: '#16a34a', fontStyle: 'italic', padding: '0.5rem 0' }}>
+                    ✓ Zero deliverables carried forward or rescheduled. Perfect sprint completion!
+                  </div>
+                ) : (
+                  Object.entries(reportMetrics.rescheduleMap).map(([name, count]) => (
+                    <div key={name} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.73rem', padding: '2px 4px', borderBottom: '1px dashed #f1f5f9' }}>
+                      <span style={{ color: '#334155', fontWeight: 600 }}>{name}</span>
+                      <span style={{ color: '#b45309', fontWeight: 800 }}>{count} reschedules</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Filtered Deliverables Table for the Report */}
+          <div className="enterprise-table-wrapper">
+            <table className="enterprise-table">
+              <thead>
+                <tr>
+                  <th style={{ width: '40px' }}>#</th>
+                  <th>Deliverable Title</th>
+                  <th>Assignees</th>
+                  <th>Department</th>
+                  <th>Scheduled Date</th>
+                  <th>Priority</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reportMetrics.filtered.slice(0, 50).map((t, idx) => (
+                  <tr key={t.id}>
+                    <td style={{ fontSize: '0.7rem', color: '#64748b' }}>#{idx + 1}</td>
+                    <td>
+                      <div style={{ fontWeight: 700, fontSize: '0.78rem' }}>{t.title}</div>
+                      <div style={{ fontSize: '0.68rem', color: '#64748b' }}>Project: {t.project || 'General'}</div>
+                      {t.holdReason && <div style={{ fontSize: '0.65rem', color: '#b45309' }}>Hold: {t.holdReason}</div>}
+                      {t.escalationReason && <div style={{ fontSize: '0.65rem', color: '#b91c1c' }}>Escalation: {t.escalationReason}</div>}
+                    </td>
+                    <td>{t.assignees.map(a => a.name).join(', ')}</td>
+                    <td>{t.department}</td>
+                    <td>{t.scheduledDate} {t.time}</td>
+                    <td>
+                      <span className={`priority-badge priority-${t.priority.toLowerCase()}`}>
+                        {t.priority}
+                      </span>
+                    </td>
+                    <td>
+                      <span style={{
+                        fontWeight: 700,
+                        fontSize: '0.75rem',
+                        color: t.status === 'Done' ? '#16a34a' : t.status === 'On Hold' ? '#d97706' : t.status === 'Escalated' ? '#dc2626' : '#2563eb'
+                      }}>
+                        {t.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {reportMetrics.filtered.length === 0 && (
+              <div style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>
+                No deliverables found for this report configuration.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      {/* FLOWCHART A: EDIT TASK MODAL (MODIFY STATUS, REASON, NOTES/REMARKS)  */}
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      {taskToEdit && (
+        <div className="stream-overlay" onClick={() => setTaskToEdit(null)}>
+          <div className="stream-modal-card" style={{ maxWidth: '540px', width: '95vw' }} onClick={e => e.stopPropagation()}>
+            <div className="stream-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Edit3 size={18} color="#2563eb" />
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                  Admin Task Modification (Flowchart A)
+                </h3>
+              </div>
+              <button className="calendar-nav-btn" onClick={() => setTaskToEdit(null)}><X size={16} /></button>
+            </div>
+
+            <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '0.75rem', marginBottom: '0.85rem' }}>
+              <div style={{ fontWeight: 800, fontSize: '0.86rem', color: '#0f172a' }}>{taskToEdit.title}</div>
+              <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>
+                #{taskToEdit.id} • Dept: {taskToEdit.department} • Assignees: {taskToEdit.assignees.map(a => a.name).join(', ')}
+              </div>
+            </div>
+
+            <form onSubmit={handleConfirmEditTask} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              <div className="form-field-group">
+                <label className="form-field-label">Status *</label>
+                <select
+                  className="form-select"
+                  value={editStatus}
+                  onChange={e => setEditStatus(e.target.value as TaskStatus)}
+                >
+                  <option value="In Progress">In Progress</option>
+                  <option value="Queued">Queued</option>
+                  <option value="Done">Done</option>
+                  <option value="On Hold">On Hold</option>
+                  <option value="Escalated">Escalated</option>
+                  <option value="Review">Review</option>
+                  <option value="Cancelled">Cancelled</option>
+                </select>
+              </div>
+
+              {(editStatus === 'On Hold' || editStatus === 'Escalated') && (
+                <div className="form-field-group">
+                  <label className="form-field-label">{editStatus === 'On Hold' ? 'Hold Reason *' : 'Escalation Reason *'}</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    required
+                    placeholder={editStatus === 'On Hold' ? 'e.g. Waiting on third-party security certification' : 'e.g. Urgent review needed by VP'}
+                    value={editReason}
+                    onChange={e => setEditReason(e.target.value)}
+                  />
+                </div>
+              )}
+
+              <div className="form-field-group">
+                <label className="form-field-label">Notes and Remarks</label>
+                <textarea
+                  className="form-input"
+                  rows={3}
+                  placeholder="Management justification and operational remarks..."
+                  value={editRemarks}
+                  onChange={e => setEditRemarks(e.target.value)}
+                  style={{ resize: 'vertical' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <button type="button" className="btn-secondary" onClick={() => setTaskToEdit(null)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary" style={{ background: '#2563eb' }}>
+                  Save Changes &amp; Log Audit
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      {/* FLOWCHART A: VIEW ONLY TASK MODAL                                     */}
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      {taskToView && (
+        <div className="stream-overlay" onClick={() => setTaskToView(null)}>
+          <div className="stream-modal-card" style={{ maxWidth: '560px', width: '95vw' }} onClick={e => e.stopPropagation()}>
+            <div className="stream-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Eye size={18} color="#2563eb" />
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                  Deliverable Inspector (Flowchart A: View Only)
+                </h3>
+              </div>
+              <button className="calendar-nav-btn" onClick={() => setTaskToView(null)}><X size={16} /></button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#2563eb' }}>DELIVERABLE #{taskToView.id}</div>
+                <div style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', margin: '2px 0 4px' }}>{taskToView.title}</div>
+                <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                  Project: <strong>{taskToView.project || 'General'}</strong> • Dept: <strong>{taskToView.department}</strong>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.76rem' }}>
+                <div>
+                  <span style={{ color: '#64748b' }}>Status:</span>
+                  <div style={{ fontWeight: 800, color: '#0f172a' }}>{taskToView.status} ({taskToView.progressPercent ?? 0}%)</div>
+                </div>
+                <div>
+                  <span style={{ color: '#64748b' }}>Priority:</span>
+                  <div style={{ fontWeight: 800 }}>{taskToView.priority}</div>
+                </div>
+                <div>
+                  <span style={{ color: '#64748b' }}>Scheduled Date:</span>
+                  <div style={{ fontWeight: 700 }}>{taskToView.scheduledDate} at {taskToView.time}</div>
+                </div>
+                <div>
+                  <span style={{ color: '#64748b' }}>Admin Intervention:</span>
+                  <div style={{ fontWeight: 700, color: taskToView.editedByAdmin ? '#1d4ed8' : '#64748b' }}>
+                    {taskToView.editedByAdmin ? '🛡️ Edited by Admin' : 'Standard'}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b' }}>Assignees ({taskToView.assignees.length}):</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
+                  {taskToView.assignees.map(a => (
+                    <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 8px', background: '#f1f5f9', borderRadius: '4px', fontSize: '0.74rem' }}>
+                      <span style={{ fontWeight: 600 }}>{a.name} ({a.department})</span>
+                      <span style={{ color: '#2563eb', fontWeight: 700 }}>{a.status}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {taskToView.notes && (
+                <div style={{ background: '#fffbeb', border: '1px solid #fef3c7', borderRadius: '6px', padding: '0.65rem', fontSize: '0.75rem' }}>
+                  <strong>Notes &amp; Remarks:</strong> {taskToView.notes}
+                </div>
+              )}
+
+              {taskToView.holdReason && (
+                <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '6px', padding: '0.65rem', fontSize: '0.75rem', color: '#b45309' }}>
+                  <strong>⏸️ Hold Reason:</strong> {taskToView.holdReason}
+                </div>
+              )}
+
+              {taskToView.escalationReason && (
+                <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.65rem', fontSize: '0.75rem', color: '#b91c1c' }}>
+                  <strong>🚨 Escalation Reason:</strong> {taskToView.escalationReason} (Escalated to: {taskToView.escalatedTo || 'Leadership'})
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                <button type="button" className="btn-secondary" onClick={() => setTaskToView(null)}>
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      {/* FLOWCHART A: BULK REASSIGN MODAL                                      */}
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      {showBulkReassignModal && (
+        <div className="stream-overlay" onClick={() => setShowBulkReassignModal(false)}>
+          <div className="stream-modal-card" style={{ maxWidth: '500px', width: '95vw' }} onClick={e => e.stopPropagation()}>
+            <div className="stream-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <ArrowRightLeft size={18} color="#1d4ed8" />
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                  Bulk Reassign Deliverables (Flowchart A)
+                </h3>
+              </div>
+              <button className="calendar-nav-btn" onClick={() => setShowBulkReassignModal(false)}><X size={16} /></button>
+            </div>
+
+            <p style={{ fontSize: '0.78rem', color: '#475569', marginBottom: '0.85rem' }}>
+              Reassign <strong>{selectedTaskIds.length}</strong> selected deliverables to a new team member. Each change will be logged in the immutable audit trail.
+            </p>
+
+            <div className="form-field-group">
+              <label className="form-field-label">Select New Assignee *</label>
+              <select
+                className="form-select"
+                value={bulkReassignTargetMemberId}
+                onChange={e => setBulkReassignTargetMemberId(e.target.value)}
+              >
+                <option value="">-- Choose New Assignee --</option>
+                {activeMembers.map(m => (
+                  <option key={m.id} value={m.id}>
+                    {m.name} — {m.designation || 'Specialist'} ({m.department})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
+              <button type="button" className="btn-secondary" onClick={() => setShowBulkReassignModal(false)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                style={{ background: '#1d4ed8' }}
+                disabled={!bulkReassignTargetMemberId}
+                onClick={handleConfirmBulkReassign}
+              >
+                Confirm Bulk Reassignment
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 2: Create Employee Flow (Flowchart: Admin Dashboard -> Create Employee) */}
       {activeTab === 'create_user' && (
         <div className="admin-create-account-container">
           {/* Left Column: Form Card */}
@@ -617,18 +2212,19 @@ export const AdminHrPortal: React.FC = () => {
                 </div>
                 <div>
                   <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                    Direct Employee Account Provisioning (Flowchart 9)
+                    Create Employee (Employee Provisioning Flow)
                   </h3>
                   <p style={{ fontSize: '0.73rem', color: '#64748b', margin: '2px 0 0 0' }}>
-                    HR & Talent Operations synchronize formal employee accounts to MongoDB Atlas.
+                    Provision new employee record with unique ID, reporting manager, and one-time activation link in status <strong>Pending First Login</strong>.
                   </p>
                 </div>
               </div>
               <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '3px 8px', borderRadius: '12px', background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0' }}>
-                Atlas Synced
+                Flowchart Compliant
               </span>
             </div>
 
+            {/* Success Banner & Generated Set-Password Link Box */}
             {inviteSuccessMsg && (
               <div style={{
                 background: '#f0fdf4',
@@ -638,21 +2234,93 @@ export const AdminHrPortal: React.FC = () => {
                 borderRadius: '8px',
                 fontSize: '0.8rem',
                 fontWeight: 700,
-                marginBottom: '1.25rem',
+                marginBottom: '1rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <CheckCircle2 size={18} color="#16a34a" style={{ flexShrink: 0 }} />
+                  <span>{inviteSuccessMsg}</span>
+                </div>
+
+                {provisionedDetails && (
+                  <div style={{
+                    background: '#ffffff',
+                    border: '1px solid #bbf7d0',
+                    borderRadius: '6px',
+                    padding: '10px 12px',
+                    marginTop: '4px',
+                    fontSize: '0.75rem',
+                    color: '#1f2937'
+                  }}>
+                    <div style={{ fontWeight: 800, color: '#15803d', marginBottom: '4px' }}>
+                      🎟️ Generated One-Time Set-Password Activation Credentials:
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 12px', marginBottom: '8px' }}>
+                      <span style={{ color: '#64748b', fontWeight: 600 }}>Employee ID:</span>
+                      <code style={{ fontWeight: 700, color: '#0f172a' }}>{provisionedDetails.employeeId}</code>
+                      <span style={{ color: '#64748b', fontWeight: 600 }}>Status:</span>
+                      <span style={{ color: '#b45309', fontWeight: 700 }}>Pending First Login</span>
+                      <span style={{ color: '#64748b', fontWeight: 600 }}>Invitation Code:</span>
+                      <code style={{ fontWeight: 700, color: '#2563eb' }}>{provisionedDetails.code}</code>
+                    </div>
+
+                    {provisionedDetails.link && (
+                      <div style={{ marginTop: '6px', paddingTop: '6px', borderTop: '1px dashed #e2e8f0' }}>
+                        <span style={{ color: '#64748b', fontWeight: 600, display: 'block', marginBottom: '4px' }}>One-Time Set-Password Link:</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <input
+                            type="text"
+                            readOnly
+                            value={provisionedDetails.link}
+                            className="form-input"
+                            style={{ fontSize: '0.72rem', padding: '4px 8px', background: '#f8fafc', color: '#2563eb' }}
+                          />
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            onClick={() => {
+                              navigator.clipboard.writeText(provisionedDetails.link);
+                              alert('Set-password link copied to clipboard!');
+                            }}
+                            style={{ padding: '4px 10px', fontSize: '0.72rem', whiteSpace: 'nowrap' }}
+                          >
+                            Copy Link
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Email Already Exists Error Alert (Flowchart Decision Diamond YES branch) */}
+            {emailExistsError && (
+              <div style={{
+                background: '#fef2f2',
+                border: '1.5px solid #f87171',
+                color: '#991b1b',
+                padding: '0.75rem 1rem',
+                borderRadius: '8px',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                marginBottom: '1rem',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.6rem'
               }}>
-                <CheckCircle2 size={18} color="#16a34a" style={{ flexShrink: 0 }} />
-                <span>{inviteSuccessMsg}</span>
+                <AlertCircle size={18} color="#dc2626" style={{ flexShrink: 0 }} />
+                <span>{emailExistsError}</span>
               </div>
             )}
 
             <form onSubmit={handleCreateEmployee} autoComplete="off" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div className="admin-form-grid-2col">
-                {/* Full Legal Name */}
+                {/* 1. Enter full name */}
                 <div className="form-field-group">
-                  <label className="form-field-label">Full Legal Name *</label>
+                  <label className="form-field-label">1. Full Legal Name *</label>
                   <div className="admin-input-wrapper">
                     <span className="admin-input-icon"><User size={15} /></span>
                     <input
@@ -667,42 +2335,101 @@ export const AdminHrPortal: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Official Corporate Email */}
+                {/* 2. Enter email address & Decision Diamond: Email already exists? */}
                 <div className="form-field-group">
-                  <label className="form-field-label">Official Corporate Email *</label>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <label className="form-field-label">2. Official Corporate Email *</label>
+                    {emailExistsError && (
+                      <span style={{ fontSize: '0.68rem', color: '#dc2626', fontWeight: 700 }}>
+                        Email already registered!
+                      </span>
+                    )}
+                  </div>
                   <div className="admin-input-wrapper">
                     <span className="admin-input-icon"><Mail size={15} /></span>
                     <input
                       type="email"
                       className="form-input admin-input-with-icon"
+                      style={{ borderColor: emailExistsError ? '#ef4444' : undefined }}
                       required
                       autoComplete="off"
                       placeholder="name@urbangaon.com"
                       value={newUserEmail}
-                      onChange={e => setNewUserEmail(e.target.value)}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setNewUserEmail(val);
+                        if (emailExistsError && !members.some(m => m.email.toLowerCase() === val.trim().toLowerCase())) {
+                          setEmailExistsError(null);
+                        }
+                      }}
+                      onBlur={() => {
+                        if (newUserEmail.trim()) {
+                          const exists = members.some(m => m.email.toLowerCase() === newUserEmail.trim().toLowerCase());
+                          if (exists) {
+                            setEmailExistsError(`Email already exists: An employee with email "${newUserEmail.trim()}" is already registered. Please enter a different email.`);
+                          } else {
+                            setEmailExistsError(null);
+                          }
+                        }
+                      }}
                     />
                   </div>
                 </div>
 
-                {/* Mobile Phone */}
+                {/* 3. Enter phone number */}
                 <div className="form-field-group">
-                  <label className="form-field-label">Mobile Phone Number</label>
+                  <label className="form-field-label">3. Mobile Phone Number *</label>
                   <div className="admin-input-wrapper">
                     <span className="admin-input-icon"><Phone size={15} /></span>
                     <input
                       type="tel"
                       className="form-input admin-input-with-icon"
+                      required
                       autoComplete="off"
-                      placeholder="+91 98765 00000"
+                      placeholder="+91 98765 43210"
                       value={newUserPhone}
                       onChange={e => setNewUserPhone(e.target.value)}
                     />
                   </div>
                 </div>
 
-                {/* Master Department (Strict 7 Depts) */}
+                {/* 4. Assign unique employee ID */}
                 <div className="form-field-group">
-                  <label className="form-field-label">Master Department *</label>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <label className="form-field-label">4. Assign Unique Employee ID *</label>
+                    <button
+                      type="button"
+                      onClick={() => setNewUserEmployeeId(`EMP-${Math.floor(1000 + Math.random() * 9000)}`)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#2563eb',
+                        fontSize: '0.68rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        padding: 0
+                      }}
+                    >
+                      🎲 Auto-Generate ID
+                    </button>
+                  </div>
+                  <div className="admin-input-wrapper">
+                    <span className="admin-input-icon"><Shield size={15} /></span>
+                    <input
+                      type="text"
+                      className="form-input admin-input-with-icon"
+                      required
+                      autoComplete="off"
+                      placeholder="e.g. EMP-2026-104"
+                      value={newUserEmployeeId}
+                      onChange={e => setNewUserEmployeeId(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* 5. Select Department from dropdown */}
+                <div className="form-field-group">
+                  <label className="form-field-label">5. Select Department from Dropdown *</label>
                   <div className="admin-input-wrapper">
                     <span className="admin-input-icon"><Building size={15} /></span>
                     <select
@@ -727,9 +2454,9 @@ export const AdminHrPortal: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Official Designation */}
+                {/* 6. Enter designation */}
                 <div className="form-field-group">
-                  <label className="form-field-label">Official Designation *</label>
+                  <label className="form-field-label">6. Enter Official Designation *</label>
                   <div className="admin-input-wrapper">
                     <span className="admin-input-icon"><Briefcase size={15} /></span>
                     <input
@@ -744,18 +2471,38 @@ export const AdminHrPortal: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Initial Access Role Tier */}
+                {/* 7. Select reporting manager */}
                 <div className="form-field-group">
-                  <label className="form-field-label">Initial Access Role Tier *</label>
+                  <label className="form-field-label">7. Select Reporting Manager *</label>
+                  <div className="admin-input-wrapper">
+                    <span className="admin-input-icon"><Users size={15} /></span>
+                    <select
+                      className="form-select admin-input-with-icon"
+                      required
+                      value={newUserReportingManagerId}
+                      onChange={e => setNewUserReportingManagerId(e.target.value)}
+                    >
+                      <option value="" disabled>-- Select Reporting Manager * --</option>
+                      {reportingManagers.map(mgr => (
+                        <option key={mgr.id} value={mgr.id}>
+                          {mgr.name} ({mgr.designation || mgr.role} - {mgr.department})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* 8. Set role as Employee */}
+                <div className="form-field-group">
+                  <label className="form-field-label">8. Set Role as Employee *</label>
                   <div className="admin-input-wrapper">
                     <span className="admin-input-icon"><Shield size={15} /></span>
                     <select
                       className="form-select admin-input-with-icon"
                       required
                       value={newUserRole}
-                      onChange={e => setNewUserRole(e.target.value as 'EMPLOYEE' | 'MANAGER' | 'ADMIN' | '')}
+                      onChange={e => setNewUserRole(e.target.value as 'EMPLOYEE' | 'MANAGER' | 'ADMIN')}
                     >
-                      <option value="" disabled>-- Select Initial Access Role Tier * --</option>
                       <option value="EMPLOYEE">Employee / Staff (Daily Register & Deliverables)</option>
                       <option value="MANAGER">Reporting Manager (Team Rebalancing & Escalations)</option>
                       <option value="ADMIN">Admin / Talent HR (People Ops & Company Oversight)</option>
@@ -764,26 +2511,24 @@ export const AdminHrPortal: React.FC = () => {
                 </div>
               </div>
 
-              {/* Default Password Credential Notice */}
+              {/* Status Note & Form Actions */}
               <div style={{
                 background: '#f8fafc',
                 border: '1px solid #e2e8f0',
-                borderRadius: '8px',
-                padding: '0.85rem 1rem',
+                borderRadius: '6px',
+                padding: '8px 12px',
+                fontSize: '0.72rem',
+                color: '#475569',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.75rem'
+                gap: '6px'
               }}>
-                <div style={{ background: '#e0e7ff', padding: '0.4rem', borderRadius: '6px', color: '#4338ca', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Key size={16} />
-                </div>
-                <div style={{ fontSize: '0.74rem', color: '#334155', lineHeight: 1.4 }}>
-                  <span style={{ fontWeight: 800, color: '#1e293b' }}>Default Credentials Provisioned: </span>
-                  New account is automatically enabled with universal initial password <code style={{ background: '#e2e8f0', padding: '1px 5px', borderRadius: '4px', fontWeight: 800, color: '#0f172a' }}>123</code>. The employee can sign in immediately through the <strong>Sign In</strong> modal.
-                </div>
+                <Clock size={13} color="#f59e0b" />
+                <span>
+                  <strong>Flowchart Lifecycle:</strong> Employee record will be created in status <code>Pending First Login</code>. An expiring one-time set-password activation link will be automatically generated and emailed to the employee.
+                </span>
               </div>
 
-              {/* Form Actions */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
                 <button
                   type="submit"
@@ -799,7 +2544,7 @@ export const AdminHrPortal: React.FC = () => {
                   }}
                 >
                   <Send size={14} />
-                  {isSubmittingUser ? 'Synchronizing with Database...' : 'Create Account & Dispatch Welcome Credentials'}
+                  {isSubmittingUser ? 'Synchronizing with Database...' : 'Create Employee & Dispatch One-Time Activation Link'}
                 </button>
 
                 <button
@@ -808,10 +2553,15 @@ export const AdminHrPortal: React.FC = () => {
                   onClick={() => {
                     setNewUserName('');
                     setNewUserEmail('');
+                    setEmailExistsError(null);
                     setNewUserPhone('');
+                    setNewUserEmployeeId(`EMP-${Math.floor(1000 + Math.random() * 9000)}`);
                     setNewUserDept('');
                     setNewUserDesignation('');
-                    setNewUserRole('');
+                    setNewUserReportingManagerId('');
+                    setNewUserRole('EMPLOYEE');
+                    setInviteSuccessMsg(null);
+                    setProvisionedDetails(null);
                   }}
                   style={{ padding: '0.55rem 1rem', fontSize: '0.78rem' }}
                 >
@@ -972,13 +2722,110 @@ export const AdminHrPortal: React.FC = () => {
       {/* Tab 3: Sign-Up Approvals Queue (FC 2 & 3) */}
       {activeTab === 'pending_approvals' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
-            Review self-registration requests from new staff. Approving a request creates their active MongoDB Atlas credentials and generates their permanent employee ID.
+          {/* Header Controls Bar */}
+          <div style={{
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '10px',
+            padding: '0.9rem 1.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '0.75rem',
+            boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)'
+          }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                  Employee Sign-Up Approvals Queue
+                </h3>
+                <span style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  background: '#ecfdf5',
+                  color: '#059669',
+                  border: '1px solid #a7f3d0',
+                  fontSize: '0.65rem',
+                  fontWeight: 800,
+                  padding: '2px 8px',
+                  borderRadius: '999px'
+                }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+                  Live Real-Time Sync
+                </span>
+                <span style={{
+                  background: pendingRequests.length > 0 ? '#eff6ff' : '#f1f5f9',
+                  color: pendingRequests.length > 0 ? '#1d4ed8' : '#64748b',
+                  border: `1px solid ${pendingRequests.length > 0 ? '#bfdbfe' : '#e2e8f0'}`,
+                  fontSize: '0.68rem',
+                  fontWeight: 800,
+                  padding: '2px 8px',
+                  borderRadius: '999px'
+                }}>
+                  {pendingRequests.length} Pending
+                </span>
+              </div>
+              <p style={{ fontSize: '0.74rem', color: '#64748b', margin: '3px 0 0 0' }}>
+                Review self-registration requests from new staff. Approving a request generates official credentials and synchronizes immediately to MongoDB Atlas.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={isFetchingRequests}
+                onClick={() => fetchPendingRequests(false)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '0.4rem 0.85rem',
+                  fontSize: '0.74rem',
+                  fontWeight: 700
+                }}
+                title="Fetch latest pending requests from MongoDB Atlas"
+              >
+                <RefreshCw size={13} className={isFetchingRequests ? 'spin' : ''} />
+                <span>{isFetchingRequests ? 'Syncing...' : 'Refresh Queue'}</span>
+              </button>
+            </div>
           </div>
 
           {approvalBanner && (
-            <div style={{ background: '#dcfce7', border: '1px solid #86efac', color: '#15803d', padding: '0.85rem', borderRadius: '6px', fontSize: '0.82rem', fontWeight: 700 }}>
-              {approvalBanner}
+            <div style={{
+              background: approvalBanner.includes('⚠️') ? '#fef2f2' : approvalBanner.includes('⏳') ? '#eff6ff' : '#f0fdf4',
+              border: `1px solid ${approvalBanner.includes('⚠️') ? '#fca5a5' : approvalBanner.includes('⏳') ? '#bfdbfe' : '#86efac'}`,
+              color: approvalBanner.includes('⚠️') ? '#991b1b' : approvalBanner.includes('⏳') ? '#1e40af' : '#166534',
+              padding: '0.85rem 1rem',
+              borderRadius: '8px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '0.75rem',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {approvalBanner.includes('⏳') ? (
+                  <RefreshCw size={16} className="spin" style={{ flexShrink: 0 }} />
+                ) : approvalBanner.includes('⚠️') ? (
+                  <AlertCircle size={16} color="#dc2626" style={{ flexShrink: 0 }} />
+                ) : (
+                  <CheckCircle2 size={16} color="#16a34a" style={{ flexShrink: 0 }} />
+                )}
+                <span>{approvalBanner}</span>
+              </div>
+              <button
+                onClick={() => setApprovalBanner(null)}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'inherit', padding: '2px' }}
+                title="Dismiss"
+              >
+                <X size={14} />
+              </button>
             </div>
           )}
 
@@ -991,49 +2838,124 @@ export const AdminHrPortal: React.FC = () => {
                     <th style={{ minWidth: '160px', whiteSpace: 'nowrap' }}>Department & Designation</th>
                     <th style={{ minWidth: '140px', whiteSpace: 'nowrap' }}>Designated Manager</th>
                     <th style={{ minWidth: '130px', whiteSpace: 'nowrap' }}>Applied Timestamp</th>
-                    <th style={{ minWidth: '180px', whiteSpace: 'nowrap' }}>HR Verification Actions</th>
+                    <th style={{ minWidth: '190px', whiteSpace: 'nowrap' }}>HR Verification Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {pendingRequests.map(req => (
-                    <tr key={req.id}>
-                      <td style={{ whiteSpace: 'nowrap' }}>
-                        <div style={{ fontWeight: 700 }}>{req.name}</div>
-                        <div style={{ fontSize: '0.72rem', color: '#2563eb' }}>{req.email}</div>
-                        <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{req.phone}</div>
-                      </td>
-                      <td style={{ whiteSpace: 'nowrap' }}>
-                        <div style={{ fontWeight: 600 }}>{req.department}</div>
-                        <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{req.designation}</div>
-                      </td>
-                      <td style={{ whiteSpace: 'nowrap' }}>
-                        <span style={{ fontWeight: 600 }}>{req.manager}</span>
-                      </td>
-                      <td style={{ whiteSpace: 'nowrap' }}>
-                        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{req.appliedAt}</span>
-                      </td>
-                      <td style={{ whiteSpace: 'nowrap' }}>
-                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'nowrap' }}>
-                          <button
-                            className="btn-success"
-                            style={{ padding: '0.35rem 0.65rem', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}
-                            onClick={() => handleApproveRequest(req)}
-                          >
-                            <Check size={13} />
-                            Approve (Create Account)
-                          </button>
-                          <button
-                            className="btn-secondary"
-                            style={{ padding: '0.35rem 0.65rem', fontSize: '0.72rem', color: '#dc2626', display: 'inline-flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}
-                            onClick={() => handleRejectRequest(req.id, req.name)}
-                          >
-                            <X size={13} />
-                            Reject
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {pendingRequests.map(req => {
+                    const isApproving = approvingId === req.id;
+                    const isRejecting = rejectingId === req.id;
+                    const isRowBusy = Boolean(approvingId || rejectingId);
+
+                    return (
+                      <tr key={req.id} style={{ cursor: 'pointer' }} onClick={() => openRequestReview(req)}>
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          <div style={{ fontWeight: 700, color: '#0f172a' }}>{req.name}</div>
+                          <div style={{ fontSize: '0.72rem', color: '#2563eb' }}>{req.email}</div>
+                          <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{req.phone || 'Phone not provided'}</div>
+                        </td>
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          <div style={{ fontWeight: 600 }}>{req.department}</div>
+                          <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{req.designation}</div>
+                          {req.reason && (
+                            <div style={{ fontSize: '0.68rem', color: '#059669', fontStyle: 'italic', maxWidth: '220px', whiteSpace: 'normal', marginTop: '2px' }}>
+                              &ldquo;{req.reason}&rdquo;
+                            </div>
+                          )}
+                        </td>
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          <span style={{ fontWeight: 600 }}>{req.manager || 'HR Pending'}</span>
+                        </td>
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{new Date(req.appliedAt).toLocaleDateString()}</span>
+                        </td>
+                        <td style={{ whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
+                          <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'nowrap' }}>
+                            <button
+                              className="btn-secondary"
+                              disabled={isRowBusy}
+                              style={{
+                                padding: '0.38rem 0.65rem',
+                                fontSize: '0.72rem',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                whiteSpace: 'nowrap',
+                                fontWeight: 700,
+                                background: '#eff6ff',
+                                borderColor: '#bfdbfe',
+                                color: '#1e40af'
+                              }}
+                              onClick={() => openRequestReview(req)}
+                              title="Click request to view details & verify (Flowchart 3)"
+                            >
+                              <FileText size={13} />
+                              <span>Verify Details</span>
+                            </button>
+                            <button
+                              className="btn-success"
+                              disabled={isRowBusy}
+                              style={{
+                                padding: '0.38rem 0.75rem',
+                                fontSize: '0.72rem',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                whiteSpace: 'nowrap',
+                                fontWeight: 700,
+                                opacity: isRowBusy && !isApproving ? 0.6 : 1,
+                                cursor: isRowBusy ? 'not-allowed' : 'pointer'
+                              }}
+                              onClick={() => handleApproveRequest(req)}
+                              title="Quick approve and dispatch set-password email"
+                            >
+                              {isApproving ? (
+                                <>
+                                  <RefreshCw size={13} className="spin" />
+                                  <span>Approving...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Check size={13} />
+                                  <span>Approve</span>
+                                </>
+                              )}
+                            </button>
+                            <button
+                              className="btn-secondary"
+                              disabled={isRowBusy}
+                              style={{
+                                padding: '0.38rem 0.75rem',
+                                fontSize: '0.72rem',
+                                color: '#dc2626',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                whiteSpace: 'nowrap',
+                                fontWeight: 600,
+                                opacity: isRowBusy && !isRejecting ? 0.6 : 1,
+                                cursor: isRowBusy ? 'not-allowed' : 'pointer'
+                              }}
+                              onClick={() => setRejectionModalRequest(req)}
+                              title="Reject sign-up request with documented rationale (Flowchart 3)"
+                            >
+                              {isRejecting ? (
+                                <>
+                                  <RefreshCw size={13} className="spin" />
+                                  <span>Rejecting...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <X size={13} />
+                                  <span>Reject</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1064,486 +2986,641 @@ export const AdminHrPortal: React.FC = () => {
         </div>
       )}
 
-      {/* Tab 4: Deactivation & Mandatory Handover (FC 18) */}
+      {/* Tab 4: Deactivation & Mandatory Handover (FC 18 — Clean & Organized) */}
       {activeTab === 'deactivation' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {/* Top Info Banner */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          
+          {/* Header & Clean Sub-Nav */}
           <div style={{
-            background: 'linear-gradient(135deg, #fef2f2 0%, #fff7ed 100%)',
-            border: '1px solid #fecaca',
-            borderRadius: '12px',
-            padding: '1.25rem 1.5rem',
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '10px',
+            padding: '1rem 1.25rem',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             flexWrap: 'wrap',
-            gap: '1rem'
+            gap: '0.75rem'
           }}>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.35rem' }}>
-                <span style={{
-                  background: '#ef4444',
-                  color: '#ffffff',
-                  fontSize: '0.7rem',
-                  fontWeight: 800,
-                  padding: '2px 8px',
-                  borderRadius: '999px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em'
-                }}>
-                  Flowchart 18 Enforced
-                </span>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#991b1b' }}>
-                  Zero-Orphan Task Governance • MongoDB Atlas Integrated
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                  Account Deactivation & Mandatory Handover
+                </h3>
+                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#64748b', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px' }}>
+                  FC 18 Governance
                 </span>
               </div>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#7f1d1d', margin: 0 }}>
-                Account Deactivation & Mandatory Task Handover
-              </h3>
-              <p style={{ fontSize: '0.8rem', color: '#78350f', margin: '0.35rem 0 0 0', maxWidth: '750px' }}>
-                Under UrbanGaon standard operating procedures, employees leaving or transitioning cannot be suspended with orphaned deliverables. All active commitments are atomically reallocated to an active successor and credentials are permanently blocked from login.
+              <p style={{ fontSize: '0.76rem', color: '#64748b', margin: '0.2rem 0 0 0' }}>
+                Atomic commitment transfer to an active colleague with immediate credential revocation.
               </p>
             </div>
+
+            {/* Sub-tab Switcher: Active Handover vs Offboarded Archive */}
             <div style={{
-              background: '#ffffff',
-              border: '1px solid #fed7aa',
-              padding: '0.75rem 1rem',
-              borderRadius: '10px',
-              textAlign: 'center',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+              display: 'inline-flex',
+              background: '#f1f5f9',
+              padding: '3px',
+              borderRadius: '8px',
+              gap: '3px'
             }}>
-              <div style={{ fontSize: '0.7rem', color: '#9a3412', fontWeight: 700, textTransform: 'uppercase' }}>
-                Active Roster / Offboarded
-              </div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#991b1b' }}>
-                {activeMembers.length} <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 500 }}>Active</span> • {members.filter(m => m.status === 'DEACTIVATED').length} <span style={{ fontSize: '0.85rem', color: '#dc2626', fontWeight: 500 }}>Deactivated</span>
-              </div>
-            </div>
-          </div>
-
-
-
-          {/* Error Notification Alert */}
-          {deactivationError && (
-            <div style={{
-              background: '#fef2f2',
-              border: '1px solid #fca5a5',
-              borderRadius: '10px',
-              padding: '1rem 1.25rem',
-              display: 'flex',
-              alignItems: 'flex-start',
-              justifyContent: 'space-between',
-              gap: '1rem'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-                <AlertCircle size={22} color="#dc2626" style={{ flexShrink: 0, marginTop: '2px' }} />
-                <div>
-                  <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#991b1b' }}>
-                    Execution Blocked
-                  </div>
-                  <div style={{ fontSize: '0.8rem', color: '#b91c1c', marginTop: '3px' }}>
-                    {deactivationError}
-                  </div>
-                </div>
-              </div>
               <button
-                onClick={() => setDeactivationError(null)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#991b1b', fontWeight: 700, fontSize: '0.85rem' }}
+                type="button"
+                onClick={() => setDeactivationSubTab('form')}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  fontSize: '0.75rem',
+                  fontWeight: deactivationSubTab === 'form' ? 700 : 500,
+                  background: deactivationSubTab === 'form' ? '#ffffff' : 'transparent',
+                  color: deactivationSubTab === 'form' ? '#0f172a' : '#64748b',
+                  boxShadow: deactivationSubTab === 'form' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px'
+                }}
               >
-                ✕
+                <UserX size={13} color={deactivationSubTab === 'form' ? '#dc2626' : '#64748b'} />
+                <span>Execute Handover</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setDeactivationSubTab('archive')}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  fontSize: '0.75rem',
+                  fontWeight: deactivationSubTab === 'archive' ? 700 : 500,
+                  background: deactivationSubTab === 'archive' ? '#ffffff' : 'transparent',
+                  color: deactivationSubTab === 'archive' ? '#0f172a' : '#64748b',
+                  boxShadow: deactivationSubTab === 'archive' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px'
+                }}
+              >
+                <Users size={13} color={deactivationSubTab === 'archive' ? '#2563eb' : '#64748b'} />
+                <span>Offboarded Archive ({deactivatedMembers.length})</span>
               </button>
             </div>
-          )}
+          </div>
 
-          {/* 2-Column Handover Cockpit */}
-          <div className="admin-handover-cockpit">
-            {/* Column 1: Handover Form Controls */}
-            <div className="admin-cockpit-card">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
-                <UserX size={18} color="#dc2626" />
-                <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                  Step 1 & 2: Offboarding Parameters
-                </h4>
-              </div>
-
-              <form onSubmit={handleConfirmDeactivation} style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
-                {/* 1. Employee to Deactivate */}
-                <div className="form-field-group">
-                  <label className="form-field-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>1. Employee to Deactivate / Offboard</span>
-                    <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Select departing staff</span>
-                  </label>
-                  <select
-                    className="form-select"
-                    value={departingMember?.id || ''}
-                    onChange={e => {
-                      setDepartingMemberId(e.target.value);
-                      setDeactivationError(null);
-                    }}
-                    style={{ fontWeight: 600, width: '100%', boxSizing: 'border-box' }}
-                  >
-                    {offboardableMembers.map(m => (
-                      <option key={m.id} value={m.id}>
-                        👤 {m.name} — {m.designation} ({m.department})
-                      </option>
-                    ))}
-                    {offboardableMembers.length === 0 && (
-                      <option value="" disabled>No active employees available for offboarding</option>
-                    )}
-                  </select>
-
-                  {/* Departing Profile Card */}
-                  {departingMember && (
-                    <div style={{
-                      marginTop: '0.5rem',
-                      padding: '0.75rem',
-                      background: isCeoUser(departingMember) ? '#fef2f2' : '#f8fafc',
-                      border: `1px solid ${isCeoUser(departingMember) ? '#fecaca' : '#e2e8f0'}`,
-                      borderRadius: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      flexWrap: 'wrap',
-                      gap: '0.75rem',
-                      width: '100%',
-                      boxSizing: 'border-box'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', minWidth: 0, flex: '1 1 200px' }}>
-                        <div style={{
-                          width: '34px',
-                          height: '34px',
-                          borderRadius: '8px',
-                          background: '#dc2626',
-                          color: '#ffffff',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontWeight: 800,
-                          fontSize: '0.8rem',
-                          flexShrink: 0
-                        }}>
-                          {departingMember.avatar || departingMember.name.slice(0, 2).toUpperCase()}
-                        </div>
-                        <div style={{ minWidth: 0, overflow: 'hidden' }}>
-                          <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {departingMember.name}
-                          </div>
-                          <div style={{ fontSize: '0.72rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {departingMember.email} • {departingMember.department}
-                          </div>
-                        </div>
-                      </div>
-                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <span style={{
-                          fontSize: '0.7rem',
-                          fontWeight: 800,
-                          padding: '3px 8px',
-                          borderRadius: '6px',
-                          background: departingMember.status === 'DEACTIVATED' ? '#fee2e2' : '#dcfce7',
-                          color: departingMember.status === 'DEACTIVATED' ? '#991b1b' : '#166534'
-                        }}>
-                          {departingMember.status}
-                        </span>
-                        <div style={{ fontSize: '0.7rem', color: '#dc2626', fontWeight: 700, marginTop: '2px' }}>
-                          {departingActiveTasks.length} in-flight tasks
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* 2. Mandatory Successor */}
-                <div className="form-field-group">
-                  <label className="form-field-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>2. Mandatory Successor / Handover Recipient</span>
-                    <span style={{ fontSize: '0.7rem', color: '#16a34a', fontWeight: 700 }}>Will receive all active tasks</span>
-                  </label>
-                  <select
-                    className="form-select"
-                    value={successorMember?.id || ''}
-                    onChange={e => {
-                      setSuccessorMemberId(e.target.value);
-                      setDeactivationError(null);
-                    }}
-                    style={{ fontWeight: 600, width: '100%', boxSizing: 'border-box' }}
-                  >
-                    {activeMembers
-                      .filter(m => m.id !== departingMember?.id)
-                      .map(m => (
-                        <option key={m.id} value={m.id}>
-                          🎯 {m.name} — {m.designation} ({m.department})
-                        </option>
-                      ))}
-                  </select>
-
-                  {/* Successor Profile Card */}
-                  {successorMember && (
-                    <div style={{
-                      marginTop: '0.5rem',
-                      padding: '0.75rem',
-                      background: '#f0fdf4',
-                      border: '1px solid #bbf7d0',
-                      borderRadius: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      flexWrap: 'wrap',
-                      gap: '0.75rem',
-                      width: '100%',
-                      boxSizing: 'border-box'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', minWidth: 0, flex: '1 1 200px' }}>
-                        <div style={{
-                          width: '34px',
-                          height: '34px',
-                          borderRadius: '8px',
-                          background: '#16a34a',
-                          color: '#ffffff',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontWeight: 800,
-                          fontSize: '0.8rem',
-                          flexShrink: 0
-                        }}>
-                          {successorMember.avatar || successorMember.name.slice(0, 2).toUpperCase()}
-                        </div>
-                        <div style={{ minWidth: 0, overflow: 'hidden' }}>
-                          <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {successorMember.name}
-                          </div>
-                          <div style={{ fontSize: '0.72rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {successorMember.email} • {successorMember.department}
-                          </div>
-                        </div>
-                      </div>
-                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <span style={{
-                          fontSize: '0.7rem',
-                          fontWeight: 800,
-                          padding: '3px 8px',
-                          borderRadius: '6px',
-                          background: '#dcfce7',
-                          color: '#166534'
-                        }}>
-                          ACTIVE SUCCESSOR
-                        </span>
-                        <div style={{ fontSize: '0.7rem', color: '#15803d', fontWeight: 700, marginTop: '2px' }}>
-                          +{departingActiveTasks.length} transferred
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* 3. Deactivation Reason */}
-                <div className="form-field-group">
-                  <label className="form-field-label">3. Official Deactivation Reason</label>
-                  <select
-                    className="form-select"
-                    value={deactivationReason}
-                    onChange={e => setDeactivationReason(e.target.value)}
-                    style={{ width: '100%', boxSizing: 'border-box' }}
-                  >
-                    <option value="Resignation / Voluntary Transition">Resignation / Voluntary Transition</option>
-                    <option value="Role Reassignment / Internal Transfer">Role Reassignment / Internal Transfer</option>
-                    <option value="Extended Maternity / Sabbatical Leave">Extended Maternity / Sabbatical Leave</option>
-                    <option value="Administrative Termination / Separation">Administrative Termination / Separation</option>
-                    <option value="Contract Expiration">Contract Expiration</option>
-                  </select>
-                </div>
-
-                {/* 4. Transition Notes */}
-                <div className="form-field-group">
-                  <label className="form-field-label">4. Handover Notes & Remarks (Logged to Audit Trail)</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="e.g. Handover approved by HR; client deliverables shifted to Tech Lead"
-                    value={handoverNotes}
-                    onChange={e => setHandoverNotes(e.target.value)}
-                    style={{ width: '100%', boxSizing: 'border-box' }}
-                  />
-                </div>
-
-                {/* Safety Checkbox */}
-                <label style={{
+          {/* VIEW A: Execute Handover (Organized 2-Pane View) */}
+          {deactivationSubTab === 'form' && (
+            <>
+              {/* Error Alert */}
+              {deactivationError && (
+                <div style={{
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  borderRadius: '8px',
+                  padding: '0.75rem 1rem',
                   display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '0.65rem',
-                  fontSize: '0.76rem',
-                  color: '#334155',
-                  cursor: 'pointer',
-                  padding: '0.5rem',
-                  background: '#f8fafc',
-                  borderRadius: '6px',
-                  border: '1px solid #e2e8f0',
-                  width: '100%',
-                  boxSizing: 'border-box'
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '0.75rem',
+                  color: '#991b1b',
+                  fontSize: '0.8rem'
                 }}>
-                  <input
-                    type="checkbox"
-                    checked={handoverAcknowledged}
-                    onChange={e => setHandoverAcknowledged(e.target.checked)}
-                    style={{ marginTop: '3px', cursor: 'pointer', flexShrink: 0 }}
-                  />
-                  <span>
-                    I confirm that all <strong>{departingActiveTasks.length}</strong> active deliverable(s) will be atomically transferred to <strong>{successorMember?.name || 'the successor'}</strong>, and <strong>{departingMember?.name || 'the employee'}</strong>&apos;s account will be revoked in MongoDB Atlas (Flowchart 18).
-                  </span>
-                </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <AlertCircle size={16} color="#dc2626" />
+                    <span>{deactivationError}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setDeactivationError(null)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#991b1b', fontWeight: 800 }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
 
-                {/* Submit Action */}
-                <button
-                  type="submit"
-                  className="btn-primary"
-                  disabled={isDeactivating || isCeoUser(departingMember) || !handoverAcknowledged || departingMember?.id === successorMember?.id}
-                  style={{
-                    background: (isDeactivating || isCeoUser(departingMember) || !handoverAcknowledged || departingMember?.id === successorMember?.id) ? '#94a3b8' : '#dc2626',
-                    cursor: (isDeactivating || isCeoUser(departingMember) || !handoverAcknowledged || departingMember?.id === successorMember?.id) ? 'not-allowed' : 'pointer',
-                    padding: '0.75rem 1.25rem',
+              {/* 2-Pane Clean Grid */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'minmax(0, 1.15fr) minmax(0, 0.85fr)',
+                gap: '1rem',
+                alignItems: 'start'
+              }} className="admin-handover-cockpit">
+
+                {/* Left Card: Handover Setup Form */}
+                <div style={{
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '10px',
+                  padding: '1.25rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '1.1rem'
+                }}>
+                  <div style={{ paddingBottom: '0.5rem', borderBottom: '1px solid #f1f5f9' }}>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>
+                      Handover Setup
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                      Assign an active colleague to inherit all in-flight deliverables.
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleConfirmDeactivation} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {/* 1. Departing Staff */}
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <label style={{ fontSize: '0.76rem', fontWeight: 700, color: '#0f172a' }}>
+                          1. Departing Staff Member
+                        </label>
+                        <span style={{ fontSize: '0.7rem', color: departingActiveTasks.length > 0 ? '#dc2626' : '#16a34a', fontWeight: 600 }}>
+                          Holds {departingActiveTasks.length} active task(s)
+                        </span>
+                      </div>
+                      <select
+                        className="form-select"
+                        value={departingMember?.id || ''}
+                        onChange={e => {
+                          setDepartingMemberId(e.target.value);
+                          setDeactivationError(null);
+                        }}
+                        style={{
+                          width: '100%',
+                          minHeight: '40px',
+                          padding: '0.45rem 0.65rem',
+                          borderRadius: '6px',
+                          fontSize: '0.8rem',
+                          borderColor: '#cbd5e1',
+                          fontWeight: 500
+                        }}
+                      >
+                        {offboardableMembers.map(m => (
+                          <option key={m.id} value={m.id}>
+                            {m.name} — {m.designation} ({m.department})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* 2. Successor */}
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <label style={{ fontSize: '0.76rem', fontWeight: 700, color: '#0f172a' }}>
+                          2. Designated Successor
+                        </label>
+                        <span style={{ fontSize: '0.7rem', color: '#16a34a', fontWeight: 600 }}>
+                          Will inherit all {departingActiveTasks.length} task(s)
+                        </span>
+                      </div>
+                      <select
+                        className="form-select"
+                        value={successorMember?.id || ''}
+                        onChange={e => {
+                          setSuccessorMemberId(e.target.value);
+                          setDeactivationError(null);
+                        }}
+                        style={{
+                          width: '100%',
+                          minHeight: '40px',
+                          padding: '0.45rem 0.65rem',
+                          borderRadius: '6px',
+                          fontSize: '0.8rem',
+                          borderColor: '#cbd5e1',
+                          fontWeight: 500
+                        }}
+                      >
+                        {activeMembers
+                          .filter(m => m.id !== departingMember?.id)
+                          .map(m => (
+                            <option key={m.id} value={m.id}>
+                              {m.name} — {m.designation} ({m.department})
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+
+                    {/* 3. Flowchart 4: Reason Pathways (Resignation / Termination / Long leave) */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#0f172a', marginBottom: '6px' }}>
+                        3. Separation / Leave Reason (Flowchart 4)
+                      </label>
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(3, 1fr)',
+                        gap: '6px',
+                        marginBottom: '10px'
+                      }}>
+                        {[
+                          { id: 'Resignation', label: '🚪 Resignation', desc: 'Voluntary separation' },
+                          { id: 'Termination', label: '⛔ Termination', desc: 'Direct separation' },
+                          { id: 'Long leave', label: '🌴 Long Leave', desc: 'Extended sabbatical' },
+                        ].map(type => {
+                          const isSelected = deactivationType === type.id;
+                          return (
+                            <button
+                              key={type.id}
+                              type="button"
+                              onClick={() => {
+                                setDeactivationType(type.id as any);
+                                setDeactivationReason(type.id);
+                              }}
+                              style={{
+                                padding: '8px 10px',
+                                borderRadius: '8px',
+                                border: isSelected ? '2px solid #2563eb' : '1px solid #cbd5e1',
+                                background: isSelected ? '#eff6ff' : '#ffffff',
+                                color: isSelected ? '#1e40af' : '#475569',
+                                fontWeight: isSelected ? 700 : 500,
+                                fontSize: '0.75rem',
+                                cursor: 'pointer',
+                                textAlign: 'left',
+                                transition: 'all 0.15s ease'
+                              }}
+                            >
+                              <div>{type.label}</div>
+                              <div style={{ fontSize: '0.65rem', color: isSelected ? '#3b82f6' : '#94a3b8', marginTop: '2px' }}>
+                                {type.desc}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Resignation Specific Inputs (Branch 1) */}
+                      {deactivationType === 'Resignation' && (
+                        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px', marginBottom: '8px' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                                Select Last Working Day:
+                              </label>
+                              <input
+                                type="date"
+                                className="form-input"
+                                value={lastWorkingDay}
+                                onChange={e => setLastWorkingDay(e.target.value)}
+                                style={{ width: '100%', padding: '0.45rem 0.65rem', borderRadius: '6px', fontSize: '0.78rem', borderColor: '#cbd5e1' }}
+                              />
+                            </div>
+                            <div style={{ fontSize: '0.7rem', color: '#b45309', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '6px', padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span>🔒</span>
+                              <span><strong>Protocol:</strong> Block login immediately after last working day ({lastWorkingDay}). Deliverables reassigned.</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Termination Specific Inputs (Branch 2) */}
+                      {deactivationType === 'Termination' && (
+                        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '10px', marginBottom: '8px' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#991b1b', marginBottom: '4px' }}>
+                                Select Effective Termination Date:
+                              </label>
+                              <input
+                                type="date"
+                                className="form-input"
+                                value={effectiveDate}
+                                onChange={e => setEffectiveDate(e.target.value)}
+                                style={{ width: '100%', padding: '0.45rem 0.65rem', borderRadius: '6px', fontSize: '0.78rem', borderColor: '#fca5a5' }}
+                              />
+                            </div>
+                            <div style={{ fontSize: '0.7rem', color: '#991b1b', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span>⛔</span>
+                              <span><strong>Protocol:</strong> Block login immediately after effective date ({effectiveDate}). Session terminated.</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Long leave Specific Inputs (Branch 3) */}
+                      {deactivationType === 'Long leave' && (
+                        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '10px', marginBottom: '8px' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#166534', marginBottom: '4px' }}>
+                                Leave Start Date:
+                              </label>
+                              <input
+                                type="date"
+                                className="form-input"
+                                value={leaveStartDate}
+                                onChange={e => setLeaveStartDate(e.target.value)}
+                                style={{ width: '100%', padding: '0.45rem 0.65rem', borderRadius: '6px', fontSize: '0.78rem', borderColor: '#86efac' }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#166534', marginBottom: '4px' }}>
+                                Leave Return Date:
+                              </label>
+                              <input
+                                type="date"
+                                className="form-input"
+                                value={leaveEndDate}
+                                onChange={e => setLeaveEndDate(e.target.value)}
+                                placeholder="Indefinite / TBD"
+                                style={{ width: '100%', padding: '0.45rem 0.65rem', borderRadius: '6px', fontSize: '0.78rem', borderColor: '#86efac' }}
+                              />
+                            </div>
+                          </div>
+                          <div style={{ fontSize: '0.7rem', color: '#166534', background: '#dcfce7', border: '1px solid #86efac', borderRadius: '6px', padding: '6px 8px', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span>🌴</span>
+                            <span><strong>Protocol:</strong> Mark On Leave, block login until return date ({leaveEndDate || 'Indefinite'}). Tasks reallocated.</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 4. Handover Notes */}
+                      <div style={{ marginTop: '8px' }}>
+                        <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#0f172a', marginBottom: '4px' }}>
+                          4. Handover Notes & Remarks
+                        </label>
+                        <input
+                          type="text"
+                          className="form-input"
+                          placeholder="Audit log remark (e.g., Handover meeting completed, assets returned)"
+                          value={handoverNotes}
+                          onChange={e => setHandoverNotes(e.target.value)}
+                          style={{ width: '100%', minHeight: '38px', padding: '0.45rem 0.65rem', borderRadius: '6px', fontSize: '0.78rem', borderColor: '#cbd5e1' }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Confirmation Checkbox */}
+                    <label style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '0.6rem',
+                      background: handoverAcknowledged ? '#f0fdf4' : '#f8fafc',
+                      border: `1px solid ${handoverAcknowledged ? '#86efac' : '#e2e8f0'}`,
+                      borderRadius: '6px',
+                      padding: '0.7rem 0.85rem',
+                      cursor: 'pointer',
+                      fontSize: '0.74rem',
+                      color: '#334155',
+                      lineHeight: 1.45
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={handoverAcknowledged}
+                        onChange={e => setHandoverAcknowledged(e.target.checked)}
+                        style={{ marginTop: '2px', cursor: 'pointer', flexShrink: 0, accentColor: '#16a34a' }}
+                      />
+                      <span>
+                        {deactivationType === 'Long leave' ? (
+                          <>I confirm that all <strong>{departingActiveTasks.length} task(s)</strong> will temporarily transfer to <strong>{successorMember?.name || 'Successor'}</strong> and <strong>{departingMember?.name || 'Employee'}</strong> will be marked <strong>On Leave</strong> until return date ({leaveEndDate || 'Indefinite'}).</>
+                        ) : (
+                          <>I confirm that all <strong>{departingActiveTasks.length} task(s)</strong> will transfer to <strong>{successorMember?.name || 'Successor'}</strong> and <strong>{departingMember?.name || 'Departing Employee'}</strong>&apos;s login access will be deactivated in MongoDB Atlas.</>
+                        )}
+                      </span>
+                    </label>
+
+                    {/* Submit Button */}
+                    <button
+                      type="submit"
+                      disabled={isDeactivating || isCeoUser(departingMember) || !handoverAcknowledged || departingMember?.id === successorMember?.id}
+                      style={{
+                        padding: '0.75rem 1.25rem',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: (isDeactivating || isCeoUser(departingMember) || !handoverAcknowledged || departingMember?.id === successorMember?.id)
+                          ? '#94a3b8'
+                          : deactivationType === 'Long leave'
+                            ? '#16a34a'
+                            : '#dc2626',
+                        color: '#ffffff',
+                        fontWeight: 700,
+                        fontSize: '0.82rem',
+                        cursor: (isDeactivating || isCeoUser(departingMember) || !handoverAcknowledged || departingMember?.id === successorMember?.id)
+                          ? 'not-allowed'
+                          : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        transition: 'background 0.15s ease'
+                      }}
+                    >
+                      {isDeactivating ? (
+                        <>
+                          <RefreshCw size={14} className="spin" />
+                          <span>Processing Handover...</span>
+                        </>
+                      ) : (
+                        <>
+                          <UserX size={14} />
+                          <span>
+                            {deactivationType === 'Long leave'
+                              ? `Reassign ${departingActiveTasks.length} Tasks & Mark On Leave`
+                              : `Reassign ${departingActiveTasks.length} Tasks & Deactivate Account`}
+                          </span>
+                        </>
+                      )}
+                    </button>
+                  </form>
+                </div>
+
+                {/* Right Card: Tasks Being Transferred */}
+                <div style={{
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '10px',
+                  padding: '1.25rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.75rem'
+                }}>
+                  <div style={{
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem',
-                    fontSize: '0.85rem',
-                    fontWeight: 700,
-                    width: '100%',
-                    marginTop: '0.25rem'
-                  }}
-                >
-                  {isDeactivating ? (
-                    <>
-                      <RefreshCw size={15} className="spin" />
-                      <span>Reassigning Tasks & Deactivating Account...</span>
-                    </>
-                  ) : (
-                    <>
-                      <UserX size={15} />
-                      <span>Reassign {departingActiveTasks.length} Tasks & Deactivate Account</span>
-                    </>
-                  )}
-                </button>
-              </form>
-            </div>
+                    justifyContent: 'space-between',
+                    paddingBottom: '0.5rem',
+                    borderBottom: '1px solid #f1f5f9'
+                  }}>
+                    <div>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>
+                        Tasks to Transfer ({departingActiveTasks.length})
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                        From {departingMember?.name?.split(' ')[0] || 'Staff'} ➔ {successorMember?.name?.split(' ')[0] || 'Successor'}
+                      </div>
+                    </div>
+                    <span style={{
+                      fontSize: '0.68rem',
+                      fontWeight: 700,
+                      background: departingActiveTasks.length > 0 ? '#fef3c7' : '#dcfce7',
+                      color: departingActiveTasks.length > 0 ? '#92400e' : '#166534',
+                      padding: '2px 7px',
+                      borderRadius: '999px'
+                    }}>
+                      {departingActiveTasks.length} active
+                    </span>
+                  </div>
 
-            {/* Column 2: Live Deliverables Manifest Preview */}
-            <div className="admin-cockpit-card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Layers size={18} color="#2563eb" />
-                  <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                    In-Flight Deliverables Manifest
-                  </h4>
+                  {/* Clean, compact task cards */}
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.5rem',
+                    maxHeight: '420px',
+                    overflowY: 'auto',
+                    paddingRight: '4px'
+                  }}>
+                    {departingActiveTasks.map(t => (
+                      <div
+                        key={t.id}
+                        style={{
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '6px',
+                          padding: '0.6rem 0.75rem',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.3rem'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                          <span style={{
+                            fontSize: '0.62rem',
+                            fontWeight: 800,
+                            padding: '1px 5px',
+                            borderRadius: '3px',
+                            background: t.priority === 'URGENT' ? '#fee2e2' : t.priority === 'HIGH' ? '#ffedd5' : '#f1f5f9',
+                            color: t.priority === 'URGENT' ? '#991b1b' : t.priority === 'HIGH' ? '#9a3412' : '#475569'
+                          }}>
+                            {t.priority}
+                          </span>
+                          <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
+                            {t.scheduledDate} • {t.time}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f172a' }}>
+                          {t.title}
+                        </div>
+                        <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
+                          {t.department} • {t.project || 'General'}
+                        </div>
+                      </div>
+                    ))}
+
+                    {departingActiveTasks.length === 0 && (
+                      <div style={{
+                        padding: '2rem 1rem',
+                        textAlign: 'center',
+                        color: '#64748b',
+                        background: '#f8fafc',
+                        borderRadius: '6px',
+                        border: '1px dashed #cbd5e1'
+                      }}>
+                        <CheckCircle2 size={24} color="#16a34a" style={{ margin: '0 auto 0.5rem auto' }} />
+                        <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#166534' }}>
+                          0 In-Flight Deliverables
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>
+                          This employee holds no active tasks. Deactivation can proceed directly.
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <span style={{
-                  fontSize: '0.72rem',
-                  fontWeight: 800,
-                  padding: '2px 8px',
-                  borderRadius: '999px',
-                  background: departingActiveTasks.length > 0 ? '#fef3c7' : '#dcfce7',
-                  color: departingActiveTasks.length > 0 ? '#92400e' : '#166534'
-                }}>
-                  {departingActiveTasks.length} Deliverable(s)
+              </div>
+            </>
+          )}
+
+          {/* VIEW B: Offboarded Personnel Archive */}
+          {deactivationSubTab === 'archive' && (
+            <div style={{
+              background: '#ffffff',
+              border: '1px solid #e2e8f0',
+              borderRadius: '10px',
+              padding: '1.25rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid #f1f5f9' }}>
+                <div>
+                  <h4 style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                    Historical Offboarded Personnel Archive
+                  </h4>
+                  <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                    Complete audit trail of deactivated staff and their handover history
+                  </div>
+                </div>
+                <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>
+                  Total Deactivated: {deactivatedMembers.length}
                 </span>
               </div>
 
-              <p style={{ fontSize: '0.75rem', color: '#64748b', margin: 0, lineHeight: 1.4 }}>
-                Live snapshot of active tasks currently assigned to <strong>{departingMember?.name || 'Selected Employee'}</strong> that will be reallocated to <strong>{successorMember?.name || 'Successor'}</strong>.
-              </p>
-
-              {/* Task Manifest List */}
-              <div className="admin-manifest-scroll">
-                {departingActiveTasks.map(t => (
-                  <div
-                    key={t.id}
-                    style={{
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '8px',
-                      padding: '0.75rem 0.85rem',
-                      background: '#f8fafc',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.4rem'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-                      <span style={{
-                        fontSize: '0.65rem',
+              {deactivatedMembers.length > 0 ? (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                  gap: '0.75rem'
+                }}>
+                  {deactivatedMembers.map(m => (
+                    <div
+                      key={m.id}
+                      style={{
+                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        padding: '0.75rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem'
+                      }}
+                    >
+                      <div style={{
+                        width: '34px',
+                        height: '34px',
+                        borderRadius: '6px',
+                        background: '#e2e8f0',
+                        color: '#475569',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                         fontWeight: 800,
-                        padding: '1px 6px',
-                        borderRadius: '4px',
-                        background: t.priority === 'URGENT' ? '#fee2e2' : t.priority === 'HIGH' ? '#ffedd5' : '#f1f5f9',
-                        color: t.priority === 'URGENT' ? '#991b1b' : t.priority === 'HIGH' ? '#9a3412' : '#475569'
+                        fontSize: '0.75rem',
+                        flexShrink: 0
                       }}>
-                        {t.priority}
-                      </span>
-                      <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <Clock size={11} /> {t.time} • {t.scheduledDate}
-                      </span>
-                    </div>
-
-                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0f172a', lineHeight: 1.3 }}>
-                      {t.title}
-                    </div>
-
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      fontSize: '0.7rem',
-                      color: '#64748b',
-                      borderTop: '1px dashed #cbd5e1',
-                      paddingTop: '0.4rem',
-                      marginTop: '0.2rem'
-                    }}>
-                      <span>{t.department} • {t.project || 'General'}</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700 }}>
-                        <span style={{ color: '#dc2626' }}>{departingMember?.avatar || 'SRC'}</span>
-                        <ArrowRight size={11} color="#64748b" />
-                        <span style={{ color: '#16a34a' }}>{successorMember?.avatar || 'DST'}</span>
+                        {m.avatar || m.name.slice(0, 2).toUpperCase()}
                       </div>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {m.name}
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {m.designation} • {m.department}
+                        </div>
+                        <div style={{ fontSize: '0.68rem', color: '#94a3b8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {m.email}
+                        </div>
+                      </div>
+                      <span style={{
+                        fontSize: '0.62rem',
+                        fontWeight: 800,
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        background: '#fee2e2',
+                        color: '#991b1b',
+                        flexShrink: 0
+                      }}>
+                        DEACTIVATED
+                      </span>
                     </div>
-                  </div>
-                ))}
-
-                {departingActiveTasks.length === 0 && (
-                  <div style={{
-                    padding: '2.5rem 1.5rem',
-                    textAlign: 'center',
-                    background: '#f0fdf4',
-                    border: '1px dashed #86efac',
-                    borderRadius: '8px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}>
-                    <CheckCircle2 size={28} color="#16a34a" />
-                    <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#166534' }}>
-                      Clean Handover Ledger
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: '#15803d', maxWidth: '300px' }}>
-                      <strong>{departingMember?.name || 'This employee'}</strong> has 0 in-flight deliverables. Account deactivation will revoke credentials and preserve historical audit logs without pending task reallocation.
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Protocol Footer */}
-              <div style={{
-                borderTop: '1px solid #f1f5f9',
-                paddingTop: '0.75rem',
-                fontSize: '0.7rem',
-                color: '#94a3b8',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}>
-                <Shield size={13} color="#94a3b8" />
-                <span>Audited per ISO/IEC 27001 Access Control & Offboarding Policy</span>
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.8rem' }}>
+                  No employees have been deactivated yet. The company active roster is 100% active.
+                </div>
+              )}
             </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -1684,13 +3761,13 @@ export const AdminHrPortal: React.FC = () => {
           <div className="admin-holiday-signatures">
             <div>
               <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>
-                Prepared By
+                Corporate Governance
               </div>
               <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0f172a', marginTop: '2px' }}>
-                Varun Mudgal
+                FY 2026-27 Official Policy
               </div>
               <div style={{ fontSize: '0.75rem', color: '#2563eb', fontWeight: 600 }}>
-                Manager - Talent
+                Flowchart 23 &amp; Flowchart 13 Compliance
               </div>
             </div>
 
@@ -1705,6 +3782,374 @@ export const AdminHrPortal: React.FC = () => {
                 Founder / CEO (UrbanGaon)
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      {/* TAB 7: STAFF DIRECTORY & CORPORATE EMAIL CONFIGURATION (SDE-3 / CEO)  */}
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'directory' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {/* Header Card */}
+          <div style={{
+            background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+            border: '1px solid #bae6fd',
+            borderRadius: '10px',
+            padding: '1rem 1.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '1rem'
+          }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '1.2rem' }}>📧</span>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0369a1' }}>
+                  Employee Directory &amp; Corporate Email Management
+                </h3>
+              </div>
+              <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: '#0c4a6e', lineHeight: 1.4 }}>
+                Directly configure, update, and manage official corporate email addresses for all team members. All email modifications are synchronized across active sessions, MongoDB Atlas, and the immutable audit trail.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{
+                background: '#ffffff',
+                border: '1px solid #7dd3fc',
+                color: '#0284c7',
+                padding: '4px 10px',
+                borderRadius: '6px',
+                fontSize: '0.75rem',
+                fontWeight: 700
+              }}>
+                Total Registered: {members.length}
+              </span>
+            </div>
+          </div>
+
+          {/* Filter Bar */}
+          <div className="admin-filter-bar" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative', flex: '1 1 240px', minWidth: '200px' }}>
+              <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+              <input
+                type="text"
+                className="form-input"
+                placeholder="Search staff by name, email, employee ID, role..."
+                value={directorySearchQuery}
+                onChange={e => setDirectorySearchQuery(e.target.value)}
+                style={{ paddingLeft: '32px', width: '100%', fontSize: '0.78rem' }}
+              />
+            </div>
+
+            <select
+              className="form-select"
+              value={directoryDeptFilter}
+              onChange={e => setDirectoryDeptFilter(e.target.value)}
+              style={{ fontSize: '0.78rem', minWidth: '150px' }}
+            >
+              <option value="ALL">All Departments</option>
+              {['AI & IT Operations', 'Executive Management', 'Full-Stack Engineering', 'Product & UI/UX', 'Talent HR & People', 'Sales', 'Accounts', 'Legal Team', 'Marketing & Growth'].map(d => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+
+            <select
+              className="form-select"
+              value={directoryStatusFilter}
+              onChange={e => setDirectoryStatusFilter(e.target.value)}
+              style={{ fontSize: '0.78rem', minWidth: '130px' }}
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="ACTIVE">Active</option>
+              <option value="ON LEAVE">On Leave</option>
+              <option value="Pending First Login">Pending First Login</option>
+              <option value="DEACTIVATED">Deactivated</option>
+            </select>
+
+            {(directorySearchQuery || directoryDeptFilter !== 'ALL' || directoryStatusFilter !== 'ALL') && (
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  setDirectorySearchQuery('');
+                  setDirectoryDeptFilter('ALL');
+                  setDirectoryStatusFilter('ALL');
+                }}
+                style={{ fontSize: '0.75rem', padding: '0.4rem 0.65rem' }}
+              >
+                Reset Filters
+              </button>
+            )}
+          </div>
+
+          {/* Directory Table */}
+          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', overflowX: 'auto', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem' }}>
+              <thead>
+                <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #cbd5e1' }}>
+                  <th style={{ padding: '10px 14px', fontWeight: 800, color: '#334155' }}>Staff Member</th>
+                  <th style={{ padding: '10px 14px', fontWeight: 800, color: '#334155' }}>Employee ID</th>
+                  <th style={{ padding: '10px 14px', fontWeight: 800, color: '#334155' }}>Department &amp; Role</th>
+                  <th style={{ padding: '10px 14px', fontWeight: 800, color: '#334155' }}>Corporate Email</th>
+                  <th style={{ padding: '10px 14px', fontWeight: 800, color: '#334155' }}>Status</th>
+                  <th style={{ padding: '10px 14px', fontWeight: 800, color: '#334155', textAlign: 'center' }}>Email Configuration</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredDirectoryMembers.map(member => (
+                  <tr key={member.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <td style={{ padding: '10px 14px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '50%',
+                          background: member.id === 'mem-12' || member.email.includes('techdesk') ? '#ecfdf5' : '#eff6ff',
+                          color: member.id === 'mem-12' || member.email.includes('techdesk') ? '#059669' : '#2563eb',
+                          fontWeight: 700,
+                          fontSize: '0.75rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          border: member.id === 'mem-12' || member.email.includes('techdesk') ? '1px solid #a7f3d0' : '1px solid #bfdbfe'
+                        }}>
+                          {member.avatar || member.name.slice(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 700, color: '#0f172a' }}>
+                            {member.name}
+                            {(member.id === 'mem-12' || member.email.includes('techdesk')) && (
+                              <span style={{ marginLeft: '6px', fontSize: '0.65rem', background: '#dcfce7', color: '#15803d', padding: '1px 5px', borderRadius: '4px', fontWeight: 800 }}>
+                                AI &amp; IT OFFICER
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{member.designation}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ padding: '10px 14px', color: '#475569', fontFamily: 'monospace', fontWeight: 600 }}>
+                      {member.employeeId || member.id}
+                    </td>
+                    <td style={{ padding: '10px 14px' }}>
+                      <div style={{ color: '#0f172a', fontWeight: 600 }}>{member.department}</div>
+                      <span style={{
+                        fontSize: '0.65rem',
+                        fontWeight: 700,
+                        padding: '1px 6px',
+                        borderRadius: '4px',
+                        background: member.role === 'SUPER_ADMIN' ? '#fdf2f8' : member.role === 'ADMIN' ? '#fef3c7' : '#f1f5f9',
+                        color: member.role === 'SUPER_ADMIN' ? '#be185d' : member.role === 'ADMIN' ? '#b45309' : '#475569',
+                        border: '1px solid #cbd5e1'
+                      }}>
+                        {member.role}
+                      </span>
+                    </td>
+                    <td style={{ padding: '10px 14px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <Mail size={13} color="#2563eb" />
+                        <span style={{ fontWeight: 700, color: '#1d4ed8' }}>{member.email}</span>
+                      </div>
+                    </td>
+                    <td style={{ padding: '10px 14px' }}>
+                      <span style={{
+                        fontSize: '0.7rem',
+                        fontWeight: 700,
+                        padding: '2px 8px',
+                        borderRadius: '9999px',
+                        background: member.status === 'ACTIVE' ? '#dcfce7' : (member.status === 'ON_LEAVE' || (member.status as string) === 'ON LEAVE') ? '#fef3c7' : member.status === 'DEACTIVATED' ? '#fee2e2' : '#f1f5f9',
+                        color: member.status === 'ACTIVE' ? '#15803d' : (member.status === 'ON_LEAVE' || (member.status as string) === 'ON LEAVE') ? '#b45309' : member.status === 'DEACTIVATED' ? '#b91c1c' : '#475569'
+                      }}>
+                        {member.status === 'ON_LEAVE' ? 'ON LEAVE' : (member.status || 'ACTIVE')}
+                      </span>
+                    </td>
+                    <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        onClick={() => {
+                          setMemberToEditEmail(member);
+                          setNewEmailInput(member.email);
+                          setEmailChangeReason('');
+                          setEmailUpdateError(null);
+                        }}
+                        style={{
+                          fontSize: '0.74rem',
+                          padding: '5px 10px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          color: '#0284c7',
+                          borderColor: '#bae6fd',
+                          background: '#f0f9ff',
+                          fontWeight: 700
+                        }}
+                        title={`Change email address for ${member.name}`}
+                      >
+                        <Edit3 size={13} />
+                        Change Email
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      {/* MODAL: CHANGE EMPLOYEE CORPORATE EMAIL (ENTERPRISE GOVERNANCE)        */}
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      {memberToEditEmail && (
+        <div className="stream-overlay" onClick={() => !isUpdatingEmail && setMemberToEditEmail(null)}>
+          <div className="stream-modal-card" style={{ maxWidth: '480px' }} onClick={e => e.stopPropagation()}>
+            <div className="stream-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ background: '#e0f2fe', padding: '6px', borderRadius: '8px' }}>
+                  <Mail size={18} color="#0284c7" />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.02rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                    Change Employee Corporate Email
+                  </h3>
+                  <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                    Enterprise Governance &amp; Identity Management
+                  </div>
+                </div>
+              </div>
+              <button
+                className="calendar-nav-btn"
+                onClick={() => !isUpdatingEmail && setMemberToEditEmail(null)}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Current Employee Info */}
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.75rem', marginTop: '0.75rem' }}>
+              <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#0f172a' }}>
+                {memberToEditEmail.name}
+              </div>
+              <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px' }}>
+                {memberToEditEmail.designation} • {memberToEditEmail.department} (ID: {memberToEditEmail.employeeId || memberToEditEmail.id})
+              </div>
+              <div style={{ fontSize: '0.74rem', color: '#475569', marginTop: '4px' }}>
+                Current Email: <strong style={{ color: '#0f172a' }}>{memberToEditEmail.email}</strong>
+              </div>
+            </div>
+
+            {emailUpdateError && (
+              <div style={{
+                background: '#fee2e2',
+                border: '1px solid #fca5a5',
+                color: '#991b1b',
+                padding: '0.5rem 0.75rem',
+                borderRadius: '6px',
+                fontSize: '0.74rem',
+                marginTop: '0.75rem'
+              }}>
+                {emailUpdateError}
+              </div>
+            )}
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const cleanEmail = newEmailInput.trim().toLowerCase();
+                if (!cleanEmail) {
+                  setEmailUpdateError('Please enter a valid corporate email address.');
+                  return;
+                }
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(cleanEmail)) {
+                  setEmailUpdateError(`"${cleanEmail}" is not a valid email address.`);
+                  return;
+                }
+                if (cleanEmail === memberToEditEmail.email.toLowerCase()) {
+                  setEmailUpdateError('The new email is identical to the current email.');
+                  return;
+                }
+                if (!emailChangeReason.trim()) {
+                  setEmailUpdateError('A documented governance reason is mandatory for identity auditing.');
+                  return;
+                }
+
+                setIsUpdatingEmail(true);
+                setEmailUpdateError(null);
+
+                const res = await updateMember(
+                  memberToEditEmail.id,
+                  { email: cleanEmail },
+                  emailChangeReason.trim()
+                );
+
+                setIsUpdatingEmail(false);
+                if (res.success) {
+                  setMemberToEditEmail(null);
+                } else {
+                  setEmailUpdateError(res.error || 'Failed to update email.');
+                }
+              }}
+              style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', marginTop: '0.85rem' }}
+            >
+              <div className="form-field-group">
+                <label className="form-field-label">New Official Corporate Email *</label>
+                <input
+                  type="email"
+                  className="form-input"
+                  required
+                  placeholder="e.g. techdesk@urbangaon.com"
+                  value={newEmailInput}
+                  onChange={e => setNewEmailInput(e.target.value)}
+                  autoFocus
+                />
+                <span style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '2px' }}>
+                  Recommended corporate domain: <code>@urbangaon.com</code>
+                </span>
+              </div>
+
+              <div className="form-field-group">
+                <label className="form-field-label">Documented Governance Reason *</label>
+                <textarea
+                  className="form-input"
+                  required
+                  rows={2}
+                  placeholder="e.g. Domain migration to techdesk@urbangaon.com, role shift, official mailbox reorganization..."
+                  value={emailChangeReason}
+                  onChange={e => setEmailChangeReason(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={isUpdatingEmail}
+                  onClick={() => setMemberToEditEmail(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={isUpdatingEmail}
+                  style={{
+                    background: '#0284c7',
+                    borderColor: '#0369a1',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px'
+                  }}
+                >
+                  <Check size={14} />
+                  {isUpdatingEmail ? 'Updating...' : 'Save & Update Email'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -1766,6 +4211,273 @@ export const AdminHrPortal: React.FC = () => {
                 >
                   <RotateCcw size={14} />
                   Confirm Administrative Reopen
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      {/* FLOWCHART 3: REQUEST DETAILS & VERIFICATION MODAL                     */}
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      {selectedRequestForReview && (
+        <div className="stream-overlay" onClick={() => setSelectedRequestForReview(null)}>
+          <div className="stream-modal-card" style={{ maxWidth: '580px', width: '95vw' }} onClick={e => e.stopPropagation()}>
+            <div className="stream-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div style={{ background: '#ecfdf5', padding: '7px', borderRadius: '8px' }}>
+                  <CheckCircle2 size={18} color="#059669" />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                    Sign-Up Request Verification (Flowchart 3)
+                  </h3>
+                  <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                    Verify department, designation, manager & assign unique employee ID
+                  </div>
+                </div>
+              </div>
+              <button className="calendar-nav-btn" onClick={() => setSelectedRequestForReview(null)}>
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Applicant Summary */}
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0f172a' }}>{selectedRequestForReview.name}</div>
+                  <div style={{ fontSize: '0.76rem', color: '#2563eb' }}>{selectedRequestForReview.email}</div>
+                  <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{selectedRequestForReview.phone || 'Phone not provided'}</div>
+                </div>
+                <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#fef3c7', color: '#b45309' }}>
+                  Applied: {new Date(selectedRequestForReview.appliedAt).toLocaleDateString()}
+                </span>
+              </div>
+              {selectedRequestForReview.reason && (
+                <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px dashed #cbd5e1', fontSize: '0.73rem', color: '#475569', fontStyle: 'italic' }}>
+                  &ldquo;{selectedRequestForReview.reason}&rdquo;
+                </div>
+              )}
+            </div>
+
+            {/* Admin Verification Form */}
+            <form onSubmit={e => {
+              e.preventDefault();
+              handleApproveRequest(selectedRequestForReview, {
+                department: verifyDept,
+                designation: verifyDesignation,
+                manager: verifyManager,
+                managerEmail: verifyManagerEmail,
+                employeeId: verifyEmployeeId,
+              });
+            }} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.73rem', fontWeight: 700, color: '#334155', marginBottom: '3px' }}>
+                    Verify Department *
+                  </label>
+                  <select
+                    className="form-select"
+                    required
+                    value={verifyDept}
+                    onChange={e => setVerifyDept(e.target.value)}
+                    style={{ width: '100%', fontSize: '0.78rem' }}
+                  >
+                    <option value="Executive Management">Executive Management</option>
+                    <option value="AI & IT Operations">AI & IT Operations</option>
+                    <option value="Full-Stack Engineering">Full-Stack Engineering</option>
+                    <option value="Product & UI/UX">Product & UI/UX</option>
+                    <option value="Talent HR & People">Talent HR & People</option>
+                    <option value="Marketing & Growth">Marketing & Growth</option>
+                    <option value="Client Success & Support">Client Success & Support</option>
+                    <option value="Finance & Compliance">Finance & Compliance</option>
+                    <option value="General Staff">General Staff</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.73rem', fontWeight: 700, color: '#334155', marginBottom: '3px' }}>
+                    Verify Designation *
+                  </label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    required
+                    value={verifyDesignation}
+                    onChange={e => setVerifyDesignation(e.target.value)}
+                    style={{ width: '100%', fontSize: '0.78rem' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.73rem', fontWeight: 700, color: '#334155', marginBottom: '3px' }}>
+                    Designated Reporting Manager *
+                  </label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    required
+                    placeholder="e.g. Dr. Rekha Pareek"
+                    value={verifyManager}
+                    onChange={e => setVerifyManager(e.target.value)}
+                    style={{ width: '100%', fontSize: '0.78rem' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.73rem', fontWeight: 700, color: '#334155', marginBottom: '3px' }}>
+                    Manager Corporate Email
+                  </label>
+                  <input
+                    type="email"
+                    className="form-input"
+                    placeholder="manager@urbangaon.com"
+                    value={verifyManagerEmail}
+                    onChange={e => setVerifyManagerEmail(e.target.value)}
+                    style={{ width: '100%', fontSize: '0.78rem' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.73rem', fontWeight: 700, color: '#334155', marginBottom: '3px' }}>
+                    Assign Unique Employee ID (Flowchart 3) *
+                  </label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    required
+                    value={verifyEmployeeId}
+                    onChange={e => setVerifyEmployeeId(e.target.value)}
+                    style={{ width: '100%', fontSize: '0.8rem', fontWeight: 800, letterSpacing: '1px', color: '#1e40af' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.73rem', fontWeight: 700, color: '#334155', marginBottom: '3px' }}>
+                    Assigned Role &amp; Initial Status
+                  </label>
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center', height: '36px' }}>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 800, padding: '3px 8px', borderRadius: '4px', background: '#eff6ff', color: '#1d4ed8' }}>
+                      Role: EMPLOYEE
+                    </span>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 800, padding: '3px 8px', borderRadius: '4px', background: '#fef3c7', color: '#b45309' }}>
+                      Status: Pending First Login
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid #f1f5f9', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  style={{ color: '#dc2626', borderColor: '#fca5a5' }}
+                  onClick={() => {
+                    const req = selectedRequestForReview;
+                    setSelectedRequestForReview(null);
+                    setRejectionModalRequest(req);
+                  }}
+                >
+                  <X size={14} style={{ marginRight: '4px' }} />
+                  Reject Request (FC 3)
+                </button>
+
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setSelectedRequestForReview(null)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-success"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '0.5rem 1rem' }}
+                  >
+                    <Check size={15} />
+                    Approve &amp; Send One-Time Link →
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      {/* FLOWCHART 3: REJECTION REASON MODAL                                    */}
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      {rejectionModalRequest && (
+        <div className="stream-overlay" onClick={() => setRejectionModalRequest(null)}>
+          <div className="stream-modal-card" style={{ maxWidth: '480px' }} onClick={e => e.stopPropagation()}>
+            <div className="stream-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <X size={18} color="#dc2626" />
+                <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#991b1b', margin: 0 }}>
+                  Reject Access Request (Flowchart 3)
+                </h3>
+              </div>
+              <button className="calendar-nav-btn" onClick={() => setRejectionModalRequest(null)}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: '8px', padding: '0.75rem', marginBottom: '0.75rem', fontSize: '0.78rem', color: '#9f1239' }}>
+              Applicant: <strong>{rejectionModalRequest.name}</strong> ({rejectionModalRequest.email})
+            </div>
+
+            <p style={{ fontSize: '0.76rem', color: '#64748b', marginBottom: '0.75rem', lineHeight: 1.45 }}>
+              Under Flowchart 3 governance, rejections require a mandatory written rationale which will be formally dispatched to the applicant via email and logged in the immutable audit trail.
+            </p>
+
+            <form onSubmit={e => {
+              e.preventDefault();
+              if (!rejectionInputReason.trim()) {
+                alert('Please provide a mandatory written justification reason.');
+                return;
+              }
+              handleRejectRequest(rejectionModalRequest.id, rejectionModalRequest.name, rejectionInputReason.trim());
+            }} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.73rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                  Mandatory Rejection Justification *
+                </label>
+                <textarea
+                  className="form-input"
+                  required
+                  rows={3}
+                  placeholder="e.g. Verification check failed: official corporate identity could not be corroborated with department leadership."
+                  value={rejectionInputReason}
+                  onChange={e => setRejectionInputReason(e.target.value)}
+                  style={{ width: '100%', resize: 'vertical', boxSizing: 'border-box' }}
+                  autoFocus
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setRejectionModalRequest(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-secondary"
+                  style={{ background: '#dc2626', color: '#ffffff', borderColor: '#b91c1c', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <X size={14} />
+                  Confirm Rejection &amp; Dispatch Email
                 </button>
               </div>
             </form>

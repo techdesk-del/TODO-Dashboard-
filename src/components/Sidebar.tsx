@@ -15,7 +15,8 @@ import {
   LogIn,
   LogOut,
   Trash2,
-  CalendarDays
+  CalendarDays,
+  FileSpreadsheet
 } from 'lucide-react';
 import { getTodayStr, getTomorrowStr, formatDateDisplay } from '@/lib/dateUtils';
 import { isCeoUser, canAccessWorkflows, canAccessAdminHr } from '@/lib/rosterData';
@@ -34,7 +35,8 @@ export const Sidebar: React.FC = () => {
     clearAllTasks,
     currentUser,
     logoutUser,
-    setBannerNotification
+    setBannerNotification,
+    setIsExportModalOpen
   } = useApp();
 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -78,9 +80,10 @@ export const Sidebar: React.FC = () => {
         return isCreator || isAssignee;
       });
 
-  // Filter tasks for today & tomorrow
+  // Filter tasks for today & tomorrow & overdue
   const todayCount = isMounted ? userVisibleTasks.filter(t => t.scheduledDate === todayStr).length : 0;
   const tomorrowCount = isMounted ? userVisibleTasks.filter(t => t.scheduledDate === tomorrowStr).length : 0;
+  const overdueCount = isMounted ? userVisibleTasks.filter(t => t.scheduledDate < todayStr && t.status !== 'Done').length : 0;
 
   const currentYearMonthStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
   const daysWithTasks: Set<number> = isMounted
@@ -271,6 +274,30 @@ export const Sidebar: React.FC = () => {
             </div>
             <span className="filter-badge-count">{tomorrowCount}</span>
           </button>
+
+          {overdueCount > 0 && (
+            <button
+              className={`filter-shortcut-btn ${selectedDate < todayStr && activeView === 'workspace' ? 'active' : ''}`}
+              style={{
+                background: '#fff1f2',
+                borderColor: '#fecdd3',
+                color: '#e11d48'
+              }}
+              onClick={() => {
+                const pastDate = userVisibleTasks.find(t => t.scheduledDate < todayStr && t.status !== 'Done')?.scheduledDate || todayStr;
+                setSelectedDate(pastDate);
+                setActiveView('workspace');
+              }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                <span style={{ fontWeight: 800, color: '#be123c' }}>⚠️ Pending / Overdue</span>
+                <span style={{ fontSize: '0.68rem', color: '#e11d48' }}>{overdueCount} Unfinished Tasks</span>
+              </div>
+              <span className="filter-badge-count" style={{ background: '#e11d48', color: '#ffffff' }}>
+                {overdueCount}
+              </span>
+            </button>
+          )}
         </div>
 
         {/* Primary Navigation Links */}
@@ -341,6 +368,15 @@ export const Sidebar: React.FC = () => {
             </button>
           )}
 
+          <button
+            className="nav-link-item"
+            onClick={() => { setIsExportModalOpen(true); closeSidebar(); }}
+            title="Enterprise Multi-Sheet Excel Export (Flowchart 14)"
+          >
+            <FileSpreadsheet size={16} color="#16a34a" />
+            <span>Excel Export Center (FC 14)</span>
+          </button>
+
           {canViewFlows && (
             <button
               className={`nav-link-item ${activeView === 'workflow_manual' ? 'active' : ''}`}
@@ -392,6 +428,7 @@ export const Sidebar: React.FC = () => {
               </button>
             </div>
           )}
+
 
           {/* Clear All Data Button (Strictly CEO Mr. Sukh Sagar Singh Bhati Only) */}
           {isCeo && (

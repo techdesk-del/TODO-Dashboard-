@@ -14,6 +14,8 @@ import { UserModel } from '@/models/User';
 import { TaskModel } from '@/models/Task';
 import { AuditLogModel } from '@/models/AuditLog';
 import { isCeoUser } from '@/lib/rosterData';
+import { sendOffboardingSummaryEmail, sendHandoverNotificationToManagerEmail } from '@/lib/email';
+import { broadcastMemberMutation, broadcastTaskMutation } from '@/lib/events';
 import type { TaskStatus, AssigneeInfo } from '@/types';
 
 export async function POST(req: NextRequest) {
@@ -24,6 +26,11 @@ export async function POST(req: NextRequest) {
       departingMemberId,
       successorMemberId,
       reason = 'Resignation / Voluntary Transition',
+      deactivationType = 'Resignation',
+      lastWorkingDay,
+      effectiveDate,
+      leaveStartDate,
+      leaveEndDate,
       actor = 'Super Admin',
       actorRole = 'SUPER_ADMIN'
     } = body;
@@ -114,7 +121,7 @@ export async function POST(req: NextRequest) {
             designation: successorMember.designation,
             avatar: successorMember.avatar,
             status: a.status || 'In Progress',
-            remarks: `Handover from ${departingMember.name} (FC 18: ${reason})`,
+            remarks: `Handover from ${departingMember.name} (Flowchart 4: ${reason})`,
             completedAt: a.completedAt
           };
         }
@@ -129,44 +136,127 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 2. Mark departing member as DEACTIVATED in MemberModel
-    departingMember.status = 'DEACTIVATED';
-    departingMember.totalTasks = Math.max(0, (departingMember.totalTasks || 0) - reassignedCount);
-    departingMember.activeTasks = 0;
-    await departingMember.save();
+    const isLongLeave = deactivationType === 'Long leave';
+    const newStatus = isLongLeave ? 'ON_LEAVE' : 'DEACTIVATED';
+
+    // 2. Update member status in MemberModel for ALL matching records (id, email, or exact name)
+    await MemberModel.updateMany(
+      {
+        $or: [
+          { id: departingMember.id },
+          { email: departingMember.email.toLowerCase() },
+          { name: departingMember.name }
+        ]
+      },
+      {
+        $set: {
+          status: newStatus,
+          activeTasks: 0,
+          totalTasks: Math.max(0, (departingMember.totalTasks || 0) - reassignedCount),
+          updatedAt: nowIso
+        }
+      }
+    );
 
     // 3. Update successor's task count in MemberModel
     successorMember.totalTasks = (successorMember.totalTasks || 0) + reassignedCount;
     successorMember.activeTasks = (successorMember.activeTasks || 0) + reassignedCount;
+    successorMember.updatedAt = nowIso;
     await successorMember.save();
 
-    // 4. Update UserModel to suspend login
+    // 4. Update UserModel to suspend login & record dates
+    const userUpdates: any = {
+      isDeactivated: true,
+      status: newStatus,
+      deactivationType,
+      deactivatedAt: nowIso,
+    };
+    if (lastWorkingDay) userUpdates.lastWorkingDay = lastWorkingDay;
+    if (effectiveDate) userUpdates.effectiveDate = effectiveDate;
+    if (leaveStartDate) userUpdates.leaveStartDate = leaveStartDate;
+    if (leaveEndDate) userUpdates.leaveEndDate = leaveEndDate;
+
     await UserModel.updateMany(
-      { $or: [{ id: departingMember.id }, { email: departingMember.email.toLowerCase() }] },
-      { $set: { isDeactivated: true, status: 'DEACTIVATED' } }
+      { 
+        $or: [
+          { id: departingMember.id }, 
+          { email: departingMember.email.toLowerCase() },
+          { name: departingMember.name }
+        ] 
+      },
+      { $set: userUpdates }
     );
 
-    // 5. Create immutable audit log entry
+    // 5. Flowchart 4: Send final summary email to departing/on-leave employee
+    const dateSummary = isLongLeave
+      ? `Leave Duration: ${leaveStartDate || 'Immediate'} to ${leaveEndDate || 'Indefinite'}`
+      : deactivationType === 'Termination'
+        ? `Effective Termination Date: ${effectiveDate || 'Immediate'}`
+        : `Last Working Day: ${lastWorkingDay || 'Immediate'}`;
+
+    if (departingMember.email) {
+      sendOffboardingSummaryEmail({
+        employeeName: departingMember.name,
+        employeeEmail: departingMember.email,
+        deactivationType: deactivationType as any,
+        dateInfo: dateSummary,
+        reassignedCount,
+        successorName: successorMember.name,
+        reason
+      }).catch(e => console.warn('[Offboarding Email Warn]', e));
+    }
+
+    // 6. Flowchart 4: Notify reporting manager of handover
+    const mgrEmail = departingMember.managerEmail || 'rekha.pareek@urbangaon.com';
+    const mgrName = departingMember.manager || 'Dr. Rekha Pareek';
+    sendHandoverNotificationToManagerEmail({
+      managerName: mgrName,
+      managerEmail: mgrEmail,
+      departingName: departingMember.name,
+      successorName: successorMember.name,
+      reassignedCount,
+      reason,
+      deactivationType: deactivationType as any
+    }).catch(e => console.warn('[Manager Handover Email Warn]', e));
+
+    // 7. Flowchart 4: Preserve all history & create immutable audit log entry
     await AuditLogModel.create({
       id: `audit-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       timestamp: nowIso,
       action: 'CONFIG_CHANGED',
-      fieldChanged: 'Account Status & Deliverable Reallocation',
+      fieldChanged: 'Account Status & Deliverable Handover (Flowchart 4)',
       oldValue: `${departingMember.name} [ACTIVE] (${reassignedCount} tasks)`,
-      newValue: `${departingMember.name} [DEACTIVATED] → All ${reassignedCount} tasks reassigned to ${successorMember.name}`,
+      newValue: `${departingMember.name} [${newStatus}] → All ${reassignedCount} tasks reassigned to ${successorMember.name}`,
       actor,
       actorRole: actorRole as any,
       ipAddress: '127.0.0.1 (Internal Governance)',
       deviceInfo: 'UrbanGaon Executive Command Center',
-      notes: `Flowchart 18 Offboarding Protocol: ${reason}`
+      notes: `Flowchart 4 Offboarding Protocol: Type=${deactivationType}. Dates: ${dateSummary}. Notes: ${reason}`
     });
+
+    // Broadcast real-time events to all clients worldwide (<50ms)
+    broadcastMemberMutation({
+      action: 'DEACTIVATED',
+      memberId: departingMember.id,
+      memberName: departingMember.name,
+      memberEmail: departingMember.email,
+      status: newStatus,
+    });
+
+    if (reassignedCount > 0) {
+      broadcastTaskMutation({
+        action: 'UPDATED',
+        taskId: 'handover-tasks',
+        taskTitle: `${reassignedCount} tasks reassigned to ${successorMember.name}`,
+      });
+    }
 
     return NextResponse.json({
       success: true,
       reassignedCount,
       departingMember: departingMember.toObject ? departingMember.toObject() : departingMember,
       successorMember: successorMember.toObject ? successorMember.toObject() : successorMember,
-      message: `Account for ${departingMember.name} successfully deactivated. ${reassignedCount} active deliverable(s) handed over to ${successorMember.name}.`
+      message: `Account for ${departingMember.name} updated to ${newStatus}. ${reassignedCount} active deliverable(s) handed over to ${successorMember.name}. Notifications dispatched to employee and manager.`
     });
 
   } catch (error: unknown) {

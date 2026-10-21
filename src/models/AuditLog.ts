@@ -17,7 +17,7 @@ const AuditLogSchema = new Schema<AuditLogEntry>(
     action:       {
       type: String,
       required: true,
-      enum: ['CREATED', 'UPDATED', 'REOPENED', 'CANCELLED', 'ESCALATED', 'CARRIED_FORWARD', 'EXPORTED', 'LOGIN', 'CONFIG_CHANGED', 'DELETED']
+      enum: ['CREATED', 'UPDATED', 'REOPENED', 'CANCELLED', 'ESCALATED', 'CARRIED_FORWARD', 'EXPORTED', 'LOGIN', 'CONFIG_CHANGED', 'DELETED', 'APPROVAL', 'REJECTED', 'STATUS_CHANGE', 'REASSIGNED']
     },
     fieldChanged: { type: String },
     oldValue:     { type: String },

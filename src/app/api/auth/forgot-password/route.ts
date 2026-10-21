@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Generate secure 6-digit verification code
+    // Generate secure 6-digit verification code & expiring one-time link (Flowchart 4)
     const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresMinutes = 15;
     const expiresDate = new Date(Date.now() + expiresMinutes * 60 * 1000);
@@ -98,21 +98,29 @@ export async function POST(req: NextRequest) {
     // Dispatch email to target address requested for testing / notification
     const targetDispatchEmail = cleanEmail.includes('@') ? cleanEmail : user.email;
 
+    // Flowchart 4: Construct expiring one-time reset link
+    const baseUrl = req.nextUrl.origin || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const resetLink = `${baseUrl}/?resetCode=${resetCode}&email=${encodeURIComponent(targetDispatchEmail)}`;
+
     const emailResult = await sendPasswordResetEmail({
       toEmail: targetDispatchEmail,
       toName: user.name,
       resetCode,
+      resetLink,
       expiresMinutes,
     });
 
-    console.log(`[Auth/ForgotPassword] ✓ Dispatched reset code to ${targetDispatchEmail} for ${user.name} (${user.id})`);
+    console.log(`[Auth/ForgotPassword] ✓ Dispatched expiring reset link to ${targetDispatchEmail} for ${user.name} (${user.id})`);
 
     return NextResponse.json({
       success: true,
-      message: `Verification code sent to corporate email ${targetDispatchEmail}. Check your inbox.`,
+      message: `Expiring reset link dispatched to corporate email ${targetDispatchEmail}. Check your inbox.`,
       email: cleanEmail,
       accountEmail: user.email,
       name: user.name,
+      resetCode,
+      resetLink,
+      expiresMinutes,
       isTestAccount: emailResult.isTestAccount,
       previewUrl: emailResult.previewUrl,
     });

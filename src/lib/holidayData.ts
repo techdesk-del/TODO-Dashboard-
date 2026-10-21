@@ -1,7 +1,7 @@
 /**
  * lib/holidayData.ts — UrbanGaon Official Company Holidays (FY 2026-27)
  *
- * Prepared By: Varun Mudgal (Manager - Talent)
+ * Prepared By: People Operations & Talent HR
  * Approved By: Mr. Sukh Sagar Singh (Founder / CEO)
  *
  * Enforces Flowchart 23 & Flowchart 13:
@@ -97,7 +97,7 @@ export const OFFICIAL_HOLIDAYS_2026_27: CompanyHoliday[] = [
 export const HOLIDAY_METADATA = {
   financialYear: '2026-27',
   totalHolidays: 8,
-  preparedBy: 'Varun Mudgal (Manager - Talent)',
+  preparedBy: 'People Operations & Talent HR',
   approvedBy: 'Mr. Sukh Sagar Singh (Founder / CEO)',
   policySummary: 'All automated morning reminder emails, task notifications, and SLA escalations are strictly paused on all gazetted company holidays and weekly off Sundays.'
 };

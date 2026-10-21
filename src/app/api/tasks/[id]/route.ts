@@ -10,6 +10,8 @@ import { TaskModel } from '@/models/Task';
 import { AuditLogModel } from '@/models/AuditLog';
 import { broadcastTaskMutation, markTaskDeleted } from '@/lib/events';
 
+import { computeMultiAssigneeStatus } from '@/lib/multiAssignee';
+
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
@@ -29,6 +31,43 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     // Never allow overriding the task's id through a PATCH
     delete body.id;
 
+    const existingTask = await TaskModel.findOne({ id }).lean();
+    if (!existingTask) {
+      return NextResponse.json({ success: false, error: `Task '${id}' not found` }, { status: 404 });
+    }
+
+    // Flowchart 8: Multi-Assignee Overall Status & Progress calculation
+    const hasAssignees = (body.assignees && Array.isArray(body.assignees)) || (existingTask.assignees && existingTask.assignees.length > 0);
+    if (hasAssignees && !body.status) {
+      const mergedForCompute = {
+        ...existingTask,
+        ...body,
+      };
+      const comp = computeMultiAssigneeStatus(mergedForCompute);
+      body.status = comp.status;
+      body.progressPercent = comp.progressPercent;
+    }
+
+    // Extract metadata for audit logging and sanitize body for TaskModel
+    const actorInput = body.actor;
+    const actorRoleInput = body.actorRole;
+    const auditActionInput = body.auditAction;
+    const auditNotesInput = body.auditNotes;
+    delete body.actor;
+    delete body.actorRole;
+    delete body.auditAction;
+    delete body.auditNotes;
+
+    // Flowchart A: If modified by Admin/Super Admin, mark editedByAdmin = true
+    const actorRole = (typeof actorInput === 'object' && actorInput?.role)
+      || req.headers.get('x-user-role')
+      || actorRoleInput
+      || 'EMPLOYEE';
+
+    if (actorRole === 'ADMIN' || actorRole === 'SUPER_ADMIN' || body.editedByAdmin) {
+      body.editedByAdmin = true;
+    }
+
     const updated = await TaskModel.findOneAndUpdate(
       { id },
       { $set: { ...body, updatedAt: new Date().toISOString() } },
@@ -39,8 +78,38 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
       return NextResponse.json({ success: false, error: `Task '${id}' not found` }, { status: 404 });
     }
 
+    // Flowchart 8 Step 13: "Audit log records each change"
+    const actorName = typeof actorInput === 'string'
+      ? actorInput
+      : (typeof actorInput === 'object' && actorInput?.name)
+      ? actorInput.name
+      : req.headers.get('x-user-name') || 'Team Member';
+
+    const auditAction = auditActionInput || (body.status && body.status !== existingTask.status ? 'STATUS_CHANGE' : 'UPDATED');
+
+    await AuditLogModel.create({
+      id: `audit-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      timestamp: new Date().toISOString(),
+      taskId: id,
+      taskTitle: (updated as { title?: string }).title || id,
+      action: auditAction,
+      fieldChanged: Object.keys(body).join(', '),
+      oldValue: `Status: ${existingTask.status}`,
+      newValue: `Status: ${updated.status}`,
+      actor: actorName,
+      actorRole: actorRole,
+      ipAddress: req.headers.get('x-forwarded-for') || '127.0.0.1',
+      deviceInfo: req.headers.get('user-agent') || 'Task Operations Engine',
+      notes: auditNotesInput || `Updated deliverable under Flowchart 8 Multi-Assignee lifecycle. Status: ${updated.status}`,
+    }).catch(err => console.debug('[API/tasks/[id] AuditLog]', err));
+
     // Broadcast instant real-time update to all connected devices worldwide
-    broadcastTaskMutation({ action: 'UPDATED', taskId: id, taskTitle: (updated as { title?: string }).title || id });
+    broadcastTaskMutation({
+      action: 'UPDATED',
+      taskId: id,
+      taskTitle: (updated as { title?: string }).title || id,
+      task: updated,
+    });
 
     return NextResponse.json({ success: true, data: updated });
   } catch (err: unknown) {

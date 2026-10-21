@@ -24,22 +24,65 @@ export const AuditTrailModal: React.FC = () => {
     auditLogs, 
     viewingAuditForTaskId, 
     setViewingAuditForTaskId, 
-    currentUser 
+    currentUser,
+    members,
+    tasks,
+    logAudit,
+    setBannerNotification
   } = useApp();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterAction, setFilterAction] = useState<string>('ALL');
+  const [filterStartDate, setFilterStartDate] = useState<string>('');
+  const [filterEndDate, setFilterEndDate] = useState<string>('');
+  const [filterUser, setFilterUser] = useState<string>('ALL');
+  const [filterTaskId, setFilterTaskId] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<'all_logs' | 'task_history'>('all_logs');
   const [pageSize, setPageSize] = useState<number>(25);
   const [currentPage, setCurrentPage] = useState<number>(1);
 
-  // Filter logs based on search term and selected action
+  // Active target Task ID for single task history forensics
+  const currentTaskTargetId = viewingAuditForTaskId || (filterTaskId.trim() || null);
+
+  // Flowchart C: Filter audit_logs records from append-only store by:
+  // 1. Date range (start and end date)
+  // 2. User (actor)
+  // 3. Task ID
+  // 4. Action type (created, edited, reopened, deleted, login, export, config)
   const filteredLogs = auditLogs.filter(log => {
-    if (viewingAuditForTaskId && log.taskId !== viewingAuditForTaskId) {
+    // Task ID filter
+    if (currentTaskTargetId && log.taskId !== currentTaskTargetId) {
       return false;
     }
-    if (filterAction !== 'ALL' && log.action !== filterAction) {
+
+    // Action type filter (normalized to flowchart taxonomy)
+    if (filterAction !== 'ALL') {
+      if (filterAction === 'EDITED') {
+        if (log.action !== 'UPDATED') return false;
+      } else if (filterAction === 'CONFIG') {
+        if (log.action !== 'CONFIG_CHANGED') return false;
+      } else if (filterAction === 'EXPORT') {
+        if (log.action !== 'EXPORTED') return false;
+      } else if (log.action !== filterAction) {
+        return false;
+      }
+    }
+
+    // User filter
+    if (filterUser !== 'ALL') {
+      if (log.actor.toLowerCase() !== filterUser.toLowerCase()) return false;
+    }
+
+    // Date range filter
+    const logDate = (log.timestamp || '').split('T')[0];
+    if (filterStartDate && logDate < filterStartDate) {
       return false;
     }
+    if (filterEndDate && logDate > filterEndDate) {
+      return false;
+    }
+
+    // Free text search
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase();
       return (
@@ -60,7 +103,7 @@ export const AuditTrailModal: React.FC = () => {
   // Reset to page 1 whenever filters, search, task scope or page size changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterAction, viewingAuditForTaskId, pageSize]);
+  }, [searchTerm, filterAction, filterStartDate, filterEndDate, filterUser, filterTaskId, viewingAuditForTaskId, pageSize]);
 
   // Pagination metrics
   const totalRecords = filteredLogs.length;
@@ -187,6 +230,21 @@ export const AuditTrailModal: React.FC = () => {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+
+    // Flowchart C: Download as Excel or CSV and log the export itself!
+    logAudit({
+      action: 'EXPORTED',
+      fieldChanged: 'Audit Logs Forensic CSV Export',
+      newValue: `${filteredLogs.length} audit records exported to CSV`,
+      notes: `Super Admin exported immutable compliance audit trail to CSV (${filteredLogs.length} records, Flowchart C).`
+    });
+
+    if (setBannerNotification) {
+      setBannerNotification({
+        message: `Exported ${filteredLogs.length} audit records to CSV and logged export event in immutable ledger.`,
+        badge: '✓ Audit Event Logged'
+      });
+    }
   };
 
   // Export Executive Multi-Sheet Excel Workbook (Flowchart 14)
@@ -252,6 +310,21 @@ export const AuditTrailModal: React.FC = () => {
     XLSX.utils.book_append_sheet(wb, ws2, 'Compliance Attestation');
 
     XLSX.writeFile(wb, `UrbanGaon_Compliance_Audit_Workbook_${new Date().toISOString().split('T')[0]}_Flowchart12.xlsx`);
+
+    // Flowchart C: Download as Excel or CSV and log the export itself!
+    logAudit({
+      action: 'EXPORTED',
+      fieldChanged: 'Audit Logs Forensic Excel Workbook Export',
+      newValue: `${filteredLogs.length} audit records exported to XLSX`,
+      notes: `Super Admin exported multi-sheet compliance workbook (${filteredLogs.length} entries, Flowchart C).`
+    });
+
+    if (setBannerNotification) {
+      setBannerNotification({
+        message: `Exported ${filteredLogs.length} audit records to Excel and logged export event in immutable ledger.`,
+        badge: '✓ Audit Event Logged'
+      });
+    }
   };
 
   const isModalMode = Boolean(viewingAuditForTaskId);
@@ -360,163 +433,429 @@ export const AuditTrailModal: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter & Metric Bar */}
+      {/* Flowchart C: Dedicated Filter Bar & Forensics Controls */}
       <div style={{
         background: '#ffffff',
         border: '1px solid #e2e8f0',
         borderRadius: '8px',
-        padding: '0.75rem 1rem',
+        padding: '0.85rem 1rem',
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
+        flexDirection: 'column',
         gap: '0.75rem'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: '260px' }}>
-          <Search size={16} color="#94a3b8" />
-          <input
-            type="text"
-            className="composer-input"
-            style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem', width: '100%' }}
-            placeholder="Search by actor, deliverable, action, field, old/new value, IP, notes..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-          />
-        </div>
+        {/* Top Filter Controls: Date Range, User, Task ID, Action Type */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.6rem', alignItems: 'flex-end' }}>
+          {/* 1. Date Range: Start Date & End Date */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 800, color: '#475569', marginBottom: '3px' }}>
+              📅 START DATE:
+            </label>
+            <input
+              type="date"
+              className="form-input"
+              style={{ padding: '0.3rem 0.5rem', fontSize: '0.75rem', width: '100%' }}
+              value={filterStartDate}
+              onChange={e => setFilterStartDate(e.target.value)}
+            />
+          </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569' }}>ACTION FILTER:</span>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 800, color: '#475569', marginBottom: '3px' }}>
+              📅 END DATE:
+            </label>
+            <input
+              type="date"
+              className="form-input"
+              style={{ padding: '0.3rem 0.5rem', fontSize: '0.75rem', width: '100%' }}
+              value={filterEndDate}
+              onChange={e => setFilterEndDate(e.target.value)}
+            />
+          </div>
+
+          {/* 2. User Selector */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 800, color: '#475569', marginBottom: '3px' }}>
+              👤 OPERATOR / USER:
+            </label>
             <select
               className="form-select"
-              style={{ padding: '0.35rem 0.65rem', fontSize: '0.78rem' }}
+              style={{ padding: '0.3rem 0.5rem', fontSize: '0.75rem', width: '100%' }}
+              value={filterUser}
+              onChange={e => setFilterUser(e.target.value)}
+            >
+              <option value="ALL">All Users / Automated ({members.length} staff)</option>
+              {members.map(m => (
+                <option key={m.id} value={m.name}>
+                  {m.name} ({m.role})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* 3. Task ID */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 800, color: '#475569', marginBottom: '3px' }}>
+              🎯 TASK ID:
+            </label>
+            <input
+              type="text"
+              className="form-input"
+              placeholder="e.g. task-123 or leave blank"
+              style={{ padding: '0.3rem 0.5rem', fontSize: '0.75rem', width: '100%' }}
+              value={filterTaskId}
+              onChange={e => setFilterTaskId(e.target.value)}
+            />
+          </div>
+
+          {/* 4. Action Type */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 800, color: '#475569', marginBottom: '3px' }}>
+              ⚡ ACTION TYPE (FC C):
+            </label>
+            <select
+              className="form-select"
+              style={{ padding: '0.3rem 0.5rem', fontSize: '0.75rem', width: '100%' }}
               value={filterAction}
               onChange={e => setFilterAction(e.target.value)}
             >
               <option value="ALL">All Actions ({auditLogs.length})</option>
               <option value="CREATED">Created</option>
-              <option value="UPDATED">Updated</option>
-              <option value="DELETED">Deleted</option>
+              <option value="EDITED">Edited (Updated)</option>
               <option value="REOPENED">Reopened</option>
+              <option value="DELETED">Deleted</option>
+              <option value="LOGIN">Login</option>
+              <option value="EXPORT">Export</option>
+              <option value="CONFIG">Config (Config Changed)</option>
               <option value="ESCALATED">Escalated</option>
               <option value="CANCELLED">Cancelled</option>
-              <option value="CARRIED_FORWARD">Carried Forward</option>
-              <option value="CONFIG_CHANGED">Config Changed</option>
-              <option value="EXPORTED">Exported</option>
-              <option value="LOGIN">Auth / Login</option>
             </select>
           </div>
+        </div>
 
-          <span style={{
-            fontSize: '0.72rem',
-            background: '#f1f5f9',
-            color: '#334155',
-            padding: '0.3rem 0.6rem',
-            borderRadius: '6px',
-            fontWeight: 700
-          }}>
-            {totalRecords > 0 ? `Showing ${startIndex + 1}–${endIndex} of ${totalRecords} Entries (Page ${activePage} of ${totalPages})` : '0 Verified Entries'}
-          </span>
+        {/* Bottom Search & Tab Controls */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.6rem', paddingTop: '0.4rem', borderTop: '1px solid #f1f5f9' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: '240px' }}>
+            <Search size={15} color="#94a3b8" />
+            <input
+              type="text"
+              className="composer-input"
+              style={{ padding: '0.35rem 0.65rem', fontSize: '0.78rem', width: '100%' }}
+              placeholder="Search keyword across actor, field, delta, IP, or notes..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {/* View Mode Toggle */}
+            <div style={{ display: 'flex', background: '#f1f5f9', padding: '2px', borderRadius: '6px' }}>
+              <button
+                type="button"
+                style={{
+                  padding: '3px 8px',
+                  fontSize: '0.72rem',
+                  fontWeight: activeTab === 'all_logs' ? 700 : 500,
+                  borderRadius: '4px',
+                  border: 'none',
+                  background: activeTab === 'all_logs' ? '#ffffff' : 'transparent',
+                  color: activeTab === 'all_logs' ? '#0f172a' : '#64748b',
+                  cursor: 'pointer',
+                  boxShadow: activeTab === 'all_logs' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                }}
+                onClick={() => setActiveTab('all_logs')}
+              >
+                All Entries ({filteredLogs.length})
+              </button>
+              <button
+                type="button"
+                style={{
+                  padding: '3px 8px',
+                  fontSize: '0.72rem',
+                  fontWeight: activeTab === 'task_history' ? 700 : 500,
+                  borderRadius: '4px',
+                  border: 'none',
+                  background: activeTab === 'task_history' ? '#ffffff' : 'transparent',
+                  color: activeTab === 'task_history' ? '#2563eb' : '#64748b',
+                  cursor: 'pointer',
+                  boxShadow: activeTab === 'task_history' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                }}
+                onClick={() => {
+                  setActiveTab('task_history');
+                  if (!currentTaskTargetId && tasks[0]) {
+                    setFilterTaskId(tasks[0].id);
+                  }
+                }}
+              >
+                Task History Drilldown (FC C)
+              </button>
+            </div>
+
+            <span style={{
+              fontSize: '0.72rem',
+              background: '#f8fafc',
+              color: '#334155',
+              border: '1px solid #cbd5e1',
+              padding: '0.25rem 0.55rem',
+              borderRadius: '6px',
+              fontWeight: 700
+            }}>
+              {totalRecords > 0 ? `${startIndex + 1}–${endIndex} of ${totalRecords}` : '0 Entries'}
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Audit Logs Table */}
-      <div className="enterprise-table-wrapper" style={{ maxHeight: isModalMode ? '450px' : '650px', overflowY: 'auto' }}>
-        <table className="enterprise-table">
-          <thead>
-            <tr>
-              <th style={{ width: '40px' }}>#</th>
-              <th>Timestamp & Actor</th>
-              <th>Action</th>
-              <th>Task / Target</th>
-              <th>Field Changed</th>
-              <th>Audit Delta (Old → New)</th>
-              <th>IP & Device</th>
-            </tr>
-          </thead>
-          <tbody>
-            {currentRecords.map((log, idx) => {
-              const badgeStyle = getActionBadgeStyle(log.action);
-              const globalIdx = startIndex + idx + 1;
-              const checksum = computeAuditHash(log, globalIdx);
+      {/* Flowchart C: Task History Tab vs Full Append-Only Store Table */}
+      {activeTab === 'task_history' ? (
+        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {/* Target Task Selector Banner */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', background: '#eff6ff', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
+            <div>
+              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#1e3a8a' }}>
+                🔍 Single Task Forensic Lifecycle (Flowchart C)
+              </div>
+              <div style={{ fontSize: '0.72rem', color: '#3b82f6' }}>
+                Chronological timeline of all status transitions, reassignments, reopens &amp; field mutations
+              </div>
+            </div>
 
-              return (
-                <tr key={log.id}>
-                  <td style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>
-                    {globalIdx}
-                  </td>
-                  <td>
-                    <div style={{ fontWeight: 700, fontSize: '0.78rem' }}>{log.actor}</div>
-                    <div style={{ fontSize: '0.7rem', color: '#2563eb', fontWeight: 600 }}>{log.actorRole}</div>
-                    <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '2px' }}>
-                      {new Date(log.timestamp).toLocaleString('en-GB')}
-                    </div>
-                    <div style={{ fontSize: '0.62rem', color: '#94a3b8', fontFamily: 'monospace', marginTop: '1px' }}>
-                      {checksum}
-                    </div>
-                  </td>
-                  <td>
-                    <span style={{
-                      background: badgeStyle.bg,
-                      color: badgeStyle.text,
-                      border: `1px solid ${badgeStyle.border}`,
-                      fontSize: '0.68rem',
-                      fontWeight: 800,
-                      padding: '0.2rem 0.5rem',
-                      borderRadius: '4px',
-                      display: 'inline-block'
-                    }}>
-                      {log.action}
-                    </span>
-                  </td>
-                  <td>
-                    <div style={{ fontWeight: 700, fontSize: '0.8rem', color: '#0f172a' }}>
-                      {log.taskTitle || log.taskId || 'System Global Policy'}
-                    </div>
-                    {log.taskId && (
-                      <span style={{ fontSize: '0.68rem', color: '#64748b', fontFamily: 'monospace' }}>
-                        ID: {log.taskId}
-                      </span>
-                    )}
-                    {log.notes && (
-                      <div style={{ fontSize: '0.7rem', color: '#475569', fontStyle: 'italic', marginTop: '3px' }}>
-                        {log.notes}
-                      </div>
-                    )}
-                  </td>
-                  <td>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#334155' }}>
-                      {log.fieldChanged || 'General State'}
-                    </span>
-                  </td>
-                  <td>
-                    <div style={{ fontSize: '0.72rem', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                      {log.oldValue && log.oldValue !== 'None' && (
-                        <span style={{ color: '#dc2626', textDecoration: 'line-through' }}>
-                          - {log.oldValue}
-                        </span>
-                      )}
-                      <span style={{ color: '#15803d', fontWeight: 600 }}>
-                        + {log.newValue || 'N/A'}
-                      </span>
-                    </div>
-                  </td>
-                  <td>
-                    <div style={{ fontSize: '0.7rem', color: '#475569', fontWeight: 500 }}>{log.ipAddress}</div>
-                    <div style={{ fontSize: '0.65rem', color: '#94a3b8' }}>{log.deviceInfo}</div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-
-        {filteredLogs.length === 0 && (
-          <div style={{ padding: '2.5rem', textAlign: 'center', color: '#94a3b8' }}>
-            No audit records found matching criteria.
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#1e40af' }}>Select Deliverable:</span>
+              <select
+                className="form-select"
+                style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', maxWidth: '300px' }}
+                value={currentTaskTargetId || ''}
+                onChange={e => {
+                  setFilterTaskId(e.target.value);
+                  if (viewingAuditForTaskId) setViewingAuditForTaskId(e.target.value || null);
+                }}
+              >
+                <option value="">-- Choose a Deliverable --</option>
+                {tasks.map(t => (
+                  <option key={t.id} value={t.id}>
+                    #{t.id} — {t.title.slice(0, 35)} ({t.status})
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-        )}
-      </div>
+
+          {/* Timeline of audit records for the selected task */}
+          {(() => {
+            const taskLogs = auditLogs.filter(l => l.taskId === currentTaskTargetId).slice().sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+            const currentTask = tasks.find(t => t.id === currentTaskTargetId);
+
+            if (!currentTaskTargetId) {
+              return (
+                <div style={{ padding: '2.5rem', textAlign: 'center', color: '#64748b' }}>
+                  Please select a deliverable from the dropdown above to view its forensic history.
+                </div>
+              );
+            }
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {currentTask && (
+                  <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <div>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#2563eb' }}>TARGET DELIVERABLE #{currentTask.id}</span>
+                      <h4 style={{ margin: '2px 0 0', fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>{currentTask.title}</h4>
+                      <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                        Dept: {currentTask.department} • Scheduled: {currentTask.scheduledDate} {currentTask.time} • Priority: {currentTask.priority}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#0f172a' }}>Status: {currentTask.status}</div>
+                      <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Assignees: {currentTask.assignees.map(a => a.name).join(', ')}</div>
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ position: 'relative', paddingLeft: '24px', borderLeft: '2px solid #e2e8f0', marginLeft: '12px' }}>
+                  {taskLogs.map((log) => {
+                    const badge = getActionBadgeStyle(log.action);
+                    return (
+                      <div key={log.id} style={{ position: 'relative', marginBottom: '1.25rem' }}>
+                        <div style={{
+                          position: 'absolute',
+                          left: '-31px',
+                          top: '2px',
+                          width: '12px',
+                          height: '12px',
+                          borderRadius: '50%',
+                          background: badge.bg,
+                          border: `2px solid ${badge.text}`
+                        }} />
+
+                        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '0.65rem 0.85rem', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px', flexWrap: 'wrap', gap: '0.4rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <span style={{
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                fontSize: '0.68rem',
+                                fontWeight: 800,
+                                background: badge.bg,
+                                color: badge.text,
+                                border: `1px solid ${badge.border}`
+                              }}>
+                                {log.action}
+                              </span>
+                              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f172a' }}>
+                                {log.fieldChanged || 'Operational Update'}
+                              </span>
+                            </div>
+
+                            <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                              {new Date(log.timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} (IST)
+                            </span>
+                          </div>
+
+                          <div style={{ fontSize: '0.74rem', color: '#334155', marginBottom: '4px' }}>
+                            <strong>Delta:</strong> {log.oldValue && log.oldValue !== 'None' ? <span style={{ color: '#dc2626' }}>{log.oldValue}</span> : 'Initial'} ➔ <span style={{ color: '#16a34a', fontWeight: 700 }}>{log.newValue}</span>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.68rem', color: '#64748b', borderTop: '1px dashed #f1f5f9', paddingTop: '4px', marginTop: '4px' }}>
+                            <span>Actor: <strong>{log.actor}</strong> ({log.actorRole})</span>
+                            <span>IP: {log.ipAddress} • {log.deviceInfo}</span>
+                          </div>
+                          {log.notes && (
+                            <div style={{ fontSize: '0.68rem', color: '#475569', fontStyle: 'italic', marginTop: '2px' }}>
+                              Note: {log.notes}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {taskLogs.length === 0 && (
+                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                      No separate audit log entries found for this deliverable.
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      ) : (
+        /* Audit Logs Table */
+        <div className="enterprise-table-wrapper" style={{ maxHeight: isModalMode ? '450px' : '650px', overflowY: 'auto' }}>
+          <table className="enterprise-table">
+            <thead>
+              <tr>
+                <th style={{ width: '40px' }}>#</th>
+                <th>Timestamp &amp; Actor</th>
+                <th>Action</th>
+                <th>Task / Target</th>
+                <th>Field Changed</th>
+                <th>Audit Delta (Old → New)</th>
+                <th>IP &amp; Device</th>
+              </tr>
+            </thead>
+            <tbody>
+              {currentRecords.map((log, idx) => {
+                const badgeStyle = getActionBadgeStyle(log.action);
+                const globalIdx = startIndex + idx + 1;
+                const checksum = computeAuditHash(log, globalIdx);
+
+                return (
+                  <tr key={log.id}>
+                    <td style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>
+                      {globalIdx}
+                    </td>
+                    <td>
+                      <div style={{ fontWeight: 700, fontSize: '0.78rem' }}>{log.actor}</div>
+                      <div style={{ fontSize: '0.7rem', color: '#2563eb', fontWeight: 600 }}>{log.actorRole}</div>
+                      <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '2px' }}>
+                        {new Date(log.timestamp).toLocaleString('en-GB')}
+                      </div>
+                      <div style={{ fontSize: '0.62rem', color: '#94a3b8', fontFamily: 'monospace', marginTop: '1px' }}>
+                        {checksum}
+                      </div>
+                    </td>
+                    <td>
+                      <span style={{
+                        background: badgeStyle.bg,
+                        color: badgeStyle.text,
+                        border: `1px solid ${badgeStyle.border}`,
+                        fontSize: '0.68rem',
+                        fontWeight: 800,
+                        padding: '0.2rem 0.5rem',
+                        borderRadius: '4px',
+                        display: 'inline-block'
+                      }}>
+                        {log.action}
+                      </span>
+                    </td>
+                    <td>
+                      <div style={{ fontWeight: 700, fontSize: '0.8rem', color: '#0f172a' }}>
+                        {log.taskTitle || log.taskId || 'System Global Policy'}
+                      </div>
+                      {log.taskId && (
+                        <button
+                          type="button"
+                          style={{
+                            background: '#eff6ff',
+                            border: '1px solid #bfdbfe',
+                            color: '#1d4ed8',
+                            borderRadius: '4px',
+                            padding: '1px 6px',
+                            fontSize: '0.68rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            marginTop: '2px'
+                          }}
+                          onClick={() => {
+                            setFilterTaskId(log.taskId || '');
+                            setActiveTab('task_history');
+                          }}
+                          title="Open Task History tab for this task (Flowchart C)"
+                        >
+                          View Task History #{log.taskId} ↗
+                        </button>
+                      )}
+                      {log.notes && (
+                        <div style={{ fontSize: '0.7rem', color: '#475569', fontStyle: 'italic', marginTop: '3px' }}>
+                          {log.notes}
+                        </div>
+                      )}
+                    </td>
+                    <td>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#334155' }}>
+                        {log.fieldChanged || 'General State'}
+                      </span>
+                    </td>
+                    <td>
+                      <div style={{ fontSize: '0.72rem', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        {log.oldValue && log.oldValue !== 'None' && (
+                          <span style={{ color: '#dc2626', textDecoration: 'line-through' }}>
+                            - {log.oldValue}
+                          </span>
+                        )}
+                        <span style={{ color: '#15803d', fontWeight: 600 }}>
+                          + {log.newValue || 'N/A'}
+                        </span>
+                      </div>
+                    </td>
+                    <td>
+                      <div style={{ fontSize: '0.7rem', color: '#475569', fontWeight: 500 }}>{log.ipAddress}</div>
+                      <div style={{ fontSize: '0.65rem', color: '#94a3b8' }}>{log.deviceInfo}</div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+
+          {filteredLogs.length === 0 && (
+            <div style={{ padding: '2.5rem', textAlign: 'center', color: '#94a3b8' }}>
+              No audit records found matching criteria.
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Enterprise Pagination Bar */}
       <div style={{

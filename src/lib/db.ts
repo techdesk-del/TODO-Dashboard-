@@ -44,7 +44,8 @@ export async function connectDB(): Promise<Connection> {
   if (!cache.promise) {
     const opts: mongoose.ConnectOptions = {
       bufferCommands: false,
-      maxPoolSize: 10,           // Max concurrent connections
+      maxPoolSize: 50,           // Optimized for 100+ concurrent employees
+      minPoolSize: 5,            // Pre-warmed connections for zero cold-latency
       serverSelectionTimeoutMS: 8000,
       socketTimeoutMS: 45000,
     };

@@ -37,8 +37,8 @@ export const OFFICIAL_ROSTER: OfficialEmployeeConfig[] = [
   {
     id: 'mem-12',
     name: 'Aakash Das',
-    email: 'aakash.das@urbangaon.com',
-    aliases: ['aakash@urbangaon.com', 'it@urbangaon.com', 'akash.das@urbangaon.com'],
+    email: 'techdesk@urbangaon.com',
+    aliases: ['aakash.das@urbangaon.com', 'aakash@urbangaon.com', 'it@urbangaon.com', 'akash.das@urbangaon.com'],
     role: 'SUPER_ADMIN',
     department: 'AI & IT Operations',
     designation: 'AI & IT Officer / Super Admin',
