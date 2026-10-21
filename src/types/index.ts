@@ -46,6 +46,11 @@ export interface Task {
   location?: string;
   progressPercent?: number; // e.g. 85 for Alex Rivera's DB migration
   isJustAdded?: boolean;
+  isOverdue?: boolean;
+  isPendingNoReason?: boolean;
+  overdueFlaggedAt?: string;
+  overdueNotifiedAt?: string;
+  overdueDays?: number;
   pastDueReason?: string;
   delayReason?: string;
   delayReasonSubmittedAt?: string;
@@ -92,6 +97,43 @@ export interface AuditLogEntry {
   notes?: string;
 }
 
+export type NotificationEventType =
+  | 'TASK_ASSIGNED'
+  | 'TASK_ESCALATED'
+  | 'TASK_REOPENED'
+  | 'REASON_STATUS_CHANGED'
+  | 'DAILY_REMINDER'
+  | 'WEEKLY_DIGEST'
+  | 'CHRONIC_DELAY'
+  | 'CONFIG_ROLLBACK';
+
+export interface InAppNotification {
+  id: string;
+  recipientEmail: string;
+  recipientName?: string;
+  title: string;
+  message: string;
+  type: NotificationEventType;
+  taskId?: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface EmailLog {
+  id: string;
+  recipientEmail: string;
+  recipientName: string;
+  eventType: NotificationEventType;
+  subject: string;
+  status: 'DELIVERED' | 'FAILED' | 'PENDING';
+  attempts: number;
+  lastError?: string;
+  taskId?: string;
+  addedToAdminSummary?: boolean;
+  deliveredAt?: string;
+  createdAt: string;
+}
+
 export interface TeamMember {
   id: string;
   employeeId?: string;
@@ -111,6 +153,10 @@ export interface TeamMember {
   activeTasks: number;
   overdueTasks: number;
   velocity: number;
+  leaveStartDate?: string;
+  leaveEndDate?: string;
+  leaveAction?: 'AUTO_EXTEND' | 'FLAG_ADMIN';
+  leaveNotes?: string;
   updatedAt?: string;
 }
 
@@ -130,6 +176,7 @@ export interface SystemConfig {
   auditRetentionDays?: number; // 730
   versionBaseline: string; // 'v2.4.0'
   previousVersionBaseline?: string;
+  previousConfigSnapshot?: Partial<SystemConfig>; // Flowchart 24: Previous version snapshot kept for rollback
   requireDualSuperAdminApproval?: boolean;
   pendingApproval?: {
     id: string;

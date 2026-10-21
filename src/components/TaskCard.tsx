@@ -23,7 +23,8 @@ import {
   UserPlus,
   UserX,
   CheckCircle2,
-  FileText
+  FileText,
+  Ban
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -45,6 +46,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
     seniorResolveTask,
     seniorReturnTask, 
     reopenTask,
+    cancelTask,
+    reassignTask,
     deleteTask,
     members,
     currentUser,
@@ -58,6 +61,18 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const activeMembers = members.filter(m => m.status !== 'DEACTIVATED');
+
+  // Flowchart 22: Task Cancellation & Reassignment Flow
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReasonInput, setCancelReasonInput] = useState('');
+  const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
+
+  const [showReassignModal, setShowReassignModal] = useState(false);
+  const [reassignMode, setReassignMode] = useState<'REPLACE_ALL' | 'ADD_ALONGSIDE' | 'REMOVE_SPECIFIC'>('REPLACE_ALL');
+  const [selectedNewAssigneeIds, setSelectedNewAssigneeIds] = useState<string[]>([]);
+  const [selectedRemoveAssigneeIds, setSelectedRemoveAssigneeIds] = useState<string[]>([]);
+  const [reassignReasonInput, setReassignReasonInput] = useState('');
+  const [isSubmittingReassign, setIsSubmittingReassign] = useState(false);
 
   // Flowchart 3: Senior Actions Modal (Advise, Reassign, Resolve, Return)
   const [seniorActionModal, setSeniorActionModal] = useState<{
@@ -236,6 +251,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
     if (!delayReasonInput.trim()) return;
     updateTask(task.id, {
       delayReason: delayReasonInput.trim(),
+      pastDueReason: delayReasonInput.trim(),
+      isPendingNoReason: false,
       delayReasonSubmittedAt: new Date().toISOString()
     }, `Flowchart 21: Documented delay reason "${delayReasonInput.trim()}"`);
     setShowDelayReasonModal(false);
@@ -414,7 +431,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
   );
 
   const todayStr = getTodayStr();
-  const isOverdue = task.scheduledDate < todayStr && task.status !== 'Done' && task.status !== 'Cancelled';
+  const isOverdue = Boolean(task.isOverdue || (task.scheduledDate < todayStr && task.status !== 'Done' && task.status !== 'Cancelled'));
+  const hasDelayReason = Boolean(
+    (task.delayReason && task.delayReason.trim().length > 0) ||
+    (task.pastDueReason && task.pastDueReason.trim().length > 0)
+  );
 
   // Standard Task Card (Slide 4)
   return (
@@ -447,9 +468,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
 
               {isOverdue && (
                 <span style={{
-                  background: task.delayReason ? '#fff7ed' : '#fef2f2',
-                  color: task.delayReason ? '#c2410c' : '#b91c1c',
-                  border: task.delayReason ? '1px solid #fed7aa' : '1px solid #fca5a5',
+                  background: hasDelayReason ? '#fff7ed' : '#fef2f2',
+                  color: hasDelayReason ? '#c2410c' : '#b91c1c',
+                  border: hasDelayReason ? '1px solid #fed7aa' : '1px solid #fca5a5',
                   fontSize: '0.65rem',
                   fontWeight: 800,
                   padding: '0.15rem 0.45rem',
@@ -457,8 +478,29 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '3px'
-                }} title={task.delayReason ? `Delay Reason: "${task.delayReason}"` : 'Flowchart 21: Overdue without recorded reason requires justification'}>
-                  {task.delayReason ? '⚠️ OVERDUE (REASON RECORDED)' : '🚨 PENDING (NO REASON - FC 21)'}
+                }} title={hasDelayReason ? `Delay Reason: "${task.delayReason || task.pastDueReason}"` : 'Flowchart 21: Overdue without recorded reason requires justification'}>
+                  {hasDelayReason ? '⚠️ OVERDUE (REASON RECORDED)' : '🚨 PENDING NO REASON (FC 21)'}
+                </span>
+              )}
+
+              {/* Flowchart 23: Show on-leave badge on their tasks */}
+              {task.assignees.some(a => {
+                const m = members.find(mem => mem.id === a.id || mem.email?.toLowerCase() === a.email?.toLowerCase());
+                return m?.status === 'ON_LEAVE';
+              }) && (
+                <span style={{
+                  background: '#fef3c7',
+                  color: '#b45309',
+                  border: '1px solid #fde68a',
+                  fontSize: '0.65rem',
+                  fontWeight: 800,
+                  padding: '0.15rem 0.45rem',
+                  borderRadius: '4px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '3px'
+                }} title="Flowchart 23: Assignee is on authorized leave. Reminders and auto-escalations paused.">
+                  🏖️ ON LEAVE (FC 23)
                 </span>
               )}
 
@@ -640,20 +682,25 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
               </button>
             )}
 
-            {/* Flowchart 21: Add Reason Button for overdue tasks without documented explanation */}
-            {isOverdue && !task.delayReason && (
+            {/* Flowchart 21: Add / Edit Reason Button for overdue tasks */}
+            {isOverdue && (
               <button
                 type="button"
                 className="btn-secondary"
                 onClick={() => {
-                  setDelayReasonInput('');
+                  setDelayReasonInput(task.delayReason || task.pastDueReason || '');
                   setShowDelayReasonModal(true);
                 }}
-                title="FC 21: Document reason for overdue deliverable"
-                style={{ color: '#c2410c', borderColor: '#fed7aa', background: '#fff7ed', fontWeight: 700 }}
+                title={hasDelayReason ? `FC 21: Delay reason recorded: "${task.delayReason || task.pastDueReason}". Click to edit.` : 'FC 21: Overdue deliverable without reason — click to record justification.'}
+                style={{
+                  color: hasDelayReason ? '#047857' : '#c2410c',
+                  borderColor: hasDelayReason ? '#a7f3d0' : '#fed7aa',
+                  background: hasDelayReason ? '#ecfdf5' : '#fff7ed',
+                  fontWeight: 700
+                }}
               >
-                <FileText size={13} color="#c2410c" />
-                Add Reason
+                <FileText size={13} color={hasDelayReason ? '#047857' : '#c2410c'} />
+                {hasDelayReason ? 'Edit Delay Reason' : 'Add Reason (FC 21)'}
               </button>
             )}
 
@@ -682,6 +729,41 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
               <CalendarIcon size={13} color="#64748b" />
               Reschedule
             </button>
+
+            {/* Flowchart 22: Reassign Task (Replace all, Add alongside, Remove specific) */}
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => {
+                setReassignMode('REPLACE_ALL');
+                setSelectedNewAssigneeIds([]);
+                setSelectedRemoveAssigneeIds([]);
+                setReassignReasonInput('');
+                setShowReassignModal(true);
+              }}
+              title="Flowchart 22: Reassign Task"
+              style={{ padding: '0.4rem 0.55rem', display: 'flex', alignItems: 'center', gap: '4px', color: '#1d4ed8' }}
+            >
+              <UserPlus size={13} color="#2563eb" />
+              <span>Reassign</span>
+            </button>
+
+            {/* Flowchart 22: Cancel Task with Mandatory Reason */}
+            {task.status !== 'Cancelled' && task.status !== 'Done' && (
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  setCancelReasonInput('');
+                  setShowCancelModal(true);
+                }}
+                title="Flowchart 22: Cancel Task with Mandatory Reason (Exclude from performance reports)"
+                style={{ padding: '0.4rem 0.55rem', display: 'flex', alignItems: 'center', gap: '4px', color: '#dc2626', borderColor: '#fca5a5' }}
+              >
+                <Ban size={13} color="#dc2626" />
+                <span>Cancel</span>
+              </button>
+            )}
 
             <button
               type="button"
@@ -1618,6 +1700,362 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Flowchart 22: Cancel Task Modal (Left Branch) */}
+      {showCancelModal && (
+        <div className="stream-overlay" onClick={() => !isSubmittingCancel && setShowCancelModal(false)}>
+          <div className="stream-modal-card" style={{ maxWidth: '480px', borderTop: '4px solid #dc2626' }} onClick={e => e.stopPropagation()}>
+            <div className="stream-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#dc2626' }}>
+                  <Ban size={16} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#991b1b', margin: 0 }}>
+                    Cancel Deliverable (Flowchart 22)
+                  </h3>
+                  <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                    Mandatory Cancellation Reason • Excluded from Performance Reports
+                  </div>
+                </div>
+              </div>
+              <button className="calendar-nav-btn" onClick={() => !isSubmittingCancel && setShowCancelModal(false)}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ marginTop: '0.85rem' }}>
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.75rem', marginBottom: '0.85rem' }}>
+                <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#0f172a' }}>{task.title}</div>
+                <div style={{ fontSize: '0.73rem', color: '#64748b', marginTop: '0.25rem' }}>
+                  Assignees: <strong>{task.assignees.map(a => a.name).join(', ') || 'Unassigned'}</strong>
+                </div>
+              </div>
+
+              <div style={{ fontSize: '0.75rem', color: '#b91c1c', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', padding: '0.55rem 0.75rem', marginBottom: '0.85rem', lineHeight: 1.45 }}>
+                ⚠️ <strong>Flowchart 22 Protocol:</strong> Cancelling this deliverable marks its status as <strong>Cancelled</strong>, sets all assignees to Cancelled, notifies all assignees and creator, and <strong>strictly excludes this task from all performance ratio calculations</strong>.
+              </div>
+
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                if (!cancelReasonInput.trim()) {
+                  alert('Cancellation reason is required per Flowchart 22 corporate governance.');
+                  return;
+                }
+                setIsSubmittingCancel(true);
+                await cancelTask(task.id, cancelReasonInput.trim());
+                setIsSubmittingCancel(false);
+                setShowCancelModal(false);
+              }} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div className="form-field-group">
+                  <label className="form-field-label" style={{ fontWeight: 700 }}>
+                    Mandatory Cancellation Reason *
+                  </label>
+                  <textarea
+                    className="form-input"
+                    required
+                    rows={3}
+                    placeholder="Document why this deliverable is being cancelled (e.g., Client cancelled scope, merged into deliverable #T-402, obsolete milestone)..."
+                    value={cancelReasonInput}
+                    onChange={e => setCancelReasonInput(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setShowCancelModal(false)}
+                    disabled={isSubmittingCancel}
+                  >
+                    Close
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    style={{ background: '#dc2626', borderColor: '#b91c1c' }}
+                    disabled={isSubmittingCancel || !cancelReasonInput.trim()}
+                  >
+                    {isSubmittingCancel ? 'Cancelling...' : 'Confirm Cancellation'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Flowchart 22: Reassign Task Modal (Right Branch) */}
+      {showReassignModal && (
+        <div className="stream-overlay" onClick={() => !isSubmittingReassign && setShowReassignModal(false)}>
+          <div className="stream-modal-card" style={{ maxWidth: '540px', borderTop: '4px solid #2563eb' }} onClick={e => e.stopPropagation()}>
+            <div className="stream-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb' }}>
+                  <UserPlus size={16} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                    Reassign Deliverable (Flowchart 22)
+                  </h3>
+                  <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                    Existing Assignees Decision Matrix: Replace All, Add Alongside, or Remove Specific
+                  </div>
+                </div>
+              </div>
+              <button className="calendar-nav-btn" onClick={() => !isSubmittingReassign && setShowReassignModal(false)}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ marginTop: '0.85rem' }}>
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.75rem', marginBottom: '0.85rem' }}>
+                <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#0f172a' }}>{task.title}</div>
+                <div style={{ fontSize: '0.73rem', color: '#64748b', marginTop: '0.25rem' }}>
+                  Current Assignees: <strong>{task.assignees.map(a => a.name).join(', ') || 'Unassigned'}</strong>
+                </div>
+              </div>
+
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                if (reassignMode === 'REPLACE_ALL' && selectedNewAssigneeIds.length === 0) {
+                  alert('Please select at least one new assignee to replace existing assignees.');
+                  return;
+                }
+                if (reassignMode === 'ADD_ALONGSIDE' && selectedNewAssigneeIds.length === 0) {
+                  alert('Please select at least one colleague to add alongside existing assignees.');
+                  return;
+                }
+                if (reassignMode === 'REMOVE_SPECIFIC' && selectedRemoveAssigneeIds.length === 0) {
+                  alert('Please select at least one assignee to remove.');
+                  return;
+                }
+                if (reassignMode === 'REMOVE_SPECIFIC' && selectedRemoveAssigneeIds.length >= task.assignees.length) {
+                  alert('Cannot remove all assignees without adding a replacement. Use "Replace all" instead.');
+                  return;
+                }
+
+                setIsSubmittingReassign(true);
+                await reassignTask({
+                  taskId: task.id,
+                  mode: reassignMode,
+                  newAssigneeIds: selectedNewAssigneeIds,
+                  removeAssigneeIds: selectedRemoveAssigneeIds,
+                  reason: reassignReasonInput.trim()
+                });
+                setIsSubmittingReassign(false);
+                setShowReassignModal(false);
+              }} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+
+                {/* Flowchart 22 Diamond: Existing assignees? (3 Modes) */}
+                <div>
+                  <label className="form-field-label" style={{ fontWeight: 800, color: '#1e293b' }}>
+                    Existing Assignees Decision? *
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginTop: '0.35rem' }}>
+                    <div
+                      onClick={() => setReassignMode('REPLACE_ALL')}
+                      style={{
+                        padding: '0.65rem 0.5rem',
+                        borderRadius: '8px',
+                        border: reassignMode === 'REPLACE_ALL' ? '2px solid #2563eb' : '1px solid #cbd5e1',
+                        background: reassignMode === 'REPLACE_ALL' ? '#eff6ff' : '#ffffff',
+                        cursor: 'pointer',
+                        textAlign: 'center',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <div style={{ fontWeight: 800, fontSize: '0.78rem', color: reassignMode === 'REPLACE_ALL' ? '#1d4ed8' : '#0f172a' }}>
+                        🔄 Replace all
+                      </div>
+                      <div style={{ fontSize: '0.67rem', color: '#64748b', marginTop: '2px' }}>
+                        Remove old, add new
+                      </div>
+                    </div>
+
+                    <div
+                      onClick={() => setReassignMode('ADD_ALONGSIDE')}
+                      style={{
+                        padding: '0.65rem 0.5rem',
+                        borderRadius: '8px',
+                        border: reassignMode === 'ADD_ALONGSIDE' ? '2px solid #059669' : '1px solid #cbd5e1',
+                        background: reassignMode === 'ADD_ALONGSIDE' ? '#ecfdf5' : '#ffffff',
+                        cursor: 'pointer',
+                        textAlign: 'center',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <div style={{ fontWeight: 800, fontSize: '0.78rem', color: reassignMode === 'ADD_ALONGSIDE' ? '#047857' : '#0f172a' }}>
+                        ➕ Add alongside
+                      </div>
+                      <div style={{ fontSize: '0.67rem', color: '#64748b', marginTop: '2px' }}>
+                        Keep old, add new
+                      </div>
+                    </div>
+
+                    <div
+                      onClick={() => setReassignMode('REMOVE_SPECIFIC')}
+                      style={{
+                        padding: '0.65rem 0.5rem',
+                        borderRadius: '8px',
+                        border: reassignMode === 'REMOVE_SPECIFIC' ? '2px solid #dc2626' : '1px solid #cbd5e1',
+                        background: reassignMode === 'REMOVE_SPECIFIC' ? '#fef2f2' : '#ffffff',
+                        cursor: 'pointer',
+                        textAlign: 'center',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <div style={{ fontWeight: 800, fontSize: '0.78rem', color: reassignMode === 'REMOVE_SPECIFIC' ? '#b91c1c' : '#0f172a' }}>
+                        ➖ Remove specific
+                      </div>
+                      <div style={{ fontSize: '0.67rem', color: '#64748b', marginTop: '2px' }}>
+                        Remove selected only
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sub-interface: New Assignee selection for REPLACE_ALL or ADD_ALONGSIDE */}
+                {(reassignMode === 'REPLACE_ALL' || reassignMode === 'ADD_ALONGSIDE') && (
+                  <div className="form-field-group">
+                    <label className="form-field-label">
+                      {reassignMode === 'REPLACE_ALL' ? 'Select New Assignees *' : 'Select Colleague(s) to Add Alongside *'}
+                    </label>
+                    <div style={{ maxHeight: '160px', overflowY: 'auto', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      {activeMembers
+                        .filter(m => reassignMode === 'REPLACE_ALL' || !task.assignees.some(a => a.id === m.id))
+                        .map(m => {
+                          const isSelected = selectedNewAssigneeIds.includes(m.id);
+                          return (
+                            <div
+                              key={m.id}
+                              onClick={() => {
+                                setSelectedNewAssigneeIds(prev => 
+                                  isSelected ? prev.filter(id => id !== m.id) : [...prev, m.id]
+                                );
+                              }}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                padding: '6px 8px',
+                                borderRadius: '6px',
+                                background: isSelected ? '#eff6ff' : '#ffffff',
+                                border: isSelected ? '1px solid #93c5fd' : '1px solid #f1f5f9',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => {}}
+                                style={{ cursor: 'pointer' }}
+                              />
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a' }}>
+                                  {m.name}
+                                </div>
+                                <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
+                                  {m.designation || 'Specialist'} • {m.department}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Sub-interface: Remove Specific Assignees */}
+                {reassignMode === 'REMOVE_SPECIFIC' && (
+                  <div className="form-field-group">
+                    <label className="form-field-label">
+                      Select Existing Assignees to Remove *
+                    </label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', border: '1px solid #fecaca', borderRadius: '8px', padding: '0.5rem', background: '#fff5f5' }}>
+                      {task.assignees.map(a => {
+                        const isMarked = selectedRemoveAssigneeIds.includes(a.id);
+                        return (
+                          <div
+                            key={a.id}
+                            onClick={() => {
+                              setSelectedRemoveAssigneeIds(prev => 
+                                isMarked ? prev.filter(id => id !== a.id) : [...prev, a.id]
+                              );
+                            }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              padding: '6px 8px',
+                              borderRadius: '6px',
+                              background: isMarked ? '#fee2e2' : '#ffffff',
+                              border: isMarked ? '1px solid #f87171' : '1px solid #e2e8f0',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isMarked}
+                              onChange={() => {}}
+                              style={{ cursor: 'pointer' }}
+                            />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a' }}>
+                                {a.name}
+                              </div>
+                              <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
+                                Status: {a.status} • {a.department}
+                              </div>
+                            </div>
+                            {isMarked && (
+                              <span style={{ fontSize: '0.68rem', color: '#dc2626', fontWeight: 700 }}>
+                                Will be removed
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Optional Reassignment Justification / Notes */}
+                <div className="form-field-group">
+                  <label className="form-field-label">
+                    Handover Notes / Reason (Sent in notification)
+                  </label>
+                  <textarea
+                    className="form-input"
+                    rows={2}
+                    placeholder="e.g. Workload rebalance, sprint reallocation, department handoff..."
+                    value={reassignReasonInput}
+                    onChange={e => setReassignReasonInput(e.target.value)}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setShowReassignModal(false)}
+                    disabled={isSubmittingReassign}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    disabled={isSubmittingReassign}
+                  >
+                    {isSubmittingReassign ? 'Reassigning...' : 'Confirm Reassignment'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}

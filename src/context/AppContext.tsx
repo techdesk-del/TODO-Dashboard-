@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { Task, TeamMember, AuditLogEntry, SystemConfig, Role, TaskStatus } from '@/types';
+import { Task, TeamMember, AuditLogEntry, SystemConfig, Role, TaskStatus, InAppNotification } from '@/types';
 import { INITIAL_TASKS, INITIAL_MEMBERS, INITIAL_AUDIT_LOGS, INITIAL_SYSTEM_CONFIG } from '@/lib/mockData';
 import { getTodayStr } from '@/lib/dateUtils';
 import { isCeoUser, canAccessAdminHr, canAccessWorkflows } from '@/lib/rosterData';
@@ -54,7 +54,14 @@ interface AppContextType {
   seniorReturnTask: (taskId: string, returnReason: string) => void;
   checkAndAutoEscalateSlaBreachedTasks: () => number;
   reopenTask: (taskId: string, reason: string) => void;
-  cancelTask: (taskId: string, reason: string) => void;
+  cancelTask: (taskId: string, reason: string) => Promise<void>;
+  reassignTask: (params: {
+    taskId: string;
+    mode: 'REPLACE_ALL' | 'ADD_ALONGSIDE' | 'REMOVE_SPECIFIC';
+    newAssigneeIds?: string[];
+    removeAssigneeIds?: string[];
+    reason?: string;
+  }) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
   completeTask: (taskId: string, assigneeId?: string) => void;
   updateAssigneeStatus: (taskId: string, assigneeId: string, status: TaskStatus, remarks?: string) => void;
@@ -73,6 +80,14 @@ interface AppContextType {
       leaveEndDate?: string;
     }
   ) => Promise<{ success: boolean; reassignedCount: number; message: string }>;
+  markMemberOnLeave: (params: {
+    memberId: string;
+    leaveStartDate: string;
+    leaveEndDate: string;
+    taskDueAction?: 'AUTO_EXTEND' | 'FLAG_ADMIN';
+    notes?: string;
+  }) => Promise<{ success: boolean; message: string }>;
+  returnMemberFromLeave: (memberId: string) => Promise<{ success: boolean; message: string }>;
   clearAllTasks: () => Promise<void>;
   logoutUser: () => void;
   exportToExcel: () => void;
@@ -87,6 +102,7 @@ interface AppContextType {
   isExportModalOpen: boolean;
   setIsExportModalOpen: (open: boolean) => void;
   runNightlyRolloverSimulation: () => void;
+  evaluateOverdueAndNoReasonTasks: () => Promise<{ overdueCount: number; pendingNoReasonCount: number; escalatedCount: number }>;
   dbStatus: DBStatus;
   refreshFromDB: () => Promise<void>;
   refreshMembersFromDB: () => Promise<void>;
@@ -95,6 +111,11 @@ interface AppContextType {
   setIsAuthModalOpen: (open: boolean) => void;
   authModalInitialMode: 'CHOOSER' | 'INVITATION_INPUT' | 'REQUEST_ACCESS' | 'LOGIN';
   setAuthModalInitialMode: (mode: 'CHOOSER' | 'INVITATION_INPUT' | 'REQUEST_ACCESS' | 'LOGIN') => void;
+  inAppNotifications: InAppNotification[];
+  unreadNotificationsCount: number;
+  refreshNotifications: () => Promise<void>;
+  markNotificationRead: (id: string) => Promise<void>;
+  markAllNotificationsRead: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -117,7 +138,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [dbStatus, setDbStatus] = useState<DBStatus>('connecting');
+  const [inAppNotifications, setInAppNotifications] = useState<InAppNotification[]>([]);
   const deletedIdsRef = useRef<Set<string>>(new Set());
+
+  const unreadNotificationsCount = inAppNotifications.filter(n => !n.read).length;
+
+  const refreshNotifications = useCallback(async () => {
+    if (!currentUser || currentUser.id === 'guest' || !currentUser.email) return;
+    try {
+      const res = await fetch(`/api/notifications?email=${encodeURIComponent(currentUser.email)}&_t=${Date.now()}`, {
+        cache: 'no-store'
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          setInAppNotifications(json.data);
+        }
+      }
+    } catch (e) {
+      console.warn('[AppContext] Notification refresh failed:', e);
+    }
+  }, [currentUser]);
+
+  const markNotificationRead = useCallback(async (id: string) => {
+    setInAppNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    try {
+      await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notificationId: id })
+      });
+    } catch {}
+  }, []);
+
+  const markAllNotificationsRead = useCallback(async () => {
+    if (!currentUser?.email) return;
+    setInAppNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    try {
+      await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: currentUser.email, markAllRead: true })
+      });
+    } catch {}
+  }, [currentUser]);
+
+  useEffect(() => {
+    refreshNotifications();
+    const interval = setInterval(refreshNotifications, 10000);
+    return () => clearInterval(interval);
+  }, [refreshNotifications]);
 
   // Auto-dismiss banner notifications after 4 seconds
 
@@ -141,6 +211,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const json = await res.json();
         if (json.success && Array.isArray(json.data) && json.data.length > 0) {
           setMembers(json.data);
+          // Flowchart 23 Node 7: "On return date restore reminders and status"
+          const todayStr = getTodayStr();
+          const returningMembers = json.data.filter(
+            (m: TeamMember) => m.status === 'ON_LEAVE' && m.leaveEndDate && m.leaveEndDate < todayStr
+          );
+          for (const rm of returningMembers) {
+            fetch('/api/members/leave', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ memberId: rm.id, actorName: 'Flowchart 23 Daily Daemon' })
+            }).catch(console.warn);
+          }
         }
       }
     } catch (e) {
@@ -764,6 +846,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       badge: `✓ Synchronized in ${task.aiMetadata?.extractionLatencyMs || 180}ms`
     });
 
+    // Flowchart 20: Event 1 — Task Assigned (Send instant in-app and email to assignee)
+    if (task.assignees && task.assignees.length > 0) {
+      fetch('/api/notifications/dispatch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventType: 'TASK_ASSIGNED',
+          recipients: task.assignees.map(a => ({ email: a.email, name: a.name })),
+          title: `New Deliverable Assigned: "${task.title}"`,
+          message: `Assigned by ${task.creator?.name || currentUser.name} • Scheduled for ${task.scheduledDate} at ${task.time}`,
+          taskId: task.id,
+          taskTitle: task.title,
+          metadata: {
+            scheduledDate: task.scheduledDate,
+            time: task.time,
+            priority: task.priority,
+            department: task.department,
+            assignedBy: task.creator?.name || currentUser.name,
+          }
+        })
+      })
+        .then(() => refreshNotifications())
+        .catch(err => console.debug('[FC20 Dispatch error]', err));
+    }
+
     return task;
   };
 
@@ -772,7 +879,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const isAdmin = currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN';
     const effectiveUpdates: Partial<Task> = (isAdmin && updates.editedByAdmin === undefined)
       ? { ...updates, editedByAdmin: true }
-      : updates;
+      : { ...updates };
+
+    // Flowchart 21: If reason is recorded, clear pendingNoReason auto-flag (Keep Overdue flag only)
+    if (updates.delayReason && updates.delayReason.trim().length > 0) {
+      effectiveUpdates.isPendingNoReason = false;
+    }
+    // If deliverable is rescheduled to today or future date, clear overdue flags
+    if (updates.scheduledDate && updates.scheduledDate >= getTodayStr()) {
+      effectiveUpdates.isOverdue = false;
+      effectiveUpdates.isPendingNoReason = false;
+      effectiveUpdates.overdueDays = 0;
+    }
 
     // Optimistic UI update
     setTasks(prev => prev.map(t => {
@@ -849,6 +967,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       message: `Escalated to ${seniorLeader}. Instant notification dispatched.`,
       badge: '🚨 Escalated'
     });
+
+    // Flowchart 20: Event 2 — Task Escalated (Send instant in-app and email to senior and manager)
+    const targetTask = tasks.find(t => t.id === taskId);
+    const recipients: Array<{ email: string; name: string }> = [];
+    if (leaderMember?.email) recipients.push({ email: leaderMember.email, name: leaderMember.name });
+    if (currentUser?.email && !recipients.some(r => r.email === currentUser.email)) {
+      recipients.push({ email: currentUser.email, name: currentUser.name });
+    }
+    if (recipients.length > 0) {
+      fetch('/api/notifications/dispatch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventType: 'TASK_ESCALATED',
+          recipients,
+          title: `Deliverable Escalated: "${targetTask?.title || 'Deliverable'}"`,
+          message: `Escalated to ${seniorLeader} by ${currentUser.name}: "${reason}"`,
+          taskId,
+          taskTitle: targetTask?.title,
+          metadata: {
+            escalationReason: reason,
+            escalatedBy: currentUser.name,
+            managerEmail: leaderMember?.email,
+            managerName: seniorLeader,
+          }
+        })
+      })
+        .then(() => refreshNotifications())
+        .catch(err => console.debug('[FC20 Dispatch error]', err));
+    }
   };
 
   // Flowchart 3: Senior Action 1 — Advise: Add advisory comment, return task to In Progress
@@ -930,6 +1078,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       message: 'Escalated deliverable resolved and marked Done (100%).',
       badge: '✓ Escalation Resolved'
     });
+
+    // Flowchart 20: Event 4 — Reason approved or resolved (Send instant in-app and email to assignee)
+    const targetTask = tasks.find(t => t.id === taskId);
+    if (targetTask?.assignees && targetTask.assignees.length > 0) {
+      fetch('/api/notifications/dispatch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventType: 'REASON_STATUS_CHANGED',
+          recipients: targetTask.assignees.map(a => ({ email: a.email, name: a.name })),
+          title: `Escalation Resolved: "${targetTask.title}"`,
+          message: `Senior resolution completed: "${resolutionNote}"`,
+          taskId,
+          taskTitle: targetTask.title,
+          metadata: {
+            decision: 'APPROVED',
+            reviewerName: currentUser.name,
+            notes: resolutionNote,
+          }
+        })
+      })
+        .then(() => refreshNotifications())
+        .catch(err => console.debug('[FC20 Dispatch error]', err));
+    }
   };
 
   // Flowchart 3: Senior Action 4 — Return: Return task to original assignee with reason
@@ -953,6 +1125,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       message: 'Deliverable returned to original assignee with documented instructions.',
       badge: '↩️ Returned to Assignee'
     });
+
+    // Flowchart 20: Event 4 — Reason rejected or returned (Send instant in-app and email to assignee)
+    const retTask = tasks.find(t => t.id === taskId);
+    if (retTask?.assignees && retTask.assignees.length > 0) {
+      fetch('/api/notifications/dispatch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventType: 'REASON_STATUS_CHANGED',
+          recipients: retTask.assignees.map(a => ({ email: a.email, name: a.name })),
+          title: `Deliverable Returned: "${retTask.title}"`,
+          message: `Returned by Senior Leadership: "${returnReason}"`,
+          taskId,
+          taskTitle: retTask.title,
+          metadata: {
+            decision: 'REJECTED',
+            reviewerName: currentUser.name,
+            notes: returnReason,
+          }
+        })
+      })
+        .then(() => refreshNotifications())
+        .catch(err => console.debug('[FC20 Dispatch error]', err));
+    }
   };
 
   // Flowchart 3: No action within SLA — Auto-escalate to reporting manager
@@ -985,6 +1181,94 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return escalatedCount;
   };
 
+  // Flowchart 21: Overdue and No-Reason Auto-Flag Evaluation Engine
+  const evaluateOverdueAndNoReasonTasks = useCallback(async (): Promise<{ overdueCount: number; pendingNoReasonCount: number; escalatedCount: number }> => {
+    const todayStr = getTodayStr();
+    const todayTime = new Date(todayStr).getTime();
+    let overdueCount = 0;
+    let pendingNoReasonCount = 0;
+    let escalatedCount = 0;
+    let stateChanged = false;
+
+    const updatedTasks = tasks.map(t => {
+      if (t.status === 'Done' || t.status === 'Cancelled') {
+        return t;
+      }
+
+      const isDuePassed = t.scheduledDate < todayStr;
+      if (!isDuePassed) {
+        if (t.isOverdue || t.isPendingNoReason) {
+          stateChanged = true;
+          return { ...t, isOverdue: false, isPendingNoReason: false, overdueDays: 0 };
+        }
+        return t;
+      }
+
+      // Due date has passed: Apply Overdue auto-flag
+      overdueCount++;
+      const taskTime = new Date(t.scheduledDate).getTime();
+      const diffDays = Math.max(1, Math.floor((todayTime - taskTime) / (1000 * 60 * 60 * 24)));
+      const hasReason = Boolean(
+        (t.delayReason && t.delayReason.trim().length > 0) ||
+        (t.pastDueReason && t.pastDueReason.trim().length > 0)
+      );
+
+      if (!hasReason) {
+        pendingNoReasonCount++;
+      }
+
+      let newStatus = t.status;
+      let newEscalatedTo = t.escalatedTo;
+      let didEscalate = false;
+
+      // Check threshold escalation (default 3 days per corporate policy)
+      if (diffDays >= 3 && t.status !== 'Escalated' && !t.autoEscalatedToManager) {
+        newStatus = 'Escalated';
+        newEscalatedTo = t.creator?.name || 'Reporting Manager';
+        didEscalate = true;
+        escalatedCount++;
+      }
+
+      const needsFlagUpdate =
+        !t.isOverdue ||
+        t.isPendingNoReason !== (!hasReason) ||
+        t.overdueDays !== diffDays ||
+        didEscalate;
+
+      if (needsFlagUpdate) {
+        stateChanged = true;
+        return {
+          ...t,
+          isOverdue: true,
+          isPendingNoReason: !hasReason,
+          overdueDays: diffDays,
+          overdueFlaggedAt: t.overdueFlaggedAt || new Date().toISOString(),
+          status: newStatus,
+          escalatedTo: newEscalatedTo,
+          autoEscalatedToManager: didEscalate ? true : t.autoEscalatedToManager,
+          escalatedAt: didEscalate ? new Date().toISOString() : t.escalatedAt,
+        };
+      }
+
+      return t;
+    });
+
+    if (stateChanged) {
+      setTasks(updatedTasks);
+    }
+
+    // Trigger server-side evaluation for email alerts & MongoDB persistence
+    try {
+      fetch('/api/tasks/evaluate-overdue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ thresholdDays: 3, sendNotifications: true })
+      }).catch(err => console.debug('[FC21 Server Sync Failed]', err));
+    } catch {}
+
+    return { overdueCount, pendingNoReasonCount, escalatedCount };
+  }, [tasks]);
+
   const reopenTask = (taskId: string, reason: string) => {
     const targetTask = tasks.find(t => t.id === taskId);
     updateTask(taskId, {
@@ -1009,6 +1293,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       message: `Reopened deliverable '${targetTask?.title || 'Task'}' as In Progress`,
       badge: '✓ Action Logged'
     });
+
+    // Flowchart 20: Event 3 — Task Reopened (Send instant in-app and email to all assignees)
+    if (targetTask?.assignees && targetTask.assignees.length > 0) {
+      fetch('/api/notifications/dispatch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventType: 'TASK_REOPENED',
+          recipients: targetTask.assignees.map(a => ({ email: a.email, name: a.name })),
+          title: `Deliverable Reopened: "${targetTask.title}"`,
+          message: `Reopened by Management: "${reason}"`,
+          taskId,
+          taskTitle: targetTask.title,
+          metadata: {
+            reopenReason: reason,
+            reopenedBy: currentUser.name,
+          }
+        })
+      })
+        .then(() => refreshNotifications())
+        .catch(err => console.debug('[FC20 Dispatch error]', err));
+    }
   };
 
   const addMember = async (memberData: Partial<TeamMember>): Promise<TeamMember> => {
@@ -1314,6 +1620,77 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   };
 
+  // Flowchart 23: Admin marks employee on leave with start and end date
+  const markMemberOnLeave = async (params: {
+    memberId: string;
+    leaveStartDate: string;
+    leaveEndDate: string;
+    taskDueAction?: 'AUTO_EXTEND' | 'FLAG_ADMIN';
+    notes?: string;
+  }): Promise<{ success: boolean; message: string }> => {
+    try {
+      const res = await fetch('/api/members/leave', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...params,
+          actorName: currentUser.name,
+          actorRole: currentUser.role,
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to record employee leave');
+      }
+
+      await refreshMembersFromDB();
+      await refreshFromDB();
+      await refreshNotifications();
+
+      setBannerNotification({
+        message: data.message,
+        badge: '🏖️ Staff On Leave'
+      });
+
+      return { success: true, message: data.message };
+    } catch (err: any) {
+      console.error('[markMemberOnLeave error]', err);
+      return { success: false, message: err?.message || 'Error recording leave' };
+    }
+  };
+
+  // Flowchart 23 Node 7: On return date restore reminders and status
+  const returnMemberFromLeave = async (memberId: string): Promise<{ success: boolean; message: string }> => {
+    try {
+      const res = await fetch('/api/members/leave', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          memberId,
+          actorName: currentUser.name,
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to restore employee from leave');
+      }
+
+      await refreshMembersFromDB();
+      await refreshFromDB();
+      await refreshNotifications();
+
+      setBannerNotification({
+        message: data.message,
+        badge: '✓ Status Restored'
+      });
+
+      return { success: true, message: data.message };
+    } catch (err: any) {
+      console.error('[returnMemberFromLeave error]', err);
+      return { success: false, message: err?.message || 'Error restoring status' };
+    }
+  };
+
   const clearAllTasks = async () => {
     if (!isCeoUser(currentUser)) {
       alert("Access Restricted: Only Executive Leadership (CEO & Aakash Das) has permission to wipe company deliverables.");
@@ -1385,11 +1762,223 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  const cancelTask = (taskId: string, reason: string) => {
+  // Flowchart 22: Cancel Task Flow (Left Branch)
+  const cancelTask = async (taskId: string, reason: string) => {
+    if (!reason || !reason.trim()) {
+      alert('Cancellation reason is required per Flowchart 22 corporate governance.');
+      return;
+    }
+
+    const targetTask = tasks.find(t => t.id === taskId);
+    if (!targetTask) return;
+
+    // Flowchart 22: Set status Cancelled exclude from performance reports
+    const cancelledAssignees = targetTask.assignees.map(a => ({
+      ...a,
+      status: 'Cancelled' as TaskStatus,
+      completedAt: undefined,
+      remarks: `Cancelled: ${reason.trim()}`
+    }));
+
     updateTask(taskId, {
       status: 'Cancelled',
-      cancellationReason: reason
-    }, `Cancelled task with documented rationale: "${reason}"`);
+      cancellationReason: reason.trim(),
+      assignees: cancelledAssignees,
+      progressPercent: 0,
+      isPendingNoReason: false,
+    }, `Cancelled task with documented rationale: "${reason.trim()}"`);
+
+    // Flowchart 22: Notify all assignees and creator
+    const notificationRecipients: Array<{ email: string; name: string }> = [];
+    targetTask.assignees.forEach(a => {
+      if (a.email && a.email.includes('@')) {
+        notificationRecipients.push({ email: a.email, name: a.name });
+      }
+    });
+    if (targetTask.creator?.email && targetTask.creator.email.includes('@')) {
+      if (!notificationRecipients.some(r => r.email.toLowerCase() === targetTask.creator.email.toLowerCase())) {
+        notificationRecipients.push({ email: targetTask.creator.email, name: targetTask.creator.name });
+      }
+    }
+
+    if (notificationRecipients.length > 0) {
+      fetch('/api/notifications/dispatch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventType: 'TASK_ASSIGNED',
+          recipients: notificationRecipients,
+          title: `🚫 Deliverable Cancelled: "${targetTask.title}"`,
+          message: `Deliverable #${targetTask.id} was marked as Cancelled by ${currentUser.name}. Mandatory justification: "${reason.trim()}". Excluded from performance reports.`,
+          taskId: targetTask.id,
+          taskTitle: targetTask.title,
+          metadata: {
+            assignedBy: currentUser.name,
+            cancellationReason: reason.trim(),
+            department: targetTask.department,
+            priority: targetTask.priority
+          }
+        })
+      })
+        .then(() => refreshNotifications())
+        .catch(err => console.debug('[FC22 Cancellation Notification Error]', err));
+    }
+
+    // Flowchart 22: Audit log entry created
+    logAudit({
+      taskId,
+      taskTitle: targetTask.title,
+      action: 'CANCELLED',
+      fieldChanged: 'Task Cancelled (Flowchart 22)',
+      oldValue: targetTask.status,
+      newValue: 'Cancelled',
+      notes: `Cancelled by ${currentUser.name}. Justification: "${reason.trim()}". Excluded from performance metrics. All assignees & creator notified.`
+    });
+
+    setBannerNotification({
+      message: `Deliverable "${targetTask.title}" marked as Cancelled. Excluded from performance metrics.`,
+      badge: '🚫 Task Cancelled'
+    });
+  };
+
+  // Flowchart 22: Reassign Task Flow (Right Branch)
+  const reassignTask = async (params: {
+    taskId: string;
+    mode: 'REPLACE_ALL' | 'ADD_ALONGSIDE' | 'REMOVE_SPECIFIC';
+    newAssigneeIds?: string[];
+    removeAssigneeIds?: string[];
+    reason?: string;
+  }) => {
+    const { taskId, mode, newAssigneeIds = [], removeAssigneeIds = [], reason } = params;
+    const targetTask = tasks.find(t => t.id === taskId);
+    if (!targetTask) return;
+
+    const oldAssignees = targetTask.assignees || [];
+    let updatedAssignees: typeof oldAssignees = [];
+    let addedMembers: TeamMember[] = [];
+    let removedAssignees: typeof oldAssignees = [];
+
+    const activeList = members.filter(m => m.status === 'ACTIVE');
+
+    if (mode === 'REPLACE_ALL') {
+      // Flowchart 22: Replace all -> Remove old assignees and add new
+      removedAssignees = [...oldAssignees];
+      addedMembers = activeList.filter(m => newAssigneeIds.includes(m.id));
+      updatedAssignees = addedMembers.map(m => ({
+        id: m.id,
+        name: m.name,
+        email: m.email,
+        department: m.department,
+        designation: m.designation,
+        avatar: m.avatar,
+        status: 'Not Started' as TaskStatus,
+      }));
+    } else if (mode === 'ADD_ALONGSIDE') {
+      // Flowchart 22: Add alongside -> Keep old assignees and add new
+      removedAssignees = [];
+      const newToAdd = activeList.filter(
+        m => newAssigneeIds.includes(m.id) && !oldAssignees.some(o => o.id === m.id)
+      );
+      addedMembers = newToAdd;
+      const newlyCreatedAssignees = newToAdd.map(m => ({
+        id: m.id,
+        name: m.name,
+        email: m.email,
+        department: m.department,
+        designation: m.designation,
+        avatar: m.avatar,
+        status: 'Not Started' as TaskStatus,
+      }));
+      updatedAssignees = [...oldAssignees, ...newlyCreatedAssignees];
+    } else if (mode === 'REMOVE_SPECIFIC') {
+      // Flowchart 22: Remove specific -> Remove selected assignees only
+      removedAssignees = oldAssignees.filter(o => removeAssigneeIds.includes(o.id));
+      addedMembers = [];
+      updatedAssignees = oldAssignees.filter(o => !removeAssigneeIds.includes(o.id));
+    }
+
+    if (updatedAssignees.length === 0) {
+      alert('A deliverable must have at least one designated assignee. Cannot remove all assignees without assigning a successor.');
+      return;
+    }
+
+    // Flowchart 22: Recalculate overall task stat
+    const comp = computeMultiAssigneeStatus({
+      assignees: updatedAssignees,
+      scheduledDate: targetTask.scheduledDate,
+      pastDueReason: targetTask.pastDueReason,
+    });
+
+    updateTask(taskId, {
+      assignees: updatedAssignees,
+      status: comp.status,
+      progressPercent: comp.progressPercent,
+    }, `Reassigned assignees (${mode}): Added ${addedMembers.length}, Removed ${removedAssignees.length}`);
+
+    // Flowchart 22: Notify removed and added assignees
+    // 1. Notify newly added assignees
+    if (addedMembers.length > 0) {
+      fetch('/api/notifications/dispatch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventType: 'TASK_ASSIGNED',
+          recipients: addedMembers.map(m => ({ email: m.email, name: m.name })),
+          title: `New Deliverable Assignment: "${targetTask.title}"`,
+          message: `You have been added to deliverable #${targetTask.id} (${mode}) by ${currentUser.name}. ${reason ? `Notes: "${reason}"` : ''}`,
+          taskId: targetTask.id,
+          taskTitle: targetTask.title,
+          metadata: {
+            assignedBy: currentUser.name,
+            scheduledDate: targetTask.scheduledDate,
+            time: targetTask.time,
+            priority: targetTask.priority,
+            department: targetTask.department,
+          }
+        })
+      })
+        .then(() => refreshNotifications())
+        .catch(err => console.debug('[FC22 Reassign Added Dispatch Error]', err));
+    }
+
+    // 2. Notify removed assignees
+    if (removedAssignees.length > 0) {
+      fetch('/api/notifications/dispatch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventType: 'TASK_ASSIGNED',
+          recipients: removedAssignees.map(a => ({ email: a.email, name: a.name })),
+          title: `Deliverable Handover Notice: "${targetTask.title}"`,
+          message: `You have been unassigned from deliverable #${targetTask.id} by ${currentUser.name} (${mode}). ${reason ? `Notes: "${reason}"` : ''}`,
+          taskId: targetTask.id,
+          taskTitle: targetTask.title,
+          metadata: {
+            assignedBy: currentUser.name,
+            reassignedBy: currentUser.name,
+            reason: reason || 'Workload rebalance',
+          }
+        })
+      })
+        .then(() => refreshNotifications())
+        .catch(err => console.debug('[FC22 Reassign Removed Dispatch Error]', err));
+    }
+
+    // Flowchart 22: Audit log entry created
+    logAudit({
+      taskId,
+      taskTitle: targetTask.title,
+      action: 'REASSIGNED',
+      fieldChanged: `Task Assignees Reassigned (Flowchart 22: ${mode})`,
+      oldValue: oldAssignees.map(a => a.name).join(', ') || 'None',
+      newValue: updatedAssignees.map(a => a.name).join(', '),
+      notes: `Reassignment mode: ${mode}. Added: ${addedMembers.map(m => m.name).join(', ') || 'None'}. Removed: ${removedAssignees.map(a => a.name).join(', ') || 'None'}. Notes: "${reason || 'Workload adjustment'}". (Flowchart 22 compliance).`
+    });
+
+    setBannerNotification({
+      message: `Reassigned "${targetTask.title}" (${mode}). Added: ${addedMembers.length}, Removed: ${removedAssignees.length}.`,
+      badge: '👥 Task Reassigned'
+    });
   };
 
   const deleteTask = async (taskId: string) => {
@@ -1740,6 +2329,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         checkAndAutoEscalateSlaBreachedTasks,
         reopenTask,
         cancelTask,
+        reassignTask,
         deleteTask,
         completeTask,
         updateAssigneeStatus,
@@ -1747,6 +2337,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addMember,
         updateMember,
         deactivateMember,
+        markMemberOnLeave,
+        returnMemberFromLeave,
         clearAllTasks,
         logoutUser,
         exportToExcel,
@@ -1761,6 +2353,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isExportModalOpen,
         setIsExportModalOpen,
         runNightlyRolloverSimulation,
+        evaluateOverdueAndNoReasonTasks,
         dbStatus,
         refreshFromDB,
         refreshMembersFromDB,
@@ -1768,7 +2361,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isAuthModalOpen,
         setIsAuthModalOpen,
         authModalInitialMode,
-        setAuthModalInitialMode
+        setAuthModalInitialMode,
+        inAppNotifications,
+        unreadNotificationsCount,
+        refreshNotifications,
+        markNotificationRead,
+        markAllNotificationsRead
       }}
     >
       {children}

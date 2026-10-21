@@ -70,7 +70,15 @@ const TaskSchema = new Schema<Task>(
     location:           { type: String },
     progressPercent:    { type: Number, min: 0, max: 100 },
     isJustAdded:        { type: Boolean, default: false },
+    isOverdue:          { type: Boolean, default: false },
+    isPendingNoReason:  { type: Boolean, default: false },
+    overdueFlaggedAt:   { type: String },
+    overdueNotifiedAt:  { type: String },
+    overdueDays:        { type: Number, default: 0 },
     pastDueReason:      { type: String },
+    delayReason:        { type: String },
+    delayReasonSubmittedAt: { type: String },
+    delayReasonApproved:    { type: Boolean, default: false },
     notes:              { type: String },
     inputMethod:        { type: String, enum: ['Speak', 'Type'], default: 'Type' },
     holdReason:         { type: String },
@@ -106,6 +114,7 @@ TaskSchema.index({ scheduledDate: 1, status: 1 });          // Calendar + status
 TaskSchema.index({ 'assignees.id': 1, scheduledDate: 1 });  // Member drilldown
 TaskSchema.index({ 'creator.id': 1,  scheduledDate: 1 });   // Personal workspace
 TaskSchema.index({ department: 1, scheduledDate: 1 });       // Dept view
+TaskSchema.index({ isOverdue: 1, isPendingNoReason: 1 });   // Flowchart 21 overdue & no-reason query optimization
 
 /* ── Model (with HMR guard) ──────────────────────────────────────── */
 if (mongoose.models && mongoose.models.Task) {

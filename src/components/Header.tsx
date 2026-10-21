@@ -44,12 +44,17 @@ export const Header: React.FC = () => {
     tasks,
     isAuthModalOpen,
     setIsAuthModalOpen,
-    setAuthModalInitialMode
+    setAuthModalInitialMode,
+    inAppNotifications,
+    unreadNotificationsCount,
+    markNotificationRead,
+    markAllNotificationsRead
   } = useApp();
 
   const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
   const [isOpsMenuOpen, setIsOpsMenuOpen] = useState(false);
   const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
+  const [notifActiveTab, setNotifActiveTab] = useState<'alerts' | 'overdue'>('alerts');
   const [isMounted, setIsMounted] = useState(false);
   const roleMenuRef = useRef<HTMLDivElement>(null);
   const opsMenuRef = useRef<HTMLDivElement>(null);
@@ -508,222 +513,361 @@ export const Header: React.FC = () => {
         )}
 
         {/* Real-Time Notification Bell & Pending Alert Center */}
-        <div ref={notificationMenuRef} style={{ position: 'relative' }}>
-          <button
-            type="button"
-            onClick={() => setIsNotificationCenterOpen(!isNotificationCenterOpen)}
-            className="btn-secondary"
-            style={{
-              width: '32px',
-              height: '32px',
-              padding: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: isNotificationCenterOpen ? '#fee2e2' : (pendingCount > 0 ? '#fff1f2' : '#ffffff'),
-              borderColor: isNotificationCenterOpen ? '#dc2626' : (pendingCount > 0 ? '#fca5a5' : '#cbd5e1'),
-              borderRadius: '6px',
-              transition: 'all 0.15s ease',
-              cursor: 'pointer',
-              position: 'relative',
-              boxShadow: pendingCount > 0 ? '0 0 0 2px rgba(239, 68, 68, 0.25)' : 'none'
-            }}
-            title={pendingCount > 0 ? `${pendingCount} Pending Overdue Deliverables Awaiting Action` : 'Notification Center'}
-            aria-expanded={isNotificationCenterOpen}
-            aria-haspopup="true"
-          >
-            <Bell size={15} color={pendingCount > 0 ? '#dc2626' : '#64748b'} />
-            {pendingCount > 0 && (
-              <span
+        {(() => {
+          const totalNotifCount = unreadNotificationsCount + pendingCount;
+          return (
+            <div ref={notificationMenuRef} style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={() => setIsNotificationCenterOpen(!isNotificationCenterOpen)}
+                className="btn-secondary"
                 style={{
-                  position: 'absolute',
-                  top: '-4px',
-                  right: '-4px',
-                  background: '#dc2626',
-                  color: 'white',
-                  fontSize: '0.62rem',
-                  fontWeight: 800,
-                  borderRadius: '10px',
-                  minWidth: '16px',
-                  height: '16px',
+                  width: '32px',
+                  height: '32px',
+                  padding: 0,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  padding: '0 3px',
-                  border: '2px solid #ffffff',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                  background: isNotificationCenterOpen ? '#fee2e2' : (totalNotifCount > 0 ? '#fff1f2' : '#ffffff'),
+                  borderColor: isNotificationCenterOpen ? '#dc2626' : (totalNotifCount > 0 ? '#fca5a5' : '#cbd5e1'),
+                  borderRadius: '6px',
+                  transition: 'all 0.15s ease',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  boxShadow: totalNotifCount > 0 ? '0 0 0 2px rgba(239, 68, 68, 0.25)' : 'none'
                 }}
+                title={totalNotifCount > 0 ? `${totalNotifCount} Notifications (${unreadNotificationsCount} In-App Alerts, ${pendingCount} Overdue)` : 'Notification Center'}
+                aria-expanded={isNotificationCenterOpen}
+                aria-haspopup="true"
               >
-                {pendingCount}
-              </span>
-            )}
-          </button>
-
-          {isNotificationCenterOpen && (
-            <div 
-              style={{
-                position: 'absolute',
-                top: 'calc(100% + 6px)',
-                right: 0,
-                width: '360px',
-                maxWidth: 'calc(100vw - 20px)',
-                background: '#ffffff',
-                border: '1px solid #cbd5e1',
-                borderRadius: '12px',
-                boxShadow: '0 16px 36px -4px rgba(15, 23, 42, 0.16), 0 4px 12px rgba(0,0,0,0.06)',
-                zIndex: 100,
-                padding: '10px',
-                overflow: 'hidden'
-              }}
-            >
-              {/* Header */}
-              <div style={{
-                padding: '4px 6px 8px',
-                borderBottom: '1px solid #f1f5f9',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between'
-              }}>
-                <div>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Bell size={14} color="#dc2626" />
-                    Pending Notifications
-                  </div>
-                  <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
-                    Real-time overdue alerts & deadline reminders
-                  </div>
-                </div>
-                {pendingCount > 0 ? (
-                  <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#be123c', background: '#ffe4e6', padding: '2px 8px', borderRadius: '12px' }}>
-                    {pendingCount} Overdue
-                  </span>
-                ) : (
-                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#16a34a', background: '#f0fdf4', padding: '2px 8px', borderRadius: '12px' }}>
-                    All Clear ✓
-                  </span>
-                )}
-              </div>
-
-              {/* Action Banner for Overdue Tasks */}
-              {pendingCount > 0 && (
-                <div style={{
-                  margin: '8px 0',
-                  padding: '8px',
-                  background: '#fff1f2',
-                  border: '1px solid #fecdd3',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '8px'
-                }}>
-                  <div style={{ fontSize: '0.72rem', color: '#9f1239', fontWeight: 600 }}>
-                    {pendingCount} task(s) awaiting completion from past dates.
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const today = getTodayStr();
-                      overdueTasks.forEach(t => {
-                        updateTask(t.id, { scheduledDate: today }, `Batch rescheduled to today (${today}) via Notification Center`);
-                      });
-                      setSelectedDate(today);
-                      setActiveView('workspace');
-                      setIsNotificationCenterOpen(false);
-                    }}
+                <Bell size={15} color={totalNotifCount > 0 ? '#dc2626' : '#64748b'} />
+                {totalNotifCount > 0 && (
+                  <span
                     style={{
-                      background: '#e11d48',
+                      position: 'absolute',
+                      top: '-4px',
+                      right: '-4px',
+                      background: '#dc2626',
                       color: 'white',
-                      border: 'none',
-                      padding: '4px 8px',
-                      borderRadius: '5px',
-                      fontSize: '0.68rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap'
-                    }}
-                  >
-                    Reschedule All to Today
-                  </button>
-                </div>
-              )}
-
-              {/* Overdue Items List */}
-              <div style={{ maxHeight: '240px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {overdueTasks.map((task, idx) => (
-                  <div
-                    key={`${task.id}-${idx}`}
-                    onClick={() => {
-                      setSelectedDate(task.scheduledDate);
-                      setActiveView('workspace');
-                      setIsNotificationCenterOpen(false);
-                    }}
-                    style={{
-                      padding: '8px',
-                      background: '#f8fafc',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      transition: 'background 0.15s ease'
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
-                    onMouseLeave={e => e.currentTarget.style.background = '#f8fafc'}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {task.title}
-                      </span>
-                      <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#dc2626', background: '#fee2e2', padding: '1px 5px', borderRadius: '4px', whiteSpace: 'nowrap' }}>
-                        {task.scheduledDate}
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.68rem', color: '#64748b', marginTop: '3px' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                        <Clock size={11} /> {task.time}
-                      </span>
-                      <span>• Priority: <strong>{task.priority}</strong></span>
-                    </div>
-                  </div>
-                ))}
-
-                {pendingCount === 0 && (
-                  <div style={{ padding: '1.5rem', textAlign: 'center', color: '#64748b', fontSize: '0.75rem' }}>
-                    🎉 No overdue pending deliverables. All tasks are up to date!
-                  </div>
-                )}
-              </div>
-
-              {/* Push Permission Toggle in Footer */}
-              {notificationPermission !== 'granted' && (
-                <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #f1f5f9' }}>
-                  <button
-                    type="button"
-                    onClick={requestPermission}
-                    style={{
-                      width: '100%',
-                      background: '#eff6ff',
-                      color: '#2563eb',
-                      border: '1px solid #bfdbfe',
-                      padding: '6px 10px',
-                      borderRadius: '6px',
-                      fontSize: '0.72rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
+                      fontSize: '0.62rem',
+                      fontWeight: 800,
+                      borderRadius: '10px',
+                      minWidth: '16px',
+                      height: '16px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: '6px'
+                      padding: '0 3px',
+                      border: '2px solid #ffffff',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
                     }}
                   >
-                    <Bell size={13} />
-                    Enable Desktop Push Notifications
-                  </button>
+                    {totalNotifCount}
+                  </span>
+                )}
+              </button>
+
+              {isNotificationCenterOpen && (
+                <div 
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 6px)',
+                    right: 0,
+                    width: '380px',
+                    maxWidth: 'calc(100vw - 20px)',
+                    background: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '12px',
+                    boxShadow: '0 16px 36px -4px rgba(15, 23, 42, 0.16), 0 4px 12px rgba(0,0,0,0.06)',
+                    zIndex: 100,
+                    padding: '10px',
+                    overflow: 'hidden'
+                  }}
+                >
+                  {/* Header */}
+                  <div style={{
+                    padding: '4px 6px 8px',
+                    borderBottom: '1px solid #f1f5f9',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}>
+                    <div>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Bell size={14} color="#2563eb" />
+                        Executive Notification Hub
+                      </div>
+                      <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
+                        Flowchart 20 Automated Dispatch Engine
+                      </div>
+                    </div>
+                    {unreadNotificationsCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={markAllNotificationsRead}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#2563eb',
+                          fontSize: '0.68rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          textDecoration: 'underline'
+                        }}
+                      >
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Tabs: In-App Alerts (Flowchart 20) vs Overdue Deliverables */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', margin: '8px 0 6px', background: '#f8fafc', padding: '3px', borderRadius: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setNotifActiveTab('alerts')}
+                      style={{
+                        padding: '5px 8px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: notifActiveTab === 'alerts' ? '#ffffff' : 'transparent',
+                        color: notifActiveTab === 'alerts' ? '#2563eb' : '#64748b',
+                        fontWeight: 700,
+                        fontSize: '0.72rem',
+                        cursor: 'pointer',
+                        boxShadow: notifActiveTab === 'alerts' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '5px'
+                      }}
+                    >
+                      <span>In-App Alerts</span>
+                      {unreadNotificationsCount > 0 && (
+                        <span style={{ background: '#2563eb', color: 'white', borderRadius: '10px', fontSize: '0.6rem', padding: '1px 5px', fontWeight: 800 }}>
+                          {unreadNotificationsCount}
+                        </span>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setNotifActiveTab('overdue')}
+                      style={{
+                        padding: '5px 8px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: notifActiveTab === 'overdue' ? '#ffffff' : 'transparent',
+                        color: notifActiveTab === 'overdue' ? '#dc2626' : '#64748b',
+                        fontWeight: 700,
+                        fontSize: '0.72rem',
+                        cursor: 'pointer',
+                        boxShadow: notifActiveTab === 'overdue' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '5px'
+                      }}
+                    >
+                      <span>Overdue Tasks</span>
+                      {pendingCount > 0 && (
+                        <span style={{ background: '#dc2626', color: 'white', borderRadius: '10px', fontSize: '0.6rem', padding: '1px 5px', fontWeight: 800 }}>
+                          {pendingCount}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Tab 1 Content: In-App Alerts (Flowchart 20) */}
+                  {notifActiveTab === 'alerts' && (
+                    <div style={{ maxHeight: '250px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {inAppNotifications.length > 0 ? (
+                        inAppNotifications.map(notif => {
+                          const typeBadge =
+                            notif.type === 'TASK_ASSIGNED' ? { label: '📋 ASSIGNED', bg: '#eff6ff', color: '#1d4ed8' } :
+                            notif.type === 'TASK_ESCALATED' ? { label: '🚨 ESCALATED', bg: '#fef2f2', color: '#b91c1c' } :
+                            notif.type === 'TASK_REOPENED' ? { label: '↩️ REOPENED', bg: '#f0f9ff', color: '#0369a1' } :
+                            notif.type === 'REASON_STATUS_CHANGED' ? { label: '⚖️ DECISION', bg: '#ecfdf5', color: '#047857' } :
+                            notif.type === 'CHRONIC_DELAY' ? { label: '⚠️ DELAY ALERT', bg: '#fff7ed', color: '#c2410c' } :
+                            { label: '📢 NOTICE', bg: '#f8fafc', color: '#475569' };
+
+                          return (
+                            <div
+                              key={notif.id}
+                              onClick={() => {
+                                if (!notif.read) markNotificationRead(notif.id);
+                                if (notif.taskId) {
+                                  setActiveView('workspace');
+                                  setIsNotificationCenterOpen(false);
+                                }
+                              }}
+                              style={{
+                                padding: '8px 10px',
+                                background: notif.read ? '#ffffff' : '#f8fafc',
+                                borderLeft: notif.read ? '3px solid #cbd5e1' : '3px solid #2563eb',
+                                borderTop: '1px solid #f1f5f9',
+                                borderRight: '1px solid #f1f5f9',
+                                borderBottom: '1px solid #f1f5f9',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', marginBottom: '3px' }}>
+                                <span style={{
+                                  fontSize: '0.62rem',
+                                  fontWeight: 800,
+                                  background: typeBadge.bg,
+                                  color: typeBadge.color,
+                                  padding: '1px 5px',
+                                  borderRadius: '4px'
+                                }}>
+                                  {typeBadge.label}
+                                </span>
+                                {!notif.read && (
+                                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#2563eb' }} />
+                                )}
+                              </div>
+                              <div style={{ fontSize: '0.74rem', fontWeight: notif.read ? 600 : 700, color: '#0f172a' }}>
+                                {notif.title}
+                              </div>
+                              <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '2px', lineHeight: 1.4 }}>
+                                {notif.message}
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#64748b', fontSize: '0.75rem' }}>
+                          🎉 Zero pending in-app alerts. You are completely up to date!
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Tab 2 Content: Overdue Tasks */}
+                  {notifActiveTab === 'overdue' && (
+                    <>
+                      {pendingCount > 0 && (
+                        <div style={{
+                          margin: '6px 0',
+                          padding: '6px 8px',
+                          background: '#fff1f2',
+                          border: '1px solid #fecdd3',
+                          borderRadius: '6px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '6px'
+                        }}>
+                          <div style={{ fontSize: '0.7rem', color: '#9f1239', fontWeight: 600 }}>
+                            {pendingCount} overdue task(s)
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const today = getTodayStr();
+                              overdueTasks.forEach(t => {
+                                updateTask(t.id, { scheduledDate: today }, `Batch rescheduled to today (${today}) via Notification Center`);
+                              });
+                              setSelectedDate(today);
+                              setActiveView('workspace');
+                              setIsNotificationCenterOpen(false);
+                            }}
+                            style={{
+                              background: '#e11d48',
+                              color: 'white',
+                              border: 'none',
+                              padding: '3px 7px',
+                              borderRadius: '4px',
+                              fontSize: '0.65rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            Reschedule to Today
+                          </button>
+                        </div>
+                      )}
+
+                      <div style={{ maxHeight: '240px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {overdueTasks.map((task, idx) => (
+                          <div
+                            key={`${task.id}-${idx}`}
+                            onClick={() => {
+                              setSelectedDate(task.scheduledDate);
+                              setActiveView('workspace');
+                              setIsNotificationCenterOpen(false);
+                            }}
+                            style={{
+                              padding: '8px',
+                              background: '#f8fafc',
+                              border: '1px solid #e2e8f0',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              transition: 'background 0.15s ease'
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
+                            onMouseLeave={e => e.currentTarget.style.background = '#f8fafc'}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {task.title}
+                              </span>
+                              <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#dc2626', background: '#fee2e2', padding: '1px 5px', borderRadius: '4px', whiteSpace: 'nowrap' }}>
+                                {task.scheduledDate}
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.68rem', color: '#64748b', marginTop: '3px' }}>
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                <Clock size={11} /> {task.time}
+                              </span>
+                              <span>• Priority: <strong>{task.priority}</strong></span>
+                            </div>
+                          </div>
+                        ))}
+
+                        {pendingCount === 0 && (
+                          <div style={{ padding: '1.5rem', textAlign: 'center', color: '#64748b', fontSize: '0.75rem' }}>
+                            🎉 No overdue pending deliverables. All tasks are up to date!
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+
+                  {/* Push Permission Toggle in Footer */}
+                  {notificationPermission !== 'granted' && (
+                    <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #f1f5f9' }}>
+                      <button
+                        type="button"
+                        onClick={requestPermission}
+                        style={{
+                          width: '100%',
+                          background: '#eff6ff',
+                          color: '#2563eb',
+                          border: '1px solid #bfdbfe',
+                          padding: '6px 10px',
+                          borderRadius: '6px',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <Bell size={13} />
+                        Enable Desktop Push Notifications
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-          )}
-        </div>
-
+          );
+        })()}
         {/* Explicit Sign In / Log In Button */}
         {isGuest ? (
           <button

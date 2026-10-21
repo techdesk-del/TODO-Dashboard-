@@ -13,6 +13,7 @@ import { AuditLogModel } from '@/models/AuditLog';
 
 import { getTodayStr } from './dateUtils';
 import { isNonWorkingDay } from './holidayData';
+import { runOverdueAndNoReasonEvaluation } from './overdueEngine';
 
 interface CronCache {
   isInitialized: boolean;
@@ -92,5 +93,18 @@ export function initServerCron() {
     }
   });
 
-  console.log('[Cron] ✓ Schedules active: 08:30 AM (Digest) & 00:05 AM (Rollover)');
+  // 3. Hourly Overdue & No-Reason Auto-Flag Routine (Flowchart 21)
+  cron.schedule('0 * * * *', async () => {
+    try {
+      console.log('[Cron Hourly] Triggering Flowchart 21 overdue & no-reason evaluation...');
+      await runOverdueAndNoReasonEvaluation({
+        thresholdDays: 3,
+        sendNotifications: true,
+      });
+    } catch (err) {
+      console.error('[Cron Hourly Error - Flowchart 21]', err);
+    }
+  });
+
+  console.log('[Cron] ✓ Schedules active: 08:30 AM (Digest), 00:05 AM (Rollover) & Hourly (Flowchart 21 Overdue Engine)');
 }

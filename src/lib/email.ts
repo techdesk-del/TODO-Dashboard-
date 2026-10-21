@@ -106,7 +106,8 @@ export function generateDigestHtml(opts: SendDigestOptions): string {
         overdueTasks.length === 0
           ? '<div class="empty-badge">✓ Zero overdue deliverables. Excellent punctuality!</div>'
           : overdueTasks.map(t => {
-            const hasReason = Boolean(t.holdReason || t.escalationReason || t.pastDueReason);
+            const hasReason = Boolean(t.delayReason || t.pastDueReason || t.holdReason || t.escalationReason);
+            const activeReason = t.delayReason || t.pastDueReason || t.holdReason || t.escalationReason;
             return `
             <div class="task-card card-red">
               <div class="task-name">${t.title}</div>
@@ -116,11 +117,11 @@ export function generateDigestHtml(opts: SendDigestOptions): string {
               </div>
               ${!hasReason ? `
                 <div class="reason-missing-box">
-                  <strong>⚠️ Delay Reason Missing:</strong> As per company governance (Flowchart D), please <a href="${appBase}/?taskId=${t.id}" style="color: #b91c1c; font-weight: 700; text-decoration: underline;">click here to enter delay justification</a>.
+                  <strong>⚠️ Delay Reason Missing (Flowchart 21):</strong> As per corporate governance, please <a href="${appBase}/?taskId=${t.id}" style="color: #b91c1c; font-weight: 700; text-decoration: underline;">click here to enter delay justification</a>.
                 </div>
               ` : `
                 <div style="font-size: 11px; color: #b45309; margin-top: 4px;">
-                  Documented Reason: ${t.holdReason || t.escalationReason || t.pastDueReason}
+                  Documented Reason: ${activeReason}
                 </div>
               `}
             </div>
@@ -1533,5 +1534,280 @@ export async function sendWeeklyDigestEmail(opts: {
   }
 }
 
+export interface SendOverdueAutoFlagOptions {
+  toEmail: string;
+  toName: string;
+  managerEmail?: string;
+  managerName?: string;
+  taskId: string;
+  taskTitle: string;
+  scheduledDate: string;
+  daysOverdue: number;
+  hasReason: boolean;
+  delayReason?: string;
+  isEscalated?: boolean;
+  baseUrl?: string;
+}
 
+/**
+ * Flowchart 21: "Notify assignee and reporting manager"
+ * Dispatched automatically when an uncompleted task passes its due date.
+ */
+export async function sendOverdueAutoFlagEmail(opts: SendOverdueAutoFlagOptions) {
+  try {
+    const { transporter, isTestAccount } = await createEmailTransporter();
+    const from = process.env.SMTP_FROM || '"UrbanGaon Automated Monitor" <alerts@urbangaon.com>';
+    const appBase = opts.baseUrl || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+
+    const statusBadge = opts.isEscalated
+      ? '<span style="background: #fee2e2; color: #b91c1c; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 12px; border: 1px solid #fca5a5;">🚨 AUTO-ESCALATED TO MANAGER</span>'
+      : opts.hasReason
+      ? '<span style="background: #fff7ed; color: #c2410c; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 12px; border: 1px solid #fed7aa;">⚠️ OVERDUE (REASON RECORDED)</span>'
+      : '<span style="background: #fef2f2; color: #dc2626; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 12px; border: 1px solid #fecaca;">🚨 PENDING NO REASON (ACTION REQUIRED)</span>';
+
+    const headerBg = opts.isEscalated
+      ? 'linear-gradient(135deg, #991b1b 0%, #dc2626 100%)'
+      : opts.hasReason
+      ? 'linear-gradient(135deg, #9a3412 0%, #ea580c 100%)'
+      : 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)';
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 20px; }
+    .card { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+    .header { background: ${headerBg}; padding: 22px; color: #ffffff; }
+    .content { padding: 24px; font-size: 14px; line-height: 1.6; }
+    .task-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 16px 0; }
+    .btn { display: inline-block; background: #2563eb; color: #ffffff !important; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 700; font-size: 13px; margin-top: 12px; }
+    .footer { background: #f1f5f9; padding: 14px 24px; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <div style="font-size: 18px; font-weight: 800;">UrbanGaon Automated Monitor • Flowchart 21</div>
+      <div style="font-size: 12px; opacity: 0.9; margin-top: 2px;">Overdue Deliverable Auto-Flag Notification</div>
+    </div>
+    <div class="content">
+      <p style="margin-top: 0;">
+        Hello <strong>${opts.toName}</strong>,
+      </p>
+      <p>
+        The corporate hourly evaluation routine detected that the following deliverable has passed its scheduled deadline without completion:
+      </p>
+
+      <div class="task-box">
+        <div style="margin-bottom: 8px;">${statusBadge}</div>
+        <div style="font-size: 16px; font-weight: 800; color: #0f172a; margin-bottom: 6px;">
+          ${opts.taskTitle}
+        </div>
+        <div style="font-size: 12px; color: #64748b; margin-bottom: 4px;">
+          <strong>Deliverable ID:</strong> #${opts.taskId} • <strong>Scheduled Due Date:</strong> ${opts.scheduledDate}
+        </div>
+        <div style="font-size: 12px; color: #b91c1c; font-weight: 700;">
+          ⏱ <strong>Days Overdue:</strong> ${opts.daysOverdue} day${opts.daysOverdue !== 1 ? 's' : ''}
+        </div>
+        ${opts.hasReason && opts.delayReason ? `
+          <div style="margin-top: 10px; padding: 8px 12px; background: #fff7ed; border-left: 3px solid #ea580c; border-radius: 4px; font-size: 12px; color: #9a3412;">
+            <strong>Recorded Delay Reason:</strong> "${opts.delayReason}"
+          </div>
+        ` : `
+          <div style="margin-top: 10px; padding: 8px 12px; background: #fef2f2; border-left: 3px solid #dc2626; border-radius: 4px; font-size: 12px; color: #991b1b;">
+            ⚠️ <strong>Action Required:</strong> No delay explanation has been recorded. Per corporate policy, please document the root cause on your dashboard immediately.
+          </div>
+        `}
+        ${opts.isEscalated ? `
+          <div style="margin-top: 10px; padding: 8px 12px; background: #fee2e2; border-left: 3px solid #b91c1c; border-radius: 4px; font-size: 12px; color: #7f1d1d; font-weight: 700;">
+            🚨 Escalation: This deliverable has been automatically escalated to reporting manager (${opts.managerName || 'Management'}) for leadership guidance.
+          </div>
+        ` : ''}
+      </div>
+
+      <p style="margin-bottom: 0;">
+        Please open your workspace to update the status, reschedule, or document your justification:
+      </p>
+      <a href="${appBase}" class="btn">View Deliverable in Workspace →</a>
+    </div>
+    <div class="footer">
+      UrbanGaon Task Register • Flowchart 21 Automated Governance Engine • Mr. Sukh Sagar Singh (CEO)
+    </div>
+  </div>
+</body>
+</html>`;
+
+    const ccList = (opts.managerEmail && opts.managerEmail.includes('@') && opts.managerEmail.toLowerCase() !== opts.toEmail.toLowerCase())
+      ? [opts.managerEmail]
+      : undefined;
+
+    const subject = opts.isEscalated
+      ? `🚨 [ESCALATION] Overdue Deliverable #${opts.taskId}: "${opts.taskTitle}" (${opts.daysOverdue}d overdue)`
+      : opts.hasReason
+      ? `⚠️ [Overdue - Reason Logged] Deliverable #${opts.taskId}: "${opts.taskTitle}"`
+      : `🚨 [Action Required: No Reason] Overdue Deliverable #${opts.taskId}: "${opts.taskTitle}"`;
+
+    const info = await transporter.sendMail({
+      from,
+      to: opts.toEmail,
+      cc: ccList,
+      subject,
+      html,
+    });
+
+    return {
+      success: true,
+      messageId: info.messageId,
+      isTestAccount,
+      previewUrl: isTestAccount ? nodemailer.getTestMessageUrl(info) : null,
+    };
+  } catch (err) {
+    console.warn('[Overdue AutoFlag Email Error]:', err);
+    return { success: false, error: String(err) };
+  }
+}
+
+/* ── Flowchart 20 Event 1: Task Assigned ────────────────────────── */
+export interface SendTaskAssignedOptions {
+  toEmail: string;
+  toName: string;
+  taskId: string;
+  taskTitle: string;
+  scheduledDate: string;
+  time: string;
+  priority: string;
+  department: string;
+  assignedBy: string;
+  baseUrl?: string;
+}
+
+export async function sendTaskAssignedEmail(opts: SendTaskAssignedOptions) {
+  try {
+    const { transporter, isTestAccount } = await createEmailTransporter();
+    const from = process.env.SMTP_FROM || '"UrbanGaon Tasks" <alerts@urbangaon.com>';
+    const appBase = opts.baseUrl || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 20px; }
+    .card { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+    .header { background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); padding: 22px; color: #ffffff; }
+    .content { padding: 24px; font-size: 14px; line-height: 1.6; }
+    .task-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 16px 0; }
+    .btn { display: inline-block; background: #2563eb; color: #ffffff !important; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 700; font-size: 13px; margin-top: 12px; }
+    .footer { background: #f1f5f9; padding: 14px 24px; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <div style="font-size: 18px; font-weight: 800;">UrbanGaon Task Register • Flowchart 20</div>
+      <div style="font-size: 12px; opacity: 0.9; margin-top: 2px;">New Deliverable Assignment</div>
+    </div>
+    <div class="content">
+      <p style="margin-top: 0;">Hello <strong>${opts.toName}</strong>,</p>
+      <p>A new deliverable has been assigned to you by <strong>${opts.assignedBy}</strong>:</p>
+      <div class="task-box">
+        <div style="font-size: 16px; font-weight: 800; color: #0f172a; margin-bottom: 6px;">${opts.taskTitle}</div>
+        <div style="font-size: 12px; color: #64748b;">
+          <strong>ID:</strong> #${opts.taskId} • <strong>Scheduled:</strong> ${opts.scheduledDate} at ${opts.time}<br>
+          <strong>Priority:</strong> ${opts.priority} • <strong>Department:</strong> ${opts.department}
+        </div>
+      </div>
+      <a href="${appBase}/?taskId=${opts.taskId}" class="btn">Open Deliverable in Workspace →</a>
+    </div>
+    <div class="footer">UrbanGaon Notification Engine • Flowchart 20 Compliance</div>
+  </div>
+</body>
+</html>`;
+
+    const info = await transporter.sendMail({
+      from,
+      to: opts.toEmail,
+      subject: `📋 New Deliverable Assigned: "${opts.taskTitle}" (#${opts.taskId})`,
+      html,
+    });
+
+    return { success: true, messageId: info.messageId, isTestAccount };
+  } catch (err) {
+    console.warn('[Task Assigned Email Error]:', err);
+    return { success: false, error: String(err) };
+  }
+}
+
+export interface SendConfigRollbackEmailOptions {
+  adminEmail: string;
+  adminName: string;
+  restoredVersion: string;
+  previousVersion: string;
+  triggeredBy: string;
+  problemReason: string;
+  baseUrl?: string;
+}
+
+export async function sendConfigRollbackEmail(opts: SendConfigRollbackEmailOptions): Promise<{ success: boolean; messageId?: string; isTestAccount?: boolean; error?: string }> {
+  try {
+    const { transporter, isTestAccount } = await createEmailTransporter();
+    const appBase = opts.baseUrl || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const from = process.env.SMTP_FROM || '"UrbanGaon System Governance" <noreply@urbangaon.com>';
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f8fafc; margin: 0; padding: 24px; }
+    .card { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+    .header { background: linear-gradient(135deg, #c2410c 0%, #ea580c 100%); padding: 22px; color: #ffffff; }
+    .content { padding: 24px; font-size: 14px; line-height: 1.6; color: #1e293b; }
+    .alert-box { background: #fff7ed; border: 1px solid #fdba74; border-radius: 8px; padding: 16px; margin: 16px 0; }
+    .btn { display: inline-block; background: #ea580c; color: #ffffff !important; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 700; font-size: 13px; margin-top: 12px; }
+    .footer { background: #f1f5f9; padding: 14px 24px; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <div style="font-size: 18px; font-weight: 800;">🚨 Configuration Rollback Alert • Flowchart 24</div>
+      <div style="font-size: 12px; opacity: 0.9; margin-top: 2px;">UrbanGaon System Governance Notification</div>
+    </div>
+    <div class="content">
+      <p style="margin-top: 0;">Hello <strong>${opts.adminName}</strong>,</p>
+      <p>This is an automated governance notice. A configuration rollback has been executed by <strong>${opts.triggeredBy}</strong> per <strong>Flowchart 24: Config Versioning and Rollback Flow</strong>.</p>
+      <div class="alert-box">
+        <div style="font-size: 15px; font-weight: 800; color: #9a3412; margin-bottom: 8px;">Rollback Summary</div>
+        <div style="font-size: 13px; color: #431407;">
+          • <strong>Restored Version:</strong> ${opts.restoredVersion}<br>
+          • <strong>Rolled Back From:</strong> ${opts.previousVersion}<br>
+          • <strong>Problem Detected:</strong> ${opts.problemReason}<br>
+          • <strong>Timestamp:</strong> ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
+        </div>
+      </div>
+      <p>All core settings (email schedules, security lockout policies, permissions, and metadata baselines) have been safely restored.</p>
+      <a href="${appBase}/" class="btn">Review System Configuration in Portal →</a>
+    </div>
+    <div class="footer">UrbanGaon Enterprise Engine • Flowchart 24 Compliance</div>
+  </div>
+</body>
+</html>`;
+
+    const info = await transporter.sendMail({
+      from,
+      to: opts.adminEmail,
+      subject: `🚨 [Rollback Notice] System Config rolled back to ${opts.restoredVersion}`,
+      html,
+    });
+
+    return { success: true, messageId: info.messageId, isTestAccount };
+  } catch (err) {
+    console.warn('[Config Rollback Email Error]:', err);
+    return { success: false, error: String(err) };
+  }
+}
 

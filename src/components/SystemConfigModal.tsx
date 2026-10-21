@@ -35,9 +35,12 @@ type ConfigTab =
   | 'retention';
 
 export const SystemConfigModal: React.FC = () => {
-  const { systemConfig, updateSystemConfig, currentUser, logAudit, setBannerNotification } = useApp();
+  const { systemConfig, updateSystemConfig, currentUser, logAudit, setBannerNotification, members } = useApp();
 
   const [activeTab, setActiveTab] = useState<ConfigTab>('email_schedule');
+  const [showRollbackModal, setShowRollbackModal] = useState(false);
+  const [rollbackProblemReason, setRollbackProblemReason] = useState('');
+  const [isRollbackSubmitting, setIsRollbackSubmitting] = useState(false);
 
   // Form states for all 7 branches (Flowchart 2)
   // 1. Email Schedule
@@ -182,9 +185,33 @@ export const SystemConfigModal: React.FC = () => {
 
     // Direct Save (No dual approval required)
     const priorBaseline = systemConfig.versionBaseline;
+    const previousSnapshot: Partial<SystemConfig> = {
+      emailScheduleTime: systemConfig.emailScheduleTime,
+      workingDays: [...systemConfig.workingDays],
+      holidaysActive: systemConfig.holidaysActive,
+      lockoutThreshold: systemConfig.lockoutThreshold,
+      lockoutDurationMinutes: systemConfig.lockoutDurationMinutes,
+      sessionTimeoutMinutes: systemConfig.sessionTimeoutMinutes,
+      passwordRules: systemConfig.passwordRules ? { ...systemConfig.passwordRules } : undefined,
+      retentionDays: systemConfig.retentionDays,
+      auditRetentionDays: systemConfig.auditRetentionDays,
+      versionBaseline: systemConfig.versionBaseline,
+      requireDualSuperAdminApproval: systemConfig.requireDualSuperAdminApproval,
+      rolePermissions: systemConfig.rolePermissions ? { ...systemConfig.rolePermissions } : undefined,
+      customStatuses: systemConfig.customStatuses ? [...systemConfig.customStatuses] : undefined,
+      exportRoles: systemConfig.exportRoles ? { ...systemConfig.exportRoles } : undefined,
+      masterLists: systemConfig.masterLists ? {
+        projects: [...systemConfig.masterLists.projects],
+        departments: [...systemConfig.masterLists.departments],
+        locations: [...systemConfig.masterLists.locations],
+        directReportingLines: systemConfig.masterLists.directReportingLines ? [...systemConfig.masterLists.directReportingLines] : undefined
+      } : undefined
+    };
+
     updateSystemConfig({
       ...proposedConfig,
       previousVersionBaseline: priorBaseline,
+      previousConfigSnapshot: previousSnapshot,
       versionBaseline: newVersionNumber,
       pendingApproval: undefined
     });
@@ -194,7 +221,7 @@ export const SystemConfigModal: React.FC = () => {
       fieldChanged: `System Config Direct Save (${activeTab})`,
       oldValue: priorBaseline,
       newValue: newVersionNumber,
-      notes: `Super Admin committed system configuration update. Baseline updated to ${newVersionNumber}.`
+      notes: `Super Admin committed system configuration update for category '${activeTab}'. Baseline upgraded to ${newVersionNumber}. Prior version kept for rollback (Flowchart 24).`
     });
 
     setBannerNotification({
@@ -211,10 +238,33 @@ export const SystemConfigModal: React.FC = () => {
     if (!systemConfig.pendingApproval) return;
     const req = systemConfig.pendingApproval;
     const priorBaseline = systemConfig.versionBaseline;
+    const previousSnapshot: Partial<SystemConfig> = {
+      emailScheduleTime: systemConfig.emailScheduleTime,
+      workingDays: [...systemConfig.workingDays],
+      holidaysActive: systemConfig.holidaysActive,
+      lockoutThreshold: systemConfig.lockoutThreshold,
+      lockoutDurationMinutes: systemConfig.lockoutDurationMinutes,
+      sessionTimeoutMinutes: systemConfig.sessionTimeoutMinutes,
+      passwordRules: systemConfig.passwordRules ? { ...systemConfig.passwordRules } : undefined,
+      retentionDays: systemConfig.retentionDays,
+      auditRetentionDays: systemConfig.auditRetentionDays,
+      versionBaseline: systemConfig.versionBaseline,
+      requireDualSuperAdminApproval: systemConfig.requireDualSuperAdminApproval,
+      rolePermissions: systemConfig.rolePermissions ? { ...systemConfig.rolePermissions } : undefined,
+      customStatuses: systemConfig.customStatuses ? [...systemConfig.customStatuses] : undefined,
+      exportRoles: systemConfig.exportRoles ? { ...systemConfig.exportRoles } : undefined,
+      masterLists: systemConfig.masterLists ? {
+        projects: [...systemConfig.masterLists.projects],
+        departments: [...systemConfig.masterLists.departments],
+        locations: [...systemConfig.masterLists.locations],
+        directReportingLines: systemConfig.masterLists.directReportingLines ? [...systemConfig.masterLists.directReportingLines] : undefined
+      } : undefined
+    };
 
     updateSystemConfig({
       ...req.configSnapshot,
       previousVersionBaseline: priorBaseline,
+      previousConfigSnapshot: previousSnapshot,
       versionBaseline: req.targetVersion,
       pendingApproval: undefined
     });
@@ -224,7 +274,7 @@ export const SystemConfigModal: React.FC = () => {
       fieldChanged: 'Dual Super Admin Approval Granted',
       oldValue: priorBaseline,
       newValue: req.targetVersion,
-      notes: `Second Super Admin approved pending configuration changes. Baseline upgraded to ${req.targetVersion} (Flowchart 2).`
+      notes: `Second Super Admin approved pending configuration changes. Baseline upgraded to ${req.targetVersion} with previous snapshot preserved (Flowchart 2 & 24).`
     });
 
     setSaveBanner(`Approved! Configuration successfully updated to ${req.targetVersion}.`);
@@ -252,32 +302,116 @@ export const SystemConfigModal: React.FC = () => {
     setTimeout(() => setSaveBanner(null), 4000);
   };
 
-  // Rollback to previous version (Flowchart 2: "Allow rollback to previous version")
-  const handleRollback = () => {
+  // Flowchart 24: Config Versioning and Rollback Flow
+  const handleOpenRollback = () => {
+    setShowRollbackModal(true);
+  };
+
+  const handleExecuteRollback = async () => {
+    setIsRollbackSubmitting(true);
     const priorVersion = systemConfig.previousVersionBaseline || 'v2.3.9-Stable';
-    const confirmRollback = confirm(
-      `Execute atomic configuration rollback to prior baseline: ${priorVersion}?\n\nThis will restore previous settings with an immutable compliance audit record.`
-    );
-    if (!confirmRollback) return;
+    const restoredVersion = priorVersion.includes('Restored') ? priorVersion : `${priorVersion}-Restored`;
+    const problemReason = rollbackProblemReason.trim() || 'Operational issue detected after configuration update';
+
+    // 1. System restores previous version
+    const snapshot = systemConfig.previousConfigSnapshot || {};
+    const currentSnapshotToKeep: Partial<SystemConfig> = {
+      emailScheduleTime: systemConfig.emailScheduleTime,
+      workingDays: [...systemConfig.workingDays],
+      holidaysActive: systemConfig.holidaysActive,
+      lockoutThreshold: systemConfig.lockoutThreshold,
+      lockoutDurationMinutes: systemConfig.lockoutDurationMinutes,
+      sessionTimeoutMinutes: systemConfig.sessionTimeoutMinutes,
+      passwordRules: systemConfig.passwordRules ? { ...systemConfig.passwordRules } : undefined,
+      retentionDays: systemConfig.retentionDays,
+      auditRetentionDays: systemConfig.auditRetentionDays,
+      versionBaseline: systemConfig.versionBaseline,
+      requireDualSuperAdminApproval: systemConfig.requireDualSuperAdminApproval,
+      rolePermissions: systemConfig.rolePermissions ? { ...systemConfig.rolePermissions } : undefined,
+      customStatuses: systemConfig.customStatuses ? [...systemConfig.customStatuses] : undefined,
+      exportRoles: systemConfig.exportRoles ? { ...systemConfig.exportRoles } : undefined,
+      masterLists: systemConfig.masterLists ? {
+        projects: [...systemConfig.masterLists.projects],
+        departments: [...systemConfig.masterLists.departments],
+        locations: [...systemConfig.masterLists.locations],
+        directReportingLines: systemConfig.masterLists.directReportingLines ? [...systemConfig.masterLists.directReportingLines] : undefined
+      } : undefined
+    };
 
     updateSystemConfig({
-      versionBaseline: `${priorVersion}-Restored`,
+      ...snapshot,
+      versionBaseline: restoredVersion,
       previousVersionBaseline: systemConfig.versionBaseline,
-      emailScheduleTime: '08:30 AM',
-      lockoutThreshold: 5,
-      lockoutDurationMinutes: 15,
-      retentionDays: 365
+      previousConfigSnapshot: currentSnapshotToKeep
     });
 
+    // Re-hydrate local modal state to restored parameters
+    if (snapshot.emailScheduleTime) setEmailTime(snapshot.emailScheduleTime);
+    if (snapshot.workingDays) setWorkingDays([...snapshot.workingDays]);
+    if (snapshot.holidaysActive !== undefined) setHolidaysActive(snapshot.holidaysActive);
+    if (snapshot.lockoutThreshold) setLockoutThreshold(snapshot.lockoutThreshold);
+    if (snapshot.lockoutDurationMinutes) setLockoutDuration(snapshot.lockoutDurationMinutes);
+    if (snapshot.sessionTimeoutMinutes) setSessionTimeout(snapshot.sessionTimeoutMinutes);
+    if (snapshot.passwordRules?.minLength) setPasswordMinLength(snapshot.passwordRules.minLength);
+    if (snapshot.passwordRules?.requireSpecialChars !== undefined) setRequireSpecialChars(snapshot.passwordRules.requireSpecialChars);
+    if (snapshot.retentionDays) setRetentionDays(snapshot.retentionDays);
+    if (snapshot.auditRetentionDays) setAuditRetentionDays(snapshot.auditRetentionDays);
+    if (snapshot.requireDualSuperAdminApproval !== undefined) setRequireDualApproval(snapshot.requireDualSuperAdminApproval);
+    if (snapshot.rolePermissions) setRolePermissions({ ...snapshot.rolePermissions });
+    if (snapshot.customStatuses) setCustomStatuses([...snapshot.customStatuses]);
+    if (snapshot.exportRoles?.canExportAllTasks) setCanExportAll([...snapshot.exportRoles.canExportAllTasks]);
+    if (snapshot.exportRoles?.canExportAuditLogs) setCanExportAudit([...snapshot.exportRoles.canExportAuditLogs]);
+    if (snapshot.exportRoles?.canExportReports) setCanExportReports([...snapshot.exportRoles.canExportReports]);
+    if (snapshot.masterLists?.projects) setProjects([...snapshot.masterLists.projects]);
+    if (snapshot.masterLists?.departments) setDepartments([...snapshot.masterLists.departments]);
+    if (snapshot.masterLists?.locations) setLocations([...snapshot.masterLists.locations]);
+
+    // 2. Audit log entry created for rollback
     logAudit({
       action: 'CONFIG_CHANGED',
-      fieldChanged: 'Atomic System Config Rollback',
+      fieldChanged: 'Configuration Rollback (Flowchart 24)',
       oldValue: systemConfig.versionBaseline,
-      newValue: `${priorVersion}-Restored`,
-      notes: `Super Admin executed atomic rollback to prior baseline snapshot ${priorVersion} (Flowchart 2 & 24).`
+      newValue: restoredVersion,
+      notes: `Super Admin executed atomic rollback to prior baseline snapshot ${priorVersion} (Flowchart 24). Problem detected: "${problemReason}". All Admins notified.`
     });
 
-    alert(`Rollback executed successfully! Baseline restored to ${priorVersion}-Restored.`);
+    // 3. Notify Admins of rollback (In-App + Email via Flowchart 20 engine)
+    const adminRecipients = (members || [])
+      .filter(m => (m.role === 'ADMIN' || m.role === 'SUPER_ADMIN') && m.email)
+      .map(m => ({ email: m.email, name: m.name }));
+
+    try {
+      await fetch('/api/notifications/dispatch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventType: 'CONFIG_ROLLBACK',
+          recipients: adminRecipients.length > 0 ? adminRecipients : [{ email: currentUser.email || 'admin@urbangaon.com', name: currentUser.name || 'Super Admin' }],
+          title: `🚨 Config Rolled Back to ${restoredVersion}`,
+          message: `Super Admin ${currentUser.name} triggered a configuration rollback from ${systemConfig.versionBaseline} to ${restoredVersion}. Reason: "${problemReason}". Previous configuration restored.`,
+          metadata: {
+            restoredVersion,
+            previousVersion: systemConfig.versionBaseline,
+            triggeredBy: currentUser.name || 'Super Admin',
+            problemReason
+          }
+        })
+      });
+    } catch (err) {
+      console.warn('[Rollback dispatch notification failed]:', err);
+    }
+
+    setBannerNotification({
+      message: `Rollback completed: Baseline restored to ${restoredVersion}. All Admins notified per Flowchart 24.`,
+      badge: '↺ Config Rollback'
+    });
+
+    setSaveBanner(`Rollback executed successfully! Baseline restored from ${systemConfig.versionBaseline} to ${restoredVersion}.`);
+    setTimeout(() => setSaveBanner(null), 5000);
+
+    setIsRollbackSubmitting(false);
+    setShowRollbackModal(false);
+    setRollbackProblemReason('');
   };
 
   const allDaysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -322,15 +456,181 @@ export const SystemConfigModal: React.FC = () => {
           <button
             type="button"
             className="btn-secondary"
-            onClick={handleRollback}
+            onClick={handleOpenRollback}
             style={{ color: '#c2410c', borderColor: '#fdba74', background: '#fff7ed', gap: '5px' }}
-            title="Flowchart 2: Allow rollback to previous version"
+            title="Flowchart 24: Config Versioning and Rollback Flow"
           >
             <RotateCcw size={14} />
             Rollback to Previous
           </button>
         </div>
       </div>
+
+      {/* Flowchart 24: Problem Detected & Rollback Flow Modal */}
+      {showRollbackModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '16px',
+            maxWidth: '560px',
+            width: '100%',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            border: '1px solid #f97316',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              background: 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)',
+              color: '#ffffff',
+              padding: '1.25rem 1.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ background: 'rgba(255,255,255,0.2)', padding: '6px', borderRadius: '8px' }}>
+                  <RotateCcw size={20} color="#ffffff" />
+                </div>
+                <div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 800 }}>Flowchart 24: Config Version Rollback</div>
+                  <div style={{ fontSize: '0.75rem', opacity: 0.9 }}>Atomic Version Restoration & Admin Dispatch Flow</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setShowRollbackModal(false); setRollbackProblemReason(''); }}
+                style={{ background: 'transparent', border: 'none', color: '#ffffff', cursor: 'pointer', padding: '4px' }}
+              >
+                <XCircle size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+              <div style={{
+                background: '#fff7ed',
+                border: '1px solid #fed7aa',
+                borderRadius: '10px',
+                padding: '1rem',
+                fontSize: '0.85rem',
+                color: '#9a3412',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800 }}>
+                  <AlertTriangle size={16} />
+                  Problem Detected After Configuration Change?
+                </div>
+                <div>
+                  Active Configuration Version: <strong>{systemConfig.versionBaseline}</strong>
+                </div>
+                <div>
+                  Target Baseline to Restore: <strong>{systemConfig.previousVersionBaseline || 'v2.3.9-Stable'}</strong>
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#7c2d12', marginTop: '4px', lineHeight: 1.5 }}>
+                  Executing rollback will restore all settings from the previous version snapshot, record an immutable audit log entry with before/after values, and immediately alert all enterprise Admins via in-app notification and email.
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                  Describe the Problem Detected (Saved to Audit Trail & Dispatched to Admins):
+                </label>
+                <textarea
+                  value={rollbackProblemReason}
+                  onChange={(e) => setRollbackProblemReason(e.target.value)}
+                  placeholder="e.g. Email schedule delivery failures, unexpected account lockouts, role permission restriction detected post-change..."
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    padding: '0.65rem 0.85rem',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '0.82rem',
+                    color: '#0f172a',
+                    fontFamily: 'inherit',
+                    resize: 'vertical',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
+                  {[
+                    'Email schedule failure',
+                    'Unexpected account lockouts',
+                    'Role permission conflict',
+                    'Policy regression observed'
+                  ].map(quickReason => (
+                    <button
+                      key={quickReason}
+                      type="button"
+                      onClick={() => setRollbackProblemReason(quickReason)}
+                      style={{
+                        background: '#f1f5f9',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '6px',
+                        padding: '4px 8px',
+                        fontSize: '0.72rem',
+                        color: '#475569',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      + {quickReason}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', paddingTop: '0.75rem', borderTop: '1px solid #e2e8f0' }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => {
+                    setShowRollbackModal(false);
+                    setRollbackProblemReason('');
+                  }}
+                  style={{ fontSize: '0.82rem' }}
+                >
+                  Keep New Version Active (No Problem)
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExecuteRollback}
+                  disabled={isRollbackSubmitting}
+                  style={{
+                    background: '#ea580c',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '0.6rem 1.2rem',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    cursor: isRollbackSubmitting ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    opacity: isRollbackSubmitting ? 0.7 : 1
+                  }}
+                >
+                  <RotateCcw size={14} />
+                  {isRollbackSubmitting ? 'Restoring & Notifying...' : 'Confirm Rollback & Notify Admins'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Save / Pending Banner */}
       {saveBanner && (

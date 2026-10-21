@@ -48,7 +48,7 @@ import { generateMultiSheetExcelWorkbook, downloadWorkbook } from '@/lib/exportU
 import { getTodayStr } from '@/lib/dateUtils';
 
 export const AdminHrPortal: React.FC = () => {
-  const { members, tasks, updateTask, reopenTask, deleteTask, addMember, updateMember, deactivateMember, currentUser, systemConfig, logAudit } = useApp();
+  const { members, tasks, updateTask, reopenTask, deleteTask, addMember, updateMember, deactivateMember, markMemberOnLeave, returnMemberFromLeave, currentUser, systemConfig, logAudit } = useApp();
   const isCeo = isCeoUser(currentUser);
 
   const [activeTab, setActiveTab] = useState<'oversight' | 'reports' | 'create_user' | 'pending_approvals' | 'deactivation' | 'holidays' | 'directory'>('oversight');
@@ -58,6 +58,19 @@ export const AdminHrPortal: React.FC = () => {
 
   // Flowchart A: Search-as-you-type, Dept & Manager Filters, Interventions
   const [departmentFilterForOversight, setDepartmentFilterForOversight] = useState<string>('ALL');
+
+  // Flowchart 23: Staff Leave & Holiday Handling State
+  const [showLeaveModal, setShowLeaveModal] = useState<boolean>(false);
+  const [leaveTargetMember, setLeaveTargetMember] = useState<TeamMember | null>(null);
+  const [leaveModalStartDate, setLeaveModalStartDate] = useState<string>(getTodayStr());
+  const [leaveModalEndDate, setLeaveModalEndDate] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 3);
+    return d.toISOString().split('T')[0];
+  });
+  const [leaveTaskAction, setLeaveTaskAction] = useState<'AUTO_EXTEND' | 'FLAG_ADMIN'>('AUTO_EXTEND');
+  const [leaveNotesInput, setLeaveNotesInput] = useState<string>('');
+  const [isSubmittingLeave, setIsSubmittingLeave] = useState<boolean>(false);
   const [managerFilterForOversight, setManagerFilterForOversight] = useState<string>('ALL');
   const [userSearchQuery, setUserSearchQuery] = useState<string>('');
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState<boolean>(false);
@@ -241,25 +254,48 @@ export const AdminHrPortal: React.FC = () => {
     setVerifyEmployeeId(`EMP-${Math.floor(1000 + Math.random() * 9000)}`);
   };
 
+  const isMountedRef = React.useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
+
   // Fetch live pending self sign-up requests from MongoDB Atlas (FC 2 & 3)
-  const fetchPendingRequests = useCallback(async (quiet = false) => {
-    if (!quiet) setIsFetchingRequests(true);
+  const fetchPendingRequests = useCallback(async (quiet = false, signal?: AbortSignal) => {
+    if (!quiet && isMountedRef.current) setIsFetchingRequests(true);
     try {
-      const res = await fetch(`/api/auth/request-access?_t=${Date.now()}`, { cache: 'no-store' });
-      const json = await res.json();
-      if (json.success && Array.isArray(json.data)) {
-        setPendingRequests(json.data);
+      if (typeof document !== 'undefined' && document.hidden && quiet) {
+        return;
       }
-    } catch (e) {
-      console.error('[AdminHrPortal] failed fetching pending requests', e);
+      const res = await fetch(`/api/auth/request-access?_t=${Date.now()}`, { 
+        cache: 'no-store',
+        signal,
+        headers: { 'Cache-Control': 'no-cache, no-store' }
+      });
+      if (res.ok) {
+        const json = await res.json().catch(() => null);
+        if (json && json.success && Array.isArray(json.data) && isMountedRef.current) {
+          setPendingRequests(json.data);
+        }
+      }
+    } catch (e: unknown) {
+      const err = e as Error;
+      if (err?.name === 'AbortError' || err?.message?.includes('aborted')) {
+        return;
+      }
+      // Silently handle background polling dropouts without throwing Next.js dev console errors
+      if (!quiet) {
+        console.warn('[AdminHrPortal] notice: pending requests fetch unavailable', err?.message || e);
+      }
     } finally {
-      if (!quiet) setIsFetchingRequests(false);
+      if (!quiet && isMountedRef.current) setIsFetchingRequests(false);
     }
   }, []);
 
   // Real-time synchronization via BroadcastChannel ('urbangaon_auth_sync') and background polling
   useEffect(() => {
-    fetchPendingRequests(false);
+    const controller = new AbortController();
+    fetchPendingRequests(false, controller.signal);
 
     let bc: BroadcastChannel | null = null;
     try {
@@ -288,12 +324,15 @@ export const AdminHrPortal: React.FC = () => {
       }
     } catch {}
 
-    // Real-time heartbeat poll every 4 seconds to guarantee sync across different devices/browsers
+    // Real-time heartbeat poll every 5 seconds when tab is active
     const interval = setInterval(() => {
-      fetchPendingRequests(true);
-    }, 4000);
+      if (typeof document !== 'undefined' && !document.hidden && isMountedRef.current) {
+        fetchPendingRequests(true);
+      }
+    }, 5000);
 
     return () => {
+      controller.abort();
       clearInterval(interval);
       bc?.close();
     };
@@ -424,6 +463,8 @@ export const AdminHrPortal: React.FC = () => {
         filtered = tasks.filter(t => t.assignees.some(a => a.id === reportSelectedEmployeeId || a.name.toLowerCase().includes(name)));
       }
     } else if (reportType === 'PERFORMANCE_RATIO') {
+      // Flowchart 22: "Set status Cancelled exclude from performance reports"
+      filtered = filtered.filter(t => t.status !== 'Cancelled');
       if (reportStartDate) filtered = filtered.filter(t => t.scheduledDate >= reportStartDate);
       if (reportEndDate) filtered = filtered.filter(t => t.scheduledDate <= reportEndDate);
     } else if (reportType === 'PENDING') {
@@ -3992,6 +4033,64 @@ export const AdminHrPortal: React.FC = () => {
                         <Edit3 size={13} />
                         Change Email
                       </button>
+
+                      {/* Flowchart 23: Mark Employee on Leave / Return from Leave */}
+                      {member.status === 'ON_LEAVE' ? (
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          onClick={async () => {
+                            if (confirm(`Restore ${member.name} from leave to ACTIVE status now?`)) {
+                              await returnMemberFromLeave(member.id);
+                            }
+                          }}
+                          style={{
+                            fontSize: '0.74rem',
+                            padding: '5px 10px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            color: '#15803d',
+                            borderColor: '#86efac',
+                            background: '#f0fdf4',
+                            fontWeight: 700,
+                            marginLeft: '6px'
+                          }}
+                          title={`Return ${member.name} from leave (Flowchart 23)`}
+                        >
+                          ↩️ Return to Active
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          onClick={() => {
+                            setLeaveTargetMember(member);
+                            setLeaveModalStartDate(getTodayStr());
+                            const d = new Date();
+                            d.setDate(d.getDate() + 3);
+                            setLeaveModalEndDate(d.toISOString().split('T')[0]);
+                            setLeaveTaskAction('AUTO_EXTEND');
+                            setLeaveNotesInput('');
+                            setShowLeaveModal(true);
+                          }}
+                          style={{
+                            fontSize: '0.74rem',
+                            padding: '5px 10px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            color: '#b45309',
+                            borderColor: '#fde68a',
+                            background: '#fffbeb',
+                            fontWeight: 700,
+                            marginLeft: '6px'
+                          }}
+                          title={`Flowchart 23: Mark ${member.name} on leave with start & end date`}
+                        >
+                          🏖️ Mark On Leave
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -4481,6 +4580,168 @@ export const AdminHrPortal: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Flowchart 23: Mark Employee On Leave Modal */}
+      {showLeaveModal && leaveTargetMember && (
+        <div className="stream-overlay" onClick={() => !isSubmittingLeave && setShowLeaveModal(false)}>
+          <div className="stream-modal-card" style={{ maxWidth: '520px', borderTop: '4px solid #d97706' }} onClick={e => e.stopPropagation()}>
+            <div className="stream-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ background: '#fef3c7', padding: '6px', borderRadius: '8px' }}>
+                  <span style={{ fontSize: '1.2rem' }}>🏖️</span>
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.02rem', fontWeight: 800, color: '#92400e', margin: 0 }}>
+                    Mark Employee On Leave (Flowchart 23)
+                  </h3>
+                  <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                    Pause Reminders • Due Date Evaluation • Notify Leadership
+                  </div>
+                </div>
+              </div>
+              <button className="calendar-nav-btn" onClick={() => !isSubmittingLeave && setShowLeaveModal(false)}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ marginTop: '0.85rem' }}>
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.75rem', marginBottom: '0.85rem' }}>
+                <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#0f172a' }}>
+                  {leaveTargetMember.name}
+                </div>
+                <div style={{ fontSize: '0.73rem', color: '#64748b', marginTop: '2px' }}>
+                  {leaveTargetMember.designation} • {leaveTargetMember.department} • ({leaveTargetMember.email})
+                </div>
+              </div>
+
+              <div style={{ fontSize: '0.74rem', color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '6px', padding: '0.55rem 0.75rem', marginBottom: '0.85rem', lineHeight: 1.45 }}>
+                📋 <strong>Flowchart 23 Automated Protocol:</strong> When marked on leave, the system pauses automated morning reminders for this employee, attaches the on-leave badge to their active deliverables, and dispatches notices to task creators and reporting managers.
+              </div>
+
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                if (!leaveModalStartDate || !leaveModalEndDate) {
+                  alert('Leave start and end dates are required.');
+                  return;
+                }
+                if (leaveModalEndDate < leaveModalStartDate) {
+                  alert('Leave end date cannot be earlier than start date.');
+                  return;
+                }
+                setIsSubmittingLeave(true);
+                await markMemberOnLeave({
+                  memberId: leaveTargetMember.id,
+                  leaveStartDate: leaveModalStartDate,
+                  leaveEndDate: leaveModalEndDate,
+                  taskDueAction: leaveTaskAction,
+                  notes: leaveNotesInput.trim()
+                });
+                setIsSubmittingLeave(false);
+                setShowLeaveModal(false);
+              }} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div className="form-field-group">
+                    <label className="form-field-label" style={{ fontWeight: 700 }}>Leave Start Date *</label>
+                    <input
+                      type="date"
+                      className="form-input"
+                      required
+                      value={leaveModalStartDate}
+                      onChange={e => setLeaveModalStartDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="form-field-group">
+                    <label className="form-field-label" style={{ fontWeight: 700 }}>Leave End / Return Date *</label>
+                    <input
+                      type="date"
+                      className="form-input"
+                      required
+                      value={leaveModalEndDate}
+                      onChange={e => setLeaveModalEndDate(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Flowchart 23 Diamond: Task due during leave? */}
+                <div>
+                  <label className="form-field-label" style={{ fontWeight: 800, color: '#1e293b' }}>
+                    Deliverables Due During Leave? (Policy Action) *
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginTop: '0.35rem' }}>
+                    <div
+                      onClick={() => setLeaveTaskAction('AUTO_EXTEND')}
+                      style={{
+                        padding: '0.65rem',
+                        borderRadius: '8px',
+                        border: leaveTaskAction === 'AUTO_EXTEND' ? '2px solid #2563eb' : '1px solid #cbd5e1',
+                        background: leaveTaskAction === 'AUTO_EXTEND' ? '#eff6ff' : '#ffffff',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <div style={{ fontWeight: 800, fontSize: '0.78rem', color: leaveTaskAction === 'AUTO_EXTEND' ? '#1d4ed8' : '#0f172a' }}>
+                        📅 Auto-extend due date
+                      </div>
+                      <div style={{ fontSize: '0.67rem', color: '#64748b', marginTop: '2px', lineHeight: 1.3 }}>
+                        Automatically push due date to return date
+                      </div>
+                    </div>
+
+                    <div
+                      onClick={() => setLeaveTaskAction('FLAG_ADMIN')}
+                      style={{
+                        padding: '0.65rem',
+                        borderRadius: '8px',
+                        border: leaveTaskAction === 'FLAG_ADMIN' ? '2px solid #ea580c' : '1px solid #cbd5e1',
+                        background: leaveTaskAction === 'FLAG_ADMIN' ? '#fff7ed' : '#ffffff',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <div style={{ fontWeight: 800, fontSize: '0.78rem', color: leaveTaskAction === 'FLAG_ADMIN' ? '#c2410c' : '#0f172a' }}>
+                        🚩 Flag for Admin decision
+                      </div>
+                      <div style={{ fontSize: '0.67rem', color: '#64748b', marginTop: '2px', lineHeight: 1.3 }}>
+                        Flag task for managerial review & reassignment
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="form-field-group">
+                  <label className="form-field-label">Leave Notes / Handover Reason</label>
+                  <textarea
+                    className="form-input"
+                    rows={2}
+                    placeholder="e.g. Annual leave approved by department lead; urgent deliverables covered by secondary assignees..."
+                    value={leaveNotesInput}
+                    onChange={e => setLeaveNotesInput(e.target.value)}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setShowLeaveModal(false)}
+                    disabled={isSubmittingLeave}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    style={{ background: '#d97706', borderColor: '#b45309' }}
+                    disabled={isSubmittingLeave}
+                  >
+                    {isSubmittingLeave ? 'Processing...' : 'Confirm Leave & Pause Reminders'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}

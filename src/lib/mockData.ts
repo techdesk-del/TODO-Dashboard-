@@ -480,6 +480,22 @@ export const INITIAL_SYSTEM_CONFIG: SystemConfig = {
   auditRetentionDays: 730,
   versionBaseline: 'v2.4.0-Production',
   previousVersionBaseline: 'v2.3.9-Stable',
+  previousConfigSnapshot: {
+    emailScheduleTime: '08:30 AM',
+    workingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+    holidaysActive: true,
+    lockoutThreshold: 5,
+    lockoutDurationMinutes: 15,
+    sessionTimeoutMinutes: 60,
+    passwordRules: {
+      minLength: 8,
+      requireSpecialChars: true,
+      requireNumbers: true
+    },
+    retentionDays: 365,
+    auditRetentionDays: 730,
+    versionBaseline: 'v2.3.9-Stable'
+  },
   requireDualSuperAdminApproval: false,
   rolePermissions: {
     SUPER_ADMIN: ['read', 'write', 'delete', 'export_all', 'export_audit', 'config_edit'],

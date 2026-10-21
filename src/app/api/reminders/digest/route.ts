@@ -116,10 +116,10 @@ export async function POST(req: NextRequest) {
       // Only process employees with pending tasks
       if (userTasks.length === 0) continue;
 
-      // Group tasks into Overdue, Due today and Upcoming
-      const overdue = userTasks.filter(t => t.scheduledDate < todayStr);
-      const today = userTasks.filter(t => t.scheduledDate === todayStr);
-      const upcoming = userTasks.filter(t => t.scheduledDate > todayStr);
+      // Group tasks into Overdue, Due today and Upcoming per Flowchart 21 & D
+      const overdue = userTasks.filter(t => t.isOverdue || t.scheduledDate < todayStr);
+      const today = userTasks.filter(t => !t.isOverdue && t.scheduledDate === todayStr);
+      const upcoming = userTasks.filter(t => !t.isOverdue && t.scheduledDate > todayStr);
 
       // Check for chronic delays (overdue by > 3 days)
       const todayTime = new Date(todayStr).getTime();

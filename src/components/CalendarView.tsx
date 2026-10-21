@@ -185,7 +185,7 @@ export const CalendarView: React.FC = () => {
   };
 
   const isOverdue = (task: Task): boolean => {
-    return task.scheduledDate < todayStr && task.status !== 'Done' && task.status !== 'Cancelled';
+    return Boolean(task.isOverdue || (task.scheduledDate < todayStr && task.status !== 'Done' && task.status !== 'Cancelled'));
   };
 
   const getStatusColor = (status: string, taskOverdue: boolean) => {
