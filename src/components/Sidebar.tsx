@@ -20,7 +20,6 @@ import {
 } from 'lucide-react';
 import { getTodayStr, getTomorrowStr, formatDateDisplay } from '@/lib/dateUtils';
 import { isCeoUser, canAccessWorkflows, canAccessAdminHr } from '@/lib/rosterData';
-import { AuthModal } from './AuthModal';
 
 export const Sidebar: React.FC = () => {
   const {
@@ -36,10 +35,11 @@ export const Sidebar: React.FC = () => {
     currentUser,
     logoutUser,
     setBannerNotification,
-    setIsExportModalOpen
+    setIsExportModalOpen,
+    setIsAuthModalOpen,
+    setAuthModalInitialMode
   } = useApp();
 
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const closeSidebar = () => setIsMobileNavOpen(false);
 
   // ── Hydration safety ─────────────────────────────────────────────
@@ -401,7 +401,7 @@ export const Sidebar: React.FC = () => {
             <button
               className="btn-primary"
               style={{ width: '100%', justifyContent: 'center', fontSize: '0.75rem', gap: '6px' }}
-              onClick={() => { setIsAuthModalOpen(true); closeSidebar(); }}
+              onClick={() => { setAuthModalInitialMode('LOGIN'); setIsAuthModalOpen(true); closeSidebar(); }}
             >
               <LogIn size={14} />
               <span>Employee Sign In</span>
@@ -411,7 +411,7 @@ export const Sidebar: React.FC = () => {
               <button
                 className="btn-secondary"
                 style={{ flex: 1, justifyContent: 'center', fontSize: '0.72rem', gap: '4px' }}
-                onClick={() => { setIsAuthModalOpen(true); closeSidebar(); }}
+                onClick={() => { setAuthModalInitialMode('LOGIN'); setIsAuthModalOpen(true); closeSidebar(); }}
                 title="Switch login credentials"
               >
                 <LogIn size={12} />
@@ -448,9 +448,6 @@ export const Sidebar: React.FC = () => {
           💡 <strong>Live Date Sync:</strong> Today is <strong>{formatDateDisplay(todayStr)}</strong>. Click any date to plan ahead.
         </div>
       </aside>
-
-      {/* Global Auth Modal from Sidebar */}
-      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </>
   );
 };

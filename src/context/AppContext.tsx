@@ -91,12 +91,18 @@ interface AppContextType {
   refreshFromDB: () => Promise<void>;
   refreshMembersFromDB: () => Promise<void>;
   logAudit: (entry: Omit<AuditLogEntry, 'id' | 'timestamp' | 'actor' | 'actorRole' | 'ipAddress' | 'deviceInfo'> & Partial<AuditLogEntry>) => void;
+  isAuthModalOpen: boolean;
+  setIsAuthModalOpen: (open: boolean) => void;
+  authModalInitialMode: 'CHOOSER' | 'INVITATION_INPUT' | 'REQUEST_ACCESS' | 'LOGIN';
+  setAuthModalInitialMode: (mode: 'CHOOSER' | 'INVITATION_INPUT' | 'REQUEST_ACCESS' | 'LOGIN') => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<TeamMember>(GUEST_USER);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(true);
+  const [authModalInitialMode, setAuthModalInitialMode] = useState<'CHOOSER' | 'INVITATION_INPUT' | 'REQUEST_ACCESS' | 'LOGIN'>('LOGIN');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [members, setMembers] = useState<TeamMember[]>(INITIAL_MEMBERS);
   const [selectedDate, setSelectedDate] = useState<string>(getTodayStr());
@@ -114,6 +120,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deletedIdsRef = useRef<Set<string>>(new Set());
 
   // Auto-dismiss banner notifications after 4 seconds
+
   useEffect(() => {
     if (bannerNotification) {
       const timer = setTimeout(() => {
@@ -262,59 +269,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     try {
-      const savedUserStr = localStorage.getItem('urbangaon_auth_user_v2');
-      if (savedUserStr) {
-        const parsed = JSON.parse(savedUserStr);
-        if (parsed && parsed.id && parsed.name && parsed.id !== 'guest') {
-          const email = (parsed.email || '').toLowerCase();
-          const name = (parsed.name || '').toLowerCase();
-          if (email.includes('aakash') || email.includes('akash') || email.includes('techdesk') || name.includes('aakash')) {
-            parsed.role = 'SUPER_ADMIN';
-            parsed.designation = 'AI & IT Officer / Super Admin';
-            parsed.email = 'techdesk@urbangaon.com';
-            localStorage.setItem('urbangaon_auth_user_v2', JSON.stringify(parsed));
-          }
-          setCurrentUser(parsed);
-        } else {
-          // Default to Aakash Das with Full Super Admin access
-          const aakashMember = INITIAL_MEMBERS.find(m => m.id === 'mem-12' || m.email.includes('techdesk') || m.email.includes('aakash')) || {
-            id: 'mem-12',
-            name: 'Aakash Das',
-            email: 'techdesk@urbangaon.com',
-            role: 'SUPER_ADMIN' as Role,
-            department: 'AI & IT Operations',
-            designation: 'AI & IT Officer / Super Admin',
-            avatar: 'AD',
-            status: 'ACTIVE' as const,
-            totalTasks: 4,
-            completedTasks: 2,
-            activeTasks: 2,
-            overdueTasks: 0,
-            velocity: 98.0
-          };
-          setCurrentUser(aakashMember);
-        }
+      const sessionActive = typeof window !== 'undefined' ? sessionStorage.getItem('urbangaon_session_active') : null;
+      if (!sessionActive) {
+        // Fresh visit or new tab: require login! Do NOT default to Super Admin
+        try {
+          localStorage.removeItem('urbangaon_auth_user_v2');
+          sessionStorage.removeItem('urbangaon_auth_user_v2');
+        } catch {}
+        setCurrentUser(GUEST_USER);
+        setAuthModalInitialMode('LOGIN');
+        setIsAuthModalOpen(true);
       } else {
-        // Default to Aakash Das with Full Super Admin access
-        const aakashMember = INITIAL_MEMBERS.find(m => m.id === 'mem-12' || m.email.includes('techdesk') || m.email.includes('aakash')) || {
-          id: 'mem-12',
-          name: 'Aakash Das',
-          email: 'techdesk@urbangaon.com',
-          role: 'SUPER_ADMIN' as Role,
-          department: 'AI & IT Operations',
-          designation: 'AI & IT Officer / Super Admin',
-          avatar: 'AD',
-          status: 'ACTIVE' as const,
-          totalTasks: 4,
-          completedTasks: 2,
-          activeTasks: 2,
-          overdueTasks: 0,
-          velocity: 98.0
-        };
-        setCurrentUser(aakashMember);
+        const savedUserStr = sessionStorage.getItem('urbangaon_auth_user_v2') || localStorage.getItem('urbangaon_auth_user_v2');
+        if (savedUserStr) {
+          const parsed = JSON.parse(savedUserStr);
+          if (parsed && parsed.id && parsed.name && parsed.id !== 'guest') {
+            setCurrentUser(parsed);
+            setIsAuthModalOpen(false);
+          } else {
+            setCurrentUser(GUEST_USER);
+            setAuthModalInitialMode('LOGIN');
+            setIsAuthModalOpen(true);
+          }
+        } else {
+          setCurrentUser(GUEST_USER);
+          setAuthModalInitialMode('LOGIN');
+          setIsAuthModalOpen(true);
+        }
       }
     } catch (e) {
       console.warn('[AppContext] auth restore failed', e);
+      setCurrentUser(GUEST_USER);
+      setAuthModalInitialMode('LOGIN');
+      setIsAuthModalOpen(true);
     }
 
     // Initial load from MongoDB
@@ -584,16 +571,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [auditLogs]);
 
-  // ── Persist authenticated user session to localStorage
+  // ── Persist authenticated user session to storage
   useEffect(() => {
     try {
       if (currentUser && currentUser.id !== 'guest') {
         localStorage.setItem('urbangaon_auth_user_v2', JSON.stringify(currentUser));
+        sessionStorage.setItem('urbangaon_auth_user_v2', JSON.stringify(currentUser));
+        sessionStorage.setItem('urbangaon_session_active', 'true');
       } else {
         localStorage.removeItem('urbangaon_auth_user_v2');
+        sessionStorage.removeItem('urbangaon_auth_user_v2');
+        sessionStorage.removeItem('urbangaon_session_active');
       }
     } catch (e) {
-      console.warn('[AppContext] localStorage auth save error', e);
+      console.warn('[AppContext] storage auth save error', e);
     }
   }, [currentUser]);
 
@@ -1374,9 +1365,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const logoutUser = () => {
     try {
       localStorage.removeItem('urbangaon_auth_user_v2');
+      sessionStorage.removeItem('urbangaon_auth_user_v2');
+      sessionStorage.removeItem('urbangaon_session_active');
     } catch {}
     setCurrentUser(GUEST_USER);
     setActiveView('workspace');
+    setAuthModalInitialMode('LOGIN');
+    setIsAuthModalOpen(true);
     logAudit({
       action: 'LOGIN',
       fieldChanged: 'Auth Session / Logout',
@@ -1385,7 +1380,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       notes: `User ${currentUser.name} signed out`
     });
     setBannerNotification({
-      message: 'You have been signed out. Click Sign In to access your account.',
+      message: 'You have been signed out. Please sign in to access your account.',
       badge: '✓ Logged Out'
     });
   };
@@ -1769,7 +1764,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         dbStatus,
         refreshFromDB,
         refreshMembersFromDB,
-        logAudit
+        logAudit,
+        isAuthModalOpen,
+        setIsAuthModalOpen,
+        authModalInitialMode,
+        setAuthModalInitialMode
       }}
     >
       {children}

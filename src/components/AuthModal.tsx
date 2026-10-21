@@ -47,12 +47,12 @@ export type AuthViewMode =
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode }) => {
   const { setCurrentUser, currentUser, members, setActiveView, setBannerNotification, logAudit } = useApp();
   
-  // View mode
-  const [authMode, setAuthMode] = useState<AuthViewMode>('CHOOSER');
+  // View mode - defaults directly to LOGIN so first screen shown is corporate sign in
+  const [authMode, setAuthMode] = useState<AuthViewMode>(initialMode || 'LOGIN');
 
   // Login credentials & Flowchart 5 Authentication State
-  const [email, setEmail] = useState(currentUser?.email || OFFICIAL_ROSTER[0].email);
-  const [password, setPassword] = useState('123');
+  const [email, setEmail] = useState(currentUser && currentUser.id !== 'guest' ? (currentUser.email || '') : '');
+  const [password, setPassword] = useState('');
   const [twoFactorCode, setTwoFactorCode] = useState('');
   const [requires2FA, setRequires2FA] = useState(false);
   const [twoFactorRole, setTwoFactorRole] = useState<string | null>(null);
@@ -134,7 +134,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
       setTwoFactorRetriesLeft(null);
       setShowRosterQuickPick(false);
       setRosterSearch('');
-      setPassword('123');
+      setPassword('');
 
       // Check URL query parameters for deep-linked invitations, password reset links, or modes (Flowchart 4)
       let deepLinkProcessed = false;
@@ -177,13 +177,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
       }
 
       if (!deepLinkProcessed) {
-        if (initialMode) {
-          setAuthMode(initialMode);
-        } else if (currentUser && currentUser.id !== 'guest') {
-          setAuthMode('LOGIN');
-        } else {
-          setAuthMode('CHOOSER');
-        }
+        setAuthMode(initialMode || 'LOGIN');
       }
 
       if (currentUser?.email) {
@@ -224,31 +218,44 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
     }> = [];
 
     const seenEmails = new Set<string>();
+    const seenIds = new Set<string>();
 
     const combinedLiveMembers = [...(Array.isArray(members) ? members : []), ...extraMembers];
 
     const deactivatedEmails = new Set<string>();
+    const deactivatedIds = new Set<string>();
     for (const m of combinedLiveMembers) {
-      if (m?.email && (m.status === 'DEACTIVATED' || (m as unknown as { isDeactivated?: boolean }).isDeactivated)) {
-        deactivatedEmails.add(m.email.toLowerCase().trim());
+      if (!m) continue;
+      const isDeact = m.status === 'DEACTIVATED' || (m as unknown as { isDeactivated?: boolean }).isDeactivated;
+      if (isDeact) {
+        if (m.email) deactivatedEmails.add(m.email.toLowerCase().trim());
+        if (m.id) deactivatedIds.add(m.id);
       }
     }
 
     for (const m of combinedLiveMembers) {
-      if (!m || !m.email) continue;
+      if (!m || !m.email || !m.id) continue;
       const cleanEmail = m.email.toLowerCase().trim();
-      if (seenEmails.has(cleanEmail)) continue;
-      if (deactivatedEmails.has(cleanEmail) || m.status === 'DEACTIVATED' || (m as unknown as { isDeactivated?: boolean }).isDeactivated) {
+      const cleanId = m.id.trim();
+      if (seenIds.has(cleanId) || seenEmails.has(cleanEmail)) continue;
+      if (deactivatedIds.has(cleanId) || deactivatedEmails.has(cleanEmail) || m.status === 'DEACTIVATED' || (m as unknown as { isDeactivated?: boolean }).isDeactivated) {
         continue;
       }
-      seenEmails.add(cleanEmail);
 
       const officialMatch = OFFICIAL_ROSTER.find(
-        o => o.email.toLowerCase() === cleanEmail || o.id === m.id
+        o => o.id === cleanId || o.email.toLowerCase() === cleanEmail || o.aliases?.some(a => a.toLowerCase() === cleanEmail)
       );
 
+      seenIds.add(cleanId);
+      seenEmails.add(cleanEmail);
+      if (officialMatch) {
+        seenIds.add(officialMatch.id);
+        seenEmails.add(officialMatch.email.toLowerCase().trim());
+        officialMatch.aliases?.forEach(a => seenEmails.add(a.toLowerCase().trim()));
+      }
+
       list.push({
-        id: m.id,
+        id: cleanId,
         name: m.name,
         email: m.email,
         role: m.role || 'EMPLOYEE',
@@ -266,11 +273,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
 
     for (const o of OFFICIAL_ROSTER) {
       const cleanEmail = o.email.toLowerCase().trim();
-      if (deactivatedEmails.has(cleanEmail)) continue;
-      if (!seenEmails.has(cleanEmail)) {
-        seenEmails.add(cleanEmail);
-        list.push(o);
-      }
+      const cleanId = o.id.trim();
+      if (deactivatedIds.has(cleanId) || deactivatedEmails.has(cleanEmail)) continue;
+      if (seenIds.has(cleanId) || seenEmails.has(cleanEmail)) continue;
+
+      const hasAliasMatch = o.aliases?.some(a => seenEmails.has(a.toLowerCase().trim()));
+      if (hasAliasMatch) continue;
+
+      seenIds.add(cleanId);
+      seenEmails.add(cleanEmail);
+      o.aliases?.forEach(a => seenEmails.add(a.toLowerCase().trim()));
+
+      list.push(o);
     }
 
     return list;
@@ -396,7 +410,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
       });
 
       try {
-        localStorage.setItem('urbangaon_auth_user_v2', JSON.stringify({
+        const payload = JSON.stringify({
           id: data.user.id,
           name: data.user.name,
           email: data.user.email,
@@ -404,7 +418,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
           department: data.user.department,
           designation: data.user.designation,
           avatar: data.user.avatar,
-        }));
+        });
+        localStorage.setItem('urbangaon_auth_user_v2', payload);
+        sessionStorage.setItem('urbangaon_auth_user_v2', payload);
+        sessionStorage.setItem('urbangaon_session_active', 'true');
       } catch {}
 
       // Flowchart 5: Log onboarding login in audit trail
@@ -505,7 +522,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
       });
       const data = await res.json();
 
-      if (!res.ok) {
+      if (!res.ok || !data.success) {
         // Flowchart 5: Account Temporarily Locked (5 Failed attempts -> Lock 15 mins)
         if (data.isLocked) {
           setIsAccountLocked(true);
@@ -579,7 +596,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
       setCurrentUser(userObj);
 
       try {
-        localStorage.setItem('urbangaon_auth_user_v2', JSON.stringify({
+        const payload = JSON.stringify({
           id: userObj.id,
           name: userObj.name,
           email: userObj.email,
@@ -587,7 +604,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
           department: userObj.department,
           designation: userObj.designation,
           avatar: userObj.avatar,
-        }));
+        });
+        localStorage.setItem('urbangaon_auth_user_v2', payload);
+        sessionStorage.setItem('urbangaon_auth_user_v2', payload);
+        sessionStorage.setItem('urbangaon_session_active', 'true');
       } catch {}
 
       // Flowchart 5: "Log successful login in audit trail"
@@ -742,7 +762,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
       });
 
       try {
-        localStorage.setItem('urbangaon_auth_user_v2', JSON.stringify({
+        const payload = JSON.stringify({
           id: data.user.id,
           name: data.user.name,
           email: data.user.email,
@@ -750,7 +770,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
           department: data.user.department,
           designation: data.user.designation,
           avatar: data.user.avatar,
-        }));
+        });
+        localStorage.setItem('urbangaon_auth_user_v2', payload);
+        sessionStorage.setItem('urbangaon_auth_user_v2', payload);
+        sessionStorage.setItem('urbangaon_session_active', 'true');
       } catch {}
 
       // Flowchart 5: Log reset password login in audit trail
@@ -1804,11 +1827,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                       </div>
                     </div>
 
-                    {filteredDirectoryMembers.map((emp) => {
+                    {filteredDirectoryMembers.map((emp, empIdx) => {
                       const isSelected = emp.email.toLowerCase() === activeEmailForLookup.toLowerCase();
                       return (
                         <div
-                          key={emp.id}
+                          key={`${emp.id}-${emp.email}-${empIdx}`}
                           onClick={() => selectEmployee(emp.email)}
                           style={{
                             display: 'flex',

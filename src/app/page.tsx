@@ -16,6 +16,7 @@ import { WorkflowManualModal } from '@/components/WorkflowManualModal';
 import { MorningDigestPreviewModal } from '@/components/MorningDigestPreviewModal';
 import { CreateTaskModal } from '@/components/CreateTaskModal';
 import { EnterpriseExportModal } from '@/components/EnterpriseExportModal';
+import { AuthModal } from '@/components/AuthModal';
 import { formatDateTitle, getTodayStr } from '@/lib/dateUtils';
 import { isCeoUser, canAccessAdminHr, canAccessWorkflows } from '@/lib/rosterData';
 import { Check, Calendar as CalendarIcon, Sparkles, Globe, CalendarDays, AlertTriangle, RotateCcw } from 'lucide-react';
@@ -35,6 +36,9 @@ export default function Home() {
     setIsCreateTaskModalOpen,
     isExportModalOpen,
     setIsExportModalOpen,
+    isAuthModalOpen,
+    setIsAuthModalOpen,
+    authModalInitialMode,
   } = useApp();
 
   const [viewScope, setViewScope] = useState<'selected' | 'all'>('all');
@@ -483,6 +487,11 @@ export default function Home() {
       <EnterpriseExportModal 
         isOpen={isExportModalOpen} 
         onClose={() => setIsExportModalOpen(false)} 
+      />
+      <AuthModal 
+        isOpen={isAuthModalOpen} 
+        onClose={() => setIsAuthModalOpen(false)} 
+        initialMode={authModalInitialMode}
       />
     </div>
   );

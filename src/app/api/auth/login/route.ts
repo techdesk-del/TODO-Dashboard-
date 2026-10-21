@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
             success: false,
             error: `Access Suspended: Employee is on authorized leave${leaveEnd ? ` until ${leaveEnd}` : ''} (Flowchart 4). Login access is blocked until return date.`,
           },
-          { status: 403 }
+          { status: 200 }
         );
       }
     }
@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
           success: false,
           error: 'Access Denied: This corporate account has been deactivated and deliverables handed over (Flowchart 4). Please contact HR / Talent Management.',
         },
-        { status: 403 }
+        { status: 200 }
       );
     }
 
@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
           email: user.email,
           error: 'First Login Detected (Flowchart 4): Corporate security policy requires setting your personal password via the set-password link before signing in.',
         },
-        { status: 403 }
+        { status: 200 }
       );
     }
 
@@ -190,7 +190,7 @@ export async function POST(req: NextRequest) {
           remainingAttempts: remaining,
           error: `Invalid email or password. Attempt ${attempts} of 5 before 15-minute account lockout (Flowchart 5).`,
         },
-        { status: 401 }
+        { status: 200 }
       );
     }
 
@@ -242,7 +242,7 @@ export async function POST(req: NextRequest) {
           requires2FA: true,
           role: user.role,
           message: `Two-step verification required for ${user.role === 'SUPER_ADMIN' ? 'Super Admin / Director' : 'Admin / Talent HR'} access (Flowchart 5). A 6-digit verification code has been dispatched to ${user.email}.`,
-        }, { status: 403 });
+        }, { status: 200 });
       }
 
       // Verify supplied 2FA code (matches current OTP, recent OTPs sent within window, or default bypass 123456)
@@ -268,7 +268,7 @@ export async function POST(req: NextRequest) {
             success: false,
             twoFactorExceeded: true,
             error: 'Two-step verification failed: Maximum retry limit exceeded (Flowchart 5). Please sign in again.',
-          }, { status: 401 });
+          }, { status: 200 });
         }
 
         await UserModel.updateOne(
@@ -281,7 +281,7 @@ export async function POST(req: NextRequest) {
           requires2FA: true,
           remainingRetries: 1,
           error: 'Invalid or expired 2FA code. Flowchart 5 allows 1 retry remaining.',
-        }, { status: 401 });
+        }, { status: 200 });
       }
 
       // Valid OTP: clear OTP fields and reset failure count

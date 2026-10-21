@@ -19,7 +19,6 @@ import {
   Clock,
   FileSpreadsheet
 } from 'lucide-react';
-import { AuthModal } from './AuthModal';
 import { useTaskDeadlines } from '@/hooks/useTaskDeadlines';
 import { formatDateDisplay, formatDateShort, getTodayStr } from '@/lib/dateUtils';
 import { isCeoUser } from '@/lib/rosterData';
@@ -42,13 +41,15 @@ export const Header: React.FC = () => {
     clearAllTasks,
     logoutUser,
     updateTask,
-    tasks
+    tasks,
+    isAuthModalOpen,
+    setIsAuthModalOpen,
+    setAuthModalInitialMode
   } = useApp();
 
   const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
   const [isOpsMenuOpen, setIsOpsMenuOpen] = useState(false);
   const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const roleMenuRef = useRef<HTMLDivElement>(null);
   const opsMenuRef = useRef<HTMLDivElement>(null);
@@ -68,6 +69,7 @@ export const Header: React.FC = () => {
         searchParams.get('auth') ||
         searchParams.get('login')
       ) {
+        setAuthModalInitialMode('LOGIN');
         setIsAuthModalOpen(true);
       }
     }
@@ -725,7 +727,7 @@ export const Header: React.FC = () => {
         {/* Explicit Sign In / Log In Button */}
         {isGuest ? (
           <button
-            onClick={() => setIsAuthModalOpen(true)}
+            onClick={() => { setAuthModalInitialMode('LOGIN'); setIsAuthModalOpen(true); }}
             className="btn-primary"
             style={{
               padding: 'clamp(0.3rem,1.5vw,0.38rem) clamp(0.6rem,2vw,0.85rem)',
@@ -932,9 +934,6 @@ export const Header: React.FC = () => {
         </div>
       </div>
     </div>
-
-      {/* Enterprise Authentication Modal */}
-      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </header>
   );
 };
