@@ -423,7 +423,7 @@ export const WorkflowManualModal: React.FC = () => {
 
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))',
           gap: '0.75rem'
         }}>
           <div style={{
@@ -657,7 +657,7 @@ export const WorkflowManualModal: React.FC = () => {
         /* ── View 2: Visual Responsive Cards Grid (Ideal for mobile / compact screens) ── */
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))',
           gap: '1rem',
           width: '100%'
         }}>
@@ -872,7 +872,7 @@ export const WorkflowManualModal: React.FC = () => {
           {/* 7 Lifecycle Phase Architecture Map Grid */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))',
             gap: '0.85rem'
           }}>
             {[

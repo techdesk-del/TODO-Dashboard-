@@ -189,7 +189,7 @@ export default function Home() {
                   flexWrap: 'wrap',
                   boxShadow: '0 2px 8px rgba(225, 29, 72, 0.08)'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: '260px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 'min(100%, 260px)' }}>
                     <div style={{
                       width: '32px',
                       height: '32px',

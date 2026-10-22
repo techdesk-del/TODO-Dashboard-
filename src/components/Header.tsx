@@ -209,6 +209,7 @@ export const Header: React.FC = () => {
         <button
           type="button"
           onClick={() => setIsCreateTaskModalOpen(true)}
+          className="header-action-btn header-add-task-btn"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -224,17 +225,19 @@ export const Header: React.FC = () => {
             boxShadow: '0 2px 4px rgba(37, 99, 235, 0.25)',
             whiteSpace: 'nowrap',
             transition: 'all 0.15s ease',
+            minHeight: '32px'
           }}
           title="Add New Deliverable / Task (Flowchart 6)"
         >
           <span style={{ fontSize: '0.85rem' }}>➕</span>
-          <span>Add Task</span>
+          <span className="header-action-label">Add Task</span>
         </button>
 
         {/* Flowchart E / 14: Enterprise Multi-Sheet Excel Export */}
         <button
           type="button"
           onClick={() => setIsExportModalOpen(true)}
+          className="header-action-btn header-export-btn"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -250,11 +253,12 @@ export const Header: React.FC = () => {
             border: '1px solid #bbf7d0',
             transition: 'all 0.15s ease',
             boxShadow: '0 1px 2px rgba(16, 185, 129, 0.1)',
+            minHeight: '32px'
           }}
           title="Export Deliverables to Excel (Flowchart 14)"
         >
           <FileSpreadsheet size={14} color="#16a34a" />
-          <span>Export</span>
+          <span className="header-action-label">Export</span>
         </button>
 
         {/* Executive Ops Dropdown (Strictly CEO & Super Admin Only) */}

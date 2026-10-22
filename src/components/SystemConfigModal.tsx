@@ -1018,7 +1018,7 @@ export const SystemConfigModal: React.FC = () => {
           {/* TAB 5: Master Data (Flowchart 2) */}
           {/* ─────────────────────────────────────────────────────────── */}
           {activeTab === 'master_data' && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))', gap: '1.25rem' }}>
               {/* Projects */}
               <div>
                 <h4 style={{ fontSize: '0.88rem', fontWeight: 800, marginBottom: '6px' }}>Master Project Tags</h4>
@@ -1101,7 +1101,7 @@ export const SystemConfigModal: React.FC = () => {
                 </p>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '1rem' }}>
                 <div className="form-field-group">
                   <label className="form-field-label">Failed Login Lockout Attempts</label>
                   <input
@@ -1158,7 +1158,7 @@ export const SystemConfigModal: React.FC = () => {
                 </p>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '1rem' }}>
                 <div className="form-field-group">
                   <label className="form-field-label">Completed Deliverable Retention (Days)</label>
                   <input

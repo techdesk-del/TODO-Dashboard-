@@ -814,7 +814,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
           {/* Flowchart 6 Steps 5, 6, 7: Project, Location, Department Dropdowns */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))',
             gap: '1rem',
             marginBottom: '1.25rem'
           }}>
@@ -935,7 +935,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
           {/* Flowchart 6 Step 8: Set Due Date and Priority */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))',
             gap: '1rem',
             marginBottom: '1.25rem'
           }}>
