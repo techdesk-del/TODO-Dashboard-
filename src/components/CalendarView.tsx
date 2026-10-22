@@ -435,7 +435,7 @@ export const CalendarView: React.FC = () => {
           width: '100%',
           boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
         }}>
-          <div style={{ minWidth: '760px' }}>
+          <div className="cal-month-inner" style={{ minWidth: '760px' }}>
             {/* Days of week header */}
             <div style={{
               display: 'grid',
@@ -448,17 +448,20 @@ export const CalendarView: React.FC = () => {
               fontSize: '0.76rem',
               color: '#475569'
             }}>
-              <span>Monday</span>
-              <span>Tuesday</span>
-              <span>Wednesday</span>
-              <span>Thursday</span>
-              <span>Friday</span>
-              <span>Saturday</span>
-              <span style={{ color: '#dc2626' }}>Sunday (Weekly Off)</span>
+              {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map(wd => (
+                <span key={wd}>
+                  <span className="cal-wd-full">{wd}</span>
+                  <span className="cal-wd-short">{wd.slice(0, 3)}</span>
+                </span>
+              ))}
+              <span style={{ color: '#dc2626' }}>
+                <span className="cal-wd-full">Sunday (Weekly Off)</span>
+                <span className="cal-wd-short">Sun</span>
+              </span>
             </div>
 
             {/* Days Grid */}
-            <div style={{
+            <div className="cal-days-grid" style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(7, 1fr)',
               gridAutoRows: 'minmax(120px, auto)'
@@ -486,6 +489,7 @@ export const CalendarView: React.FC = () => {
                 return (
                   <div
                     key={day}
+                    className="cal-day-cell"
                     onClick={() => setInspectDate(dateStr)}
                     style={{
                       border: isSelected 
@@ -558,13 +562,13 @@ export const CalendarView: React.FC = () => {
                             borderRadius: '3px',
                             padding: '1px 4px'
                           }} title={`${overdueCount} Overdue Deliverable(s)`}>
-                            {overdueCount} Overdue
+                            {overdueCount}<span className="cal-badge-label"> Overdue</span>
                           </span>
                         )}
 
                         {dayTasks.length > 0 && overdueCount === 0 && (
-                          <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#2563eb' }}>
-                            {dayTasks.length} {dayTasks.length === 1 ? 'task' : 'tasks'}
+                          <span className="cal-task-count" style={{ fontSize: '0.65rem', fontWeight: 700, color: '#2563eb' }}>
+                            {dayTasks.length}<span className="cal-badge-label"> {dayTasks.length === 1 ? 'task' : 'tasks'}</span>
                           </span>
                         )}
                       </div>
@@ -588,7 +592,7 @@ export const CalendarView: React.FC = () => {
                         gap: '3px'
                       }}>
                         <span>{holiday.icon}</span>
-                        <span>{holiday.name}</span>
+                        <span className="cal-holiday-name">{holiday.name}</span>
                       </div>
                     )}
 
@@ -599,6 +603,7 @@ export const CalendarView: React.FC = () => {
                         return (
                           <div
                             key={t.id}
+                            className="cal-task-chip"
                             onClick={(e) => {
                               e.stopPropagation();
                               setActiveTaskDetail(t);
@@ -656,7 +661,7 @@ export const CalendarView: React.FC = () => {
       {viewMode === 'week' && (
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 160px), 1fr))',
           gap: '0.75rem'
         }}>
           {currentWeekDays.map(dayDate => {

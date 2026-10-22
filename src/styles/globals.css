@@ -1584,6 +1584,24 @@ html, body {
   -webkit-tap-highlight-color: transparent;
 }
 
+:root {
+  --mobile-header-h: calc(clamp(54px, 8vw, 62px) + env(safe-area-inset-top, 0px));
+}
+
+/* Voice button labels: full on desktop/tablet, short on phones */
+.voice-label-short { display: none; }
+.cal-wd-short { display: none; }
+
+/* Notification count badge must never be resized by layout rules */
+.notif-count-badge {
+  width: auto !important;
+  max-width: none !important;
+  left: auto !important;
+  right: -4px !important;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
 /* Prevent iOS auto-zoom on mobile text inputs when focused */
 @media screen and (max-width: 768px) {
   input[type="text"],
@@ -1655,9 +1673,9 @@ html, body {
 
   .app-sidebar {
     position: fixed !important;
-    top: clamp(52px, 8vw, 60px) !important;
+    top: var(--mobile-header-h) !important;
     left: 0 !important;
-    height: calc(100dvh - clamp(52px, 8vw, 60px)) !important;
+    height: calc(100dvh - var(--mobile-header-h)) !important;
     z-index: 40 !important;
     transform: translateX(-100%) !important;
     box-shadow: 4px 0 24px rgba(0, 0, 0, 0.18) !important;
@@ -1881,16 +1899,41 @@ html, body {
     justify-content: center !important;
   }
 
-  /* Dropdown menus lock within viewport width */
-  .header-main-section [ref=opsMenuRef] > div,
-  .header-main-section [ref=notificationMenuRef] > div,
-  .header-main-section [ref=roleMenuRef] > div,
-  .header-meta-group > div > div[style*="position: absolute"],
-  .header-meta-group [style*="position: absolute"] {
-    max-width: calc(100vw - 16px) !important;
-    width: min(340px, calc(100vw - 16px)) !important;
-    right: 0 !important;
-    left: auto !important;
+  /* Header dropdowns become full-width sheets pinned under the header */
+  .header-dropdown-panel,
+  .user-profile-dropdown-menu {
+    position: fixed !important;
+    top: calc(var(--mobile-header-h) + 6px) !important;
+    left: 8px !important;
+    right: 8px !important;
+    width: auto !important;
+    max-width: none !important;
+    max-height: calc(100dvh - var(--mobile-header-h) - 96px) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    z-index: 1000 !important;
+  }
+
+  /* Voice button: short label */
+  .voice-label-full { display: none !important; }
+  .voice-label-short { display: inline !important; }
+
+  /* Calendar month grid fits the phone screen (no forced 760px scroll) */
+  .cal-month-inner { min-width: 0 !important; width: 100% !important; }
+  .cal-wd-full { display: none !important; }
+  .cal-wd-short { display: inline !important; }
+  .cal-days-grid {
+    grid-auto-rows: minmax(68px, auto) !important;
+    grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+  }
+  .cal-days-grid > div { min-width: 0 !important; overflow: hidden !important; padding: 3px !important; }
+  .cal-day-cell { gap: 2px !important; }
+  .cal-day-cell > div:first-child { flex-wrap: wrap !important; gap: 2px !important; }
+  .cal-badge-label,
+  .cal-holiday-name { display: none !important; }
+  .cal-task-chip {
+    font-size: 0.56rem !important;
+    padding: 1px 3px !important;
   }
 
   /* Multi-assignee card breakdown: 1 column */
@@ -1944,6 +1987,16 @@ html, body {
     padding: 3px !important;
   }
 
+  /* Logout remains available inside the profile menu */
+  .header-logout-btn,
+  .user-badge-chevron {
+    display: none !important;
+  }
+
+  .header-meta-group {
+    gap: 0.3rem !important;
+  }
+
   .workspace-date-title {
     font-size: clamp(0.78rem, 4vw, 0.92rem) !important;
   }
@@ -1978,8 +2031,42 @@ html, body {
 /* ── Ultra-Compact & Low-End Viewports (≤ 360px — iPhone SE 1st, Fold) */
 @media (max-width: 360px) {
   .brand-official-logo {
-    max-width: 110px !important;
-    max-height: 25px !important;
+    max-width: 92px !important;
+    max-height: 24px !important;
+  }
+
+  .header-brand-panel {
+    padding: 0 0.25rem !important;
+    gap: 0.25rem !important;
+  }
+
+  .mobile-menu-btn {
+    width: 30px !important;
+    height: 30px !important;
+    min-width: 30px !important;
+  }
+
+  .header-main-section {
+    padding: 0 0.25rem !important;
+  }
+
+  .header-meta-group {
+    gap: 0.22rem !important;
+  }
+
+  .header-icon-btn,
+  .header-action-btn {
+    width: 30px !important;
+    min-width: 30px !important;
+    height: 30px !important;
+    min-height: 30px !important;
+    padding: 0 !important;
+  }
+
+  .avatar-circle {
+    width: 26px !important;
+    height: 26px !important;
+    min-width: 26px !important;
   }
 
   .main-workspace {

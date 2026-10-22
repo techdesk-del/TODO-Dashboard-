@@ -168,7 +168,8 @@ export const VoiceInputBar: React.FC = () => {
           title="Voice task input"
         >
           <Mic size={18} />
-          <span>{isListening ? 'Listening...' : 'Voice Input (Click to Speak)'}</span>
+          <span className="voice-label-full">{isListening ? 'Listening...' : 'Voice Input (Click to Speak)'}</span>
+          <span className="voice-label-short">{isListening ? 'Listening' : 'Voice'}</span>
         </button>
 
         {/* Text Input Bar with submit */}

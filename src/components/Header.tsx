@@ -267,7 +267,7 @@ export const Header: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsOpsMenuOpen(!isOpsMenuOpen)}
-              className="btn-secondary"
+              className="btn-secondary header-icon-btn"
               style={{
                 width: '32px',
                 height: '32px',
@@ -291,6 +291,7 @@ export const Header: React.FC = () => {
 
             {isOpsMenuOpen && (
               <div 
+                className="header-dropdown-panel"
                 style={{
                   position: 'absolute',
                   top: 'calc(100% + 6px)',
@@ -524,7 +525,7 @@ export const Header: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsNotificationCenterOpen(!isNotificationCenterOpen)}
-                className="btn-secondary"
+                className="btn-secondary header-icon-btn"
                 style={{
                   width: '32px',
                   height: '32px',
@@ -547,6 +548,7 @@ export const Header: React.FC = () => {
                 <Bell size={15} color={totalNotifCount > 0 ? '#dc2626' : '#64748b'} />
                 {totalNotifCount > 0 && (
                   <span
+                    className="notif-count-badge"
                     style={{
                       position: 'absolute',
                       top: '-4px',
@@ -573,6 +575,7 @@ export const Header: React.FC = () => {
 
               {isNotificationCenterOpen && (
                 <div 
+                  className="header-dropdown-panel"
                   style={{
                     position: 'absolute',
                     top: 'calc(100% + 6px)',
@@ -894,7 +897,7 @@ export const Header: React.FC = () => {
         ) : (
           <button
             onClick={logoutUser}
-            className="btn-secondary"
+            className="btn-secondary header-logout-btn"
             style={{
               padding: 'clamp(0.28rem,1.5vw,0.35rem) clamp(0.4rem,2vw,0.65rem)',
               display: 'flex',
@@ -926,6 +929,7 @@ export const Header: React.FC = () => {
               <span className="user-role-label">{isMounted ? currentUser.role.replace('_', ' ') : 'EMPLOYEE'}</span>
             </div>
             <ChevronDown
+              className="user-badge-chevron"
               size={12}
               color="#64748b"
               style={{
