@@ -51,7 +51,7 @@ export const AdminHrPortal: React.FC = () => {
   const { members, tasks, updateTask, reopenTask, deleteTask, addMember, updateMember, deactivateMember, markMemberOnLeave, returnMemberFromLeave, currentUser, systemConfig, logAudit } = useApp();
   const isCeo = isCeoUser(currentUser);
 
-  const [activeTab, setActiveTab] = useState<'oversight' | 'reports' | 'create_user' | 'pending_approvals' | 'deactivation' | 'holidays' | 'directory'>('oversight');
+  const [activeTab, setActiveTab] = useState<'oversight' | 'reports' | 'create_user' | 'pending_approvals' | 'deactivation' | 'holidays' | 'directory' | 'email_logs'>('oversight');
   const [selectedUserForOversight, setSelectedUserForOversight] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [searchFilter, setSearchFilter] = useState<string>('');
@@ -95,6 +95,82 @@ export const AdminHrPortal: React.FC = () => {
   const [taskToReopen, setTaskToReopen] = useState<Task | null>(null);
   const [reopenReason, setReopenReason] = useState<string>('');
 
+  // Flowchart 20 & Flowchart 26: Email Logs Table State (Admin & Super Admin)
+  const [emailLogs, setEmailLogs] = useState<Array<{
+    _id?: string;
+    id?: string;
+    recipientEmail: string;
+    recipientName?: string;
+    eventType: string;
+    subject: string;
+    bodyText?: string;
+    status: 'DELIVERED' | 'FAILED' | 'PENDING';
+    errorMessage?: string;
+    retries?: number;
+    taskId?: string;
+    taskTitle?: string;
+    createdAt: string;
+  }>>([]);
+  const [emailLogStats, setEmailLogStats] = useState<{ total: number; delivered: number; failed: number }>({
+    total: 0,
+    delivered: 0,
+    failed: 0,
+  });
+  const [emailLogFilter, setEmailLogFilter] = useState<'ALL' | 'DELIVERED' | 'FAILED'>('ALL');
+  const [emailLogSearch, setEmailLogSearch] = useState<string>('');
+  const [isFetchingEmailLogs, setIsFetchingEmailLogs] = useState<boolean>(false);
+  const [retryingEmailId, setRetryingEmailId] = useState<string | null>(null);
+  const [retryBanner, setRetryBanner] = useState<string | null>(null);
+
+  const fetchEmailLogs = useCallback(async () => {
+    setIsFetchingEmailLogs(true);
+    try {
+      const res = await fetch(`/api/notifications/email-logs?limit=100&_t=${Date.now()}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          setEmailLogs(json.data);
+          if (json.stats) {
+            setEmailLogStats(json.stats);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[AdminHrPortal] failed to fetch email logs', err);
+    } finally {
+      setIsFetchingEmailLogs(false);
+    }
+  }, []);
+
+  const retryDispatch = async (log: any) => {
+    const logId = log._id || log.id || '';
+    setRetryingEmailId(logId);
+    try {
+      const res = await fetch('/api/notifications/dispatch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventType: log.eventType,
+          recipients: [{ email: log.recipientEmail, name: log.recipientName || '' }],
+          title: log.subject,
+          message: log.bodyText || log.subject,
+          taskId: log.taskId,
+          taskTitle: log.taskTitle
+        })
+      });
+      if (res.ok) {
+        setRetryBanner(`✓ Dispatched retry email to ${log.recipientEmail}`);
+        fetchEmailLogs();
+      } else {
+        setRetryBanner(`❌ Retry failed: HTTP ${res.status}`);
+      }
+    } catch (err: any) {
+      setRetryBanner(`❌ Retry error: ${err.message}`);
+    } finally {
+      setRetryingEmailId(null);
+    }
+  };
+
   // Flowchart: Staff Directory & Corporate Email Configuration
   const [memberToEditEmail, setMemberToEditEmail] = useState<TeamMember | null>(null);
   const [newEmailInput, setNewEmailInput] = useState<string>('');
@@ -126,6 +202,7 @@ export const AdminHrPortal: React.FC = () => {
     name: string;
   } | null>(null);
   const [isSubmittingUser, setIsSubmittingUser] = useState(false);
+
 
   // Deactivation Handover state (Flowchart 4 & 18)
   const [deactivationSubTab, setDeactivationSubTab] = useState<'form' | 'archive'>('form');
@@ -166,6 +243,7 @@ export const AdminHrPortal: React.FC = () => {
     }
     return unique;
   }, [activeMembers]);
+
 
   // Flowchart: Reporting Managers (Managers, Admins, Super Admin/CEO)
   const reportingManagers = useMemo(() => {
@@ -460,7 +538,8 @@ export const AdminHrPortal: React.FC = () => {
       if (reportSelectedEmployeeId) {
         const targetMember = members.find(m => m.id === reportSelectedEmployeeId);
         const name = (targetMember?.name || '').toLowerCase();
-        filtered = tasks.filter(t => t.assignees.some(a => a.id === reportSelectedEmployeeId || a.name.toLowerCase().includes(name)));
+        // Flowchart 22: Exclude Cancelled tasks from performance reports
+        filtered = tasks.filter(t => t.status !== 'Cancelled' && t.assignees.some(a => a.id === reportSelectedEmployeeId || a.name.toLowerCase().includes(name)));
       }
     } else if (reportType === 'PERFORMANCE_RATIO') {
       // Flowchart 22: "Set status Cancelled exclude from performance reports"
@@ -4094,6 +4173,273 @@ export const AdminHrPortal: React.FC = () => {
                     </td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      {/* TAB 8: EMAIL DELIVERY LOGS & NOTIFICATION DISPATCH (FC 20 & FC 26)   */}
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'email_logs' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {/* Header Card */}
+          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Mail size={20} color="#4338ca" />
+                  Email Delivery Logs &amp; Notification Dispatch Daemon (Flowcharts 20 &amp; 26)
+                </h3>
+                <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '4px 0 0 0' }}>
+                  Centralized dispatch audit tracking delivery status, SMTP handshake verification, and immediate retry orchestration.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={fetchEmailLogs}
+                disabled={isFetchingEmailLogs}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <RotateCcw size={14} className={isFetchingEmailLogs ? 'animate-spin' : ''} />
+                <span>{isFetchingEmailLogs ? 'Refreshing...' : 'Refresh Logs'}</span>
+              </button>
+            </div>
+
+            {retryBanner && (
+              <div style={{
+                marginTop: '0.75rem',
+                padding: '0.55rem 0.85rem',
+                borderRadius: '8px',
+                background: retryBanner.startsWith('✓') ? '#f0fdf4' : '#fef2f2',
+                border: retryBanner.startsWith('✓') ? '1px solid #86efac' : '1px solid #fecaca',
+                color: retryBanner.startsWith('✓') ? '#15803d' : '#991b1b',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+              }}>
+                {retryBanner}
+              </div>
+            )}
+
+            {/* KPI Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', marginTop: '1rem' }}>
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.85rem 1rem' }}>
+                <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>
+                  TOTAL DISPATCHES
+                </div>
+                <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0f172a', marginTop: '2px' }}>
+                  {emailLogStats.total}
+                </div>
+                <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '2px' }}>
+                  Across all notification triggers
+                </div>
+              </div>
+
+              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '0.85rem 1rem' }}>
+                <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#166534', textTransform: 'uppercase' }}>
+                  SUCCESSFULLY DELIVERED
+                </div>
+                <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#15803d', marginTop: '2px' }}>
+                  {emailLogStats.delivered}
+                </div>
+                <div style={{ fontSize: '0.68rem', color: '#166534', marginTop: '2px' }}>
+                  SMTP 250 OK confirmed
+                </div>
+              </div>
+
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '0.85rem 1rem' }}>
+                <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#991b1b', textTransform: 'uppercase' }}>
+                  DELIVERY FAILURES
+                </div>
+                <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#dc2626', marginTop: '2px' }}>
+                  {emailLogStats.failed}
+                </div>
+                <div style={{ fontSize: '0.68rem', color: '#991b1b', marginTop: '2px' }}>
+                  Actionable admin failure summary
+                </div>
+              </div>
+            </div>
+
+            {/* Filter & Search Bar */}
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#475569' }}>Filter Status:</span>
+                {(['ALL', 'DELIVERED', 'FAILED'] as const).map(f => (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => setEmailLogFilter(f)}
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: '6px',
+                      fontSize: '0.74rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      border: emailLogFilter === f ? '1.5px solid #4338ca' : '1px solid #cbd5e1',
+                      background: emailLogFilter === f ? '#e0e7ff' : '#ffffff',
+                      color: emailLogFilter === f ? '#3730a3' : '#475569'
+                    }}
+                  >
+                    {f === 'ALL' ? `All (${emailLogs.length})` : f === 'DELIVERED' ? `Delivered (${emailLogStats.delivered})` : `Failed (${emailLogStats.failed})`}
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ position: 'relative', width: '280px' }}>
+                <Search size={14} style={{ position: 'absolute', left: '10px', top: '10px', color: '#94a3b8' }} />
+                <input
+                  type="text"
+                  placeholder="Search recipient, subject, or task..."
+                  className="form-input"
+                  style={{ paddingLeft: '32px', fontSize: '0.78rem', height: '34px' }}
+                  value={emailLogSearch}
+                  onChange={e => setEmailLogSearch(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Email Logs Table */}
+          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}>
+            <table className="admin-oversight-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+              <thead>
+                <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', textAlign: 'left' }}>
+                  <th style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#475569' }}>TIMESTAMP</th>
+                  <th style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#475569' }}>EVENT TYPE</th>
+                  <th style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#475569' }}>RECIPIENT</th>
+                  <th style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#475569' }}>SUBJECT / DELIVERABLE</th>
+                  <th style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#475569' }}>STATUS</th>
+                  <th style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#475569', textAlign: 'right' }}>ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {emailLogs
+                  .filter(l => {
+                    if (emailLogFilter === 'DELIVERED' && l.status !== 'DELIVERED') return false;
+                    if (emailLogFilter === 'FAILED' && l.status !== 'FAILED') return false;
+                    if (emailLogSearch.trim()) {
+                      const q = emailLogSearch.toLowerCase();
+                      const matchEmail = (l.recipientEmail || '').toLowerCase().includes(q);
+                      const matchName = (l.recipientName || '').toLowerCase().includes(q);
+                      const matchSubject = (l.subject || '').toLowerCase().includes(q);
+                      const matchTask = (l.taskTitle || '').toLowerCase().includes(q);
+                      if (!matchEmail && !matchName && !matchSubject && !matchTask) return false;
+                    }
+                    return true;
+                  })
+                  .map((log, idx) => {
+                    const logId = log._id || log.id || `log-${idx}`;
+                    const isRetrying = retryingEmailId === logId;
+                    return (
+                      <tr key={logId} style={{ borderBottom: '1px solid #f1f5f9', background: idx % 2 === 0 ? '#ffffff' : '#fafafa' }}>
+                        <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap', color: '#64748b', fontSize: '0.75rem' }}>
+                          {log.createdAt ? (
+                            <>
+                              <div>{new Date(log.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                              <div style={{ color: '#94a3b8' }}>{new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
+                            </>
+                          ) : '—'}
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap' }}>
+                          <span style={{
+                            background: '#f1f5f9',
+                            color: '#334155',
+                            border: '1px solid #e2e8f0',
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            fontSize: '0.68rem',
+                            fontWeight: 700
+                          }}>
+                            {log.eventType || 'NOTIFICATION'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem' }}>
+                          <div style={{ fontWeight: 700, color: '#0f172a' }}>{log.recipientName || log.recipientEmail}</div>
+                          <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{log.recipientEmail}</div>
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem' }}>
+                          <div style={{ fontWeight: 600, color: '#0f172a' }}>{log.subject}</div>
+                          {log.taskTitle && (
+                            <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>
+                              Task: {log.taskTitle}
+                            </div>
+                          )}
+                          {log.errorMessage && (
+                            <div style={{ fontSize: '0.7rem', color: '#b91c1c', marginTop: '3px', background: '#fef2f2', padding: '2px 6px', borderRadius: '4px', display: 'inline-block' }}>
+                              Error: {log.errorMessage}
+                            </div>
+                          )}
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap' }}>
+                          {log.status === 'DELIVERED' ? (
+                            <span style={{
+                              background: '#dcfce7',
+                              color: '#15803d',
+                              border: '1px solid #86efac',
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              fontSize: '0.72rem',
+                              fontWeight: 800,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}>
+                              ✓ DELIVERED
+                            </span>
+                          ) : (
+                            <span style={{
+                              background: '#fee2e2',
+                              color: '#b91c1c',
+                              border: '1px solid #fca5a5',
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              fontSize: '0.72rem',
+                              fontWeight: 800,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}>
+                              ✕ FAILED
+                            </span>
+                          )}
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            onClick={() => retryDispatch(log)}
+                            disabled={isRetrying}
+                            style={{
+                              padding: '4px 8px',
+                              fontSize: '0.72rem',
+                              color: '#4338ca',
+                              borderColor: '#c7d2fe',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            <RotateCcw size={12} className={isRetrying ? 'animate-spin' : ''} />
+                            <span>{isRetrying ? 'Retrying...' : 'Resend'}</span>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+
+                {emailLogs.length === 0 && !isFetchingEmailLogs && (
+                  <tr>
+                    <td colSpan={6} style={{ padding: '2.5rem 1rem', textAlign: 'center', color: '#94a3b8' }}>
+                      <Mail size={32} style={{ margin: '0 auto 0.5rem auto', opacity: 0.5 }} />
+                      <div style={{ fontWeight: 600 }}>No email logs recorded yet.</div>
+                      <div style={{ fontSize: '0.75rem', marginTop: '2px' }}>
+                        Dispatches sent by the Notification Daemon will appear here in realtime.
+                      </div>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

@@ -79,6 +79,8 @@ export interface Task {
   editedByAdmin?: boolean;
   createdAt: string;
   updatedAt: string;
+  isArchived?: boolean;
+  archivedAt?: string;
 }
 
 export interface AuditLogEntry {
@@ -95,6 +97,9 @@ export interface AuditLogEntry {
   ipAddress: string;
   deviceInfo: string;
   notes?: string;
+  isColdStorage?: boolean;
+  coldStorageAt?: string;
+  retentionPolicyYears?: number;
 }
 
 export type NotificationEventType =
@@ -105,7 +110,8 @@ export type NotificationEventType =
   | 'DAILY_REMINDER'
   | 'WEEKLY_DIGEST'
   | 'CHRONIC_DELAY'
-  | 'CONFIG_ROLLBACK';
+  | 'CONFIG_ROLLBACK'
+  | 'DATA_RETENTION';
 
 export interface InAppNotification {
   id: string;

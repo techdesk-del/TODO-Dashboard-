@@ -26,7 +26,10 @@ const AuditLogSchema = new Schema<AuditLogEntry>(
     actorRole:    { type: String, required: true },
     ipAddress:    { type: String, required: true },
     deviceInfo:   { type: String, required: true },
-    notes:        { type: String },
+    notes:                { type: String },
+    isColdStorage:        { type: Boolean, default: false, index: true },
+    coldStorageAt:        { type: String },
+    retentionPolicyYears: { type: Number, default: 7 },
   },
   {
     timestamps: false,

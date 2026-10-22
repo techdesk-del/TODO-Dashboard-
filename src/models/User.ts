@@ -29,6 +29,8 @@ export interface IUser {
   recentOtps?: string[];
   isDeactivated?: boolean;
   status?: string;
+  isAnonymized?: boolean;
+  anonymizedAt?: string;
   createdAt: string;
 }
 
@@ -55,6 +57,8 @@ const UserSchema = new Schema<IUser>(
     recentOtps:           { type: [String], default: [] },
     isDeactivated:        { type: Boolean, default: false },
     status:               { type: String, default: 'ACTIVE' },
+    isAnonymized:         { type: Boolean, default: false, index: true },
+    anonymizedAt:         { type: String },
     createdAt:            { type: String, default: () => new Date().toISOString() },
   },
   { timestamps: false, versionKey: false, strict: false }

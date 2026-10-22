@@ -26,7 +26,8 @@ const EmailLogSchema = new Schema<EmailLog>(
         'DAILY_REMINDER',
         'WEEKLY_DIGEST',
         'CHRONIC_DELAY',
-        'CONFIG_ROLLBACK'
+        'CONFIG_ROLLBACK',
+        'DATA_RETENTION'
       ],
       index: true
     },

@@ -61,9 +61,20 @@ export function computeMultiAssigneeStatus(task: {
   const progressPercent = Math.round((completedCount / effectiveTotal) * 100);
   const progressText = `${completedCount} of ${totalCount} completed`;
 
+  // Flowchart 22: Cancelled Task handling (status Cancelled, excluded from performance reports)
+  if (task.status === 'Cancelled' || (cancelledCount === totalCount && totalCount > 0 && completedCount === 0)) {
+    return {
+      status: 'Cancelled',
+      progressPercent: 0,
+      completedCount: 0,
+      totalCount,
+      progressText: `0 of ${totalCount} completed (Cancelled)`,
+    };
+  }
+
   // Flowchart 8 Step 6: All completed or cancelled?
   const allCompletedOrCancelled = assignees.every(a => a.status === 'Done' || a.status === 'Cancelled');
-  if (allCompletedOrCancelled && (completedCount > 0 || cancelledCount === totalCount)) {
+  if (allCompletedOrCancelled && completedCount > 0) {
     return {
       status: 'Done',
       progressPercent: 100,

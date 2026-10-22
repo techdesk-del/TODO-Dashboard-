@@ -96,6 +96,8 @@ const TaskSchema = new Schema<Task>(
     carryForwardCount:  { type: Number, default: 0 },
     aiMetadata:         { type: AiMetaSchema },
     editedByAdmin:      { type: Boolean, default: false },
+    isArchived:         { type: Boolean, default: false, index: true },
+    archivedAt:         { type: String },
     createdAt:          { type: String },
     updatedAt:          { type: String },
   },
@@ -103,6 +105,7 @@ const TaskSchema = new Schema<Task>(
     // Mongoose manages _id separately; our app uses string `id`
     timestamps: false,
     versionKey: false,
+    strict: false,
   }
 );
 

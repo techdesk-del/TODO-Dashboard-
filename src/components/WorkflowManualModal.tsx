@@ -12,7 +12,10 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
-  ChevronsRight
+  ChevronsRight,
+  Network,
+  Maximize2,
+  ExternalLink
 } from 'lucide-react';
 import { canAccessWorkflows } from '@/lib/rosterData';
 
@@ -20,7 +23,8 @@ export const WorkflowManualModal: React.FC = () => {
   const { currentUser } = useApp();
   const [searchFilter, setSearchFilter] = useState('');
   const [selectedPhase, setSelectedPhase] = useState<string>('ALL');
-  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'cards' | 'diagram'>('table');
+  const [isDiagramExpanded, setIsDiagramExpanded] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
 
@@ -29,34 +33,34 @@ export const WorkflowManualModal: React.FC = () => {
   }
 
   const workflows = useMemo(() => [
-    { num: 1, name: 'Sign-Up / Invitation Landing Page', phase: 'Phase 1: Account Onboarding', role: 'Public / All Staff', outcome: 'User chooses to redeem invitation, request access, or sign in directly.' },
-    { num: 2, name: 'Employee Self Sign-Up Request', phase: 'Phase 1: Account Onboarding', role: 'Public / New Staff', outcome: 'Registration request submitted and sent to HR & Admin for verification.' },
-    { num: 3, name: 'Admin Approves Sign-Up Request', phase: 'Phase 1: Account Onboarding', role: 'Admin / Talent HR', outcome: 'New employee account created, credentials generated, and welcome email dispatched.' },
-    { num: 4, name: 'Password Setup & First Login', phase: 'Phase 1: Account Onboarding', role: 'All Users / Employees', outcome: 'Password securely established, credentials encrypted, and user routed to active workspace.' },
-    { num: 5, name: 'Login & Role Routing', phase: 'Phase 2: Authentication & Security', role: 'All Organizational Roles', outcome: 'Credentials authenticated, security verified, and user directed to designated dashboard tier.' },
-    { num: 6, name: 'Employee – Add Task', phase: 'Phase 3: Daily Work & Task Operations', role: 'Employee / All Staff', outcome: 'Task registered with full metadata, assignees designated, and work queued for execution.' },
-    { num: 7, name: 'Employee – Edit or Update Task', phase: 'Phase 3: Daily Work & Task Operations', role: 'Employee / Assignees', outcome: 'Status updated with mandatory justifications where required; audit trail fully updated.' },
-    { num: 8, name: 'Multi-Assignee Task Flow', phase: 'Phase 3: Daily Work & Task Operations', role: 'All Collaborative Teams', outcome: 'Multi-person task tracked independently per person; consolidated overall status rolled up automatically.' },
-    { num: 9, name: 'Admin – Create Employee Login (Direct Invitation)', phase: 'Phase 3: Daily Work & Task Operations', role: 'Admin / Talent HR', outcome: 'Employee credentials formally created by HR; official activation email sent.' },
-    { num: 10, name: 'Admin – View User Tasks via Dropdown', phase: 'Phase 3: Daily Work & Task Operations', role: 'Admin / Talent HR', outcome: 'Full managerial oversight of any employee’s tasks with ability to edit, reopen, reassign, or export.' },
-    { num: 11, name: 'Admin – Reports and Performance Ratio', phase: 'Phase 4: Reporting, Visibility & Auditing', role: 'Admin / Directors', outcome: 'Fair, standardized productivity metrics generated across employees, teams, and departments.' },
-    { num: 12, name: 'Super Admin – Audit Log View', phase: 'Phase 4: Reporting, Visibility & Auditing', role: 'Super Admin / Director', outcome: '100% transparency and traceability into every system modification with immutable tamper-proof logs.' },
-    { num: 13, name: 'Morning Email Reminder Flow', phase: 'Phase 4: Reporting, Visibility & Auditing', role: 'Automated System Routine', outcome: 'Targeted, clutter-free morning reminder emails sent to every employee with pending commitments.' },
-    { num: 14, name: 'Excel Export Flow', phase: 'Phase 4: Reporting, Visibility & Auditing', role: 'All Authorized Roles', outcome: 'Standardized, multi-sheet Excel workbooks generated for offline analysis and board reviews.' },
-    { num: 15, name: 'Calendar View Flow', phase: 'Phase 4: Reporting, Visibility & Auditing', role: 'All Organizational Roles', outcome: 'Interactive visual scheduling of tasks by month, week, or day with instant edit and drag capabilities.' },
-    { num: 16, name: 'Super Admin – System Configuration', phase: 'Phase 4: Reporting, Visibility & Auditing', role: 'Super Admin / Director', outcome: 'Global system policies, master dropdown lists, and schedules updated with versioning controls.' },
-    { num: 17, name: 'Escalation Resolution Flow', phase: 'Phase 5: Exception Handling & Governance', role: 'Senior Management / Department Heads', outcome: 'Task bottlenecks reviewed by senior leadership; decisive intervention executed with SLA tracking.' },
-    { num: 18, name: 'Account Deactivation and Task Handover', phase: 'Phase 5: Exception Handling & Governance', role: 'Admin / HR / Management', outcome: 'Departing employee’s tasks smoothly reassigned; complete historical accountability preserved.' },
-    { num: 19, name: 'Reporting Manager Team View', phase: 'Phase 5: Exception Handling & Governance', role: 'Reporting Managers / Team Leads', outcome: 'Team leaders monitor subordinate workloads, approve delay reasons, and balance assignments.' },
-    { num: 20, name: 'Notification Dispatch Flow', phase: 'Phase 5: Exception Handling & Governance', role: 'Automated Communication Engine', outcome: 'Intelligent, timely notifications routed to appropriate recipients with zero email clutter.' },
-    { num: 21, name: 'Overdue and No-Reason Auto-Flag Flow', phase: 'Phase 5: Exception Handling & Governance', role: 'Automated System Routine', outcome: 'Lapsed deadlines automatically flagged; delays without reasons escalated for immediate attention.' },
-    { num: 22, name: 'Task Cancellation and Reassignment Flow', phase: 'Phase 5: Exception Handling & Governance', role: 'Creator / Admin / Managers', outcome: 'Obsolete tasks properly cancelled with documented reasons; reassignments handled seamlessly.' },
-    { num: 23, name: 'Leave and Holiday Handling Flow', phase: 'Phase 5: Exception Handling & Governance', role: 'Automated System Routine', outcome: 'Reminders paused during employee leaves; tasks due on holidays handled intelligently.' },
-    { num: 24, name: 'Config Versioning and Rollback Flow', phase: 'Phase 5: Exception Handling & Governance', role: 'Super Admin / Director', outcome: 'Configuration modifications tracked as versioned baselines with instantaneous rollback readiness.' },
-    { num: 25, name: 'Data Retention and Archive Flow', phase: 'Phase 5: Exception Handling & Governance', role: 'Automated System Routine', outcome: 'Historical data transferred to secure archives; active database maintained at maximum speed.' },
-    { num: 26, name: 'Complete System Overview – Master Flow', phase: 'Phase 6: Executive Synthesis & Architecture', role: 'Senior Management / Directors / CEO', outcome: 'Unified single-page architectural overview connecting all roles, workflows, and automated routines.' },
-    { num: 27, name: 'System Trigger Map (Event Cascade)', phase: 'Phase 6: Executive Synthesis & Architecture', role: 'System Architecture & Automation', outcome: 'Complete event-driven matrix mapping operational triggers to corresponding downstream actions.' },
-    { num: 28, name: 'System Module Index & Operational Map', phase: 'Phase 6: Executive Synthesis & Architecture', role: 'Senior Management / Directors / CEO', outcome: 'Comprehensive operational roadmap grouping all 26 procedures into 6 structured business phases.' }
+    { num: 1, name: 'Sign-Up / Invitation Landing Page', phase: 'Phase 1: Before Login', role: 'Public / All Staff', outcome: 'User chooses to redeem invitation, request access, or sign in directly.' },
+    { num: 2, name: 'Employee Self Sign-Up Request', phase: 'Phase 1: Before Login', role: 'Public / New Staff', outcome: 'Registration request submitted and sent to HR & Admin for verification.' },
+    { num: 3, name: 'Admin Approves Sign-Up Request', phase: 'Phase 1: Before Login', role: 'Admin / Talent HR', outcome: 'New employee account created, credentials generated, and welcome email dispatched.' },
+    { num: 4, name: 'Password Reset & First Login', phase: 'Phase 1: Before Login', role: 'All Users / Employees', outcome: 'Password securely established, credentials encrypted, and user routed to active workspace.' },
+    { num: 5, name: 'Login & Role Routing', phase: 'Phase 2: Login', role: 'All Organizational Roles', outcome: 'Credentials authenticated, security verified, and user directed to designated dashboard tier.' },
+    { num: 6, name: 'Employee – Add Task', phase: 'Phase 3: Daily Work', role: 'Employee / All Staff', outcome: 'Task registered with full metadata, assignees designated, and work queued for execution.' },
+    { num: 7, name: 'Employee – Edit or Update Task', phase: 'Phase 3: Daily Work', role: 'Employee / Assignees', outcome: 'Status updated with mandatory justifications where required; audit trail fully updated.' },
+    { num: 8, name: 'Multi-Assignee Task Flow', phase: 'Phase 3: Daily Work', role: 'All Collaborative Teams', outcome: 'Multi-person task tracked independently per person; consolidated overall status rolled up automatically.' },
+    { num: 9, name: 'Admin – Create Employee Login (Direct Invitation)', phase: 'Phase 3: Daily Work', role: 'Admin / Talent HR', outcome: 'Employee credentials formally created by HR; official activation email sent.' },
+    { num: 10, name: 'Admin – View User Tasks via Dropdown', phase: 'Phase 3: Daily Work', role: 'Admin / Talent HR', outcome: 'Full managerial oversight of any employee’s tasks with ability to edit, reopen, reassign, or export.' },
+    { num: 11, name: 'Admin – Reports and Performance Ratio', phase: 'Phase 4: Reporting and Configuration', role: 'Admin / Directors', outcome: 'Fair, standardized productivity metrics generated across employees, teams, and departments.' },
+    { num: 12, name: 'Super Admin – Audit Log View', phase: 'Phase 4: Reporting and Configuration', role: 'Super Admin / Director', outcome: '100% transparency and traceability into every system modification with immutable tamper-proof logs.' },
+    { num: 13, name: 'Morning Email Reminder Flow', phase: 'Phase 5: System Automation', role: 'Automated System Routine', outcome: 'Targeted, clutter-free morning reminder emails sent to every employee with pending commitments.' },
+    { num: 14, name: 'Excel Export Flow', phase: 'Phase 4: Reporting and Configuration', role: 'All Authorized Roles', outcome: 'Standardized, multi-sheet Excel workbooks generated for offline analysis and board reviews.' },
+    { num: 15, name: 'Calendar View Flow', phase: 'Phase 4: Reporting and Configuration', role: 'All Organizational Roles', outcome: 'Interactive visual scheduling of tasks by month, week, or day with instant edit and drag capabilities.' },
+    { num: 16, name: 'Super Admin – System Configuration', phase: 'Phase 4: Reporting and Configuration', role: 'Super Admin / Director', outcome: 'Global system policies, master dropdown lists, and schedules updated with versioning controls.' },
+    { num: 17, name: 'Escalation Resolution Flow', phase: 'Phase 6: Exception Paths', role: 'Senior Management / Department Heads', outcome: 'Task bottlenecks reviewed by senior leadership; decisive intervention executed with SLA tracking.' },
+    { num: 18, name: 'Account Deactivation and Task Handover', phase: 'Phase 6: Exception Paths', role: 'Admin / HR / Management', outcome: 'Departing employee’s tasks smoothly reassigned; complete historical accountability preserved.' },
+    { num: 19, name: 'Reporting Manager Team View', phase: 'Phase 4: Reporting and Configuration', role: 'Reporting Managers / Team Leads', outcome: 'Team leaders monitor subordinate workloads, approve delay reasons, and balance assignments.' },
+    { num: 20, name: 'Notification Dispatch Flow', phase: 'Phase 5: System Automation', role: 'Automated Communication Engine', outcome: 'Intelligent, timely notifications routed to appropriate recipients with zero email clutter.' },
+    { num: 21, name: 'Overdue and No-Reason Auto-Flag Flow', phase: 'Phase 5: System Automation', role: 'Automated System Routine', outcome: 'Lapsed deadlines automatically flagged; delays without reasons escalated for immediate attention.' },
+    { num: 22, name: 'Task Cancellation and Reassignment Flow', phase: 'Phase 6: Exception Paths', role: 'Creator / Admin / Managers', outcome: 'Obsolete tasks properly cancelled with documented reasons; reassignments handled seamlessly.' },
+    { num: 23, name: 'Leave and Holiday Handling Flow', phase: 'Phase 5: System Automation', role: 'Automated System Routine', outcome: 'Reminders paused during employee leaves; tasks due on holidays handled intelligently.' },
+    { num: 24, name: 'Config Versioning and Rollback Flow', phase: 'Phase 5: System Automation', role: 'Super Admin / Director', outcome: 'Configuration modifications tracked as versioned baselines with instantaneous rollback readiness.' },
+    { num: 25, name: 'Data Retention and Archive Flow', phase: 'Phase 5: System Automation', role: 'Automated System Routine', outcome: 'Historical data transferred to secure archives; active database maintained at maximum speed.' },
+    { num: 26, name: 'Complete System Overview – Master Flow', phase: 'Phase 7: Management Overview', role: 'Senior Management / Directors / CEO', outcome: 'Unified single-page architectural overview connecting all roles, workflows, and automated routines.' },
+    { num: 27, name: 'System Trigger Map (Event Cascade)', phase: 'Phase 7: Management Overview', role: 'System Architecture & Automation', outcome: 'Complete event-driven matrix mapping operational triggers to corresponding downstream actions.' },
+    { num: 28, name: 'The Index Chart (Complete System Reference)', phase: 'Phase 7: Management Overview', role: 'Senior Management / Directors / CEO', outcome: 'Master architectural index roadmap grouping all 28 corporate procedures into 7 structured phases.' }
   ], []);
 
   // Phase color mapper
@@ -65,7 +69,8 @@ export const WorkflowManualModal: React.FC = () => {
     if (phase.includes('Phase 2')) return { dot: '#0891b2', bg: '#ecfeff', text: '#0e7490', border: '#a5f3fc' };
     if (phase.includes('Phase 3')) return { dot: '#059669', bg: '#ecfdf5', text: '#047857', border: '#a7f3d0' };
     if (phase.includes('Phase 4')) return { dot: '#d97706', bg: '#fffbeb', text: '#b45309', border: '#fde68a' };
-    if (phase.includes('Phase 5')) return { dot: '#dc2626', bg: '#fef2f2', text: '#b91c1c', border: '#fecaca' };
+    if (phase.includes('Phase 5')) return { dot: '#6366f1', bg: '#e0e7ff', text: '#4338ca', border: '#c7d2fe' };
+    if (phase.includes('Phase 6')) return { dot: '#dc2626', bg: '#fef2f2', text: '#b91c1c', border: '#fecaca' };
     return { dot: '#7c3aed', bg: '#f5f3ff', text: '#6d28d9', border: '#ddd6fe' };
   };
 
@@ -80,21 +85,22 @@ export const WorkflowManualModal: React.FC = () => {
     if (role.includes('Manager') || role.includes('Leads')) {
       return { bg: '#f3e8ff', text: '#6b21a8', border: '#e9d5ff' };
     }
-    if (role.includes('Automated') || role.includes('Routine')) {
+    if (role.includes('Automated') || role.includes('Routine') || role.includes('System')) {
       return { bg: '#dcfce7', text: '#166534', border: '#bbf7d0' };
     }
     return { bg: '#f1f5f9', text: '#334155', border: '#cbd5e1' };
   };
 
-  // Unique phases for filter bar
+  // Unique phases for filter bar per Flowchart 28: The Index Chart (7 Phases)
   const phases = [
-    { id: 'ALL', label: 'All Workflows', count: 28 },
-    { id: 'Phase 1', label: 'Phase 1: Onboarding', count: 4 },
-    { id: 'Phase 2', label: 'Phase 2: Auth & Security', count: 1 },
-    { id: 'Phase 3', label: 'Phase 3: Daily Operations', count: 5 },
-    { id: 'Phase 4', label: 'Phase 4: Reporting & Audit', count: 6 },
-    { id: 'Phase 5', label: 'Phase 5: Exception & Governance', count: 9 },
-    { id: 'Phase 6', label: 'Phase 6: Architecture', count: 3 },
+    { id: 'ALL', label: 'All 28 Flowcharts', count: 28 },
+    { id: 'Phase 1', label: 'Phase 1: Before Login', count: 4 },
+    { id: 'Phase 2', label: 'Phase 2: Login', count: 1 },
+    { id: 'Phase 3', label: 'Phase 3: Daily Work', count: 5 },
+    { id: 'Phase 4', label: 'Phase 4: Reporting & Configuration', count: 6 },
+    { id: 'Phase 5', label: 'Phase 5: System Automation', count: 6 },
+    { id: 'Phase 6', label: 'Phase 6: Exception Paths', count: 3 },
+    { id: 'Phase 7', label: 'Phase 7: Management Overview', count: 3 },
   ];
 
   // Filtered workflows based on search query and selected phase
@@ -312,6 +318,30 @@ export const WorkflowManualModal: React.FC = () => {
               >
                 <LayoutGrid size={14} />
                 <span>Cards</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setViewMode('diagram')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '5px 10px',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  background: viewMode === 'diagram' ? '#ffffff' : 'transparent',
+                  color: viewMode === 'diagram' ? '#7c3aed' : '#64748b',
+                  boxShadow: viewMode === 'diagram' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                  transition: 'all 0.15s ease'
+                }}
+                title="Switch to Flowchart 28: Master Architecture Diagram"
+              >
+                <Network size={14} />
+                <span>Roadmap (FC 28)</span>
               </button>
             </div>
           </div>
@@ -723,8 +753,238 @@ export const WorkflowManualModal: React.FC = () => {
         </div>
       )}
 
+      {/* ── View 3: Flowchart 28: Master Architecture Roadmap Diagram ────────── */}
+      {viewMode === 'diagram' && (
+        <div style={{
+          background: '#ffffff',
+          border: '1px solid #cbd5e1',
+          borderRadius: '12px',
+          padding: '1.25rem clamp(1rem, 2.5vw, 1.5rem)',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1.25rem'
+        }}>
+          {/* Header & Controls */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '1rem',
+            paddingBottom: '0.85rem',
+            borderBottom: '1px solid #e2e8f0'
+          }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{
+                  background: '#f5f3ff',
+                  color: '#7c3aed',
+                  border: '1px solid #ddd6fe',
+                  borderRadius: '6px',
+                  padding: '2px 8px',
+                  fontSize: '0.74rem',
+                  fontWeight: 800
+                }}>
+                  Flowchart 28: Master Taxonomy
+                </span>
+                <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                  The Index Chart & 7-Phase Operational Lifecycle
+                </h2>
+              </div>
+              <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '4px 0 0 0' }}>
+                Visual architecture mapping every procedure in UrbanGaon from pre-login onboarding to executive governance.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => setIsDiagramExpanded(!isDiagramExpanded)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 12px',
+                  fontSize: '0.76rem',
+                  fontWeight: 700,
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1',
+                  background: '#f8fafc',
+                  color: '#334155',
+                  cursor: 'pointer'
+                }}
+              >
+                <Maximize2 size={13} />
+                <span>{isDiagramExpanded ? 'Compact View' : 'Expand High-Res'}</span>
+              </button>
+
+              <a
+                href="/flowchart28_index_chart.png"
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 12px',
+                  fontSize: '0.76rem',
+                  fontWeight: 700,
+                  borderRadius: '6px',
+                  border: '1px solid #7c3aed',
+                  background: '#7c3aed',
+                  color: '#ffffff',
+                  textDecoration: 'none'
+                }}
+              >
+                <ExternalLink size={13} />
+                <span>Open Full HD Diagram</span>
+              </a>
+            </div>
+          </div>
+
+          {/* Diagram Container */}
+          <div style={{
+            position: 'relative',
+            background: '#fafaf9',
+            border: '1.5px solid #e7e5e4',
+            borderRadius: '10px',
+            overflow: 'auto',
+            maxHeight: isDiagramExpanded ? '900px' : '480px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
+            transition: 'max-height 0.3s ease'
+          }}>
+            <img
+              src="/flowchart28_index_chart.png"
+              alt="Flowchart 28: The Index Chart"
+              style={{
+                maxWidth: '100%',
+                height: 'auto',
+                borderRadius: '6px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.06)'
+              }}
+            />
+          </div>
+
+          {/* 7 Lifecycle Phase Architecture Map Grid */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: '0.85rem'
+          }}>
+            {[
+              {
+                phase: 'Phase 1: Before Login',
+                fcs: 'FC 1, 2, 3, 4',
+                desc: 'Public landing, employee self sign-up, admin verification, and credential setup.',
+                color: '#2563eb',
+                bg: '#eff6ff',
+                border: '#bfdbfe'
+              },
+              {
+                phase: 'Phase 2: Login',
+                fcs: 'FC 5',
+                desc: 'Secure multi-role authentication and tier-based routing to user workspace.',
+                color: '#0891b2',
+                bg: '#ecfeff',
+                border: '#a5f3fc'
+              },
+              {
+                phase: 'Phase 3: Daily Work',
+                fcs: 'FC 6, 7, 8, 9, 10',
+                desc: 'Task creation, status progression, multi-assignee rollup, HR onboarding, and user oversight.',
+                color: '#059669',
+                bg: '#ecfdf5',
+                border: '#a7f3d0'
+              },
+              {
+                phase: 'Phase 4: Reporting & Configuration',
+                fcs: 'FC 11, 12, 14, 15, 16, 19',
+                desc: 'Performance ratios, audit trails, Excel export, calendar view, config management, and team lead view.',
+                color: '#d97706',
+                bg: '#fffbeb',
+                border: '#fde68a'
+              },
+              {
+                phase: 'Phase 5: System Automation',
+                fcs: 'FC 13, 20, 21, 23, 24, 25',
+                desc: '8:30 AM digests, dispatch daemon, overdue auto-flag, holiday pausing, rollback, and data retention.',
+                color: '#6366f1',
+                bg: '#e0e7ff',
+                border: '#c7d2fe'
+              },
+              {
+                phase: 'Phase 6: Exception Paths',
+                fcs: 'FC 17, 18, 22',
+                desc: 'Managerial escalation resolution, offboarding handover, and task cancellation with reason.',
+                color: '#dc2626',
+                bg: '#fef2f2',
+                border: '#fecaca'
+              },
+              {
+                phase: 'Phase 7: Management Overview',
+                fcs: 'FC 26, 27, 28',
+                desc: 'Unified master flow overview, automated system trigger map, and Flowchart 28 index roadmap.',
+                color: '#7c3aed',
+                bg: '#f5f3ff',
+                border: '#ddd6fe'
+              }
+            ].map(item => (
+              <div
+                key={item.phase}
+                style={{
+                  background: item.bg,
+                  border: `1px solid ${item.border}`,
+                  borderLeft: `4px solid ${item.color}`,
+                  borderRadius: '8px',
+                  padding: '0.85rem 1rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 800, color: item.color }}>{item.phase}</span>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 800, background: '#ffffff', color: item.color, padding: '1px 6px', borderRadius: '4px', border: `1px solid ${item.border}` }}>
+                    {item.fcs}
+                  </span>
+                </div>
+                <p style={{ fontSize: '0.76rem', color: '#475569', margin: 0, lineHeight: 1.4 }}>
+                  {item.desc}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const phaseKey = item.phase.split(':')[0].trim();
+                    setSelectedPhase(phaseKey);
+                    setViewMode('table');
+                  }}
+                  style={{
+                    alignSelf: 'flex-start',
+                    marginTop: '6px',
+                    background: '#ffffff',
+                    border: `1px solid ${item.border}`,
+                    color: item.color,
+                    padding: '3px 8px',
+                    borderRadius: '4px',
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  View Workflows in Table →
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── Pagination Controls Toolbar ─────────────────────────────── */}
-      {totalItems > 0 && (
+      {totalItems > 0 && viewMode !== 'diagram' && (
         <div style={{
           background: '#ffffff',
           border: '1px solid #cbd5e1',

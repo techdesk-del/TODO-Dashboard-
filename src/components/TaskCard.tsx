@@ -536,6 +536,24 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                 </span>
               )}
 
+              {/* Flowchart 22: Cancelled Status Badge */}
+              {(comp.status === 'Cancelled' || task.status === 'Cancelled') && (
+                <span style={{
+                  background: '#fef2f2',
+                  color: '#991b1b',
+                  border: '1px solid #fecaca',
+                  fontSize: '0.65rem',
+                  fontWeight: 800,
+                  padding: '0.15rem 0.45rem',
+                  borderRadius: '4px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '3px'
+                }}>
+                  🚫 CANCELLED
+                </span>
+              )}
+
               {/* Flowchart 8 Overall Status Badges */}
               {comp.status === 'Done' && (
                 <span style={{
@@ -853,6 +871,28 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
             )}
           </div>
         </div>
+
+        {/* Flowchart 22: Cancellation Rationale Banner */}
+        {task.cancellationReason && (
+          <div style={{
+            fontSize: '0.72rem',
+            color: '#991b1b',
+            background: '#fef2f2',
+            border: '1px solid #fecaca',
+            padding: '0.35rem 0.65rem',
+            borderRadius: '6px',
+            marginLeft: '28px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '6px'
+          }}>
+            <span>🚫 <strong>Cancellation Rationale (FC 22):</strong> {task.cancellationReason}</span>
+            <span style={{ color: '#dc2626', fontSize: '0.68rem', fontWeight: 600, flexShrink: 0 }}>
+              Excluded from Performance Reports
+            </span>
+          </div>
+        )}
 
         {/* Optional Hold or Escalation Rationale Banner */}
         {task.holdReason && (

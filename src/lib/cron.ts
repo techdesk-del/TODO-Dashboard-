@@ -14,6 +14,7 @@ import { AuditLogModel } from '@/models/AuditLog';
 import { getTodayStr } from './dateUtils';
 import { isNonWorkingDay } from './holidayData';
 import { runOverdueAndNoReasonEvaluation } from './overdueEngine';
+import { executeDataRetention } from './retentionEngine';
 
 interface CronCache {
   isInitialized: boolean;
@@ -106,5 +107,20 @@ export function initServerCron() {
     }
   });
 
-  console.log('[Cron] ✓ Schedules active: 08:30 AM (Digest), 00:05 AM (Rollover) & Hourly (Flowchart 21 Overdue Engine)');
+  // 4. Daily Data Retention and Archive Engine at 02:00 AM (Flowchart 25 & 27)
+  cron.schedule('0 2 * * *', async () => {
+    try {
+      console.log('[Cron 02:00 AM] Triggering Flowchart 25 Data Retention & Archive Engine...');
+      await executeDataRetention({
+        taskRetentionDays: 365,
+        auditRetentionDays: 730,
+        actor: 'Daily Retention Cron (Flowchart 25)',
+        actorRole: 'SUPER_ADMIN'
+      });
+    } catch (err) {
+      console.error('[Cron 02:00 AM Error - Flowchart 25]', err);
+    }
+  });
+
+  console.log('[Cron] ✓ Schedules active: 08:30 AM (Digest), 00:05 AM (Rollover), 02:00 AM (Retention) & Hourly (Overdue)');
 }
