@@ -254,7 +254,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
       pastDueReason: delayReasonInput.trim(),
       isPendingNoReason: false,
       delayReasonSubmittedAt: new Date().toISOString()
-    }, `Flowchart 21: Documented delay reason "${delayReasonInput.trim()}"`);
+    }, `Documented delay reason "${delayReasonInput.trim()}"`);
     setShowDelayReasonModal(false);
     setDelayReasonInput('');
   };
@@ -478,8 +478,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '3px'
-                }} title={hasDelayReason ? `Delay Reason: "${task.delayReason || task.pastDueReason}"` : 'Flowchart 21: Overdue without recorded reason requires justification'}>
-                  {hasDelayReason ? '⚠️ OVERDUE (REASON RECORDED)' : '🚨 PENDING NO REASON (FC 21)'}
+                }} title={hasDelayReason ? `Delay Reason: "${task.delayReason || task.pastDueReason}"` : 'Overdue without recorded reason requires justification'}>
+                  {hasDelayReason ? '⚠️ OVERDUE (REASON RECORDED)' : '🚨 PENDING NO REASON'}
                 </span>
               )}
 
@@ -499,8 +499,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '3px'
-                }} title="Flowchart 23: Assignee is on authorized leave. Reminders and auto-escalations paused.">
-                  🏖️ ON LEAVE (FC 23)
+                }} title="Assignee is on authorized leave. Reminders and auto-escalations paused.">
+                  🏖️ ON LEAVE
                 </span>
               )}
 
@@ -531,7 +531,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '3px'
-                }} title="Administrative Intervention: Edited by Admin (Flowchart A)">
+                }} title="Administrative Intervention: Edited by Admin">
                   🛡️ Edited by Admin
                 </span>
               )}
@@ -718,7 +718,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                 }}
               >
                 <FileText size={13} color={hasDelayReason ? '#047857' : '#c2410c'} />
-                {hasDelayReason ? 'Edit Delay Reason' : 'Add Reason (FC 21)'}
+                {hasDelayReason ? 'Edit Delay Reason' : 'Add Reason'}
               </button>
             )}
 
@@ -759,7 +759,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                 setReassignReasonInput('');
                 setShowReassignModal(true);
               }}
-              title="Flowchart 22: Reassign Task"
+              title="Reassign Task"
               style={{ padding: '0.4rem 0.55rem', display: 'flex', alignItems: 'center', gap: '4px', color: '#1d4ed8' }}
             >
               <UserPlus size={13} color="#2563eb" />
@@ -775,7 +775,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                   setCancelReasonInput('');
                   setShowCancelModal(true);
                 }}
-                title="Flowchart 22: Cancel Task with Mandatory Reason (Exclude from performance reports)"
+                title="Cancel Task with Mandatory Reason (Exclude from performance reports)"
                 style={{ padding: '0.4rem 0.55rem', display: 'flex', alignItems: 'center', gap: '4px', color: '#dc2626', borderColor: '#fca5a5' }}
               >
                 <Ban size={13} color="#dc2626" />
@@ -887,7 +887,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
             justifyContent: 'space-between',
             gap: '6px'
           }}>
-            <span>🚫 <strong>Cancellation Rationale (FC 22):</strong> {task.cancellationReason}</span>
+            <span>🚫 <strong>Cancellation Rationale:</strong> {task.cancellationReason}</span>
             <span style={{ color: '#dc2626', fontSize: '0.68rem', fontWeight: 600, flexShrink: 0 }}>
               Excluded from Performance Reports
             </span>
@@ -1121,7 +1121,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                             cursor: 'pointer',
                             outline: 'none'
                           }}
-                          title="Update individual assignee status (Flowchart 8)"
+                          title="Update individual assignee status"
                         >
                           <option value="Not Started">Not Started</option>
                           <option value="In Progress">In Progress</option>
@@ -1171,7 +1171,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                             gap: '3px',
                             whiteSpace: 'nowrap'
                           }}
-                          title="Assignee left or resigned? Reassign or close this component (Flowchart 8)"
+                          title="Assignee left or resigned? Reassign or close this component"
                         >
                           ⚙️ Shift/Close
                         </button>
@@ -1225,12 +1225,12 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
           <div className="stream-modal-card" style={{ maxWidth: '480px' }} onClick={e => e.stopPropagation()}>
             <div className="stream-modal-header">
               <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#c2410c' }}>
-                📝 Document Overdue Delay Reason (Flowchart 21)
+                📝 Document Overdue Delay Reason
               </h3>
               <button className="calendar-nav-btn" onClick={() => setShowDelayReasonModal(false)}><X size={16} /></button>
             </div>
             <p style={{ fontSize: '0.78rem', color: '#64748b' }}>
-              Per Flowchart 21 compliance, overdue tasks without a recorded explanation trigger manager notifications and escalation. Record your reason below:
+              Per company policy, overdue tasks without a recorded explanation trigger manager notifications and escalation. Record your reason below:
             </p>
             <form onSubmit={handleConfirmDelayReason} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <div className="form-field-group">
@@ -1491,7 +1491,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                     Manage Assignee Component
                   </h3>
                   <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                    Flowchart 8: Assignee left or resigned protocol
+                    Assignee left or resigned protocol
                   </div>
                 </div>
               </div>
@@ -1754,7 +1754,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                 </div>
                 <div>
                   <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#991b1b', margin: 0 }}>
-                    Cancel Deliverable (Flowchart 22)
+                    Cancel Deliverable
                   </h3>
                   <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
                     Mandatory Cancellation Reason • Excluded from Performance Reports
@@ -1775,13 +1775,13 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
               </div>
 
               <div style={{ fontSize: '0.75rem', color: '#b91c1c', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', padding: '0.55rem 0.75rem', marginBottom: '0.85rem', lineHeight: 1.45 }}>
-                ⚠️ <strong>Flowchart 22 Protocol:</strong> Cancelling this deliverable marks its status as <strong>Cancelled</strong>, sets all assignees to Cancelled, notifies all assignees and creator, and <strong>strictly excludes this task from all performance ratio calculations</strong>.
+                ⚠️ <strong>Policy:</strong> Cancelling this deliverable marks its status as <strong>Cancelled</strong>, sets all assignees to Cancelled, notifies all assignees and creator, and <strong>strictly excludes this task from all performance ratio calculations</strong>.
               </div>
 
               <form onSubmit={async (e) => {
                 e.preventDefault();
                 if (!cancelReasonInput.trim()) {
-                  alert('Cancellation reason is required per Flowchart 22 corporate governance.');
+                  alert('Cancellation reason is required per corporate governance.');
                   return;
                 }
                 setIsSubmittingCancel(true);
@@ -1839,7 +1839,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                 </div>
                 <div>
                   <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                    Reassign Deliverable (Flowchart 22)
+                    Reassign Deliverable
                   </h3>
                   <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
                     Existing Assignees Decision Matrix: Replace All, Add Alongside, or Remove Specific

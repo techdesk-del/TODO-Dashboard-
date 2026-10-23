@@ -170,7 +170,7 @@ export const SystemConfigModal: React.FC = () => {
         fieldChanged: 'System Config Dual Approval Request Submitted',
         oldValue: systemConfig.versionBaseline,
         newValue: `${newVersionNumber} (Pending Approval)`,
-        notes: `Approval request dispatched to second Super Admin per Flowchart 2 governance policy.`
+        notes: `Approval request dispatched to second Super Admin per governance policy.`
       });
 
       setBannerNotification({
@@ -221,7 +221,7 @@ export const SystemConfigModal: React.FC = () => {
       fieldChanged: `System Config Direct Save (${activeTab})`,
       oldValue: priorBaseline,
       newValue: newVersionNumber,
-      notes: `Super Admin committed system configuration update for category '${activeTab}'. Baseline upgraded to ${newVersionNumber}. Prior version kept for rollback (Flowchart 24).`
+      notes: `Super Admin committed system configuration update for category '${activeTab}'. Baseline upgraded to ${newVersionNumber}. Prior version kept for rollback.`
     });
 
     setBannerNotification({
@@ -274,7 +274,7 @@ export const SystemConfigModal: React.FC = () => {
       fieldChanged: 'Dual Super Admin Approval Granted',
       oldValue: priorBaseline,
       newValue: req.targetVersion,
-      notes: `Second Super Admin approved pending configuration changes. Baseline upgraded to ${req.targetVersion} with previous snapshot preserved (Flowchart 2 & 24).`
+      notes: `Second Super Admin approved pending configuration changes. Baseline upgraded to ${req.targetVersion} with previous snapshot preserved.`
     });
 
     setSaveBanner(`Approved! Configuration successfully updated to ${req.targetVersion}.`);
@@ -369,10 +369,10 @@ export const SystemConfigModal: React.FC = () => {
     // 2. Audit log entry created for rollback
     logAudit({
       action: 'CONFIG_CHANGED',
-      fieldChanged: 'Configuration Rollback (Flowchart 24)',
+      fieldChanged: 'Configuration Rollback',
       oldValue: systemConfig.versionBaseline,
       newValue: restoredVersion,
-      notes: `Super Admin executed atomic rollback to prior baseline snapshot ${priorVersion} (Flowchart 24). Problem detected: "${problemReason}". All Admins notified.`
+      notes: `Super Admin executed atomic rollback to prior baseline snapshot ${priorVersion}. Problem detected: "${problemReason}". All Admins notified.`
     });
 
     // 3. Notify Admins of rollback (In-App + Email via Flowchart 20 engine)
@@ -402,7 +402,7 @@ export const SystemConfigModal: React.FC = () => {
     }
 
     setBannerNotification({
-      message: `Rollback completed: Baseline restored to ${restoredVersion}. All Admins notified per Flowchart 24.`,
+      message: `Rollback completed: Baseline restored to ${restoredVersion}. All Admins notified.`,
       badge: '↺ Config Rollback'
     });
 
@@ -437,7 +437,7 @@ export const SystemConfigModal: React.FC = () => {
           </div>
           <div>
             <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
-              Super Admin System Configuration & Governance (Flowchart 2)
+              Super Admin System Configuration & Governance
             </div>
             <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
               7 Operational Settings Categories • Dual Super Admin Approval Workflow • Atomic Versioning & Rollback
@@ -458,7 +458,7 @@ export const SystemConfigModal: React.FC = () => {
             className="btn-secondary"
             onClick={handleOpenRollback}
             style={{ color: '#c2410c', borderColor: '#fdba74', background: '#fff7ed', gap: '5px' }}
-            title="Flowchart 24: Config Versioning and Rollback Flow"
+            title="Config Versioning and Rollback Flow"
           >
             <RotateCcw size={14} />
             Rollback to Previous
@@ -504,7 +504,7 @@ export const SystemConfigModal: React.FC = () => {
                   <RotateCcw size={20} color="#ffffff" />
                 </div>
                 <div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 800 }}>Flowchart 24: Config Version Rollback</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 800 }}>Config Version Rollback</div>
                   <div style={{ fontSize: '0.75rem', opacity: 0.9 }}>Atomic Version Restoration & Admin Dispatch Flow</div>
                 </div>
               </div>
@@ -667,7 +667,7 @@ export const SystemConfigModal: React.FC = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#92400e' }}>
               <GitPullRequest size={18} color="#d97706" />
               <strong style={{ fontSize: '0.9rem' }}>
-                Pending Second Super Admin Approval (Flowchart 2 Requirement)
+                Pending Second Super Admin Approval
               </strong>
             </div>
             <span style={{ fontSize: '0.72rem', background: '#fef3c7', padding: '2px 8px', borderRadius: '4px', fontWeight: 700, color: '#b45309' }}>
@@ -776,7 +776,7 @@ export const SystemConfigModal: React.FC = () => {
                   placeholder="08:30 AM"
                 />
                 <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
-                  System clock dispatches daily portfolio digests to employees at this configured time (Flowchart D & 13).
+                  System clock dispatches daily portfolio digests to employees at this configured time.
                 </span>
               </div>
 
@@ -974,7 +974,7 @@ export const SystemConfigModal: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <div>
                 <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', margin: '0 0 0.25rem' }}>
-                  Export Permissions Policy (Flowchart 14 & Flowchart E)
+                  Export Permissions Policy
                 </h3>
                 <p style={{ fontSize: '0.75rem', color: '#64748b', margin: 0 }}>
                   Define which roles are authorized to export deliverables, compliance logs, and executive reports.
@@ -1004,7 +1004,7 @@ export const SystemConfigModal: React.FC = () => {
                     2. Who can export Immutable Compliance Audit Trail Logs?
                   </div>
                   <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '8px' }}>
-                    Strict forensic logging exports including cryptographic audit trail (Flowchart C & 12).
+                    Strict forensic logging exports including cryptographic audit trail.
                   </div>
                   <span style={{ background: '#fef3c7', color: '#b45309', padding: '3px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700 }}>
                     SUPER_ADMIN Strictly Only
@@ -1209,7 +1209,7 @@ export const SystemConfigModal: React.FC = () => {
                 checked={requireDualApproval}
                 onChange={e => setRequireDualApproval(e.target.checked)}
               />
-              <span>Second Super Admin Approval Required? (Flowchart 2 Branch)</span>
+              <span>Second Super Admin Approval Required?</span>
             </label>
             <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
               {requireDualApproval ? 'Changes require approval before taking effect.' : 'Changes save immediately and update version baseline.'}

@@ -642,7 +642,7 @@ export const AdminHrPortal: React.FC = () => {
       fieldChanged: 'Status, Reason & Remarks (Admin Intervention)',
       oldValue: `Status: ${taskToEdit.status}`,
       newValue: `Status: ${editStatus}, Reason: ${editReason || 'N/A'}`,
-      notes: `Admin oversight intervention (Flowchart A). Remarks: ${editRemarks || 'None'}`
+      notes: `Admin oversight intervention. Remarks: ${editRemarks || 'None'}`
     });
 
     setTaskToEdit(null);
@@ -679,7 +679,7 @@ export const AdminHrPortal: React.FC = () => {
         fieldChanged: 'Assignee Reassignment',
         oldValue: task.assignees.map(a => a.name).join(', '),
         newValue: targetMember.name,
-        notes: `Bulk reassigned by Admin (Flowchart A). New Assignee: ${targetMember.name} (${targetMember.email})`
+        notes: `Bulk reassigned by Admin. New Assignee: ${targetMember.name} (${targetMember.email})`
       });
     });
 
@@ -703,7 +703,7 @@ export const AdminHrPortal: React.FC = () => {
       action: 'EXPORTED',
       fieldChanged: 'Employee Tasks Excel Export',
       newValue: `${filename} (${tasksToExport.length} tasks)`,
-      notes: `Admin exported deliverables for ${selectedUserForOversight} (Flowchart A)`
+      notes: `Admin exported deliverables for ${selectedUserForOversight}`
     });
   };
 
@@ -923,7 +923,7 @@ export const AdminHrPortal: React.FC = () => {
       try {
         logAudit({
           action: 'APPROVAL',
-          fieldChanged: 'Sign-Up Request Approval (Flowchart 3)',
+          fieldChanged: 'Sign-Up Request Approval',
           oldValue: `Pending Request: ${req.email}`,
           newValue: `Approved ID: ${empIdToAssign} (Pending First Login)`,
           notes: `Admin ${currentUser.name} approved access request for ${req.name}. Assigned ${empIdToAssign}, Dept: ${deptToAssign}.`
@@ -967,7 +967,7 @@ export const AdminHrPortal: React.FC = () => {
     if (approvingId || rejectingId) return;
     let reason = documentedReason;
     if (!reason || !reason.trim()) {
-      const promptReason = prompt(`Enter mandatory written rejection reason for ${name} (Flowchart 3):`);
+      const promptReason = prompt(`Enter mandatory written rejection reason for ${name}:`);
       if (!promptReason || !promptReason.trim()) return;
       reason = promptReason.trim();
     }
@@ -1010,7 +1010,7 @@ export const AdminHrPortal: React.FC = () => {
       try {
         logAudit({
           action: 'REJECTED',
-          fieldChanged: 'Sign-Up Request Rejection (Flowchart 3)',
+          fieldChanged: 'Sign-Up Request Rejection',
           oldValue: `Pending Request: ${name}`,
           newValue: `Rejected ("${reason.trim()}")`,
           notes: `Admin ${currentUser.name} rejected access request for ${name}. Reason: "${reason.trim()}". Rejection email dispatched.`
@@ -1167,7 +1167,7 @@ export const AdminHrPortal: React.FC = () => {
           }}
         >
           <BarChart3 size={14} />
-          <span>Reports &amp; Ratios (FC 11)</span>
+          <span>Reports &amp; Ratios</span>
         </button>
         <button
           className={`admin-portal-tab-pill ${activeTab === 'create_user' ? 'active' : ''}`}
@@ -1378,7 +1378,7 @@ export const AdminHrPortal: React.FC = () => {
                     alignItems: 'center',
                     gap: '6px'
                   }}
-                  title="Export filtered employee tasks to multi-sheet Excel (Flowchart A)"
+                  title="Export filtered employee tasks to multi-sheet Excel"
                 >
                   <FileSpreadsheet size={14} />
                   Export Employee Tasks (.xlsx)
@@ -1490,7 +1490,7 @@ export const AdminHrPortal: React.FC = () => {
                   onClick={() => setShowBulkReassignModal(true)}
                 >
                   <ArrowRightLeft size={13} />
-                  Bulk Reassign Tasks (Flowchart A)
+                  Bulk Reassign Tasks
                 </button>
                 <button
                   type="button"
@@ -1523,12 +1523,12 @@ export const AdminHrPortal: React.FC = () => {
                       title="Select all tasks for bulk reassignment"
                     />
                   </th>
-                  <th style={{ minWidth: '220px' }}>Deliverable Title &amp; Project</th>
-                  <th style={{ minWidth: '160px', whiteSpace: 'nowrap' }}>Assignee(s)</th>
-                  <th style={{ minWidth: '135px', whiteSpace: 'nowrap' }}>Scheduled Date &amp; Time</th>
+                  <th style={{ minWidth: '320px' }}>Deliverable &amp; Project</th>
+                  <th style={{ minWidth: '150px', whiteSpace: 'nowrap' }}>Assignee(s)</th>
+                  <th style={{ minWidth: '120px', whiteSpace: 'nowrap' }}>Scheduled</th>
                   <th style={{ minWidth: '90px', textAlign: 'center', whiteSpace: 'nowrap' }}>Priority</th>
-                  <th style={{ minWidth: '120px', whiteSpace: 'nowrap' }}>Status &amp; Progress</th>
-                  <th style={{ minWidth: '220px', whiteSpace: 'nowrap' }}>Admin Actions (Flowchart A)</th>
+                  <th style={{ minWidth: '130px', whiteSpace: 'nowrap' }}>Status</th>
+                  <th style={{ minWidth: '200px', whiteSpace: 'nowrap', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -1556,42 +1556,47 @@ export const AdminHrPortal: React.FC = () => {
                         />
                       </td>
                       <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                          <span className="task-sequence-badge" style={{ fontSize: '0.7rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem' }}>
+                          <span className="task-sequence-badge" style={{ fontSize: '0.7rem', marginTop: '1px' }}>
                             #{idx + 1}
                           </span>
-                          <div style={{ fontWeight: 700, color: '#0f172a' }}>{t.title}</div>
-                          {/* Flowchart A: "Show edited by Admin tag on the task" */}
-                          {isEditedByAdmin && (
-                            <span style={{
-                              background: '#eff6ff',
-                              color: '#1d4ed8',
-                              border: '1px solid #bfdbfe',
-                              fontSize: '0.65rem',
-                              fontWeight: 800,
-                              padding: '1px 6px',
-                              borderRadius: '4px',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '3px'
-                            }} title="Modified under Admin Task Oversight">
-                              🛡️ Edited by Admin
-                            </span>
-                          )}
-                        </div>
-                        <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '2px' }}>
-                          Project: {t.project || 'General Operations'} • {t.department}
-                        </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, color: '#0f172a', lineHeight: 1.4 }}>{t.title}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap', marginTop: '4px' }}>
+                              {/* Flowchart A: "Show edited by Admin tag on the task" */}
+                              {isEditedByAdmin && (
+                                <span style={{
+                                  background: '#eff6ff',
+                                  color: '#1d4ed8',
+                                  border: '1px solid #bfdbfe',
+                                  fontSize: '0.64rem',
+                                  fontWeight: 700,
+                                  padding: '1px 6px',
+                                  borderRadius: '999px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '3px',
+                                  whiteSpace: 'nowrap'
+                                }} title="Modified under Admin Task Oversight">
+                                  Edited by Admin
+                                </span>
+                              )}
+                              <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                                {t.project || 'General Operations'}{t.department ? ` • ${t.department}` : ''}
+                              </span>
+                            </div>
                         {t.holdReason && (
-                          <div style={{ fontSize: '0.68rem', color: '#b45309', background: '#fef3c7', padding: '2px 6px', borderRadius: '4px', marginTop: '4px', display: 'inline-block' }}>
+                          <div style={{ fontSize: '0.68rem', color: '#b45309', background: '#fef3c7', padding: '2px 6px', borderRadius: '4px', marginTop: '6px', display: 'inline-block' }}>
                             ⏸️ Hold: {t.holdReason}
                           </div>
                         )}
                         {t.escalationReason && (
-                          <div style={{ fontSize: '0.68rem', color: '#b91c1c', background: '#fee2e2', padding: '2px 6px', borderRadius: '4px', marginTop: '4px', display: 'inline-block' }}>
+                          <div style={{ fontSize: '0.68rem', color: '#b91c1c', background: '#fee2e2', padding: '2px 6px', borderRadius: '4px', marginTop: '6px', display: 'inline-block' }}>
                             🚨 Escalated to {t.escalatedTo || 'Senior Leadership'}: {t.escalationReason}
                           </div>
                         )}
+                          </div>
+                        </div>
                       </td>
                       <td style={{ whiteSpace: 'nowrap' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -1628,21 +1633,31 @@ export const AdminHrPortal: React.FC = () => {
                       </td>
                       <td style={{ whiteSpace: 'nowrap' }}>
                         <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
                           fontWeight: 700,
-                          fontSize: '0.78rem',
-                          color: isDone ? '#16a34a' : isOnHold ? '#d97706' : t.status === 'Escalated' ? '#dc2626' : '#2563eb'
+                          fontSize: '0.74rem',
+                          padding: '2px 8px',
+                          borderRadius: '999px',
+                          color: isDone ? '#15803d' : isOnHold ? '#b45309' : t.status === 'Escalated' ? '#b91c1c' : '#1d4ed8',
+                          background: isDone ? '#f0fdf4' : isOnHold ? '#fffbeb' : t.status === 'Escalated' ? '#fef2f2' : '#eff6ff'
                         }}>
+                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'currentColor' }} />
                           {t.status}
                         </span>
                         {t.progressPercent !== undefined && (
-                          <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
-                            Progress: {t.progressPercent}%
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}>
+                            <div style={{ width: '64px', height: '4px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden' }}>
+                              <div style={{ width: `${Math.min(100, Math.max(0, t.progressPercent))}%`, height: '100%', background: isDone ? '#16a34a' : '#2563eb', borderRadius: '999px' }} />
+                            </div>
+                            <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>{t.progressPercent}%</span>
                           </div>
                         )}
                       </td>
                       {/* Flowchart A: Admin Actions (Edit, Reopen, View Only) */}
                       <td style={{ whiteSpace: 'nowrap' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'nowrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.35rem', flexWrap: 'nowrap' }}>
                           {/* 1. Edit Action */}
                           <button
                             type="button"
@@ -1654,7 +1669,7 @@ export const AdminHrPortal: React.FC = () => {
                               setEditReason(t.holdReason || t.escalationReason || '');
                               setEditRemarks(t.notes || '');
                             }}
-                            title="Edit status, reason, notes and remarks (Flowchart A)"
+                            title="Edit status, reason, notes and remarks"
                           >
                             <Edit3 size={11} />
                             Edit
@@ -1678,7 +1693,7 @@ export const AdminHrPortal: React.FC = () => {
                                 setTaskToReopen(t);
                                 setReopenReason('');
                               }}
-                              title="Reopen completed task (Flowchart A)"
+                              title="Reopen completed task"
                             >
                               <RotateCcw size={11} />
                               Reopen
@@ -1691,7 +1706,7 @@ export const AdminHrPortal: React.FC = () => {
                             className="btn-secondary"
                             style={{ padding: '0.28rem 0.55rem', fontSize: '0.7rem', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
                             onClick={() => setTaskToView(t)}
-                            title="See task details, status, notes and reasons (Flowchart A)"
+                            title="See task details, status, notes and reasons"
                           >
                             <Eye size={11} />
                             View
@@ -1744,7 +1759,7 @@ export const AdminHrPortal: React.FC = () => {
                 </div>
                 <div>
                   <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                    Reports &amp; Performance Ratios (Flowchart 11)
+                    Reports &amp; Performance Ratios
                   </h3>
                   <div style={{ fontSize: '0.73rem', color: '#64748b' }}>
                     Calculates metrics using official written formulas • Executive charts, trends &amp; multi-sheet export
@@ -1767,7 +1782,7 @@ export const AdminHrPortal: React.FC = () => {
                   alignItems: 'center',
                   gap: '6px'
                 }}
-                title="Download to Excel with task-summary sheet (Flowchart 11)"
+                title="Download to Excel with task-summary sheet"
               >
                 <Download size={14} />
                 Download to Excel (Summary Sheet)
@@ -2109,7 +2124,7 @@ export const AdminHrPortal: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Edit3 size={18} color="#2563eb" />
                 <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                  Admin Task Modification (Flowchart A)
+                  Admin Task Modification
                 </h3>
               </div>
               <button className="calendar-nav-btn" onClick={() => setTaskToEdit(null)}><X size={16} /></button>
@@ -2189,7 +2204,7 @@ export const AdminHrPortal: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Eye size={18} color="#2563eb" />
                 <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                  Deliverable Inspector (Flowchart A: View Only)
+                  Deliverable Inspector
                 </h3>
               </div>
               <button className="calendar-nav-btn" onClick={() => setTaskToView(null)}><X size={16} /></button>
@@ -2275,7 +2290,7 @@ export const AdminHrPortal: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <ArrowRightLeft size={18} color="#1d4ed8" />
                 <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                  Bulk Reassign Deliverables (Flowchart A)
+                  Bulk Reassign Deliverables
                 </h3>
               </div>
               <button className="calendar-nav-btn" onClick={() => setShowBulkReassignModal(false)}><X size={16} /></button>
@@ -3007,7 +3022,7 @@ export const AdminHrPortal: React.FC = () => {
                                 color: '#1e40af'
                               }}
                               onClick={() => openRequestReview(req)}
-                              title="Click request to view details & verify (Flowchart 3)"
+                              title="Click request to view details & verify"
                             >
                               <FileText size={13} />
                               <span>Verify Details</span>
@@ -3057,7 +3072,7 @@ export const AdminHrPortal: React.FC = () => {
                                 cursor: isRowBusy ? 'not-allowed' : 'pointer'
                               }}
                               onClick={() => setRejectionModalRequest(req)}
-                              title="Reject sign-up request with documented rationale (Flowchart 3)"
+                              title="Reject sign-up request with documented rationale"
                             >
                               {isRejecting ? (
                                 <>
@@ -3324,7 +3339,7 @@ export const AdminHrPortal: React.FC = () => {
                     {/* 3. Flowchart 4: Reason Pathways (Resignation / Termination / Long leave) */}
                     <div>
                       <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#0f172a', marginBottom: '6px' }}>
-                        3. Separation / Leave Reason (Flowchart 4)
+                        3. Separation / Leave Reason
                       </label>
                       <div style={{
                         display: 'grid',
@@ -4135,7 +4150,7 @@ export const AdminHrPortal: React.FC = () => {
                             fontWeight: 700,
                             marginLeft: '6px'
                           }}
-                          title={`Return ${member.name} from leave (Flowchart 23)`}
+                          title={`Return ${member.name} from leave`}
                         >
                           ↩️ Return to Active
                         </button>
@@ -4165,7 +4180,7 @@ export const AdminHrPortal: React.FC = () => {
                             fontWeight: 700,
                             marginLeft: '6px'
                           }}
-                          title={`Flowchart 23: Mark ${member.name} on leave with start & end date`}
+                          title={`Mark ${member.name} on leave with start & end date`}
                         >
                           🏖️ Mark On Leave
                         </button>
@@ -4607,7 +4622,7 @@ export const AdminHrPortal: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <RotateCcw size={18} color="#1e40af" />
                 <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                  Administrative Task Reopen (Flowchart 10)
+                  Administrative Task Reopen
                 </h3>
               </div>
               <button className="calendar-nav-btn" onClick={() => setTaskToReopen(null)}><X size={16} /></button>
@@ -4676,7 +4691,7 @@ export const AdminHrPortal: React.FC = () => {
                 </div>
                 <div>
                   <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                    Sign-Up Request Verification (Flowchart 3)
+                    Sign-Up Request Verification
                   </h3>
                   <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
                     Verify department, designation, manager & assign unique employee ID
@@ -4792,7 +4807,7 @@ export const AdminHrPortal: React.FC = () => {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '0.75rem' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.73rem', fontWeight: 700, color: '#334155', marginBottom: '3px' }}>
-                    Assign Unique Employee ID (Flowchart 3) *
+                    Assign Unique Employee ID *
                   </label>
                   <input
                     type="text"
@@ -4832,7 +4847,7 @@ export const AdminHrPortal: React.FC = () => {
                   }}
                 >
                   <X size={14} style={{ marginRight: '4px' }} />
-                  Reject Request (FC 3)
+                  Reject Request
                 </button>
 
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -4868,7 +4883,7 @@ export const AdminHrPortal: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <X size={18} color="#dc2626" />
                 <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#991b1b', margin: 0 }}>
-                  Reject Access Request (Flowchart 3)
+                  Reject Access Request
                 </h3>
               </div>
               <button className="calendar-nav-btn" onClick={() => setRejectionModalRequest(null)}>
@@ -4941,7 +4956,7 @@ export const AdminHrPortal: React.FC = () => {
                 </div>
                 <div>
                   <h3 style={{ fontSize: '1.02rem', fontWeight: 800, color: '#92400e', margin: 0 }}>
-                    Mark Employee On Leave (Flowchart 23)
+                    Mark Employee On Leave
                   </h3>
                   <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
                     Pause Reminders • Due Date Evaluation • Notify Leadership

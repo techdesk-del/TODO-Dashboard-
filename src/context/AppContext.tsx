@@ -35,6 +35,8 @@ interface AppContextType {
   members: TeamMember[];
   selectedDate: string; // 'YYYY-MM-DD'
   setSelectedDate: (date: string) => void;
+  viewScope: 'selected' | 'all';
+  setViewScope: (scope: 'selected' | 'all') => void;
   activeView: 'workspace' | 'calendar' | 'ceo_portal' | 'admin_hr' | 'team_view' | 'audit_trail' | 'system_config' | 'workflow_manual';
   setActiveView: (view: 'workspace' | 'calendar' | 'ceo_portal' | 'admin_hr' | 'team_view' | 'audit_trail' | 'system_config' | 'workflow_manual') => void;
   selectedMemberFilter: string | null;
@@ -127,6 +129,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [members, setMembers] = useState<TeamMember[]>(INITIAL_MEMBERS);
   const [selectedDate, setSelectedDate] = useState<string>(getTodayStr());
+  const [viewScope, setViewScope] = useState<'selected' | 'all'>('all');
   const [activeView, setActiveView] = useState<'workspace' | 'calendar' | 'ceo_portal' | 'admin_hr' | 'team_view' | 'audit_trail' | 'system_config' | 'workflow_manual'>('workspace');
   const [selectedMemberFilter, setSelectedMemberFilter] = useState<string | null>(null);
   const [bannerNotification, setBannerNotification] = useState<{ message: string; badge: string } | null>(null);
@@ -2309,6 +2312,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         members,
         selectedDate,
         setSelectedDate,
+        viewScope,
+        setViewScope,
         activeView,
         setActiveView,
         selectedMemberFilter,

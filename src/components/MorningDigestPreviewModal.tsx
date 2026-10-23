@@ -58,7 +58,7 @@ export const MorningDigestPreviewModal: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Mail size={18} color="#2563eb" />
             <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>
-              Simulated 08:30 AM Morning Digest (Flowchart 13)
+              Simulated 08:30 AM Morning Digest
             </span>
           </div>
           <button className="calendar-nav-btn" onClick={() => setShowMorningDigestModal(false)}>
@@ -204,7 +204,7 @@ export const MorningDigestPreviewModal: React.FC = () => {
         {/* Footer */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #e2e8f0', paddingTop: '0.75rem', gap: '0.5rem', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
-            Flowchart 13 • Corporate Anti-Spam Guarantee
+            Corporate Anti-Spam Guarantee
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <button

@@ -433,7 +433,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
           newValue: `${data.user.name} (${data.user.role})`,
           actor: data.user.name,
           actorRole: data.user.role,
-          notes: `Official invitation credentials activated under Flowchart 4 & 5 protocol.`
+          notes: `Official invitation credentials activated under corporate security protocol.`
         });
       } catch {}
 
@@ -496,7 +496,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
         throw new Error(data.error || 'Failed to submit registration request.');
       }
 
-      setReqSubmittedSuccess(data.message || 'Request submitted successfully to Admin & Talent HR (FC 2).');
+      setReqSubmittedSuccess(data.message || 'Request submitted successfully to Admin & Talent HR.');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to submit self sign-up request.');
     } finally {
@@ -619,7 +619,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
           newValue: `${userObj.name} (${userObj.role})`,
           actor: userObj.name,
           actorRole: userObj.role,
-          notes: `Successful login verified under Flowchart 5 protocol. Role routed to ${
+          notes: `Successful login verified under corporate security protocol. Role routed to ${
             isCeoUser(userObj) || userObj.role === 'SUPER_ADMIN' ? 'Super Admin Dashboard (CEO Portal)' :
             userObj.role === 'ADMIN' ? 'Admin / Talent HR Dashboard' :
             userObj.role === 'MANAGER' ? 'Manager Dashboard (My Team View)' : 'Employee Workspace'
@@ -645,7 +645,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
       }
 
       setBannerNotification({
-        message: `Welcome, ${data.user.name} (${data.user.designation})! Authenticated under Flowchart 5 protocol.`,
+        message: `Welcome, ${data.user.name} (${data.user.designation})! Authenticated under corporate security protocol.`,
         badge: 'AUTHENTICATED',
       });
 
@@ -785,7 +785,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
           newValue: `${data.user.name} (${data.user.role})`,
           actor: data.user.name,
           actorRole: data.user.role,
-          notes: `Personal password configured and authenticated under Flowchart 5 protocol.`
+          notes: `Personal password configured and authenticated under corporate security protocol.`
         });
       } catch {}
 
@@ -888,11 +888,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                 {authMode === 'FORGOT_VERIFY' && 'Verify Email & Set Password'}
               </div>
               <div style={{ fontSize: '0.73rem', color: '#64748b' }}>
-                {authMode === 'CHOOSER' && 'Flowchart 1: Select an onboarding or login option'}
-                {authMode === 'INVITATION_INPUT' && 'Branch 1: Enter your code or email link to proceed'}
-                {authMode === 'INVITATION_SETUP' && 'Flowchart 4: Securely establish personal password'}
-                {authMode === 'REQUEST_ACCESS' && 'Branch 2 (FC 2): Submit request to HR & Admin'}
-                {authMode === 'LOGIN' && 'Branch 3 (FC 5): Verified Corporate Directory Auth'}
+                {authMode === 'CHOOSER' && 'Select an onboarding or login option'}
+                {authMode === 'INVITATION_INPUT' && 'Enter your invitation code or email link to proceed'}
+                {authMode === 'INVITATION_SETUP' && 'Securely establish personal password'}
+                {authMode === 'REQUEST_ACCESS' && 'Submit an access request to HR & Admin'}
+                {authMode === 'LOGIN' && 'Sign in with your verified corporate account'}
                 {authMode === 'FORGOT_REQUEST' && 'Enter corporate email to receive a secure 6-digit code'}
                 {authMode === 'FORGOT_VERIFY' && 'Enter verification code sent to your corporate email'}
               </div>
@@ -1051,7 +1051,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                       I have an invitation
                     </span>
                     <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '1px 6px', borderRadius: '4px', background: '#dbeafe', color: '#1e40af' }}>
-                      Branch 1
+                      Invited
                     </span>
                   </div>
                   <div style={{ fontSize: '0.74rem', color: '#64748b', lineHeight: 1.4 }}>
@@ -1111,7 +1111,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                       I want to request access
                     </span>
                     <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '1px 6px', borderRadius: '4px', background: '#d1fae5', color: '#065f46' }}>
-                      Branch 2 (FC 2)
+                      New Joiner
                     </span>
                   </div>
                   <div style={{ fontSize: '0.74rem', color: '#64748b', lineHeight: 1.4 }}>
@@ -1170,7 +1170,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                       I already have an account
                     </span>
                     <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '1px 6px', borderRadius: '4px', background: '#ede9fe', color: '#5b21b6' }}>
-                      Branch 3 (FC 5)
+                      Employee
                     </span>
                   </div>
                   <div style={{ fontSize: '0.74rem', color: '#64748b', lineHeight: 1.4 }}>
@@ -1231,7 +1231,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                     color: '#881337',
                     fontWeight: 700
                   }}>
-                    📢 Flowchart Resolution: Please contact your System Administrator or Talent HR team to resend an updated invitation link.
+                    📢 Resolution: Please contact your System Administrator or Talent HR team to resend an updated invitation link.
                   </div>
                   <div style={{ marginTop: '0.45rem', display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <button
@@ -1436,7 +1436,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                 gap: '4px'
               }}>
                 <div style={{ fontWeight: 700, color: '#334155', marginBottom: '2px' }}>
-                  Corporate Password Policy (Flowchart 4):
+                  Corporate Password Policy:
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: invitePassword.length >= 6 ? '#16a34a' : '#64748b' }}>
                   {invitePassword.length >= 6 ? '✓' : '○'} Minimum 6 characters ({invitePassword.length}/6)
@@ -1516,7 +1516,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                     color: '#64748b',
                     marginTop: '0.5rem'
                   }}>
-                    Next Step (FC 3): Admin/HR will review your request in their Approvals Queue. Once approved, you will receive an invitation code to complete your first login.
+                    Next Step: Admin/HR will review your request in their Approvals Queue. Once approved, you will receive an invitation code to complete your first login.
                   </div>
                   <button
                     onClick={() => {
@@ -1711,7 +1711,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                       className="btn-primary"
                       style={{ minWidth: '180px', flex: '2 1 180px', justifyContent: 'center', padding: '9px', fontWeight: 700, fontSize: '0.82rem', borderRadius: '8px', background: '#059669' }}
                     >
-                      {loading ? 'Submitting...' : 'Submit Request to HR (FC 2)'}
+                      {loading ? 'Submitting...' : 'Submit Request to HR'}
                     </button>
                   </div>
                 </form>
@@ -1747,11 +1747,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                   }}
                 >
                   <ArrowLeft size={13} />
-                  ← Back to Portal Options
+                  Back to Portal Options
                 </button>
 
                 <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
-                  Branch 3 (FC 5)
+                  Secure Sign-In
                 </span>
               </div>
 
@@ -1908,7 +1908,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                     <AlertTriangle size={18} color="#dc2626" style={{ flexShrink: 0, marginTop: '2px' }} />
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 800, fontSize: '0.82rem', marginBottom: '2px' }}>
-                        Account Temporarily Frozen for 15 Minutes (Flowchart 5)
+                        Account Temporarily Frozen for 15 Minutes
                       </div>
                       <div>
                         {lockoutMsg || '5 consecutive failed login attempts detected. To protect enterprise systems, this account is frozen for 15 minutes. A security alert email was dispatched.'}
@@ -1955,7 +1955,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                   }}>
                     <ShieldCheck size={17} color="#2563eb" style={{ flexShrink: 0, marginTop: '2px' }} />
                     <div>
-                      <div style={{ fontWeight: 800 }}>Role-Based Two-Step Verification (Flowchart 5)</div>
+                      <div style={{ fontWeight: 800 }}>Role-Based Two-Step Verification</div>
                       <div>
                         Privileged access ({twoFactorRole || 'Admin / Super Admin'}) requires two-step verification. An official 6-digit OTP has been sent to <strong>{email}</strong> (or enter default test code <code>123456</code>). Under protocol, 1 retry is permitted upon error.
                       </div>
@@ -2358,7 +2358,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                 gap: '4px'
               }}>
                 <div style={{ fontWeight: 700, color: '#334155', marginBottom: '2px' }}>
-                  Corporate Password Policy (Flowchart 4):
+                  Corporate Password Policy:
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: newPassword.length >= 6 ? '#16a34a' : '#64748b' }}>
                   {newPassword.length >= 6 ? '✓' : '○'} Minimum 6 characters ({newPassword.length}/6)
@@ -2490,7 +2490,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
             color: '#64748b',
             lineHeight: 1.45
           }}>
-            🔒 <strong>UrbanGaon Security Protocol (FC 1 to 5):</strong> Secure invitation tokens, encrypted credentials, and verified role routing ensure complete enterprise confidentiality.
+            🔒 <strong>UrbanGaon Security Protocol:</strong> Secure invitation tokens, encrypted credentials, and verified role routing ensure complete enterprise confidentiality.
           </div>
         </div>
       </div>

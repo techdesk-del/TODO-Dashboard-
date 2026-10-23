@@ -92,3 +92,15 @@ export const formatDateShort = (dateStr?: string): string => {
   return formatted;
 };
 
+export const formatDateDayMonth = (dateStr?: string): string => {
+  if (!dateStr) return '';
+  const [y, m, d] = dateStr.split('-').map(Number);
+  if (!y || !m || !d) return dateStr;
+
+  const dateObj = new Date(y, m - 1, d);
+  return dateObj.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short'
+  });
+};
+

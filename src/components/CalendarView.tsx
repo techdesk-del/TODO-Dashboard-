@@ -30,6 +30,7 @@ export const CalendarView: React.FC = () => {
     members, 
     selectedDate, 
     setSelectedDate, 
+    setViewScope,
     setActiveView, 
     currentUser, 
     updateTask, 
@@ -246,7 +247,7 @@ export const CalendarView: React.FC = () => {
                 Interactive Calendar & Dispatch Schedule
               </h2>
               <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
-                Flowchart 1 & 15: Due date colour coding • Overdue in Red • Quick actions
+                Due date colour coding • Overdue in Red • Quick actions
               </span>
             </div>
           </div>
@@ -307,7 +308,7 @@ export const CalendarView: React.FC = () => {
                 style={{ padding: '0.35rem 0.65rem', fontSize: '0.78rem', borderRadius: '6px', fontWeight: 600, minWidth: '170px' }}
                 value={selectedEmployeeId}
                 onChange={e => setSelectedEmployeeId(e.target.value)}
-                title="Flowchart 1: Switch employee calendar view as Admin"
+                title="Switch employee calendar view as Admin"
               >
                 <option value="ME">👤 My Deliverables</option>
                 <option value="ALL">🏢 All Employees (Department)</option>
@@ -720,7 +721,7 @@ export const CalendarView: React.FC = () => {
                       cursor: 'pointer',
                       boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
                     }}
-                    title="Add task on this date (Flowchart 1)"
+                    title="Add task on this date"
                   >
                     <Plus size={14} />
                   </button>
@@ -1058,15 +1059,30 @@ export const CalendarView: React.FC = () => {
               )}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e2e8f0', paddingTop: '0.75rem' }}>
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={() => handleAddTaskOnDate(inspectDate)}
-                style={{ fontSize: '0.76rem', gap: '4px' }}
-              >
-                <Plus size={14} /> Add Task on this Date
-              </button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e2e8f0', paddingTop: '0.75rem', gap: '8px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => handleAddTaskOnDate(inspectDate)}
+                  style={{ fontSize: '0.76rem', gap: '4px' }}
+                >
+                  <Plus size={14} /> Add Task on this Date
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => {
+                    setSelectedDate(inspectDate);
+                    setViewScope('selected');
+                    setActiveView('workspace');
+                    setInspectDate(null);
+                  }}
+                  style={{ fontSize: '0.76rem', gap: '4px' }}
+                >
+                  View in Workspace
+                </button>
+              </div>
 
               <button
                 type="button"

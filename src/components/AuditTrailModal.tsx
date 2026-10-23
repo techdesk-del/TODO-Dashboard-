@@ -375,7 +375,7 @@ export const AuditTrailModal: React.FC = () => {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
-                Immutable Compliance Audit Trail (Flowchart 12 & 14)
+                Immutable Compliance Audit Trail
               </span>
               <span style={{
                 background: '#ecfdf5',
@@ -510,7 +510,7 @@ export const AuditTrailModal: React.FC = () => {
           {/* 4. Action Type */}
           <div>
             <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 800, color: '#475569', marginBottom: '3px' }}>
-              ⚡ ACTION TYPE (FC C):
+              ⚡ ACTION TYPE:
             </label>
             <select
               className="form-select"
@@ -586,7 +586,7 @@ export const AuditTrailModal: React.FC = () => {
                   }
                 }}
               >
-                Task History Drilldown (FC C)
+                Task History Drilldown
               </button>
             </div>
 
@@ -612,7 +612,7 @@ export const AuditTrailModal: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', background: '#eff6ff', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
             <div>
               <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#1e3a8a' }}>
-                🔍 Single Task Forensic Lifecycle (Flowchart C)
+                🔍 Single Task Forensic Lifecycle
               </div>
               <div style={{ fontSize: '0.72rem', color: '#3b82f6' }}>
                 Chronological timeline of all status transitions, reassignments, reopens &amp; field mutations
@@ -811,7 +811,7 @@ export const AuditTrailModal: React.FC = () => {
                             setFilterTaskId(log.taskId || '');
                             setActiveTab('task_history');
                           }}
-                          title="Open Task History tab for this task (Flowchart C)"
+                          title="Open Task History tab for this task"
                         >
                           View Task History #{log.taskId} ↗
                         </button>

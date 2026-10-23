@@ -158,7 +158,7 @@ export const ManagerTeamView: React.FC = () => {
       fieldChanged: 'Manager Task Rebalance',
       oldValue: taskToReassign.assignees.map(a => a.name).join(', '),
       newValue: targetMember.name,
-      notes: `Reporting Manager ${currentUser.name} reassigned deliverable: "${reassignReason || 'Workload rebalance'}" (Flowchart 5).`
+      notes: `Reporting Manager ${currentUser.name} reassigned deliverable: "${reassignReason || 'Workload rebalance'}".`
     });
 
     setBannerNotification({
@@ -192,7 +192,7 @@ export const ManagerTeamView: React.FC = () => {
       fieldChanged: 'Flagged to Admin with Reason',
       oldValue: taskToEscalateAdmin.status,
       newValue: 'Escalated to Admin',
-      notes: `Manager ${currentUser.name} escalated deliverable to Admin HR: "${adminEscalateReason.trim()}" (Flowchart 5).`
+      notes: `Manager ${currentUser.name} escalated deliverable to Admin HR: "${adminEscalateReason.trim()}".`
     });
 
     setBannerNotification({
@@ -224,7 +224,7 @@ export const ManagerTeamView: React.FC = () => {
       fieldChanged: 'Pending Delay Reason Review',
       oldValue: task.pastDueReason || task.holdReason || 'Pending Review',
       newValue: `${decision}: "${feedback || 'No remarks'}"`,
-      notes: `Reporting Manager ${currentUser.name} ${isApproved ? 'approved' : 'rejected'} justification (Flowchart 5).`
+      notes: `Reporting Manager ${currentUser.name} ${isApproved ? 'approved' : 'rejected'} justification.`
     });
 
     setBannerNotification({
@@ -265,7 +265,7 @@ export const ManagerTeamView: React.FC = () => {
       fieldChanged: 'Manager Note Appended',
       oldValue: taskToComment.notes || 'None',
       newValue: managerComment.trim(),
-      notes: `Manager ${currentUser.name} commented on deliverable (Flowchart 5).`
+      notes: `Manager ${currentUser.name} commented on deliverable.`
     });
 
     setTaskToComment(null);
@@ -293,7 +293,7 @@ export const ManagerTeamView: React.FC = () => {
           </div>
           <div>
             <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
-              Reporting Manager Command Center — "My Team" (Flowchart 5)
+              Reporting Manager Command Center — "My Team"
             </div>
             <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
               Direct Reports Monitoring • Rebalance Workloads • Escalate to Admin • Reason Approvals • Team Performance Trends
@@ -338,7 +338,7 @@ export const ManagerTeamView: React.FC = () => {
               onClick={() => setActiveTab('report')}
             >
               <BarChart3 size={13} />
-              View Team Report (FC 5)
+              View Team Report
             </button>
           </div>
         </div>
@@ -554,7 +554,7 @@ export const ManagerTeamView: React.FC = () => {
                     <th>Assignee(s)</th>
                     <th>Due Date &amp; Time</th>
                     <th>Status &amp; Delay Justification</th>
-                    <th>Manager Actions (Flowchart 5)</th>
+                    <th>Manager Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -624,7 +624,7 @@ export const ManagerTeamView: React.FC = () => {
                                 setNewAssigneeId(myTeamMembers[0]?.id || '');
                                 setReassignReason('');
                               }}
-                              title="Flowchart 5: Reassign a task to another team member"
+                              title="Reassign a task to another team member"
                             >
                               <ArrowRightLeft size={12} />
                               Reassign
@@ -640,7 +640,7 @@ export const ManagerTeamView: React.FC = () => {
                                   setTaskToEscalateAdmin(t);
                                   setAdminEscalateReason('');
                                 }}
-                                title="Flowchart 5: Flag a task to Admin with reason"
+                                title="Flag a task to Admin with reason"
                               >
                                 <ShieldAlert size={12} color="#dc2626" />
                                 Escalate Admin
@@ -660,7 +660,7 @@ export const ManagerTeamView: React.FC = () => {
                                     feedback: ''
                                   });
                                 }}
-                                title="Flowchart 5: Approve or reject a pending reason"
+                                title="Approve or reject a pending reason"
                               >
                                 <CheckCircle2 size={12} color="#059669" />
                                 Reason Review
@@ -677,7 +677,7 @@ export const ManagerTeamView: React.FC = () => {
                                   setTaskToReopen(t);
                                   setManagerReopenReason('');
                                 }}
-                                title="Flowchart 5: Reopen task as allowed"
+                                title="Reopen task as allowed"
                               >
                                 <RotateCcw size={12} />
                                 Reopen
@@ -693,7 +693,7 @@ export const ManagerTeamView: React.FC = () => {
                                 setTaskToComment(t);
                                 setManagerComment('');
                               }}
-                              title="Flowchart 5: Add managerial advisory note or comment"
+                              title="Add managerial advisory note or comment"
                             >
                               <MessageSquare size={12} />
                               Note
@@ -724,7 +724,7 @@ export const ManagerTeamView: React.FC = () => {
           <div className="stream-modal-card" style={{ maxWidth: '480px' }} onClick={e => e.stopPropagation()}>
             <div className="stream-modal-header">
               <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: 0 }}>
-                👥 Reassign Deliverable (Flowchart 5)
+                👥 Reassign Deliverable
               </h3>
               <button className="calendar-nav-btn" onClick={() => setTaskToReassign(null)}><X size={16} /></button>
             </div>
@@ -780,7 +780,7 @@ export const ManagerTeamView: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <ShieldAlert size={18} color="#dc2626" />
                 <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: 0, color: '#dc2626' }}>
-                  Escalate Task to Admin (Flowchart 5)
+                  Escalate Task to Admin
                 </h3>
               </div>
               <button className="calendar-nav-btn" onClick={() => setTaskToEscalateAdmin(null)}><X size={16} /></button>
@@ -823,7 +823,7 @@ export const ManagerTeamView: React.FC = () => {
           <div className="stream-modal-card" style={{ maxWidth: '500px' }} onClick={e => e.stopPropagation()}>
             <div className="stream-modal-header">
               <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: 0 }}>
-                ⚖️ Review Delay Justification (Flowchart 5)
+                ⚖️ Review Delay Justification
               </h3>
               <button className="calendar-nav-btn" onClick={() => setTaskReasonDecision(null)}><X size={16} /></button>
             </div>
@@ -899,7 +899,7 @@ export const ManagerTeamView: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <RotateCcw size={16} color="#1e40af" />
                 <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                  Managerial Task Reopen (Flowchart 5)
+                  Managerial Task Reopen
                 </h3>
               </div>
               <button className="calendar-nav-btn" onClick={() => setTaskToReopen(null)}><X size={16} /></button>
@@ -940,7 +940,7 @@ export const ManagerTeamView: React.FC = () => {
           <div className="stream-modal-card" style={{ maxWidth: '460px' }} onClick={e => e.stopPropagation()}>
             <div className="stream-modal-header">
               <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: 0 }}>
-                📝 Add Managerial Note (Flowchart 5)
+                📝 Add Managerial Note
               </h3>
               <button className="calendar-nav-btn" onClick={() => setTaskToComment(null)}><X size={16} /></button>
             </div>

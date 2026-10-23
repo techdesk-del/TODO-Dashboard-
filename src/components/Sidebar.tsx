@@ -16,15 +16,18 @@ import {
   LogOut,
   Trash2,
   CalendarDays,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Globe
 } from 'lucide-react';
-import { getTodayStr, getTomorrowStr, formatDateDisplay } from '@/lib/dateUtils';
+import { getTodayStr, getTomorrowStr, formatDateDisplay, formatDateDayMonth } from '@/lib/dateUtils';
 import { isCeoUser, canAccessWorkflows, canAccessAdminHr } from '@/lib/rosterData';
 
 export const Sidebar: React.FC = () => {
   const {
     selectedDate,
     setSelectedDate,
+    viewScope,
+    setViewScope,
     activeView,
     setActiveView,
     tasks,
@@ -109,6 +112,7 @@ export const Sidebar: React.FC = () => {
     const monthPadded = String(currentMonth + 1).padStart(2, '0');
     const newDate = `${currentYear}-${monthPadded}-${dayPadded}`;
     setSelectedDate(newDate);
+    setViewScope('selected');
     if (activeView !== 'workspace' && activeView !== 'calendar') {
       setActiveView('workspace');
     }
@@ -244,61 +248,94 @@ export const Sidebar: React.FC = () => {
         </div>
 
         {/* Filter Shortcuts: Synchronized to Today and Tomorrow */}
-        <div className="filter-shortcuts-group">
-          <span className="filter-group-heading">Live Date Shortcuts</span>
-          
-          <button
-            className={`filter-shortcut-btn ${selectedDate === todayStr && activeView === 'workspace' ? 'active' : ''}`}
-            onClick={() => {
-              setSelectedDate(todayStr);
-              setActiveView('workspace');
-            }}
-          >
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-              <span>📍 Today ({todayStr.slice(5)})</span>
-              <span style={{ fontSize: '0.68rem', opacity: 0.75 }}>{todayCount} Active Deliverables</span>
-            </div>
-            <span className="filter-badge-count">{todayCount}</span>
-          </button>
+        {(() => {
+          const isAllActive = viewScope === 'all' && activeView === 'workspace';
+          const isTodayActive = viewScope === 'selected' && selectedDate === todayStr && activeView === 'workspace';
+          const isTomorrowActive = viewScope === 'selected' && selectedDate === tomorrowStr && activeView === 'workspace';
+          const isOverdueActive = viewScope === 'selected' && selectedDate < todayStr && activeView === 'workspace';
 
-          <button
-            className={`filter-shortcut-btn ${selectedDate === tomorrowStr && activeView === 'workspace' ? 'active' : ''}`}
-            onClick={() => {
-              setSelectedDate(tomorrowStr);
-              setActiveView('workspace');
-            }}
-          >
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-              <span>⚡ Tomorrow ({tomorrowStr.slice(5)})</span>
-              <span style={{ fontSize: '0.68rem', opacity: 0.75 }}>{tomorrowCount} Scheduled Deliverables</span>
-            </div>
-            <span className="filter-badge-count">{tomorrowCount}</span>
-          </button>
+          return (
+            <div className="filter-shortcuts-group">
+              <span className="filter-group-heading">Live Date Shortcuts</span>
 
-          {overdueCount > 0 && (
-            <button
-              className={`filter-shortcut-btn ${selectedDate < todayStr && activeView === 'workspace' ? 'active' : ''}`}
-              style={{
-                background: '#fff1f2',
-                borderColor: '#fecdd3',
-                color: '#e11d48'
-              }}
-              onClick={() => {
-                const pastDate = userVisibleTasks.find(t => t.scheduledDate < todayStr && t.status !== 'Done')?.scheduledDate || todayStr;
-                setSelectedDate(pastDate);
-                setActiveView('workspace');
-              }}
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                <span style={{ fontWeight: 800, color: '#be123c' }}>⚠️ Pending / Overdue</span>
-                <span style={{ fontSize: '0.68rem', color: '#e11d48' }}>{overdueCount} Unfinished Tasks</span>
-              </div>
-              <span className="filter-badge-count" style={{ background: '#e11d48', color: '#ffffff' }}>
-                {overdueCount}
-              </span>
-            </button>
-          )}
-        </div>
+              <button
+                type="button"
+                className={`filter-shortcut-btn ${isAllActive ? 'active' : ''}`}
+                onClick={() => {
+                  setViewScope('all');
+                  setActiveView('workspace');
+                }}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Globe size={13} color={isAllActive ? '#2563eb' : '#64748b'} />
+                    <span style={{ fontWeight: 700 }}>All Dates</span>
+                  </div>
+                  <span style={{ fontSize: '0.68rem', opacity: 0.75 }}>{userVisibleTasks.length} Total Deliverables</span>
+                </div>
+                <span className="filter-badge-count">{userVisibleTasks.length}</span>
+              </button>
+              
+              <button
+                type="button"
+                className={`filter-shortcut-btn ${isTodayActive ? 'active' : ''}`}
+                onClick={() => {
+                  setSelectedDate(todayStr);
+                  setViewScope('selected');
+                  setActiveView('workspace');
+                }}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                  <span>📍 Today ({formatDateDayMonth(todayStr)})</span>
+                  <span style={{ fontSize: '0.68rem', opacity: 0.75 }}>{todayCount} Active Deliverables</span>
+                </div>
+                <span className="filter-badge-count">{todayCount}</span>
+              </button>
+
+              <button
+                type="button"
+                className={`filter-shortcut-btn ${isTomorrowActive ? 'active' : ''}`}
+                onClick={() => {
+                  setSelectedDate(tomorrowStr);
+                  setViewScope('selected');
+                  setActiveView('workspace');
+                }}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                  <span>⚡ Tomorrow ({formatDateDayMonth(tomorrowStr)})</span>
+                  <span style={{ fontSize: '0.68rem', opacity: 0.75 }}>{tomorrowCount} Scheduled Deliverables</span>
+                </div>
+                <span className="filter-badge-count">{tomorrowCount}</span>
+              </button>
+
+              {overdueCount > 0 && (
+                <button
+                  type="button"
+                  className={`filter-shortcut-btn ${isOverdueActive ? 'active' : ''}`}
+                  style={{
+                    background: isOverdueActive ? '#ffe4e6' : '#fff1f2',
+                    borderColor: isOverdueActive ? '#e11d48' : '#fecdd3',
+                    color: '#e11d48'
+                  }}
+                  onClick={() => {
+                    const pastDate = userVisibleTasks.find(t => t.scheduledDate < todayStr && t.status !== 'Done')?.scheduledDate || todayStr;
+                    setSelectedDate(pastDate);
+                    setViewScope('selected');
+                    setActiveView('workspace');
+                  }}
+                >
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                    <span style={{ fontWeight: 800, color: '#be123c' }}>⚠️ Pending / Overdue</span>
+                    <span style={{ fontSize: '0.68rem', color: '#e11d48' }}>{overdueCount} Unfinished Tasks</span>
+                  </div>
+                  <span className="filter-badge-count" style={{ background: '#e11d48', color: '#ffffff' }}>
+                    {overdueCount}
+                  </span>
+                </button>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Primary Navigation Links */}
         <nav className="sidebar-nav-links">
@@ -315,7 +352,7 @@ export const Sidebar: React.FC = () => {
             onClick={() => { setActiveView('calendar'); closeSidebar(); }}
           >
             <CalendarIcon size={16} />
-            <span>Calendar Grid View (FC 15)</span>
+            <span>Calendar Grid View</span>
           </button>
 
           {isCeo && (
@@ -334,7 +371,7 @@ export const Sidebar: React.FC = () => {
               onClick={() => { setActiveView('admin_hr'); closeSidebar(); }}
             >
               <Users size={16} />
-              <span>Admin & HR Portal (FC 1-10)</span>
+              <span>Admin & HR Portal</span>
             </button>
           )}
 
@@ -344,7 +381,7 @@ export const Sidebar: React.FC = () => {
               onClick={() => { setActiveView('team_view'); closeSidebar(); }}
             >
               <Layers size={16} />
-              <span>Manager "My Team" (FC 19)</span>
+              <span>Manager "My Team"</span>
             </button>
           )}
 
@@ -354,7 +391,7 @@ export const Sidebar: React.FC = () => {
               onClick={() => { setActiveView('audit_trail'); closeSidebar(); }}
             >
               <ShieldCheck size={16} />
-              <span>Immutable Audit Log (FC 12)</span>
+              <span>Immutable Audit Log</span>
             </button>
           )}
 
@@ -364,17 +401,17 @@ export const Sidebar: React.FC = () => {
               onClick={() => { setActiveView('system_config'); closeSidebar(); }}
             >
               <Sliders size={16} />
-              <span>System Config (FC 16/24)</span>
+              <span>System Config</span>
             </button>
           )}
 
           <button
             className="nav-link-item"
             onClick={() => { setIsExportModalOpen(true); closeSidebar(); }}
-            title="Enterprise Multi-Sheet Excel Export (Flowchart 14)"
+            title="Enterprise Multi-Sheet Excel Export"
           >
             <FileSpreadsheet size={16} color="#16a34a" />
-            <span>Excel Export Center (FC 14)</span>
+            <span>Excel Export Center</span>
           </button>
 
           {canViewFlows && (

@@ -17,7 +17,8 @@ import {
   Zap,
   AlertTriangle,
   Clock,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Plus
 } from 'lucide-react';
 import { useTaskDeadlines } from '@/hooks/useTaskDeadlines';
 import { formatDateDisplay, formatDateShort, getTodayStr } from '@/lib/dateUtils';
@@ -29,6 +30,7 @@ export const Header: React.FC = () => {
     switchRole,
     selectedDate,
     setSelectedDate,
+    setViewScope,
     setShowMorningDigestModal,
     setIsCreateTaskModalOpen,
     isExportModalOpen,
@@ -199,11 +201,21 @@ export const Header: React.FC = () => {
       {/* Right: Meta actions + user */}
       <div className="header-meta-group">
         {/* Dynamic Synchronized Date Badge */}
-        <div className="active-date-pill" title="Current Active Calendar Date">
-          <CalendarDays size={13} style={{ marginRight: '4px', verticalAlign: '-1px' }} />
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedDate(getTodayStr());
+            setViewScope('selected');
+            setActiveView('workspace');
+          }}
+          className="active-date-pill"
+          style={{ cursor: 'pointer', border: '1px solid var(--border-subtle)', background: '#f8fafc' }}
+          title={`Active Date: ${formatDateDisplay(selectedDate)} — Click to view Today's deliverables`}
+        >
+          <CalendarDays size={14} color="#2563eb" />
           <span className="date-pill-full">{formatDateDisplay(selectedDate)}</span>
           <span className="date-pill-compact">{formatDateShort(selectedDate)}</span>
-        </div>
+        </button>
 
         {/* Flowchart 6: Add Task Action Button */}
         <button
@@ -227,9 +239,9 @@ export const Header: React.FC = () => {
             transition: 'all 0.15s ease',
             minHeight: '32px'
           }}
-          title="Add New Deliverable / Task (Flowchart 6)"
+          title="Add New Deliverable / Task"
         >
-          <span style={{ fontSize: '0.85rem' }}>➕</span>
+          <Plus size={15} strokeWidth={2.75} />
           <span className="header-action-label">Add Task</span>
         </button>
 
@@ -255,7 +267,7 @@ export const Header: React.FC = () => {
             boxShadow: '0 1px 2px rgba(16, 185, 129, 0.1)',
             minHeight: '32px'
           }}
-          title="Export Deliverables to Excel (Flowchart 14)"
+          title="Export Deliverables to Excel"
         >
           <FileSpreadsheet size={14} color="#16a34a" />
           <span className="header-action-label">Export</span>
@@ -385,7 +397,7 @@ export const Header: React.FC = () => {
                       </span>
                     </div>
                     <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '2px', lineHeight: 1.3 }}>
-                      Simulate & preview portfolio email briefing (FC 13)
+                      Simulate & preview portfolio email briefing
                     </div>
                   </div>
                 </button>
@@ -439,7 +451,7 @@ export const Header: React.FC = () => {
                       </span>
                     </div>
                     <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '2px', lineHeight: 1.3 }}>
-                      Auto-roll unfinished tasks to today with count++ (FC 11)
+                      Auto-roll unfinished tasks to today with count++
                     </div>
                   </div>
                 </button>
@@ -605,7 +617,7 @@ export const Header: React.FC = () => {
                         Executive Notification Hub
                       </div>
                       <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
-                        Flowchart 20 Automated Dispatch Engine
+                        Automated Dispatch Engine
                       </div>
                     </div>
                     {unreadNotificationsCount > 0 && (
@@ -1008,7 +1020,7 @@ export const Header: React.FC = () => {
                     {isGuest ? 'Sign In / Employee Login' : 'Switch Account (Login)'}
                   </div>
                   <div style={{ fontSize: '0.66rem', color: '#64748b' }}>
-                    Flowchart 1-5 Credentials Auth
+                    Secure corporate sign-in
                   </div>
                 </div>
               </div>

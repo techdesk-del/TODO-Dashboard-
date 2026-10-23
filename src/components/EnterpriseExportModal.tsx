@@ -125,7 +125,7 @@ export const EnterpriseExportModal: React.FC<EnterpriseExportModalProps> = ({
         action: 'EXPORTED',
         fieldChanged: 'Multi-Sheet Excel Workbook Export',
         newValue: `${filename} (${totalRowCount} assignee rows across ${filteredTasks.length} tasks)`,
-        notes: `Generated Flowchart E sanitized multi-sheet Excel file. Scope: ${currentUser.role}, Type: ${exportType}${includeAuditLogs ? ' (Includes Audit Trail)' : ''}`
+        notes: `Generated sanitized multi-sheet Excel file. Scope: ${currentUser.role}, Type: ${exportType}${includeAuditLogs ? ' (Includes Audit Trail)' : ''}`
       });
 
       setBannerNotification({
@@ -159,7 +159,7 @@ export const EnterpriseExportModal: React.FC<EnterpriseExportModalProps> = ({
             </div>
             <div>
               <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                Enterprise Multi-Sheet Excel Export (Flowchart E)
+                Enterprise Multi-Sheet Excel Export
               </h3>
               <p style={{ fontSize: '0.72rem', color: '#64748b', margin: '2px 0 0 0' }}>
                 OWASP formula injection sanitized • 2-Sheet structure • Role-governed export
@@ -203,7 +203,7 @@ export const EnterpriseExportModal: React.FC<EnterpriseExportModalProps> = ({
         {/* Step 2: Export Type Selection (5 Flowchart E Pathways) */}
         <div style={{ marginBottom: '1rem' }}>
           <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-            Export Classification (Flowchart E Decision Diamond):
+            Export Classification:
           </label>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '0.4rem' }}>
             {[
@@ -373,7 +373,7 @@ export const EnterpriseExportModal: React.FC<EnterpriseExportModalProps> = ({
                 onChange={e => setBackgroundEmailMode(e.target.checked)}
                 style={{ width: '15px', height: '15px', accentColor: '#d97706' }}
               />
-              <span>Run export in background &amp; email download link (Flowchart E threshold branch)</span>
+              <span>Run export in background &amp; email download link</span>
             </label>
           </div>
         )}

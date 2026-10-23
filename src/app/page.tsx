@@ -17,9 +17,9 @@ import { MorningDigestPreviewModal } from '@/components/MorningDigestPreviewModa
 import { CreateTaskModal } from '@/components/CreateTaskModal';
 import { EnterpriseExportModal } from '@/components/EnterpriseExportModal';
 import { AuthModal } from '@/components/AuthModal';
-import { formatDateTitle, getTodayStr } from '@/lib/dateUtils';
+import { formatDateTitle, getTodayStr, getTomorrowStr, formatDateDayMonth } from '@/lib/dateUtils';
 import { isCeoUser, canAccessAdminHr, canAccessWorkflows } from '@/lib/rosterData';
-import { Check, Calendar as CalendarIcon, Sparkles, Globe, CalendarDays, AlertTriangle, RotateCcw } from 'lucide-react';
+import { Check, Calendar as CalendarIcon, Sparkles, Globe, CalendarDays, AlertTriangle, RotateCcw, Plus } from 'lucide-react';
 
 export default function Home() {
   const {
@@ -39,9 +39,10 @@ export default function Home() {
     isAuthModalOpen,
     setIsAuthModalOpen,
     authModalInitialMode,
+    viewScope,
+    setViewScope,
   } = useApp();
 
-  const [viewScope, setViewScope] = useState<'selected' | 'all'>('all');
   const [assigneeFilter, setAssigneeFilter] = useState<'all' | 'assigned_to_me' | 'assigned_by_me'>('all');
   const [isMounted, setIsMounted] = useState(false);
 
@@ -264,7 +265,7 @@ export default function Home() {
               <div className="workspace-heading-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', width: '100%', paddingBottom: '0.5rem' }}>
                 <div>
                   <div className="workspace-date-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <span>📅</span>
+                    <CalendarDays size={18} color="#2563eb" />
                     <span>
                       {isCeo
                         ? (viewScope === 'all' ? `Executive Company-Wide Deliverables (${visibleTasks.length})` : `Tasks for: ${formatDateTitle(selectedDate)}`)
@@ -331,7 +332,7 @@ export default function Home() {
                         boxShadow: assigneeFilter === 'assigned_to_me' ? '0 1px 3px rgba(37,99,235,0.25)' : 'none',
                         transition: 'all 0.15s ease'
                       }}
-                      title="Tasks assigned to you (Flowchart 6)"
+                      title="Tasks assigned to you"
                     >
                       Assigned to Me ({assignedToMeCount})
                     </button>
@@ -352,7 +353,7 @@ export default function Home() {
                         boxShadow: assigneeFilter === 'assigned_by_me' ? '0 1px 3px rgba(37,99,235,0.25)' : 'none',
                         transition: 'all 0.15s ease'
                       }}
-                      title="Tasks created and assigned by you (Flowchart 6)"
+                      title="Tasks created and assigned by you"
                     >
                       Assigned by Me ({assignedByMeCount})
                     </button>
@@ -405,7 +406,7 @@ export default function Home() {
                       }}
                     >
                       <CalendarDays size={13} />
-                      {selectedDate.slice(5)} ({dateTasks.length})
+                      {selectedDate === todayStr ? `Today (${dateTasks.length})` : selectedDate === getTomorrowStr() ? `Tomorrow (${dateTasks.length})` : `${formatDateDayMonth(selectedDate)} (${dateTasks.length})`}
                     </button>
                   </div>
 
@@ -430,7 +431,7 @@ export default function Home() {
                       flexShrink: 0
                     }}
                   >
-                    <span>➕</span>
+                    <Plus size={14} strokeWidth={2.75} />
                     <span>Add Task</span>
                   </button>
                 </div>

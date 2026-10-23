@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useApp } from '@/context/AppContext';
 import { TaskPriority, TeamMember, AssigneeInfo } from '@/types';
-import { getTodayStr } from '@/lib/dateUtils';
+import { getTodayStr, getTomorrowStr } from '@/lib/dateUtils';
 import { 
   X, 
   Mic, 
@@ -939,17 +939,57 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
             gap: '1rem',
             marginBottom: '1.25rem'
           }}>
-            {/* Due Date */}
+            {/* Due Date with Today / Tomorrow shortcuts */}
             <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.82rem',
-                fontWeight: 700,
-                color: missingFields.includes('dueDate') ? '#dc2626' : '#334155',
-                marginBottom: '0.35rem'
-              }}>
-                Due Date *
-              </label>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                <label style={{
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  color: missingFields.includes('dueDate') ? '#dc2626' : '#334155',
+                }}>
+                  Due Date *
+                </label>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDueDate(getTodayStr());
+                      if (missingFields.includes('dueDate')) setMissingFields(prev => prev.filter(f => f !== 'dueDate'));
+                    }}
+                    style={{
+                      fontSize: '0.68rem',
+                      fontWeight: 700,
+                      padding: '1px 6px',
+                      borderRadius: '4px',
+                      border: '1px solid #bfdbfe',
+                      background: dueDate === getTodayStr() ? '#2563eb' : '#eff6ff',
+                      color: dueDate === getTodayStr() ? '#ffffff' : '#1d4ed8',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Today
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDueDate(getTomorrowStr());
+                      if (missingFields.includes('dueDate')) setMissingFields(prev => prev.filter(f => f !== 'dueDate'));
+                    }}
+                    style={{
+                      fontSize: '0.68rem',
+                      fontWeight: 700,
+                      padding: '1px 6px',
+                      borderRadius: '4px',
+                      border: '1px solid #bfdbfe',
+                      background: dueDate === getTomorrowStr() ? '#2563eb' : '#eff6ff',
+                      color: dueDate === getTomorrowStr() ? '#ffffff' : '#1d4ed8',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Tomorrow
+                  </button>
+                </div>
+              </div>
               <input
                 type="date"
                 value={dueDate}
