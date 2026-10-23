@@ -673,6 +673,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                   title="FC 7: Put on Hold with mandatory reason"
                 >
                   <PauseCircle size={15} color="#d97706" />
+                  <span className="task-utility-label">Hold</span>
                 </button>
               )}
 
@@ -684,6 +685,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                   title="FC 17: Escalate to Senior Leadership"
                 >
                   <AlertTriangle size={15} color="#dc2626" />
+                  <span className="task-utility-label">Escalate</span>
                 </button>
               )}
 
@@ -694,6 +696,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                 title="FC 12: View Immutable Audit Trail"
               >
                 <ShieldCheck size={15} color="#059669" />
+                <span className="task-utility-label">Audit Trail</span>
               </button>
 
               {/* Delete Deliverable (Strictly CEO Only) */}
@@ -705,6 +708,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                   title="Delete Deliverable (CEO Sukh Sagar ji only)"
                 >
                   <Trash2 size={15} color="#dc2626" />
+                  <span className="task-utility-label">Delete</span>
                 </button>
               )}
             </div>

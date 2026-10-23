@@ -445,8 +445,8 @@ export const SystemConfigModal: React.FC = () => {
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+        <div className="system-config-header-meta" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
             <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>Active Version Baseline:</span>
             <span style={{ fontSize: '0.85rem', color: '#15803d', fontWeight: 800 }}>
               {systemConfig.versionBaseline}
@@ -701,13 +701,7 @@ export const SystemConfigModal: React.FC = () => {
       )}
 
       {/* 7 Settings Navigation Tabs (Flowchart 2) */}
-      <div style={{
-        display: 'flex',
-        gap: '0.4rem',
-        borderBottom: '2px solid #e2e8f0',
-        paddingBottom: '0.4rem',
-        overflowX: 'auto'
-      }}>
+      <div className="system-config-tabs-bar">
         {[
           { key: 'email_schedule', label: '1. Email Schedule', icon: Mail },
           { key: 'role_permissions', label: '2. Role Permissions', icon: Users },
@@ -724,21 +718,7 @@ export const SystemConfigModal: React.FC = () => {
               key={tab.key}
               type="button"
               onClick={() => setActiveTab(tab.key as ConfigTab)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '0.45rem 0.85rem',
-                borderRadius: '6px',
-                border: 'none',
-                background: isActive ? '#eff6ff' : 'transparent',
-                color: isActive ? '#2563eb' : '#64748b',
-                fontWeight: isActive ? 800 : 600,
-                fontSize: '0.78rem',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                transition: 'all 0.15s ease'
-              }}
+              className={`system-config-tab-btn ${isActive ? 'active' : ''}`}
             >
               <Icon size={14} color={isActive ? '#2563eb' : '#64748b'} />
               <span>{tab.label}</span>

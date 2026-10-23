@@ -891,10 +891,11 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
 
 .task-title-line {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: clamp(0.35rem, 1.5vw, 0.55rem);
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   line-height: 1.4;
+  width: 100%;
 }
 
 .task-title-text {
@@ -903,6 +904,8 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
   color: #0f172a;
   word-break: break-word;
   overflow-wrap: break-word;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .just-added-badge {
@@ -2060,20 +2063,28 @@ html, body {
     align-items: center !important;
     gap: 0.45rem !important;
     width: 100% !important;
-    justify-content: flex-start !important;
   }
 
   .task-actions-utility button {
-    flex: 0 0 36px !important;
-    width: 36px !important;
+    flex: 1 1 0px !important;
+    width: auto !important;
     height: 36px !important;
-    min-width: 36px !important;
     min-height: 36px !important;
-    padding: 0 !important;
-    display: flex !important;
+    min-width: 0 !important;
+    padding: 0 0.5rem !important;
+    display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
+    gap: 5px !important;
+    font-size: 0.72rem !important;
+    font-weight: 600 !important;
     border-radius: 6px !important;
+    white-space: nowrap !important;
+    box-sizing: border-box !important;
+  }
+
+  .task-actions-utility .task-utility-label {
+    display: inline !important;
   }
 
   .multi-assignee-breakdown-card {
@@ -2624,6 +2635,19 @@ textarea:focus-visible {
   }
 }
 
+@media (max-width: 480px) {
+  .overdue-alert-actions {
+    grid-template-columns: 1fr !important;
+    gap: 0.45rem !important;
+  }
+  .overdue-alert-actions button {
+    min-height: 38px !important;
+    font-size: 0.75rem !important;
+    white-space: nowrap !important;
+    padding: 8px 12px !important;
+  }
+}
+
 /* Tab 2: Create Account Provisioning Grid */
 .admin-create-account-container {
   display: grid;
@@ -3083,5 +3107,122 @@ input[type="time"]:focus {
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
   outline: none;
 }
+
+/* ------------------------------------------------------------------ */
+/* SYSTEM CONFIGURATION MODAL / PAGE TABS & META                     */
+/* ------------------------------------------------------------------ */
+.system-config-tabs-bar {
+  display: flex;
+  gap: 0.45rem;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 0.5rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  width: 100%;
+}
+
+.system-config-tabs-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.system-config-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.45rem 0.85rem;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 0.78rem;
+  cursor: pointer;
+  white-space: nowrap;
+  flex: 0 0 auto !important;
+  flex-shrink: 0 !important;
+  transition: all 0.15s ease;
+}
+
+.system-config-tab-btn:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.system-config-tab-btn.active {
+  background: #eff6ff;
+  color: #2563eb;
+  border-color: #bfdbfe;
+  font-weight: 800;
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.08);
+}
+
+.system-config-header-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 640px) {
+  .system-config-header-meta {
+    width: 100%;
+    justify-content: space-between;
+    margin-top: 0.35rem;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* MOBILE DROPDOWN BACKDROP & CLOSE BUTTON                           */
+/* ------------------------------------------------------------------ */
+.mobile-dropdown-backdrop {
+  display: none;
+}
+
+.dropdown-close-btn {
+  display: none;
+}
+
+.task-utility-label {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .mobile-dropdown-backdrop {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    z-index: 998;
+  }
+
+  .dropdown-close-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #64748b;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.15s ease;
+  }
+
+  .dropdown-close-btn:hover {
+    background: #fee2e2;
+    color: #dc2626;
+    border-color: #fca5a5;
+  }
+}
+
 
 

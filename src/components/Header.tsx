@@ -302,52 +302,69 @@ export const Header: React.FC = () => {
             </button>
 
             {isOpsMenuOpen && (
-              <div 
-                className="header-dropdown-panel"
-                style={{
-                  position: 'absolute',
-                  top: 'calc(100% + 6px)',
-                  right: 0,
-                  width: '320px',
-                  maxWidth: 'calc(100vw - 20px)',
-                  background: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '12px',
-                  boxShadow: '0 16px 36px -4px rgba(15, 23, 42, 0.16), 0 4px 12px rgba(0,0,0,0.06)',
-                  zIndex: 100,
-                  padding: '8px',
-                  overflow: 'hidden'
-                }}
-              >
-                {/* Header: Live Cron Status */}
-                <div style={{
-                  padding: '8px 10px 10px',
-                  borderBottom: '1px solid #f1f5f9',
-                  marginBottom: '6px'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#64748b' }}>
-                      Automated System Engines
-                    </span>
-                    <span style={{ 
-                      fontSize: '0.65rem', 
-                      fontWeight: 700, 
-                      color: '#16a34a', 
-                      background: '#f0fdf4', 
-                      padding: '2px 6px', 
-                      borderRadius: '4px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}>
-                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
-                      Daemon Active
-                    </span>
+              <>
+                <div 
+                  className="mobile-dropdown-backdrop"
+                  onClick={() => setIsOpsMenuOpen(false)}
+                  aria-hidden="true"
+                />
+                <div 
+                  className="header-dropdown-panel"
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 6px)',
+                    right: 0,
+                    width: '320px',
+                    maxWidth: 'calc(100vw - 20px)',
+                    background: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '12px',
+                    boxShadow: '0 16px 36px -4px rgba(15, 23, 42, 0.16), 0 4px 12px rgba(0,0,0,0.06)',
+                    zIndex: 100,
+                    padding: '8px',
+                    overflow: 'hidden'
+                  }}
+                >
+                  {/* Header: Live Cron Status */}
+                  <div style={{
+                    padding: '8px 10px 10px',
+                    borderBottom: '1px solid #f1f5f9',
+                    marginBottom: '6px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#64748b' }}>
+                        Automated System Engines
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ 
+                          fontSize: '0.65rem', 
+                          fontWeight: 700, 
+                          color: '#16a34a', 
+                          background: '#f0fdf4', 
+                          padding: '2px 6px', 
+                          borderRadius: '4px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}>
+                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+                          Daemon Active
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setIsOpsMenuOpen(false)}
+                          className="dropdown-close-btn"
+                          title="Close"
+                          aria-label="Close"
+                        >
+                          <XIcon size={14} />
+                        </button>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: '#64748b', lineHeight: 1.3 }}>
+                      FC 11 (00:05 Rollover) & FC 13 (08:30 Digest) background schedulers
+                    </div>
                   </div>
-                  <div style={{ fontSize: '0.7rem', color: '#64748b', lineHeight: 1.3 }}>
-                    FC 11 (00:05 Rollover) & FC 13 (08:30 Digest) background schedulers
-                  </div>
-                </div>
 
                 {/* Option 1: 08:30 AM Morning Digest */}
                 <button
@@ -525,9 +542,10 @@ export const Header: React.FC = () => {
                   🛡️ Zero spam policy • Auto-suppressed on Sundays & Holidays
                 </div>
               </div>
-            )}
-          </div>
-        )}
+            </>
+          )}
+        </div>
+      )}
 
         {/* Real-Time Notification Bell & Pending Alert Center */}
         {(() => {
@@ -586,58 +604,75 @@ export const Header: React.FC = () => {
               </button>
 
               {isNotificationCenterOpen && (
-                <div 
-                  className="header-dropdown-panel"
-                  style={{
-                    position: 'absolute',
-                    top: 'calc(100% + 6px)',
-                    right: 0,
-                    width: '380px',
-                    maxWidth: 'calc(100vw - 20px)',
-                    background: '#ffffff',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '12px',
-                    boxShadow: '0 16px 36px -4px rgba(15, 23, 42, 0.16), 0 4px 12px rgba(0,0,0,0.06)',
-                    zIndex: 100,
-                    padding: '10px',
-                    overflow: 'hidden'
-                  }}
-                >
-                  {/* Header */}
-                  <div style={{
-                    padding: '4px 6px 8px',
-                    borderBottom: '1px solid #f1f5f9',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between'
-                  }}>
-                    <div>
-                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <Bell size={14} color="#2563eb" />
-                        Executive Notification Hub
+                <>
+                  <div
+                    className="mobile-dropdown-backdrop"
+                    onClick={() => setIsNotificationCenterOpen(false)}
+                    aria-hidden="true"
+                  />
+                  <div 
+                    className="header-dropdown-panel"
+                    style={{
+                      position: 'absolute',
+                      top: 'calc(100% + 6px)',
+                      right: 0,
+                      width: '380px',
+                      maxWidth: 'calc(100vw - 20px)',
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '12px',
+                      boxShadow: '0 16px 36px -4px rgba(15, 23, 42, 0.16), 0 4px 12px rgba(0,0,0,0.06)',
+                      zIndex: 100,
+                      padding: '10px',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    {/* Header */}
+                    <div style={{
+                      padding: '4px 6px 8px',
+                      borderBottom: '1px solid #f1f5f9',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between'
+                    }}>
+                      <div>
+                        <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Bell size={14} color="#2563eb" />
+                          Executive Notification Hub
+                        </div>
+                        <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
+                          Automated Dispatch Engine
+                        </div>
                       </div>
-                      <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
-                        Automated Dispatch Engine
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {unreadNotificationsCount > 0 && (
+                          <button
+                            type="button"
+                            onClick={markAllNotificationsRead}
+                            style={{
+                              background: 'transparent',
+                              border: 'none',
+                              color: '#2563eb',
+                              fontSize: '0.68rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              textDecoration: 'underline'
+                            }}
+                          >
+                            Mark all read
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setIsNotificationCenterOpen(false)}
+                          className="dropdown-close-btn"
+                          title="Close Notification Center"
+                          aria-label="Close"
+                        >
+                          <XIcon size={15} />
+                        </button>
                       </div>
                     </div>
-                    {unreadNotificationsCount > 0 && (
-                      <button
-                        type="button"
-                        onClick={markAllNotificationsRead}
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: '#2563eb',
-                          fontSize: '0.68rem',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          textDecoration: 'underline'
-                        }}
-                      >
-                        Mark all read
-                      </button>
-                    )}
-                  </div>
 
                   {/* Tabs: In-App Alerts (Flowchart 20) vs Overdue Deliverables */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', margin: '8px 0 6px', background: '#f8fafc', padding: '3px', borderRadius: '8px' }}>
@@ -883,7 +918,8 @@ export const Header: React.FC = () => {
                     </div>
                   )}
                 </div>
-              )}
+              </>
+            )}
             </div>
           );
         })()}
