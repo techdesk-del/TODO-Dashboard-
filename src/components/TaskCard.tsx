@@ -452,395 +452,262 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
               title={isCompleted ? 'Mark as In Progress' : 'Mark as Completed'}
             />
 
-            <div className="task-title-line">
-              {typeof index === 'number' && (
-                <span className="task-sequence-badge" title={`Deliverable #${index}`}>
-                  #{index}
+            <div className="task-header-content">
+              <div className="task-title-line">
+                {typeof index === 'number' && (
+                  <span className="task-sequence-badge" title={`Deliverable #${index}`}>
+                    #{index}
+                  </span>
+                )}
+                <span className="task-title-text" style={{ textDecoration: isCompleted ? 'line-through' : 'none', color: isCompleted ? '#94a3b8' : undefined }}>
+                  {task.title}
                 </span>
-              )}
-              <span style={{ textDecoration: isCompleted ? 'line-through' : 'none', color: isCompleted ? '#94a3b8' : undefined, fontWeight: 700 }}>
-                {task.title}
-              </span>
 
-              {isActuallyJustAdded && (
-                <span className="just-added-badge">JUST ADDED</span>
-              )}
+                {isActuallyJustAdded && (
+                  <span className="just-added-badge">JUST ADDED</span>
+                )}
+              </div>
 
-              {isOverdue && (
-                <span style={{
-                  background: hasDelayReason ? '#fff7ed' : '#fef2f2',
-                  color: hasDelayReason ? '#c2410c' : '#b91c1c',
-                  border: hasDelayReason ? '1px solid #fed7aa' : '1px solid #fca5a5',
-                  fontSize: '0.65rem',
-                  fontWeight: 800,
-                  padding: '0.15rem 0.45rem',
-                  borderRadius: '4px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '3px'
-                }} title={hasDelayReason ? `Delay Reason: "${task.delayReason || task.pastDueReason}"` : 'Overdue without recorded reason requires justification'}>
-                  {hasDelayReason ? '⚠️ OVERDUE (REASON RECORDED)' : '🚨 PENDING NO REASON'}
-                </span>
-              )}
+              {/* Status and Compliance Badges Row */}
+              <div className="task-badges-row">
+                {isOverdue && (
+                  <span className="task-pill-badge badge-overdue" title={hasDelayReason ? `Delay Reason: "${task.delayReason || task.pastDueReason}"` : 'Overdue without recorded reason requires justification'}>
+                    {hasDelayReason ? '⚠️ OVERDUE (REASON RECORDED)' : '🚨 PENDING NO REASON'}
+                  </span>
+                )}
 
-              {/* Flowchart 23: Show on-leave badge on their tasks */}
-              {task.assignees.some(a => {
-                const m = members.find(mem => mem.id === a.id || mem.email?.toLowerCase() === a.email?.toLowerCase());
-                return m?.status === 'ON_LEAVE';
-              }) && (
-                <span style={{
-                  background: '#fef3c7',
-                  color: '#b45309',
-                  border: '1px solid #fde68a',
-                  fontSize: '0.65rem',
-                  fontWeight: 800,
-                  padding: '0.15rem 0.45rem',
-                  borderRadius: '4px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '3px'
-                }} title="Assignee is on authorized leave. Reminders and auto-escalations paused.">
-                  🏖️ ON LEAVE
-                </span>
-              )}
+                {task.assignees.some(a => {
+                  const m = members.find(mem => mem.id === a.id || mem.email?.toLowerCase() === a.email?.toLowerCase());
+                  return m?.status === 'ON_LEAVE';
+                }) && (
+                  <span className="task-pill-badge badge-on-leave" title="Assignee is on authorized leave. Reminders and auto-escalations paused.">
+                    🏖️ ON LEAVE
+                  </span>
+                )}
 
-              {typeof task.carryForwardCount === 'number' && task.carryForwardCount > 0 ? (
-                <span style={{
-                  background: '#fef3c7',
-                  color: '#b45309',
-                  border: '1px solid #fcd34d',
-                  fontSize: '0.65rem',
-                  fontWeight: 800,
-                  padding: '0.15rem 0.45rem',
-                  borderRadius: '4px'
-                }}>
-                  🔄 CARRIED FORWARD ({task.carryForwardCount})
-                </span>
-              ) : null}
+                {typeof task.carryForwardCount === 'number' && task.carryForwardCount > 0 ? (
+                  <span className="task-pill-badge badge-carry-forward">
+                    🔄 CARRIED FORWARD ({task.carryForwardCount})
+                  </span>
+                ) : null}
 
-              {/* Flowchart A: Show edited by Admin tag on the task */}
-              {(task.editedByAdmin || task.notes?.toLowerCase().includes('edited by admin')) && (
-                <span style={{
-                  background: '#eff6ff',
-                  color: '#1d4ed8',
-                  border: '1px solid #bfdbfe',
-                  fontSize: '0.65rem',
-                  fontWeight: 800,
-                  padding: '0.15rem 0.45rem',
-                  borderRadius: '4px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '3px'
-                }} title="Administrative Intervention: Edited by Admin">
-                  🛡️ Edited by Admin
-                </span>
-              )}
+                {(task.editedByAdmin || task.notes?.toLowerCase().includes('edited by admin')) && (
+                  <span className="task-pill-badge badge-edited-admin" title="Administrative Intervention: Edited by Admin">
+                    🛡️ Edited by Admin
+                  </span>
+                )}
 
-              {/* Flowchart 22: Cancelled Status Badge */}
-              {(comp.status === 'Cancelled' || task.status === 'Cancelled') && (
-                <span style={{
-                  background: '#fef2f2',
-                  color: '#991b1b',
-                  border: '1px solid #fecaca',
-                  fontSize: '0.65rem',
-                  fontWeight: 800,
-                  padding: '0.15rem 0.45rem',
-                  borderRadius: '4px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '3px'
-                }}>
-                  🚫 CANCELLED
-                </span>
-              )}
+                {(comp.status === 'Cancelled' || task.status === 'Cancelled') && (
+                  <span className="task-pill-badge badge-cancelled">
+                    🚫 CANCELLED
+                  </span>
+                )}
 
-              {/* Flowchart 8 Overall Status Badges */}
-              {comp.status === 'Done' && (
-                <span style={{
-                  background: '#dcfce7',
-                  color: '#15803d',
-                  border: '1px solid #86efac',
-                  fontSize: '0.65rem',
-                  fontWeight: 800,
-                  padding: '0.15rem 0.45rem',
-                  borderRadius: '4px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '3px'
-                }}>
-                  ✓ COMPLETED
-                </span>
-              )}
+                {comp.status === 'Done' && (
+                  <span className="task-pill-badge badge-done">
+                    ✓ COMPLETED
+                  </span>
+                )}
 
-              {comp.status === 'Partially Completed' && (
-                <span style={{
-                  background: '#e0e7ff',
-                  color: '#3730a3',
-                  border: '1px solid #c7d2fe',
-                  fontSize: '0.65rem',
-                  fontWeight: 800,
-                  padding: '0.15rem 0.45rem',
-                  borderRadius: '4px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '3px'
-                }}>
-                  ⏳ PARTIALLY COMPLETED
-                </span>
-              )}
+                {comp.status === 'Partially Completed' && (
+                  <span className="task-pill-badge badge-partial">
+                    ⏳ PARTIALLY COMPLETED
+                  </span>
+                )}
 
-              {comp.status === 'On Hold' && (
-                <span style={{
-                  background: '#fef9c3',
-                  color: '#854d0e',
-                  border: '1px solid #fde047',
-                  fontSize: '0.65rem',
-                  fontWeight: 700,
-                  padding: '0.15rem 0.4rem',
-                  borderRadius: '4px'
-                }}>
-                  ⏸️ ON HOLD
-                </span>
-              )}
+                {comp.status === 'On Hold' && (
+                  <span className="task-pill-badge badge-hold">
+                    ⏸️ ON HOLD
+                  </span>
+                )}
 
-              {comp.status === 'Escalated' && (
-                <span style={{
-                  background: '#fee2e2',
-                  color: '#b91c1c',
-                  border: '1px solid #fca5a5',
-                  fontSize: '0.65rem',
-                  fontWeight: 700,
-                  padding: '0.15rem 0.4rem',
-                  borderRadius: '4px'
-                }}>
-                  🚨 ESCALATED TO {task.escalatedTo || 'SENIOR'}
-                </span>
-              )}
+                {comp.status === 'Escalated' && (
+                  <span className="task-pill-badge badge-escalated">
+                    🚨 ESCALATED TO {task.escalatedTo || 'SENIOR'}
+                  </span>
+                )}
 
-              {comp.status === 'Pending Notice' && (
-                <span style={{
-                  background: '#fef2f2',
-                  color: '#991b1b',
-                  border: '1px solid #f87171',
-                  fontSize: '0.65rem',
-                  fontWeight: 800,
-                  padding: '0.15rem 0.45rem',
-                  borderRadius: '4px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '3px'
-                }}>
-                  ⚠️ PENDING NOTICE (OVERDUE)
-                </span>
-              )}
+                {comp.status === 'Pending Notice' && (
+                  <span className="task-pill-badge badge-pending-notice">
+                    ⚠️ PENDING NOTICE (OVERDUE)
+                  </span>
+                )}
 
-              {comp.status === 'Not Started' && (
-                <span style={{
-                  background: '#f1f5f9',
-                  color: '#475569',
-                  border: '1px solid #cbd5e1',
-                  fontSize: '0.65rem',
-                  fontWeight: 800,
-                  padding: '0.15rem 0.45rem',
-                  borderRadius: '4px'
-                }}>
-                  🆕 NOT STARTED
-                </span>
-              )}
+                {comp.status === 'Not Started' && (
+                  <span className="task-pill-badge badge-not-started">
+                    🆕 NOT STARTED
+                  </span>
+                )}
 
-              {comp.status === 'In Progress' && (
-                <span style={{
-                  background: '#eff6ff',
-                  color: '#1d4ed8',
-                  border: '1px solid #93c5fd',
-                  fontSize: '0.65rem',
-                  fontWeight: 800,
-                  padding: '0.15rem 0.45rem',
-                  borderRadius: '4px'
-                }}>
-                  ⚡ IN PROCESS
-                </span>
-              )}
+                {comp.status === 'In Progress' && (
+                  <span className="task-pill-badge badge-in-progress">
+                    ⚡ IN PROCESS
+                  </span>
+                )}
 
-              {/* Flowchart 8: "Show progress like N of 3 completed beside overall status" */}
-              {task.assignees.length > 1 && (
-                <span style={{
-                  background: '#f8fafc',
-                  color: '#1e293b',
-                  border: '1px solid #cbd5e1',
-                  fontSize: '0.65rem',
-                  fontWeight: 800,
-                  padding: '0.15rem 0.5rem',
-                  borderRadius: '9999px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                }}>
-                  👥 {comp.progressText}
-                </span>
-              )}
+                {task.assignees.length > 1 && (
+                  <span className="task-pill-badge badge-multi-progress">
+                    👥 {comp.progressText}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
           <div className="task-actions-group">
-            {/* Quick Reschedule Overdue Task to Today */}
-            {isOverdue && (
+            {/* Primary Workflow Actions (Text + Icons) */}
+            <div className="task-actions-workflow">
+              {/* Quick Reschedule Overdue Task to Today */}
+              {isOverdue && (
+                <button
+                  type="button"
+                  className="btn-secondary task-btn-overdue-today"
+                  onClick={() => {
+                    updateTask(task.id, { scheduledDate: todayStr }, `Rescheduled overdue deliverable to today (${todayStr})`);
+                  }}
+                  title="Reschedule this overdue task to today"
+                >
+                  <CalendarIcon size={13} color="#b91c1c" />
+                  <span>Move to Today</span>
+                </button>
+              )}
+
+              {/* Flowchart 21: Add / Edit Reason Button for overdue tasks */}
+              {isOverdue && (
+                <button
+                  type="button"
+                  className="btn-secondary task-btn-delay-reason"
+                  onClick={() => {
+                    setDelayReasonInput(task.delayReason || task.pastDueReason || '');
+                    setShowDelayReasonModal(true);
+                  }}
+                  title={hasDelayReason ? `FC 21: Delay reason recorded: "${task.delayReason || task.pastDueReason}". Click to edit.` : 'FC 21: Overdue deliverable without reason — click to record justification.'}
+                >
+                  <FileText size={13} color={hasDelayReason ? '#047857' : '#c2410c'} />
+                  <span>{hasDelayReason ? 'Edit Reason' : 'Add Reason'}</span>
+                </button>
+              )}
+
+              {/* Edit Task Button */}
+              <button
+                type="button"
+                className="btn-secondary task-btn-edit"
+                onClick={handleStartEdit}
+                title="Edit Task Details"
+              >
+                <Edit3 size={13} color="#2563eb" />
+                <span>Edit Task</span>
+              </button>
+
+              {/* Reschedule Date Button */}
               <button
                 type="button"
                 className="btn-secondary"
                 onClick={() => {
-                  updateTask(task.id, { scheduledDate: todayStr }, `Rescheduled overdue deliverable to today (${todayStr})`);
+                  setRescheduleDateInput(task.scheduledDate);
+                  setShowRescheduleModal(true);
                 }}
-                title="Reschedule this overdue task to today"
-                style={{ color: '#b91c1c', borderColor: '#fca5a5', background: '#fff1f2', fontWeight: 700 }}
+                title="Reschedule Task Date"
               >
-                <CalendarIcon size={13} color="#b91c1c" />
-                Move to Today
+                <CalendarIcon size={13} color="#64748b" />
+                <span>Reschedule</span>
               </button>
-            )}
 
-            {/* Flowchart 21: Add / Edit Reason Button for overdue tasks */}
-            {isOverdue && (
+              {/* Flowchart 22: Reassign Task */}
               <button
                 type="button"
-                className="btn-secondary"
+                className="btn-secondary task-btn-reassign"
                 onClick={() => {
-                  setDelayReasonInput(task.delayReason || task.pastDueReason || '');
-                  setShowDelayReasonModal(true);
+                  setReassignMode('REPLACE_ALL');
+                  setSelectedNewAssigneeIds([]);
+                  setSelectedRemoveAssigneeIds([]);
+                  setReassignReasonInput('');
+                  setShowReassignModal(true);
                 }}
-                title={hasDelayReason ? `FC 21: Delay reason recorded: "${task.delayReason || task.pastDueReason}". Click to edit.` : 'FC 21: Overdue deliverable without reason — click to record justification.'}
-                style={{
-                  color: hasDelayReason ? '#047857' : '#c2410c',
-                  borderColor: hasDelayReason ? '#a7f3d0' : '#fed7aa',
-                  background: hasDelayReason ? '#ecfdf5' : '#fff7ed',
-                  fontWeight: 700
-                }}
+                title="Reassign Task"
               >
-                <FileText size={13} color={hasDelayReason ? '#047857' : '#c2410c'} />
-                {hasDelayReason ? 'Edit Delay Reason' : 'Add Reason'}
+                <UserPlus size={13} color="#2563eb" />
+                <span>Reassign</span>
               </button>
-            )}
 
-            {/* Edit Task Button */}
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={handleStartEdit}
-              title="Edit Task Details"
-              style={{ color: '#2563eb', borderColor: '#bfdbfe', background: '#eff6ff' }}
-            >
-              <Edit3 size={13} color="#2563eb" />
-              Edit Task
-            </button>
+              {/* Flowchart 22: Cancel Task with Mandatory Reason */}
+              {task.status !== 'Cancelled' && task.status !== 'Done' && (
+                <button
+                  type="button"
+                  className="btn-secondary task-btn-cancel"
+                  onClick={() => {
+                    setCancelReasonInput('');
+                    setShowCancelModal(true);
+                  }}
+                  title="Cancel Task with Mandatory Reason"
+                >
+                  <Ban size={13} color="#dc2626" />
+                  <span>Cancel</span>
+                </button>
+              )}
 
-            {/* Reschedule Date Button */}
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => {
-                setRescheduleDateInput(task.scheduledDate);
-                setShowRescheduleModal(true);
-              }}
-              title="Reschedule Task Date"
-            >
-              <CalendarIcon size={13} color="#64748b" />
-              Reschedule
-            </button>
+              {/* Flowchart 10: Reopen Completed Task with Justification */}
+              {isCompleted && (
+                <button
+                  type="button"
+                  className="btn-secondary task-btn-reopen"
+                  onClick={() => {
+                    setShowReopenModal(true);
+                    setReopenReasonInput('');
+                  }}
+                  title="FC 10: Reopen Completed Task with Justification"
+                >
+                  <RotateCcw size={13} color="#1e40af" />
+                  <span>Reopen</span>
+                </button>
+              )}
+            </div>
 
-            {/* Flowchart 22: Reassign Task (Replace all, Add alongside, Remove specific) */}
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => {
-                setReassignMode('REPLACE_ALL');
-                setSelectedNewAssigneeIds([]);
-                setSelectedRemoveAssigneeIds([]);
-                setReassignReasonInput('');
-                setShowReassignModal(true);
-              }}
-              title="Reassign Task"
-              style={{ padding: '0.4rem 0.55rem', display: 'flex', alignItems: 'center', gap: '4px', color: '#1d4ed8' }}
-            >
-              <UserPlus size={13} color="#2563eb" />
-              <span>Reassign</span>
-            </button>
+            {/* Quick Utility Icon Actions (Hold, Escalate, Audit, Delete) */}
+            <div className="task-actions-utility">
+              {!isCompleted && (
+                <button
+                  type="button"
+                  className="btn-secondary task-icon-action-btn"
+                  onClick={() => setShowHoldModal(true)}
+                  title="FC 7: Put on Hold with mandatory reason"
+                >
+                  <PauseCircle size={15} color="#d97706" />
+                </button>
+              )}
 
-            {/* Flowchart 22: Cancel Task with Mandatory Reason */}
-            {task.status !== 'Cancelled' && task.status !== 'Done' && (
+              {!isCompleted && (
+                <button
+                  type="button"
+                  className="btn-secondary task-icon-action-btn"
+                  onClick={() => setShowEscalateModal(true)}
+                  title="FC 17: Escalate to Senior Leadership"
+                >
+                  <AlertTriangle size={15} color="#dc2626" />
+                </button>
+              )}
+
               <button
                 type="button"
-                className="btn-secondary"
-                onClick={() => {
-                  setCancelReasonInput('');
-                  setShowCancelModal(true);
-                }}
-                title="Cancel Task with Mandatory Reason (Exclude from performance reports)"
-                style={{ padding: '0.4rem 0.55rem', display: 'flex', alignItems: 'center', gap: '4px', color: '#dc2626', borderColor: '#fca5a5' }}
+                className="btn-secondary task-icon-action-btn"
+                onClick={() => setViewingAuditForTaskId(task.id)}
+                title="FC 12: View Immutable Audit Trail"
               >
-                <Ban size={13} color="#dc2626" />
-                <span>Cancel</span>
+                <ShieldCheck size={15} color="#059669" />
               </button>
-            )}
 
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => setShowHoldModal(true)}
-              title="FC 7: Put on Hold with mandatory reason"
-              style={{ padding: '0.4rem 0.5rem' }}
-            >
-              <PauseCircle size={13} color="#d97706" />
-            </button>
-
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => setShowEscalateModal(true)}
-              title="FC 17: Escalate to Senior Leadership"
-              style={{ padding: '0.4rem 0.5rem' }}
-            >
-              <AlertTriangle size={13} color="#dc2626" />
-            </button>
-
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => setViewingAuditForTaskId(task.id)}
-              title="FC 12: View Immutable Audit Trail"
-              style={{ padding: '0.4rem 0.5rem' }}
-            >
-              <ShieldCheck size={13} color="#059669" />
-            </button>
-
-            {/* Delete Deliverable (Strictly CEO Only) */}
-            {isCeo && (
-              <button
-                type="button"
-                className="btn-secondary btn-delete-task"
-                onClick={() => setShowDeleteModal(true)}
-                title="Delete Deliverable (CEO Sukh Sagar ji only)"
-                style={{ padding: '0.4rem 0.5rem', color: '#dc2626', borderColor: '#fca5a5' }}
-              >
-                <Trash2 size={13} color="#dc2626" />
-              </button>
-            )}
-
-            {isCompleted && (
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => {
-                  setShowReopenModal(true);
-                  setReopenReasonInput('');
-                }}
-                title="FC 10: Reopen Completed Task with Justification"
-                style={{ padding: '0.4rem 0.6rem', color: '#1e40af', background: '#eff6ff', borderColor: '#bfdbfe' }}
-              >
-                <RotateCcw size={13} color="#1e40af" />
-                Reopen
-              </button>
-            )}
+              {/* Delete Deliverable (Strictly CEO Only) */}
+              {isCeo && (
+                <button
+                  type="button"
+                  className="btn-secondary task-icon-action-btn btn-delete-task"
+                  onClick={() => setShowDeleteModal(true)}
+                  title="Delete Deliverable (CEO Sukh Sagar ji only)"
+                >
+                  <Trash2 size={15} color="#dc2626" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -1026,20 +893,10 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
 
         {/* Flowchart 8: Multi-Assignee Interactive Component Breakdown (Full Width) */}
         {task.assignees && task.assignees.length > 0 && (
-          <div style={{
-            marginTop: '0.2rem',
-            marginLeft: '28px',
-            padding: '0.65rem 0.85rem',
-            background: '#f8fafc',
-            border: '1px solid #e2e8f0',
-            borderRadius: '8px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.55rem'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.74rem', fontWeight: 700, color: '#475569' }}>
+          <div className="multi-assignee-breakdown-card">
+            <div className="multi-assignee-header">
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span>👥</span> Multi-Assignee Component Breakdown ({task.assignees.length} assignees • {comp.progressText}):
+                <span>👥</span> Multi-Assignee Breakdown ({task.assignees.length} {task.assignees.length === 1 ? 'member' : 'members'} • {comp.progressText}):
               </span>
               <span style={{ color: comp.progressPercent === 100 ? '#15803d' : '#2563eb', fontWeight: 800 }}>
                 {comp.progressPercent}% Completed
@@ -1058,20 +915,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                 const isCreatorOrAdmin = isCeo || currentUser.role === 'ADMIN' || task.creator?.id === currentUser.id || task.creator?.email?.toLowerCase() === currentUser.email?.toLowerCase();
 
                 return (
-                  <div key={a.id} style={{
-                    background: '#ffffff',
-                    border: a.status === 'Done' ? '1px solid #bbf7d0' : '1px solid #e2e8f0',
-                    borderRadius: '8px',
-                    padding: '8px 10px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flexWrap: 'wrap',
-                    gap: '0.5rem',
-                    fontSize: '0.75rem',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: '150px', flex: '1 1 auto' }}>
+                  <div key={a.id} className="assignee-item-card">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0, flex: 1 }}>
                       <span style={{
                         width: '26px',
                         height: '26px',
@@ -1101,6 +946,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                       {/* Assignee individual status updater (Flowchart 8 Step 5) */}
                       {canManageThisAssignee ? (
                         <select
+                          className="assignee-status-select"
                           value={a.status || 'Not Started'}
                           onChange={(e) => {
                             const newStat = e.target.value as TaskStatus;
@@ -1110,16 +956,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                             updateAssigneeStatus(task.id, a.id, newStat);
                           }}
                           style={{
-                            fontSize: '0.72rem',
-                            fontWeight: 700,
-                            padding: '4px 8px',
-                            minHeight: '30px',
-                            borderRadius: '6px',
-                            border: '1px solid #cbd5e1',
                             background: a.status === 'Done' ? '#f0fdf4' : a.status === 'On Hold' ? '#fefce8' : a.status === 'Escalated' ? '#fef2f2' : '#ffffff',
                             color: a.status === 'Done' ? '#15803d' : a.status === 'On Hold' ? '#854d0e' : a.status === 'Escalated' ? '#b91c1c' : '#1e293b',
-                            cursor: 'pointer',
-                            outline: 'none'
+                            borderColor: a.status === 'Done' ? '#86efac' : a.status === 'On Hold' ? '#fde047' : a.status === 'Escalated' ? '#fca5a5' : '#cbd5e1'
                           }}
                           title="Update individual assignee status"
                         >

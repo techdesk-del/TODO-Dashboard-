@@ -214,7 +214,7 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <div className="overdue-alert-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <button
                       type="button"
                       onClick={() => setViewScope('all')}
@@ -226,7 +226,11 @@ export default function Home() {
                         border: '1px solid #fca5a5',
                         background: '#ffffff',
                         color: '#be123c',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        whiteSpace: 'nowrap'
                       }}
                     >
                       View All Overdue ({overdueTasks.length})
@@ -250,8 +254,10 @@ export default function Home() {
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
+                        justifyContent: 'center',
                         gap: '5px',
-                        boxShadow: '0 2px 4px rgba(225, 29, 72, 0.25)'
+                        boxShadow: '0 2px 4px rgba(225, 29, 72, 0.25)',
+                        whiteSpace: 'nowrap'
                       }}
                     >
                       <RotateCcw size={13} />

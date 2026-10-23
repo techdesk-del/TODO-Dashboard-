@@ -1218,170 +1218,158 @@ export const AdminHrPortal: React.FC = () => {
       {activeTab === 'oversight' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {/* Controls Bar: Search-as-you-type Combobox, Dept Filter, Manager Filter & Export */}
-          <div className="admin-filter-bar" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', flex: 1 }}>
-                {/* 1. Flowchart A: "Click Select User dropdown with search-as-you-type" */}
-                <div style={{ position: 'relative', minWidth: '260px', flex: '1 1 280px' }}>
-                  <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 800, color: '#1e40af', marginBottom: '2px' }}>
-                    SELECT EMPLOYEE (SEARCH-AS-YOU-TYPE):
-                  </label>
-                  <div style={{ position: 'relative' }}>
-                    <Search size={14} style={{ position: 'absolute', left: '10px', top: '10px', color: '#64748b' }} />
-                    <input
-                      type="text"
-                      className="form-input"
-                      placeholder={selectedUserForOversight === 'ALL' ? 'Type to search staff by name, email, ID...' : `Current: ${selectedUserForOversight}`}
-                      value={userSearchQuery}
-                      onChange={e => {
-                        setUserSearchQuery(e.target.value);
-                        setIsUserDropdownOpen(true);
-                      }}
-                      onFocus={() => setIsUserDropdownOpen(true)}
-                      style={{ paddingLeft: '30px', fontSize: '0.75rem', height: '34px', width: '100%' }}
-                    />
-                    {isUserDropdownOpen && (
-                      <div style={{
-                        position: 'absolute',
-                        top: 'calc(100% + 4px)',
-                        left: 0,
-                        right: 0,
-                        maxHeight: '260px',
-                        overflowY: 'auto',
-                        background: '#ffffff',
-                        border: '1px solid #cbd5e1',
-                        borderRadius: '8px',
-                        boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
-                        zIndex: 100,
-                        padding: '4px'
-                      }}>
+          <div className="admin-filter-bar">
+            <div className="admin-filter-controls-grid">
+              {/* 1. Flowchart A: "Click Select User dropdown with search-as-you-type" */}
+              <div className="admin-filter-control-item" style={{ position: 'relative' }}>
+                <label className="admin-filter-label" style={{ color: '#1e40af' }}>
+                  SELECT EMPLOYEE (SEARCH-AS-YOU-TYPE):
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <Search size={14} style={{ position: 'absolute', left: '10px', top: '10px', color: '#64748b' }} />
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder={selectedUserForOversight === 'ALL' ? 'Type to search staff by name, email, ID...' : `Current: ${selectedUserForOversight}`}
+                    value={userSearchQuery}
+                    onChange={e => {
+                      setUserSearchQuery(e.target.value);
+                      setIsUserDropdownOpen(true);
+                    }}
+                    onFocus={() => setIsUserDropdownOpen(true)}
+                    style={{ paddingLeft: '30px', fontSize: '0.75rem', height: '34px', width: '100%' }}
+                  />
+                  {isUserDropdownOpen && (
+                    <div style={{
+                      position: 'absolute',
+                      top: 'calc(100% + 4px)',
+                      left: 0,
+                      right: 0,
+                      maxHeight: '260px',
+                      overflowY: 'auto',
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '8px',
+                      boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+                      zIndex: 100,
+                      padding: '4px'
+                    }}>
+                      <div
+                        style={{
+                          padding: '6px 10px',
+                          fontSize: '0.74rem',
+                          fontWeight: 800,
+                          color: '#1e40af',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          background: selectedUserForOversight === 'ALL' ? '#eff6ff' : 'transparent'
+                        }}
+                        onClick={() => {
+                          setSelectedUserForOversight('ALL');
+                          setUserSearchQuery('');
+                          setIsUserDropdownOpen(false);
+                        }}
+                      >
+                        🏢 ALL EMPLOYEES — Full Company Overview ({tasks.length} Deliverables)
+                      </div>
+                      {searchMatchedMembers.map(m => (
                         <div
+                          key={m.id}
                           style={{
                             padding: '6px 10px',
-                            fontSize: '0.74rem',
-                            fontWeight: 800,
-                            color: '#1e40af',
+                            fontSize: '0.73rem',
                             borderRadius: '4px',
                             cursor: 'pointer',
-                            background: selectedUserForOversight === 'ALL' ? '#eff6ff' : 'transparent'
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            background: selectedUserForOversight === m.name ? '#eff6ff' : 'transparent'
                           }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
+                          onMouseLeave={e => e.currentTarget.style.background = selectedUserForOversight === m.name ? '#eff6ff' : 'transparent'}
                           onClick={() => {
-                            setSelectedUserForOversight('ALL');
+                            setSelectedUserForOversight(m.name);
                             setUserSearchQuery('');
                             setIsUserDropdownOpen(false);
                           }}
                         >
-                          🏢 ALL EMPLOYEES — Full Company Overview ({tasks.length} Deliverables)
-                        </div>
-                        {searchMatchedMembers.map(m => (
-                          <div
-                            key={m.id}
-                            style={{
-                              padding: '6px 10px',
-                              fontSize: '0.73rem',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                              background: selectedUserForOversight === m.name ? '#eff6ff' : 'transparent'
-                            }}
-                            onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
-                            onMouseLeave={e => e.currentTarget.style.background = selectedUserForOversight === m.name ? '#eff6ff' : 'transparent'}
-                            onClick={() => {
-                              setSelectedUserForOversight(m.name);
-                              setUserSearchQuery('');
-                              setIsUserDropdownOpen(false);
-                            }}
-                          >
-                            <div>
-                              <div style={{ fontWeight: 700, color: '#0f172a' }}>{m.name}</div>
-                              <div style={{ fontSize: '0.65rem', color: '#64748b' }}>
-                                {m.designation || 'Staff'} • {m.department} {m.employeeId ? `• ${m.employeeId}` : ''}
-                              </div>
+                          <div>
+                            <div style={{ fontWeight: 700, color: '#0f172a' }}>{m.name}</div>
+                            <div style={{ fontSize: '0.65rem', color: '#64748b' }}>
+                              {m.designation || 'Staff'} • {m.department} {m.employeeId ? `• ${m.employeeId}` : ''}
                             </div>
-                            <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: '#f8fafc', color: '#2563eb' }}>
-                              {tasks.filter(t => t.assignees.some(a => a.name.toLowerCase().includes(m.name.toLowerCase()))).length} tasks
-                            </span>
                           </div>
-                        ))}
-                        {searchMatchedMembers.length === 0 && (
-                          <div style={{ padding: '8px 10px', fontSize: '0.72rem', color: '#94a3b8' }}>
-                            No staff found matching &ldquo;{userSearchQuery}&rdquo;
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* 2. Flowchart A: "Filter by department or reporting manager" */}
-                <div style={{ minWidth: '180px', flex: '1 1 180px' }}>
-                  <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 800, color: '#475569', marginBottom: '2px' }}>
-                    🏢 DEPARTMENT FILTER:
-                  </label>
-                  <select
-                    className="form-select"
-                    style={{ fontSize: '0.75rem', height: '34px', width: '100%', fontWeight: 600 }}
-                    value={departmentFilterForOversight}
-                    onChange={e => setDepartmentFilterForOversight(e.target.value)}
-                  >
-                    <option value="ALL">All 7 Departments</option>
-                    {(systemConfig?.masterLists?.departments || [
-                      'Executive Management',
-                      'AI & IT Operations',
-                      'Full-Stack Engineering',
-                      'Product & UI/UX',
-                      'Talent HR & People',
-                      'Marketing & Growth',
-                      'Client Success & Support',
-                      'Finance & Compliance'
-                    ]).map(dept => (
-                      <option key={dept} value={dept}>{dept}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div style={{ minWidth: '180px', flex: '1 1 180px' }}>
-                  <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 800, color: '#475569', marginBottom: '2px' }}>
-                    👔 REPORTING MANAGER FILTER:
-                  </label>
-                  <select
-                    className="form-select"
-                    style={{ fontSize: '0.75rem', height: '34px', width: '100%', fontWeight: 600 }}
-                    value={managerFilterForOversight}
-                    onChange={e => setManagerFilterForOversight(e.target.value)}
-                  >
-                    <option value="ALL">All Reporting Managers</option>
-                    {reportingManagers.map(mgr => (
-                      <option key={mgr.id} value={mgr.name}>
-                        {mgr.name} ({mgr.role})
-                      </option>
-                    ))}
-                  </select>
+                          <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: '#f8fafc', color: '#2563eb' }}>
+                            {tasks.filter(t => t.assignees.some(a => a.name.toLowerCase().includes(m.name.toLowerCase()))).length} tasks
+                          </span>
+                        </div>
+                      ))}
+                      {searchMatchedMembers.length === 0 && (
+                        <div style={{ padding: '8px 10px', fontSize: '0.72rem', color: '#94a3b8' }}>
+                          No staff found matching &ldquo;{userSearchQuery}&rdquo;
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
+              {/* 2. Flowchart A: "Filter by department or reporting manager" */}
+              <div className="admin-filter-control-item">
+                <label className="admin-filter-label">
+                  🏢 DEPARTMENT FILTER:
+                </label>
+                <select
+                  className="form-select"
+                  style={{ fontSize: '0.75rem', height: '34px', width: '100%', fontWeight: 600 }}
+                  value={departmentFilterForOversight}
+                  onChange={e => setDepartmentFilterForOversight(e.target.value)}
+                >
+                  <option value="ALL">All 7 Departments</option>
+                  {(systemConfig?.masterLists?.departments || [
+                    'Executive Management',
+                    'AI & IT Operations',
+                    'Full-Stack Engineering',
+                    'Product & UI/UX',
+                    'Talent HR & People',
+                    'Marketing & Growth',
+                    'Client Success & Support',
+                    'Finance & Compliance'
+                  ]).map(dept => (
+                    <option key={dept} value={dept}>{dept}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="admin-filter-control-item">
+                <label className="admin-filter-label">
+                  👔 REPORTING MANAGER FILTER:
+                </label>
+                <select
+                  className="form-select"
+                  style={{ fontSize: '0.75rem', height: '34px', width: '100%', fontWeight: 600 }}
+                  value={managerFilterForOversight}
+                  onChange={e => setManagerFilterForOversight(e.target.value)}
+                >
+                  <option value="ALL">All Reporting Managers</option>
+                  {reportingManagers.map(mgr => (
+                    <option key={mgr.id} value={mgr.name}>
+                      {mgr.name} ({mgr.role})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* 3. Flowchart A: "Export that employee's task to Excel" */}
-              <div style={{ alignSelf: 'flex-end' }}>
+              <div className="admin-filter-control-item">
                 <button
                   type="button"
-                  className="btn-primary"
+                  className="admin-export-tasks-btn"
                   onClick={handleExportCurrentEmployeeTasks}
-                  style={{
-                    background: '#059669',
-                    borderColor: '#047857',
-                    padding: '0.45rem 0.85rem',
-                    fontSize: '0.74rem',
-                    fontWeight: 700,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}
                   title="Export filtered employee tasks to multi-sheet Excel"
                 >
-                  <FileSpreadsheet size={14} />
-                  Export Employee Tasks (.xlsx)
+                  <FileSpreadsheet size={15} />
+                  <span>Export Employee Tasks (.xlsx)</span>
                 </button>
               </div>
             </div>

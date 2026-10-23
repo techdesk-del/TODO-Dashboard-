@@ -179,7 +179,7 @@ export const VoiceInputBar: React.FC = () => {
             className="composer-input"
             value={inputText}
             onChange={e => setInputText(e.target.value)}
-            placeholder="Type your task here (e.g. Schedule team meeting tomorrow at 3pm)..."
+            placeholder="Type your task or click Voice..."
           />
           <button type="submit" className="composer-send-btn" title="Submit task command">
             <ArrowRight size={18} />
