@@ -54,6 +54,9 @@ export async function connectDB(): Promise<Connection> {
       .connect(uri, opts)
       .then((m) => {
         console.log('[DB] ✓ Connected to MongoDB Atlas');
+        if (typeof window === 'undefined') {
+          import('@/lib/cron').then(m => m.initServerCron()).catch(() => {});
+        }
         return m.connection;
       })
       .catch((err) => {

@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { useTaskDeadlines } from '@/hooks/useTaskDeadlines';
 import { formatDateDisplay, formatDateShort, getTodayStr } from '@/lib/dateUtils';
-import { isCeoUser } from '@/lib/rosterData';
+import { isCeoUser, isStrictCeo } from '@/lib/rosterData';
 
 export const Header: React.FC = () => {
   const {
@@ -62,6 +62,7 @@ export const Header: React.FC = () => {
   const opsMenuRef = useRef<HTMLDivElement>(null);
   const notificationMenuRef = useRef<HTMLDivElement>(null);
   const { notificationPermission, requestPermission, overdueTasks, dueSoonTasks, pendingCount } = useTaskDeadlines();
+  const isCeoMonitoring = isMounted && isStrictCeo(currentUser);
 
   useEffect(() => {
     setIsMounted(true);
@@ -217,33 +218,58 @@ export const Header: React.FC = () => {
           <span className="date-pill-compact">{formatDateShort(selectedDate)}</span>
         </button>
 
-        {/* Flowchart 6: Add Task Action Button */}
-        <button
-          type="button"
-          onClick={() => setIsCreateTaskModalOpen(true)}
-          className="header-action-btn header-add-task-btn"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '6px 12px',
-            background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-            color: '#ffffff',
-            border: 'none',
-            borderRadius: '6px',
-            fontSize: '0.78rem',
-            fontWeight: 700,
-            cursor: 'pointer',
-            boxShadow: '0 2px 4px rgba(37, 99, 235, 0.25)',
-            whiteSpace: 'nowrap',
-            transition: 'all 0.15s ease',
-            minHeight: '32px'
-          }}
-          title="Add New Deliverable / Task"
-        >
-          <Plus size={15} strokeWidth={2.75} />
-          <span className="header-action-label">Add Task</span>
-        </button>
+        {/* Flowchart 6: Add Task Action Button (Disabled & Hidden for CEO - Executive Monitor Mode) */}
+        {!isCeoMonitoring ? (
+          <button
+            type="button"
+            onClick={() => setIsCreateTaskModalOpen(true)}
+            className="header-action-btn header-add-task-btn"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              boxShadow: '0 2px 4px rgba(37, 99, 235, 0.25)',
+              whiteSpace: 'nowrap',
+              transition: 'all 0.15s ease',
+              minHeight: '32px'
+            }}
+            title="Add New Deliverable / Task"
+          >
+            <Plus size={15} strokeWidth={2.75} />
+            <span className="header-action-label">Add Task</span>
+          </button>
+        ) : (
+          <div
+            className="header-action-btn"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 11px',
+              background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+              color: '#38bdf8',
+              border: '1px solid #334155',
+              borderRadius: '6px',
+              fontSize: '0.76rem',
+              fontWeight: 700,
+              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.12)',
+              whiteSpace: 'nowrap',
+              minHeight: '32px'
+            }}
+            title="Executive Oversight Active — Real-time Deliverable Monitoring across all employees"
+          >
+            <span style={{ fontSize: '0.82rem' }}>🛡️</span>
+            <span>Executive Monitor</span>
+          </div>
+        )}
 
         {/* Flowchart E / 14: Enterprise Multi-Sheet Excel Export */}
         <button

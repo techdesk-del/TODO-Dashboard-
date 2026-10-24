@@ -1810,6 +1810,118 @@ export async function sendTaskAssignedEmail(opts: SendTaskAssignedOptions) {
   }
 }
 
+export interface SendTaskCancelledOptions {
+  recipientEmail: string;
+  recipientName: string;
+  taskId: string;
+  taskTitle: string;
+  cancelledBy: string;
+  cancellationReason: string;
+  department?: string;
+  priority?: string;
+  baseUrl?: string;
+}
+
+export async function sendTaskCancelledEmail(opts: SendTaskCancelledOptions) {
+  try {
+    const { transporter } = await createEmailTransporter();
+    const from = process.env.SMTP_FROM || '"UrbanGaon Task Operations" <techdesk@urbangaon.com>';
+    const appBase = opts.baseUrl || process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : '') || 'https://todo-dashboard-rhvx.vercel.app';
+    const taskDirectLink = opts.taskId ? `${appBase}/?taskId=${encodeURIComponent(opts.taskId)}` : appBase;
+
+    const subject = `[UrbanGaon] 🚫 Deliverable Cancelled: "${opts.taskTitle}"`;
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deliverable Cancelled</title>
+  <style>
+    body { margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; color: #1e293b; }
+    .email-container { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #cbd5e1; overflow: hidden; box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08); }
+    .email-header { background: linear-gradient(135deg, #7f1d1d 0%, #b91c1c 100%); padding: 24px 28px; color: #ffffff; border-bottom: 3px solid #dc2626; }
+    .brand-title { font-size: 20px; font-weight: 800; color: #ffffff; margin: 0; }
+    .brand-subtitle { font-size: 12px; color: #fecaca; margin-top: 4px; font-weight: 500; }
+    .email-body { padding: 28px; font-size: 14px; line-height: 1.6; color: #334155; }
+    .greeting { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
+    .task-card { background: #fef2f2; border: 1px solid #fecaca; border-top: 4px solid #dc2626; border-radius: 8px; padding: 18px; margin: 18px 0; }
+    .task-title { font-size: 16px; font-weight: 800; color: #991b1b; margin-bottom: 10px; }
+    .reason-box { background: #ffffff; border-left: 3px solid #dc2626; border-radius: 4px; padding: 10px 14px; margin-top: 12px; font-size: 13px; color: #7f1d1d; }
+    .info-note { font-size: 12px; color: #64748b; margin-top: 12px; line-height: 1.4; }
+    .cta-container { text-align: center; margin-top: 22px; }
+    .cta-button { display: inline-block; background: #dc2626; color: #ffffff !important; padding: 11px 26px; border-radius: 6px; font-weight: 700; font-size: 13px; text-decoration: none; }
+    .email-footer { background: #f8fafc; padding: 16px 24px; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="email-header">
+      <div class="brand-title">UrbanGaon Intelligent Todo Platform</div>
+      <div class="brand-subtitle">Operational Deliverable Governance • Task Cancelled</div>
+    </div>
+    <div class="email-body">
+      <div class="greeting">Dear ${opts.recipientName},</div>
+      <p style="margin: 0 0 16px 0;">
+        The operational deliverable below has been officially marked as <strong>Cancelled</strong> by <strong>${opts.cancelledBy}</strong>.
+      </p>
+
+      <div class="task-card">
+        <div class="task-title">🚫 ${opts.taskTitle}</div>
+        <div style="font-size: 12px; color: #64748b; margin-bottom: 8px;">
+          <strong>Deliverable ID:</strong> #${opts.taskId} ${opts.department ? `• <strong>Dept:</strong> ${opts.department}` : ''}
+        </div>
+        <div class="reason-box">
+          <strong>Mandatory Cancellation Rationale:</strong><br>
+          "${opts.cancellationReason}"
+        </div>
+        <div class="info-note">
+          ℹ️ Per corporate governance, this deliverable has been excluded from all active rosters and performance reports.
+        </div>
+      </div>
+
+      <div class="cta-container">
+        <a href="${taskDirectLink}" class="cta-button">View Workspace →</a>
+      </div>
+    </div>
+    <div class="email-footer">
+      UrbanGaon Technologies Private Limited • Corporate Governance Engine<br>
+      Cancellation dispatch sent to ${opts.recipientEmail}.
+    </div>
+  </div>
+</body>
+</html>`;
+
+    await transporter.sendMail({
+      from,
+      to: opts.recipientEmail,
+      subject,
+      html,
+    });
+
+    try {
+      const { EmailLogModel } = await import('@/models/EmailLog');
+      await EmailLogModel.create({
+        id: `elog-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+        recipientEmail: opts.recipientEmail.toLowerCase(),
+        recipientName: opts.recipientName,
+        eventType: 'TASK_CANCELLED',
+        subject,
+        status: 'DELIVERED',
+        attempts: 1,
+        taskId: opts.taskId,
+        deliveredAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+      });
+    } catch {}
+
+    return { success: true };
+  } catch (err) {
+    console.warn('[Task Cancelled Email Error]:', err);
+    return { success: false, error: String(err) };
+  }
+}
+
 export interface SendConfigRollbackEmailOptions {
   adminEmail: string;
   adminName: string;

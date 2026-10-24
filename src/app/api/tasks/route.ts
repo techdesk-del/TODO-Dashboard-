@@ -13,6 +13,7 @@ import { InAppNotificationModel } from '@/models/InAppNotification';
 import { INITIAL_TASKS, INITIAL_MEMBERS } from '@/lib/mockData';
 import { broadcastTaskMutation, isTaskDeleted, unmarkTaskDeleted, globalDeletedTaskIds } from '@/lib/events';
 import { sendTaskAssignmentEmail } from '@/lib/email';
+import { isStrictCeo } from '@/lib/rosterData';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -127,6 +128,17 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
 
+    // Executive role guard: CEO role is restricted to deliverable monitoring & governance
+    if (body.creator && isStrictCeo(body.creator)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'CEO executive account is reserved for deliverable monitoring & governance. Direct task creation is disabled for this role.',
+        },
+        { status: 403 }
+      );
+    }
+
     // Mandatory fields check per Flowchart 6: "All mandatory fields filled?"
     const missing: string[] = [];
     if (!body.title || !body.title.trim()) missing.push('title');
@@ -191,11 +203,11 @@ export async function POST(req: NextRequest) {
       location: body.location,
       department: body.department,
       creator: body.creator || {
-        id: 'mem-exec',
-        name: 'Mr. Sukh Sagar Singh Bhati',
-        email: 'ceo@urbangaon.com',
-        role: 'SUPER_ADMIN',
-        avatar: 'SS',
+        id: 'mem-ops-admin',
+        name: 'Operations Admin',
+        email: 'ops@urbangaon.com',
+        role: 'ADMIN',
+        avatar: 'OA',
       },
       assignees: normalizedAssignees,
       notes: body.notes?.trim() || '',

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useApp } from '@/context/AppContext';
 import { TaskPriority, TeamMember, AssigneeInfo } from '@/types';
 import { getTodayStr, getTomorrowStr } from '@/lib/dateUtils';
+import { isStrictCeo } from '@/lib/rosterData';
 import { 
   X, 
   Mic, 
@@ -249,6 +250,11 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
     if (isSubmitting) return;
     setServerError(null);
 
+    if (isStrictCeo(currentUser)) {
+      setServerError('CEO account is restricted to deliverable monitoring & governance. Task creation is disabled.');
+      return;
+    }
+
     if (!validateForm()) {
       return;
     }
@@ -331,7 +337,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
     }
   };
 
-  if (!isCreateTaskModalOpen) return null;
+  if (!isCreateTaskModalOpen || isStrictCeo(currentUser)) return null;
 
   return (
     <div 

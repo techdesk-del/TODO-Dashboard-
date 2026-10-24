@@ -277,6 +277,39 @@ export function isCeoUser(user?: { email?: string; designation?: string; role?: 
 }
 
 /**
+ * Strictly checks whether the active user is the Chief Executive Officer (CEO Mr. Sukh Sagar Singh Bhati).
+ * Per company executive policy: The CEO exclusively oversees and monitors all employees' deliverables across the company.
+ * Direct task creation UI and systems are disabled for the CEO account.
+ */
+export function isStrictCeo(user?: { email?: string; designation?: string; role?: string; name?: string } | null): boolean {
+  if (!user) return false;
+  const email = (user.email || '').toLowerCase().trim();
+  const designation = (user.designation || '').toUpperCase().trim();
+  const name = (user.name || '').toLowerCase().trim();
+
+  // Explicit check for CEO designation or CEO email or Mr. Sukh Sagar Singh Bhati
+  if (
+    email === 'ceo@urbangaon.com' ||
+    email.includes('sukhsagar') ||
+    email.includes('bhati') ||
+    designation === 'CEO' ||
+    designation === 'CHIEF EXECUTIVE OFFICER (CEO)' ||
+    designation.includes('CEO') ||
+    (name.includes('sukh') && name.includes('bhati'))
+  ) {
+    return true;
+  }
+
+  // Super Admin role account if not IT Officer Aakash Das
+  if (user.role === 'SUPER_ADMIN' && !email.includes('techdesk') && !email.includes('aakash') && !name.includes('aakash')) {
+    return true;
+  }
+
+  return false;
+}
+
+
+/**
  * Checks whether user belongs to Talent / HR team or has Talent Admin privileges.
  */
 export function isTalentUser(user?: { email?: string; department?: string; designation?: string; role?: string; name?: string } | null): boolean {

@@ -20,6 +20,7 @@ const InAppNotificationSchema = new Schema<InAppNotification>(
         'TASK_ASSIGNED',
         'TASK_ESCALATED',
         'TASK_REOPENED',
+        'TASK_CANCELLED',
         'REASON_STATUS_CHANGED',
         'DAILY_REMINDER',
         'WEEKLY_DIGEST',

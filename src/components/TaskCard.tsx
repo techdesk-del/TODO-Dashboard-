@@ -56,6 +56,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
   } = useApp();
 
   const isCeo = isCeoUser(currentUser);
+  const canCancelOrDelete = isCeo || currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN';
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -630,8 +631,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                 <span>Reassign</span>
               </button>
 
-              {/* Flowchart 22: Cancel Task with Mandatory Reason */}
-              {task.status !== 'Cancelled' && task.status !== 'Done' && (
+              {/* Flowchart 22: Cancel Task with Mandatory Reason (Strictly Admin & CEO Only) */}
+              {canCancelOrDelete && task.status !== 'Cancelled' && task.status !== 'Done' && (
                 <button
                   type="button"
                   className="btn-secondary task-btn-cancel"
@@ -639,7 +640,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                     setCancelReasonInput('');
                     setShowCancelModal(true);
                   }}
-                  title="Cancel Task with Mandatory Reason"
+                  title="Cancel Task with Mandatory Reason (Admin & CEO Only)"
                 >
                   <Ban size={13} color="#dc2626" />
                   <span>Cancel</span>
@@ -699,13 +700,13 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                 <span className="task-utility-label">Audit Trail</span>
               </button>
 
-              {/* Delete Deliverable (Strictly CEO Only) */}
-              {isCeo && (
+              {/* Delete Deliverable (Strictly Admin & CEO Only) */}
+              {canCancelOrDelete && (
                 <button
                   type="button"
                   className="btn-secondary task-icon-action-btn btn-delete-task"
                   onClick={() => setShowDeleteModal(true)}
-                  title="Delete Deliverable (CEO Sukh Sagar ji only)"
+                  title="Delete Deliverable (Admin & CEO Only)"
                 >
                   <Trash2 size={15} color="#dc2626" />
                   <span className="task-utility-label">Delete</span>
@@ -1303,8 +1304,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                 style={{ background: '#dc2626', borderColor: '#b91c1c', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
                 disabled={isDeleting}
                 onClick={async () => {
-                  if (!isCeo) {
-                    alert("Access Restricted: Only CEO Mr. Sukh Sagar Singh Bhati has permission to permanently delete deliverables.");
+                  if (!canCancelOrDelete) {
+                    alert("Access Restricted: Only Admin, Super Admin, and CEO have permission to permanently delete deliverables.");
                     setShowDeleteModal(false);
                     return;
                   }

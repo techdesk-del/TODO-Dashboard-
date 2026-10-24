@@ -68,6 +68,13 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
       body.editedByAdmin = true;
     }
 
+    // Authorization: Only Admin, Super Admin, and CEO can cancel tasks
+    const callerName = (typeof actorInput === 'string' ? actorInput : actorInput?.name) || req.headers.get('x-user-name') || '';
+    const isCallerAdminOrCeo = actorRole === 'ADMIN' || actorRole === 'SUPER_ADMIN' || callerName.toLowerCase().includes('sukh sagar');
+    if (body.status === 'Cancelled' && actorRole && !isCallerAdminOrCeo) {
+      return NextResponse.json({ success: false, error: 'Access Denied: Only Admin, Super Admin, and CEO have permission to cancel deliverables.' }, { status: 403 });
+    }
+
     const updated = await TaskModel.findOneAndUpdate(
       { id },
       { $set: { ...body, updatedAt: new Date().toISOString() } },
@@ -127,6 +134,14 @@ export async function DELETE(req: NextRequest, ctx: RouteContext) {
 
     if (!id) {
       return NextResponse.json({ success: false, error: 'Task ID is required' }, { status: 400 });
+    }
+
+    // Authorization: Only Admin, Super Admin, and CEO can delete deliverables
+    const deleteCallerRole = (req.headers.get('x-user-role') as string) || '';
+    const deleteCallerName = (req.headers.get('x-user-name') as string) || '';
+    const isDeleteAllowed = deleteCallerRole === 'ADMIN' || deleteCallerRole === 'SUPER_ADMIN' || deleteCallerName.toLowerCase().includes('sukh sagar');
+    if (deleteCallerRole && !isDeleteAllowed) {
+      return NextResponse.json({ success: false, error: 'Access Denied: Only Admin, Super Admin, and CEO have permission to delete deliverables.' }, { status: 403 });
     }
 
     const { searchParams } = new URL(req.url);

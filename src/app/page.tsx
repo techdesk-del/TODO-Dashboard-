@@ -18,7 +18,7 @@ import { CreateTaskModal } from '@/components/CreateTaskModal';
 import { EnterpriseExportModal } from '@/components/EnterpriseExportModal';
 import { AuthModal } from '@/components/AuthModal';
 import { formatDateTitle, getTodayStr, getTomorrowStr, formatDateDayMonth } from '@/lib/dateUtils';
-import { isCeoUser, canAccessAdminHr, canAccessWorkflows } from '@/lib/rosterData';
+import { isCeoUser, isStrictCeo, canAccessAdminHr, canAccessWorkflows } from '@/lib/rosterData';
 import { Check, Calendar as CalendarIcon, Sparkles, Globe, CalendarDays, AlertTriangle, RotateCcw, Plus } from 'lucide-react';
 
 export default function Home() {
@@ -32,6 +32,7 @@ export default function Home() {
     bannerNotification,
     viewingAuditForTaskId,
     currentUser,
+    members,
     isCreateTaskModalOpen,
     setIsCreateTaskModalOpen,
     isExportModalOpen,
@@ -44,6 +45,7 @@ export default function Home() {
   } = useApp();
 
   const [assigneeFilter, setAssigneeFilter] = useState<'all' | 'assigned_to_me' | 'assigned_by_me'>('all');
+  const [ceoEmployeeFilter, setCeoEmployeeFilter] = useState<string>('ALL');
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -51,6 +53,7 @@ export default function Home() {
   }, []);
 
   const isCeo = isMounted && isCeoUser(currentUser);
+  const isCeoMonitoring = isMounted && isStrictCeo(currentUser);
   const canAccessAdmin = isMounted && canAccessAdminHr(currentUser);
   const canViewWorkflows = isMounted && canAccessWorkflows(currentUser);
   const canAccessManager = isMounted && (isCeo || currentUser.role === 'MANAGER' || currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN');
@@ -78,14 +81,28 @@ export default function Home() {
   // - CEO oversees all company deliverables across all staff members
   // - Regular employees ONLY see tasks that they created OR are assigned to
   const currentCleanEmail = (currentUser.email || '').toLowerCase().trim();
-  const visibleTasks = isCeo
-    ? tasks.filter(t => t.status !== 'Cancelled')
-    : tasks.filter(t => {
+  const visibleTasks = useMemo(() => {
+    if (!isCeo) {
+      return tasks.filter(t => {
         if (t.status === 'Cancelled') return false;
         const isCreator = t.creator?.id === currentUser.id || (t.creator?.email && t.creator.email.toLowerCase().trim() === currentCleanEmail);
         const isAssignee = t.assignees?.some(a => a.id === currentUser.id || (a.email && a.email.toLowerCase().trim() === currentCleanEmail));
         return isCreator || isAssignee;
       });
+    }
+
+    const uncancelled = tasks.filter(t => t.status !== 'Cancelled');
+    if (isCeoMonitoring && ceoEmployeeFilter !== 'ALL') {
+      const targetMember = members.find(m => m.id === ceoEmployeeFilter);
+      const targetEmail = (targetMember?.email || '').toLowerCase().trim();
+      return uncancelled.filter(t => {
+        const isCreator = t.creator?.id === ceoEmployeeFilter || (t.creator?.email && t.creator.email.toLowerCase().trim() === targetEmail);
+        const isAssignee = t.assignees?.some(a => a.id === ceoEmployeeFilter || (a.email && a.email.toLowerCase().trim() === targetEmail));
+        return isCreator || isAssignee;
+      });
+    }
+    return uncancelled;
+  }, [tasks, isCeo, isCeoMonitoring, ceoEmployeeFilter, members, currentUser, currentCleanEmail]);
 
   // Flowchart 6 view partition:
   // - Task appears in "Assigned to" for each assignee
@@ -300,70 +317,110 @@ export default function Home() {
                   WebkitOverflowScrolling: 'touch',
                   paddingBottom: '2px'
                 }}>
-                  {/* View Partition Tabs */}
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', background: '#f1f5f9', padding: '3px', borderRadius: '8px', flexShrink: 0 }}>
-                    <button
-                      type="button"
-                      onClick={() => setAssigneeFilter('all')}
-                      style={{
-                        padding: '5px 11px',
-                        fontSize: '0.74rem',
-                        fontWeight: 700,
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap',
-                        background: assigneeFilter === 'all' ? '#ffffff' : 'transparent',
-                        color: assigneeFilter === 'all' ? '#0f172a' : '#64748b',
-                        boxShadow: assigneeFilter === 'all' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                        transition: 'all 0.15s ease'
-                      }}
-                    >
-                      All ({visibleTasks.length})
-                    </button>
+                  {/* Flowchart 6 View Partition Tabs & Scope Switcher */}
+                  {isCeoMonitoring ? (
+                    <div style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      background: '#f1f5f9',
+                      padding: '3px 8px',
+                      borderRadius: '8px',
+                      flexShrink: 0,
+                      border: '1px solid #e2e8f0'
+                    }}>
+                      <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#1e293b' }}>
+                        Staff Filter:
+                      </span>
+                      <select
+                        value={ceoEmployeeFilter}
+                        onChange={(e) => setCeoEmployeeFilter(e.target.value)}
+                        style={{
+                          padding: '3px 8px',
+                          fontSize: '0.74rem',
+                          fontWeight: 700,
+                          borderRadius: '6px',
+                          border: '1px solid #cbd5e1',
+                          background: '#ffffff',
+                          color: '#0f172a',
+                          cursor: 'pointer',
+                          outline: 'none'
+                        }}
+                        title="Select an employee to isolate and monitor their corporate deliverables"
+                      >
+                        <option value="ALL">🏢 All Monitored Staff ({tasks.filter(t => t.status !== 'Cancelled').length} tasks)</option>
+                        {members.filter(m => !isStrictCeo(m) && m.status !== 'DEACTIVATED').map(emp => (
+                          <option key={emp.id} value={emp.id}>
+                            👤 {emp.name} ({emp.department})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', background: '#f1f5f9', padding: '3px', borderRadius: '8px', flexShrink: 0 }}>
+                      <button
+                        type="button"
+                        onClick={() => setAssigneeFilter('all')}
+                        style={{
+                          padding: '5px 11px',
+                          fontSize: '0.74rem',
+                          fontWeight: 700,
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                          background: assigneeFilter === 'all' ? '#ffffff' : 'transparent',
+                          color: assigneeFilter === 'all' ? '#0f172a' : '#64748b',
+                          boxShadow: assigneeFilter === 'all' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        All ({visibleTasks.length})
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={() => setAssigneeFilter('assigned_to_me')}
-                      style={{
-                        padding: '5px 11px',
-                        fontSize: '0.74rem',
-                        fontWeight: 700,
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap',
-                        background: assigneeFilter === 'assigned_to_me' ? '#2563eb' : 'transparent',
-                        color: assigneeFilter === 'assigned_to_me' ? '#ffffff' : '#64748b',
-                        boxShadow: assigneeFilter === 'assigned_to_me' ? '0 1px 3px rgba(37,99,235,0.25)' : 'none',
-                        transition: 'all 0.15s ease'
-                      }}
-                      title="Tasks assigned to you"
-                    >
-                      Assigned to Me ({assignedToMeCount})
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => setAssigneeFilter('assigned_to_me')}
+                        style={{
+                          padding: '5px 11px',
+                          fontSize: '0.74rem',
+                          fontWeight: 700,
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                          background: assigneeFilter === 'assigned_to_me' ? '#2563eb' : 'transparent',
+                          color: assigneeFilter === 'assigned_to_me' ? '#ffffff' : '#64748b',
+                          boxShadow: assigneeFilter === 'assigned_to_me' ? '0 1px 3px rgba(37,99,235,0.25)' : 'none',
+                          transition: 'all 0.15s ease'
+                        }}
+                        title="Tasks assigned to you"
+                      >
+                        Assigned to Me ({assignedToMeCount})
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={() => setAssigneeFilter('assigned_by_me')}
-                      style={{
-                        padding: '5px 11px',
-                        fontSize: '0.74rem',
-                        fontWeight: 700,
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap',
-                        background: assigneeFilter === 'assigned_by_me' ? '#2563eb' : 'transparent',
-                        color: assigneeFilter === 'assigned_by_me' ? '#ffffff' : '#64748b',
-                        boxShadow: assigneeFilter === 'assigned_by_me' ? '0 1px 3px rgba(37,99,235,0.25)' : 'none',
-                        transition: 'all 0.15s ease'
-                      }}
-                      title="Tasks created and assigned by you"
-                    >
-                      Assigned by Me ({assignedByMeCount})
-                    </button>
-                  </div>
+                      <button
+                        type="button"
+                        onClick={() => setAssigneeFilter('assigned_by_me')}
+                        style={{
+                          padding: '5px 11px',
+                          fontSize: '0.74rem',
+                          fontWeight: 700,
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                          background: assigneeFilter === 'assigned_by_me' ? '#2563eb' : 'transparent',
+                          color: assigneeFilter === 'assigned_by_me' ? '#ffffff' : '#64748b',
+                          boxShadow: assigneeFilter === 'assigned_by_me' ? '0 1px 3px rgba(37,99,235,0.25)' : 'none',
+                          transition: 'all 0.15s ease'
+                        }}
+                        title="Tasks created and assigned by you"
+                      >
+                        Assigned by Me ({assignedByMeCount})
+                      </button>
+                    </div>
+                  )}
 
                   {/* Scope Switcher: All Dates vs Selected Date */}
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', background: '#f1f5f9', padding: '3px', borderRadius: '8px', flexShrink: 0 }}>
@@ -416,30 +473,32 @@ export default function Home() {
                     </button>
                   </div>
 
-                  {/* Flowchart 6: Add Task Button */}
-                  <button
-                    type="button"
-                    onClick={() => setIsCreateTaskModalOpen(true)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      padding: '5px 12px',
-                      fontSize: '0.76rem',
-                      fontWeight: 800,
-                      borderRadius: '7px',
-                      border: 'none',
-                      background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-                      color: '#ffffff',
-                      cursor: 'pointer',
-                      boxShadow: '0 2px 4px rgba(37,99,235,0.25)',
-                      whiteSpace: 'nowrap',
-                      flexShrink: 0
-                    }}
-                  >
-                    <Plus size={14} strokeWidth={2.75} />
-                    <span>Add Task</span>
-                  </button>
+                  {/* Flowchart 6: Add Task Button (Disabled & Hidden for CEO - Executive Monitor Mode) */}
+                  {!isCeoMonitoring && (
+                    <button
+                      type="button"
+                      onClick={() => setIsCreateTaskModalOpen(true)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        padding: '5px 12px',
+                        fontSize: '0.76rem',
+                        fontWeight: 800,
+                        borderRadius: '7px',
+                        border: 'none',
+                        background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                        color: '#ffffff',
+                        cursor: 'pointer',
+                        boxShadow: '0 2px 4px rgba(37,99,235,0.25)',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0
+                      }}
+                    >
+                      <Plus size={14} strokeWidth={2.75} />
+                      <span>Add Task</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -466,14 +525,16 @@ export default function Home() {
                       No tasks scheduled for {formatDateTitle(selectedDate)}
                     </div>
                     <div style={{ fontSize: '0.8rem', color: '#64748b', maxWidth: '400px' }}>
-                      Use the voice microphone button below or type a conversational prompt to schedule deliverables instantaneously.
+                      {isCeoMonitoring
+                        ? 'Executive Monitoring Mode active: No deliverables found for this date across monitored employees.'
+                        : 'Use the voice microphone button below or type a conversational prompt to schedule deliverables instantaneously.'}
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Dual-Mode Task Composer (Slide 4, 5, 6) */}
-              <VoiceInputBar />
+              {/* Dual-Mode Task Composer (Slide 4, 5, 6) - Hidden for CEO */}
+              {!isCeoMonitoring && <VoiceInputBar />}
             </>
           )}
 

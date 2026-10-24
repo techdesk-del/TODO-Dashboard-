@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Task, TeamMember } from '@/types';
-import { isCeoUser, canAccessAdminHr } from '@/lib/rosterData';
+import { isCeoUser, isStrictCeo, canAccessAdminHr } from '@/lib/rosterData';
 import { getCompanyHoliday, isSundayDate, HOLIDAY_METADATA } from '@/lib/holidayData';
 import { getTodayStr, formatDateDisplay, formatDateShort } from '@/lib/dateUtils';
 import { 
@@ -52,6 +52,7 @@ export const CalendarView: React.FC = () => {
   }, []);
 
   const isCeo = isMounted && isCeoUser(currentUser);
+  const isCeoMonitoring = isMounted && isStrictCeo(currentUser);
   const isAdminOrManager = isMounted && (isCeo || canAccessAdminHr(currentUser) || currentUser.role === 'MANAGER');
   const todayStr = getTodayStr();
 
@@ -213,6 +214,7 @@ export const CalendarView: React.FC = () => {
   };
 
   const handleAddTaskOnDate = (dateStr: string, e?: React.MouseEvent) => {
+    if (isCeoMonitoring) return;
     if (e) e.stopPropagation();
     setSelectedDate(dateStr);
     setIsCreateTaskModalOpen(true);
@@ -705,26 +707,28 @@ export const CalendarView: React.FC = () => {
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => handleAddTaskOnDate(dateStr)}
-                    style={{
-                      border: 'none',
-                      background: '#ffffff',
-                      color: '#2563eb',
-                      width: '26px',
-                      height: '26px',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
-                    }}
-                    title="Add task on this date"
-                  >
-                    <Plus size={14} />
-                  </button>
+                  {!isCeoMonitoring && (
+                    <button
+                      type="button"
+                      onClick={() => handleAddTaskOnDate(dateStr)}
+                      style={{
+                        border: 'none',
+                        background: '#ffffff',
+                        color: '#2563eb',
+                        width: '26px',
+                        height: '26px',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
+                      }}
+                      title="Add task on this date"
+                    >
+                      <Plus size={14} />
+                    </button>
+                  )}
                 </div>
 
                 {/* Holiday pill if any */}
@@ -1061,14 +1065,16 @@ export const CalendarView: React.FC = () => {
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e2e8f0', paddingTop: '0.75rem', gap: '8px', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  className="btn-primary"
-                  onClick={() => handleAddTaskOnDate(inspectDate)}
-                  style={{ fontSize: '0.76rem', gap: '4px' }}
-                >
-                  <Plus size={14} /> Add Task on this Date
-                </button>
+                {!isCeoMonitoring && (
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => handleAddTaskOnDate(inspectDate)}
+                    style={{ fontSize: '0.76rem', gap: '4px' }}
+                  >
+                    <Plus size={14} /> Add Task on this Date
+                  </button>
+                )}
                 <button
                   type="button"
                   className="btn-secondary"

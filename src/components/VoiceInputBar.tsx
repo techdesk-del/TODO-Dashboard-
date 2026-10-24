@@ -3,10 +3,16 @@ import { useApp } from '@/context/AppContext';
 import { parseSpeechOrTextCommand } from '@/lib/aiParser';
 import { soundEngine } from '@/lib/sound';
 import { Mic, ArrowRight, X, Check } from 'lucide-react';
-import { isCeoUser } from '@/lib/rosterData';
+import { isCeoUser, isStrictCeo } from '@/lib/rosterData';
 
 export const VoiceInputBar: React.FC = () => {
   const { addTask, members, currentUser } = useApp();
+
+  // Executive monitoring mode: CEO does not add tasks
+  if (isStrictCeo(currentUser)) {
+    return null;
+  }
+
   const [inputText, setInputText] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [showStreamModal, setShowStreamModal] = useState(false);

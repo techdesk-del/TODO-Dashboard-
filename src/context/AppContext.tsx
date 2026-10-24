@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { Task, TeamMember, AuditLogEntry, SystemConfig, Role, TaskStatus, InAppNotification } from '@/types';
 import { INITIAL_TASKS, INITIAL_MEMBERS, INITIAL_AUDIT_LOGS, INITIAL_SYSTEM_CONFIG } from '@/lib/mockData';
 import { getTodayStr } from '@/lib/dateUtils';
-import { isCeoUser, canAccessAdminHr, canAccessWorkflows } from '@/lib/rosterData';
+import { isCeoUser, isStrictCeo, canAccessAdminHr, canAccessWorkflows } from '@/lib/rosterData';
 import { computeMultiAssigneeStatus } from '@/lib/multiAssignee';
 import * as XLSX from 'xlsx';
 
@@ -138,7 +138,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [viewingAuditForTaskId, setViewingAuditForTaskId] = useState<string | null>(null);
   const [showMorningDigestModal, setShowMorningDigestModal] = useState(false);
-  const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
+  const [isCreateTaskModalOpen, setRawIsCreateTaskModalOpen] = useState(false);
+
+  const setIsCreateTaskModalOpen = useCallback((open: boolean) => {
+    if (open && isStrictCeo(currentUser)) {
+      setBannerNotification({
+        message: 'Executive Monitoring Mode: CEO role oversees all staff deliverables across the company. Direct task creation is disabled for this role.',
+        badge: '🔒 Executive Monitor'
+      });
+      return;
+    }
+    setRawIsCreateTaskModalOpen(open);
+  }, [currentUser]);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [dbStatus, setDbStatus] = useState<DBStatus>('connecting');
   const [inAppNotifications, setInAppNotifications] = useState<InAppNotification[]>([]);
@@ -735,6 +746,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addTask = (newTaskData: Partial<Task>, skipApiSync: boolean = false): Task => {
+    // Executive role guard: CEO oversees all company tasks and does not create direct tasks
+    if (isStrictCeo(currentUser)) {
+      console.warn('[Security / Role Guard] CEO account is dedicated to deliverable monitoring & governance. Task creation is disabled.');
+      setBannerNotification({
+        message: 'Executive Monitoring Mode: CEO role oversees all staff deliverables across the company. Direct task creation is disabled for this role.',
+        badge: '🔒 Executive Monitor'
+      });
+      return {} as Task;
+    }
+
     const createdDate = newTaskData.scheduledDate || selectedDate;
     const task: Task = {
       id: newTaskData.id || `task-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -1745,8 +1766,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  // Flowchart 22: Cancel Task Flow (Left Branch)
+  // Flowchart 22: Cancel Task Flow (Left Branch) — Restricted to Admin & CEO
   const cancelTask = async (taskId: string, reason: string) => {
+    const canCancel = isCeoUser(currentUser) || currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN';
+    if (!canCancel) {
+      alert('Access Restricted: Only Admin, Super Admin, and CEO have permission to cancel deliverables.');
+      return;
+    }
+
     if (!reason || !reason.trim()) {
       alert('Cancellation reason is required per Flowchart 22 corporate governance.');
       return;
@@ -1789,14 +1816,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          eventType: 'TASK_ASSIGNED',
+          eventType: 'TASK_CANCELLED',
           recipients: notificationRecipients,
           title: `🚫 Deliverable Cancelled: "${targetTask.title}"`,
           message: `Deliverable #${targetTask.id} was marked as Cancelled by ${currentUser.name}. Mandatory justification: "${reason.trim()}". Excluded from performance reports.`,
           taskId: targetTask.id,
           taskTitle: targetTask.title,
           metadata: {
-            assignedBy: currentUser.name,
+            cancelledBy: currentUser.name,
             cancellationReason: reason.trim(),
             department: targetTask.department,
             priority: targetTask.priority
@@ -1965,8 +1992,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteTask = async (taskId: string) => {
-    if (!isCeoUser(currentUser)) {
-      alert("Access Restricted: Only Executive Leadership (CEO & Aakash Das) has permission to permanently delete deliverables.");
+    const canDelete = isCeoUser(currentUser) || currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN';
+    if (!canDelete) {
+      alert("Access Restricted: Only Admin, Super Admin, and CEO have permission to permanently delete deliverables.");
       return;
     }
 
@@ -2239,45 +2267,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  const runNightlyRolloverSimulation = () => {
-    // Flowchart 11 / Automated Carry-forward at 00:05 AM
-    const currentDate = selectedDate || new Date().toISOString().split('T')[0];
-    const d = new Date(currentDate);
-    d.setDate(d.getDate() + 1);
-    const tomorrowStr = d.toISOString().split('T')[0];
+  const runNightlyRolloverSimulation = async () => {
+    // Flowchart 11 / Automated Carry-forward at 00:05 AM executed live on MongoDB Atlas
+    try {
+      setBannerNotification({
+        message: 'Executing live 00:05 AM Midnight Rollover on MongoDB Atlas...',
+        badge: 'ROLLOVER IN PROGRESS'
+      });
 
-    let rolledCount = 0;
-    setTasks(prev => prev.map(t => {
-      if (t.status !== 'Done' && t.status !== 'Cancelled' && (t.scheduledDate <= currentDate)) {
-        rolledCount++;
-        const updated = {
-          ...t,
-          scheduledDate: tomorrowStr,
-          carryForwardCount: (t.carryForwardCount || 0) + 1
-        };
-        // sync to db
-        fetch(`/api/tasks/${t.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ scheduledDate: tomorrowStr, carryForwardCount: updated.carryForwardCount })
-        }).catch(() => {});
-        return updated;
+      const res = await fetch('/api/cron', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'rollover',
+          forceShiftTodayToTomorrow: true,
+          actor: `${currentUser.name} (${currentUser.role})`
+        })
+      });
+
+      const data = await res.json();
+      await refreshFromDB();
+
+      if (data.success) {
+        setBannerNotification({
+          message: `Nightly rollover complete: ${data.message || `${data.rolledOverCount || 0} task(s) rolled over`}. Real-time MongoDB sync active.`,
+          badge: '✓ 00:05 AM Rollover Active'
+        });
+      } else {
+        throw new Error(data.error || 'Rollover execution failed');
       }
-      return t;
-    }));
-
-    logAudit({
-      action: 'CARRIED_FORWARD',
-      fieldChanged: 'Nightly 00:05 AM Rollover Engine',
-      oldValue: `Tasks on ${currentDate}`,
-      newValue: `Rolled over to ${tomorrowStr} (${rolledCount} Tasks)`,
-      notes: `Unfinished commitments automatically rolled over to ${tomorrowStr} with Amber Badge.`
-    });
-
-    setBannerNotification({
-      message: `Nightly rollover complete: ${rolledCount} task(s) rolled over to ${tomorrowStr} without data loss.`,
-      badge: '✓ 00:05 AM Rollover Active'
-    });
+    } catch (err: any) {
+      console.error('[Rollover Execution Error]', err);
+      setBannerNotification({
+        message: `Midnight Rollover notice: ${err.message || 'Execution error'}.`,
+        badge: 'ROLLOVER ERROR'
+      });
+    }
   };
 
   ////

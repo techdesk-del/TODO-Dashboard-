@@ -24,6 +24,7 @@ import {
   sendTaskAssignedEmail,
   sendTaskEscalatedEmail,
   sendTaskReopenedEmail,
+  sendTaskCancelledEmail,
   sendReasonDecisionEmail,
   sendOverdueAutoFlagEmail,
   sendMorningDigestEmail,
@@ -145,6 +146,20 @@ export async function dispatchNotificationFlow(
               taskTitle: event.taskTitle || event.title,
               reopenedBy: event.metadata?.reopenedBy || 'Management',
               reason: event.metadata?.reopenReason || event.message,
+            });
+            break;
+
+          case 'TASK_CANCELLED':
+            sendRes = await sendTaskCancelledEmail({
+              recipientEmail: recipient.email,
+              recipientName: recipient.name,
+              taskId: event.taskId || 'N/A',
+              taskTitle: event.taskTitle || event.title,
+              cancelledBy: event.metadata?.cancelledBy || event.metadata?.assignedBy || 'Management',
+              cancellationReason: event.metadata?.cancellationReason || event.message,
+              department: event.metadata?.department,
+              priority: event.metadata?.priority,
+              baseUrl: event.metadata?.baseUrl,
             });
             break;
 
