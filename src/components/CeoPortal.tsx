@@ -40,6 +40,7 @@ export const CeoPortal: React.FC = () => {
   const { 
     tasks, 
     members, 
+    activeMembers,
     selectedMemberFilter, 
     setSelectedMemberFilter, 
     exportToExcel,
@@ -63,11 +64,6 @@ export const CeoPortal: React.FC = () => {
   const [inspectingTask, setInspectingTask] = useState<Task | null>(null);
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-
-  // Active members excluding deactivated staff
-  const activeMembers = useMemo(() => {
-    return members.filter(m => m.status !== 'DEACTIVATED' && (m as any).isDeactivated !== true);
-  }, [members]);
 
   // Active member for drilldown
   const activeMember = useMemo(() => {

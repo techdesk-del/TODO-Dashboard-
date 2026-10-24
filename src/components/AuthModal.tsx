@@ -226,10 +226,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
     const deactivatedIds = new Set<string>();
     for (const m of combinedLiveMembers) {
       if (!m) continue;
-      const isDeact = m.status === 'DEACTIVATED' || (m as unknown as { isDeactivated?: boolean }).isDeactivated;
+      const s = String(m.status || '').toUpperCase().trim();
+      const isDeact = s === 'DEACTIVATED' || s === 'REMOVED' || s === 'TERMINATED' || s === 'EXITED' || (m as unknown as { isDeactivated?: boolean }).isDeactivated === true;
       if (isDeact) {
         if (m.email) deactivatedEmails.add(m.email.toLowerCase().trim());
-        if (m.id) deactivatedIds.add(m.id);
+        if (m.id) deactivatedIds.add(m.id.trim());
       }
     }
 
@@ -237,8 +238,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
       if (!m || !m.email || !m.id) continue;
       const cleanEmail = m.email.toLowerCase().trim();
       const cleanId = m.id.trim();
+      const s = String(m.status || '').toUpperCase().trim();
+      const isDeact = s === 'DEACTIVATED' || s === 'REMOVED' || s === 'TERMINATED' || s === 'EXITED' || (m as unknown as { isDeactivated?: boolean }).isDeactivated === true;
       if (seenIds.has(cleanId) || seenEmails.has(cleanEmail)) continue;
-      if (deactivatedIds.has(cleanId) || deactivatedEmails.has(cleanEmail) || m.status === 'DEACTIVATED' || (m as unknown as { isDeactivated?: boolean }).isDeactivated) {
+      if (deactivatedIds.has(cleanId) || deactivatedEmails.has(cleanEmail) || isDeact) {
         continue;
       }
 

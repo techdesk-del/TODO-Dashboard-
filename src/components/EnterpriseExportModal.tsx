@@ -39,14 +39,14 @@ export const EnterpriseExportModal: React.FC<EnterpriseExportModalProps> = ({
   initialType = 'WHOLE_TASKS',
   initialUserId,
 }) => {
-  const { tasks, members, auditLogs, currentUser, logAudit, setBannerNotification } = useApp();
+  const { tasks, members, activeMembers, auditLogs, currentUser, logAudit, setBannerNotification } = useApp();
 
   const [exportType, setExportType] = useState<ExportType>(initialType);
   const [selectedDate, setSelectedDate] = useState<string>(getTodayStr());
   const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7));
   const [startDate, setStartDate] = useState<string>(getTodayStr());
   const [endDate, setEndDate] = useState<string>(getTodayStr());
-  const [selectedUserId, setSelectedUserId] = useState<string>(initialUserId || (members[0]?.id || ''));
+  const [selectedUserId, setSelectedUserId] = useState<string>(initialUserId || (activeMembers[0]?.id || members[0]?.id || ''));
   const [includeAuditLogs, setIncludeAuditLogs] = useState<boolean>(false);
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [backgroundEmailMode, setBackgroundEmailMode] = useState<boolean>(false);
@@ -301,7 +301,7 @@ export const EnterpriseExportModal: React.FC<EnterpriseExportModalProps> = ({
                 onChange={e => setSelectedUserId(e.target.value)}
                 style={{ fontSize: '0.8rem' }}
               >
-                {members.map(m => (
+                {activeMembers.map(m => (
                   <option key={m.id} value={m.id}>
                     {m.name} — {m.designation || 'Specialist'} ({m.department})
                   </option>

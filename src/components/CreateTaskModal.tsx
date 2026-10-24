@@ -35,6 +35,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
   const { 
     currentUser, 
     members, 
+    activeMembers,
     systemConfig, 
     addTask, 
     setBannerNotification,
@@ -191,8 +192,8 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
     if (assigneeMode === 'Self') {
       list.push(selfAssignee);
     } else if (assigneeMode === 'Others') {
-      const others: AssigneeInfo[] = members
-        .filter(m => selectedOthersIds.includes(m.id))
+      const others: AssigneeInfo[] = activeMembers
+        .filter(m => selectedOthersIds.includes(m.id) && !isStrictCeo(m))
         .map(m => ({
           id: m.id,
           name: m.name,
@@ -205,8 +206,8 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
       list.push(...others);
     } else if (assigneeMode === 'Both') {
       list.push(selfAssignee);
-      const others: AssigneeInfo[] = members
-        .filter(m => selectedOthersIds.includes(m.id) && m.id !== currentUser.id)
+      const others: AssigneeInfo[] = activeMembers
+        .filter(m => selectedOthersIds.includes(m.id) && m.id !== currentUser.id && !isStrictCeo(m))
         .map(m => ({
           id: m.id,
           name: m.name,
@@ -752,58 +753,66 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
                   flexDirection: 'column',
                   gap: '0.4rem'
                 }}>
-                  {members
-                    .filter(m => m.id !== currentUser.id)
-                    .map(member => {
-                      const isSelected = selectedOthersIds.includes(member.id);
-                      return (
-                        <label
-                          key={member.id}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.6rem',
-                            padding: '6px 10px',
-                            borderRadius: '6px',
-                            background: isSelected ? '#dbeafe' : '#ffffff',
-                            border: isSelected ? '1px solid #93c5fd' : '1px solid #e2e8f0',
-                            cursor: 'pointer',
-                            fontSize: '0.8rem',
-                            transition: 'all 0.12s ease'
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedOthersIds(prev => [...prev, member.id]);
-                              } else {
-                                setSelectedOthersIds(prev => prev.filter(id => id !== member.id));
-                              }
-                            }}
-                          />
-                          <span style={{
-                            width: '24px',
-                            height: '24px',
-                            borderRadius: '50%',
-                            background: '#2563eb',
-                            color: '#ffffff',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '0.65rem',
-                            fontWeight: 700
-                          }}>
-                            {member.avatar || member.name.slice(0, 2).toUpperCase()}
-                          </span>
-                          <span style={{ fontWeight: 600, color: '#1e293b' }}>{member.name}</span>
-                          <span style={{ color: '#64748b', fontSize: '0.72rem' }}>
-                            ({member.designation} • {member.department})
-                          </span>
-                        </label>
-                      );
-                    })}
+                  {activeMembers
+                    .filter(m => m.id !== currentUser.id && !isStrictCeo(m))
+                    .length === 0 ? (
+                      <div style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.75rem', color: '#94a3b8' }}>
+                        No other active team members available for assignment.
+                      </div>
+                    ) : (
+                      activeMembers
+                        .filter(m => m.id !== currentUser.id && !isStrictCeo(m))
+                        .map(member => {
+                          const isSelected = selectedOthersIds.includes(member.id);
+                          return (
+                            <label
+                              key={member.id}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.6rem',
+                                padding: '6px 10px',
+                                borderRadius: '6px',
+                                background: isSelected ? '#dbeafe' : '#ffffff',
+                                border: isSelected ? '1px solid #93c5fd' : '1px solid #e2e8f0',
+                                cursor: 'pointer',
+                                fontSize: '0.8rem',
+                                transition: 'all 0.12s ease'
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedOthersIds(prev => [...prev, member.id]);
+                                  } else {
+                                    setSelectedOthersIds(prev => prev.filter(id => id !== member.id));
+                                  }
+                                }}
+                              />
+                              <span style={{
+                                width: '24px',
+                                height: '24px',
+                                borderRadius: '50%',
+                                background: '#2563eb',
+                                color: '#ffffff',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '0.65rem',
+                                fontWeight: 700
+                              }}>
+                                {member.avatar || member.name.slice(0, 2).toUpperCase()}
+                              </span>
+                              <span style={{ fontWeight: 600, color: '#1e293b' }}>{member.name}</span>
+                              <span style={{ color: '#64748b', fontSize: '0.72rem' }}>
+                                ({member.designation} • {member.department})
+                              </span>
+                            </label>
+                          );
+                        })
+                    )}
                 </div>
               </div>
             )}

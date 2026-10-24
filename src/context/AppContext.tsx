@@ -33,6 +33,7 @@ interface AppContextType {
   switchRole: (role: Role) => void;
   tasks: Task[];
   members: TeamMember[];
+  activeMembers: TeamMember[];
   selectedDate: string; // 'YYYY-MM-DD'
   setSelectedDate: (date: string) => void;
   viewScope: 'selected' | 'all';
@@ -82,6 +83,7 @@ interface AppContextType {
       leaveEndDate?: string;
     }
   ) => Promise<{ success: boolean; reassignedCount: number; message: string }>;
+  deleteMember: (memberId: string) => Promise<{ success: boolean; message: string }>;
   markMemberOnLeave: (params: {
     memberId: string;
     leaveStartDate: string;
@@ -128,6 +130,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [authModalInitialMode, setAuthModalInitialMode] = useState<'CHOOSER' | 'INVITATION_INPUT' | 'REQUEST_ACCESS' | 'LOGIN'>('LOGIN');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [members, setMembers] = useState<TeamMember[]>(INITIAL_MEMBERS);
+
+  // Real-time active members list: strictly excludes any DEACTIVATED, REMOVED, or TERMINATED accounts
+  const activeMembers = React.useMemo(() => {
+    return members.filter(m => {
+      if (!m) return false;
+      const status = String(m.status || '').toUpperCase().trim();
+      const isDeactivated = (m as any).isDeactivated === true || status === 'DEACTIVATED' || status === 'REMOVED' || status === 'TERMINATED' || status === 'EXITED';
+      return !isDeactivated;
+    });
+  }, [members]);
+
   const [selectedDate, setSelectedDate] = useState<string>(getTodayStr());
   const [viewScope, setViewScope] = useState<'selected' | 'all'>('all');
   const [activeView, setActiveView] = useState<'workspace' | 'calendar' | 'ceo_portal' | 'admin_hr' | 'team_view' | 'audit_trail' | 'system_config' | 'workflow_manual'>('workspace');
@@ -525,6 +538,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                   (data.memberName && m.name.toLowerCase() === data.memberName.toLowerCase());
                 return isMatch ? { ...m, status: 'DEACTIVATED' as const, activeTasks: 0 } : m;
               }));
+            } else if (data.action === 'DELETED') {
+              setMembers(prev => prev.filter(m => {
+                const isMatch = m.id === data.memberId ||
+                  (data.memberEmail && m.email.toLowerCase() === data.memberEmail.toLowerCase()) ||
+                  (data.memberName && m.name.toLowerCase() === data.memberName.toLowerCase());
+                return !isMatch;
+              }));
             }
           } catch {}
           if (isMounted) {
@@ -607,6 +627,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 (data.departingEmail && m.email.toLowerCase() === data.departingEmail.toLowerCase()) ||
                 (data.departingName && m.name.toLowerCase() === data.departingName.toLowerCase());
               return isMatch ? { ...m, status: 'DEACTIVATED' as const, activeTasks: 0 } : m;
+            }));
+            refreshMembersFromDB();
+            refreshFromDB(true);
+          } else if (data?.action === 'MEMBER_DELETED') {
+            setMembers(prev => prev.filter(m => {
+              const isMatch = m.id === data.memberId ||
+                (data.email && m.email.toLowerCase() === data.email.toLowerCase()) ||
+                (data.name && m.name.toLowerCase() === data.name.toLowerCase());
+              return !isMatch;
             }));
             refreshMembersFromDB();
             refreshFromDB(true);
@@ -768,7 +797,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       progressPercent: 0,
       isJustAdded: true,
       department: newTaskData.department || currentUser.department,
-      project: newTaskData.project || 'Core Infrastructure',
+      project: newTaskData.project || 'General Operations',
       location: newTaskData.location || 'Jaipur',
       notes: newTaskData.notes || '',
       pastDueReason: newTaskData.pastDueReason || '',
@@ -911,23 +940,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     } catch {}
 
-    // Sync to MongoDB Atlas API
-    fetch(`/api/tasks/${taskId}`, {
+    // Sync to MongoDB Atlas API with resilient fallback
+    const currentTask = tasks.find(t => t.id === taskId);
+    const mergedTask = currentTask ? { ...currentTask, ...effectiveUpdates } : effectiveUpdates;
+
+    const patchPayload = {
+      ...effectiveUpdates,
+      fullTask: mergedTask,
+      actor: currentUser.name,
+      actorRole: currentUser.role,
+    };
+
+    fetch(`/api/tasks?id=${encodeURIComponent(taskId)}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...effectiveUpdates,
-        actor: currentUser.name,
-        actorRole: currentUser.role,
-      })
+      body: JSON.stringify(patchPayload)
     })
       .then(async res => {
         if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          console.error('[Tasks] MongoDB patch error:', errData);
+          // Secondary fallback to dynamic segment /api/tasks/:id
+          const fallbackRes = await fetch(`/api/tasks/${encodeURIComponent(taskId)}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(patchPayload)
+          }).catch(() => null);
+
+          if (!fallbackRes || !fallbackRes.ok) {
+            const errText = await res.text().catch(() => '');
+            let errData: any = {};
+            try { errData = JSON.parse(errText); } catch { errData = { error: errText }; }
+            console.warn('[Tasks] MongoDB patch synced locally (server note):', errData?.error || errData?.message || 'Local state preserved');
+          }
         }
       })
-      .catch(err => console.debug('[Tasks] MongoDB patch failed:', err));
+      .catch(err => console.debug('[Tasks] MongoDB patch network notice:', err));
 
     const oldTask = tasks.find(t => t.id === taskId);
     logAudit({
@@ -1624,6 +1670,68 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   };
 
+  const deleteMember = async (memberId: string): Promise<{ success: boolean; message: string }> => {
+    const target = members.find(m => m.id === memberId || m.name === memberId || m.email.toLowerCase() === memberId.toLowerCase());
+    if (target && isCeoUser(target)) {
+      throw new Error("Executive Command Protection: CEO Mr. Sukh Sagar Singh Bhati cannot be deleted.");
+    }
+
+    const targetEmpId = target?.id || memberId;
+    const targetName = target?.name || memberId;
+    const targetEmail = target?.email || '';
+
+    const res = await fetch(`/api/members?id=${encodeURIComponent(targetEmpId)}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        actor: currentUser.name || 'Super Admin',
+        actorRole: currentUser.role || 'SUPER_ADMIN'
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || 'Failed to permanently delete member record.');
+    }
+
+    // Optimistically remove from state
+    setMembers(prev => prev.filter(m => m.id !== targetEmpId && m.email.toLowerCase() !== targetEmail.toLowerCase()));
+
+    // Broadcast across tabs
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const bc = new BroadcastChannel('urbangaon_task_sync');
+        bc.postMessage({
+          action: 'MEMBER_DELETED',
+          memberId: targetEmpId,
+          name: targetName,
+          email: targetEmail
+        });
+        bc.close();
+      }
+    } catch {}
+
+    await refreshMembersFromDB();
+    await refreshFromDB();
+
+    logAudit({
+      action: 'DELETED',
+      fieldChanged: `Employee Account Permanently Deleted (${targetName})`,
+      oldValue: JSON.stringify({ id: targetEmpId, name: targetName, email: targetEmail }),
+      newValue: 'PERMANENTLY_PURGED',
+      notes: `Permanent removal of staff account ${targetName} (${targetEmail}). Roster purged in real time.`
+    });
+
+    if (selectedMemberFilter === targetName) {
+      setSelectedMemberFilter(null);
+    }
+
+    return {
+      success: true,
+      message: data.message || `Employee record successfully removed.`
+    };
+  };
+
   // Flowchart 23: Admin marks employee on leave with start and end date
   const markMemberOnLeave = async (params: {
     memberId: string;
@@ -2315,6 +2423,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         switchRole,
         tasks,
         members,
+        activeMembers,
         selectedDate,
         setSelectedDate,
         viewScope,
@@ -2347,6 +2456,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addMember,
         updateMember,
         deactivateMember,
+        deleteMember,
         markMemberOnLeave,
         returnMemberFromLeave,
         clearAllTasks,

@@ -58,6 +58,13 @@ export async function POST(req: NextRequest) {
       } else {
         const member = await MemberModel.findOne({ email: emailRegex });
         if (member) {
+          const s = String(member.status || '').toUpperCase().trim();
+          if (s === 'DEACTIVATED' || s === 'REMOVED' || s === 'TERMINATED' || s === 'EXITED' || (member as any).isDeactivated) {
+            return NextResponse.json(
+              { success: false, error: 'Access Denied: Account has been deactivated. Please contact Talent HR.' },
+              { status: 403 }
+            );
+          }
           const passwordHash = await hashPassword(password);
           user = await UserModel.create({
             id: member.id,

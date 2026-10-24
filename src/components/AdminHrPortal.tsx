@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useApp } from '@/context/AppContext';
-import { isCeoUser } from '@/lib/rosterData';
+import { isCeoUser, isAakashUser } from '@/lib/rosterData';
 import { TeamMember, Task, TaskStatus } from '@/types';
 import { 
   UserPlus, 
@@ -48,7 +48,7 @@ import { generateMultiSheetExcelWorkbook, downloadWorkbook } from '@/lib/exportU
 import { getTodayStr } from '@/lib/dateUtils';
 
 export const AdminHrPortal: React.FC = () => {
-  const { members, tasks, updateTask, reopenTask, deleteTask, addMember, updateMember, deactivateMember, markMemberOnLeave, returnMemberFromLeave, currentUser, systemConfig, logAudit } = useApp();
+  const { members, tasks, updateTask, reopenTask, deleteTask, addMember, updateMember, deactivateMember, deleteMember, markMemberOnLeave, returnMemberFromLeave, currentUser, systemConfig, logAudit } = useApp();
   const isCeo = isCeoUser(currentUser);
 
   const [activeTab, setActiveTab] = useState<'oversight' | 'reports' | 'create_user' | 'pending_approvals' | 'deactivation' | 'holidays' | 'directory' | 'email_logs'>('oversight');
@@ -1827,8 +1827,8 @@ export const AdminHrPortal: React.FC = () => {
                     value={reportSelectedEmployeeId}
                     onChange={e => setReportSelectedEmployeeId(e.target.value)}
                   >
-                    <option value="">All Employees ({members.length})</option>
-                    {members.map(m => (
+                    <option value="">All Active Employees ({activeMembers.length})</option>
+                    {activeMembers.map(m => (
                       <option key={m.id} value={m.id}>
                         {m.name} — {m.designation || 'Staff'} ({m.department})
                       </option>
@@ -3723,17 +3723,50 @@ export const AdminHrPortal: React.FC = () => {
                           {m.email}
                         </div>
                       </div>
-                      <span style={{
-                        fontSize: '0.62rem',
-                        fontWeight: 800,
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        background: '#fee2e2',
-                        color: '#991b1b',
-                        flexShrink: 0
-                      }}>
-                        DEACTIVATED
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                        <span style={{
+                          fontSize: '0.62rem',
+                          fontWeight: 800,
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          background: '#fee2e2',
+                          color: '#991b1b',
+                        }}>
+                          DEACTIVATED
+                        </span>
+                        {(currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'ADMIN') && (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (window.confirm(`Permanently delete and remove record for ${m.name} (${m.email}) from database? This action cannot be undone.`)) {
+                                try {
+                                  await deleteMember(m.id);
+                                } catch (err: any) {
+                                  alert(err.message || 'Failed to delete member');
+                                }
+                              }
+                            }}
+                            style={{
+                              padding: '3px 7px',
+                              fontSize: '0.65rem',
+                              fontWeight: 700,
+                              borderRadius: '4px',
+                              border: '1px solid #fca5a5',
+                              background: '#fff',
+                              color: '#dc2626',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px',
+                              transition: 'all 0.12s ease'
+                            }}
+                            title={`Permanently delete ${m.name} from MongoDB`}
+                          >
+                            <Trash2 size={11} />
+                            Purge
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -4030,21 +4063,21 @@ export const AdminHrPortal: React.FC = () => {
                           width: '32px',
                           height: '32px',
                           borderRadius: '50%',
-                          background: member.id === 'mem-12' || member.email.includes('techdesk') ? '#ecfdf5' : '#eff6ff',
-                          color: member.id === 'mem-12' || member.email.includes('techdesk') ? '#059669' : '#2563eb',
+                          background: isAakashUser(member) ? '#ecfdf5' : '#eff6ff',
+                          color: isAakashUser(member) ? '#059669' : '#2563eb',
                           fontWeight: 700,
                           fontSize: '0.75rem',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          border: member.id === 'mem-12' || member.email.includes('techdesk') ? '1px solid #a7f3d0' : '1px solid #bfdbfe'
+                          border: isAakashUser(member) ? '1px solid #a7f3d0' : '1px solid #bfdbfe'
                         }}>
                           {member.avatar || member.name.slice(0, 2).toUpperCase()}
                         </div>
                         <div>
                           <div style={{ fontWeight: 700, color: '#0f172a' }}>
                             {member.name}
-                            {(member.id === 'mem-12' || member.email.includes('techdesk')) && (
+                            {isAakashUser(member) && (
                               <span style={{ marginLeft: '6px', fontSize: '0.65rem', background: '#dcfce7', color: '#15803d', padding: '1px 5px', borderRadius: '4px', fontWeight: 800 }}>
                                 AI &amp; IT OFFICER
                               </span>

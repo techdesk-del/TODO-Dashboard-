@@ -21,8 +21,10 @@ type RouteContext = { params: Promise<{ id: string }> };
 export async function PATCH(req: NextRequest, ctx: RouteContext) {
   try {
     await connectDB();
-    const { id } = await ctx.params;
-    const body   = await req.json();
+    const rawParams = ctx?.params;
+    const resolvedParams = rawParams instanceof Promise ? await rawParams : (rawParams || {});
+    const id = resolvedParams.id;
+    const body = await req.json().catch(() => ({}));
 
     if (!id) {
       return NextResponse.json({ success: false, error: 'Task ID is required' }, { status: 400 });
@@ -31,9 +33,35 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     // Never allow overriding the task's id through a PATCH
     delete body.id;
 
-    const existingTask = await TaskModel.findOne({ id }).lean();
+    let existingTask = await TaskModel.findOne({ id }).lean();
     if (!existingTask) {
-      return NextResponse.json({ success: false, error: `Task '${id}' not found` }, { status: 404 });
+      if (body.fullTask && body.fullTask.title) {
+        const toInsert = {
+          ...body.fullTask,
+          id,
+          scheduledDate: body.fullTask.scheduledDate || new Date().toISOString().slice(0, 10),
+          time: body.fullTask.time || '05:00 PM',
+          priority: body.fullTask.priority || 'NORMAL',
+          status: body.fullTask.status || 'Not Started',
+          department: body.fullTask.department || 'General',
+          creator: body.fullTask.creator || {
+            id: 'mem-ops-admin',
+            name: 'Operations Admin',
+            email: 'ops@urbangaon.com',
+            role: 'ADMIN',
+            avatar: 'OA',
+          },
+          createdAt: body.fullTask.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        delete toInsert.actor;
+        delete toInsert.actorRole;
+        delete toInsert.fullTask;
+        const created = await TaskModel.create(toInsert);
+        existingTask = created.toObject();
+      } else {
+        return NextResponse.json({ success: false, error: `Task '${id}' not found` }, { status: 404 });
+      }
     }
 
     // Flowchart 8: Multi-Assignee Overall Status & Progress calculation
@@ -71,7 +99,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     // Authorization: Only Admin, Super Admin, and CEO can cancel tasks
     const callerName = (typeof actorInput === 'string' ? actorInput : actorInput?.name) || req.headers.get('x-user-name') || '';
     const isCallerAdminOrCeo = actorRole === 'ADMIN' || actorRole === 'SUPER_ADMIN' || callerName.toLowerCase().includes('sukh sagar');
-    if (body.status === 'Cancelled' && actorRole && !isCallerAdminOrCeo) {
+    if (body.status === 'Cancelled' && existingTask.status !== 'Cancelled' && !isCallerAdminOrCeo) {
       return NextResponse.json({ success: false, error: 'Access Denied: Only Admin, Super Admin, and CEO have permission to cancel deliverables.' }, { status: 403 });
     }
 
@@ -130,7 +158,9 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
 export async function DELETE(req: NextRequest, ctx: RouteContext) {
   try {
     await connectDB();
-    const { id } = await ctx.params;
+    const rawParams = ctx?.params;
+    const resolvedParams = rawParams instanceof Promise ? await rawParams : (rawParams || {});
+    const id = resolvedParams.id;
 
     if (!id) {
       return NextResponse.json({ success: false, error: 'Task ID is required' }, { status: 400 });

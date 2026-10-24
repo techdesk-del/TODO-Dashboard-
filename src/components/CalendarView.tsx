@@ -28,6 +28,7 @@ export const CalendarView: React.FC = () => {
   const { 
     tasks, 
     members, 
+    activeMembers,
     selectedDate, 
     setSelectedDate, 
     setViewScope,
@@ -55,9 +56,6 @@ export const CalendarView: React.FC = () => {
   const isCeoMonitoring = isMounted && isStrictCeo(currentUser);
   const isAdminOrManager = isMounted && (isCeo || canAccessAdminHr(currentUser) || currentUser.role === 'MANAGER');
   const todayStr = getTodayStr();
-
-  // Active members for employee switcher
-  const activeMembers = useMemo(() => members.filter(m => m.status !== 'DEACTIVATED'), [members]);
 
   // Dynamic calendar date cursor
   const [calDate, setCalDate] = useState<Date>(() => {

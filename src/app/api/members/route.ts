@@ -15,6 +15,8 @@ import { hashPassword } from '@/lib/auth';
 import { INITIAL_MEMBERS } from '@/lib/mockData';
 import { syncOfficialRosterToDB } from '@/lib/rosterSync';
 import { sendSetPasswordEmail } from '@/lib/email';
+import { broadcastMemberMutation } from '@/lib/events';
+import { isCeoUser } from '@/lib/rosterData';
 
 async function seedMembersIfEmpty() {
   const count = await MemberModel.countDocuments();
@@ -402,3 +404,78 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  try {
+    await connectDB();
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id') || searchParams.get('memberId');
+    const body = await req.json().catch(() => ({}));
+    const targetId = (id || body.id || body.memberId || '').trim();
+    const targetEmail = (searchParams.get('email') || body.email || '').trim().toLowerCase();
+
+    if (!targetId && !targetEmail) {
+      return NextResponse.json({ success: false, error: 'Member ID or Email is required for removal' }, { status: 400 });
+    }
+
+    const member = await MemberModel.findOne({
+      $or: [
+        ...(targetId ? [{ id: targetId }] : []),
+        ...(targetEmail ? [{ email: targetEmail }] : []),
+      ]
+    }).exec();
+
+    if (!member) {
+      return NextResponse.json({ success: false, error: 'Employee record not found in database' }, { status: 404 });
+    }
+
+    if (isCeoUser(member)) {
+      return NextResponse.json({ success: false, error: 'Executive Command Protection: CEO account cannot be deleted' }, { status: 403 });
+    }
+
+    const memberName = member.name;
+    const memberEmail = member.email;
+    const memberEmpId = member.id;
+
+    // Permanently purge from collections
+    await MemberModel.deleteOne({ id: memberEmpId }).exec();
+    await UserModel.deleteMany({ $or: [{ id: memberEmpId }, { email: memberEmail.toLowerCase() }] }).exec();
+    await InvitationModel.deleteMany({ $or: [{ id: memberEmpId }, { email: memberEmail.toLowerCase() }] }).exec();
+
+    // Broadcast realtime event across all clients
+    broadcastMemberMutation({
+      action: 'DELETED',
+      memberId: memberEmpId,
+      memberName,
+      memberEmail,
+    });
+
+    // Create Audit Log
+    try {
+      const actorName = body.actor || 'Super Admin';
+      const actorRole = body.actorRole || 'SUPER_ADMIN';
+      await AuditLogModel.create({
+        id: `audit-del-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        timestamp: new Date().toISOString(),
+        action: 'DELETED',
+        fieldChanged: `Employee Account Permanently Purged (${memberName})`,
+        oldValue: JSON.stringify({ id: memberEmpId, name: memberName, email: memberEmail, status: member.status }),
+        newValue: 'PERMANENTLY_PURGED',
+        actor: actorName,
+        actorRole: actorRole,
+        ipAddress: req.headers.get('x-forwarded-for') || '127.0.0.1',
+        deviceInfo: req.headers.get('user-agent') || 'Admin Dashboard',
+        notes: `Permanently removed employee record for ${memberName} (${memberEmail}) from database.`,
+      });
+    } catch {}
+
+    return NextResponse.json({
+      success: true,
+      message: `Employee ${memberName} permanently removed from system.`
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+  }
+}
+

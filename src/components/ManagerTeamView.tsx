@@ -26,15 +26,12 @@ import {
 } from 'lucide-react';
 
 export const ManagerTeamView: React.FC = () => {
-  const { members, tasks, updateTask, reopenTask, deleteTask, currentUser, logAudit, setBannerNotification } = useApp();
+  const { members, activeMembers, tasks, updateTask, reopenTask, deleteTask, currentUser, logAudit, setBannerNotification } = useApp();
   const isCeo = isCeoUser(currentUser);
   const todayStr = getTodayStr();
 
   const [activeTab, setActiveTab] = useState<'roster' | 'report'>('roster');
   const [selectedMemberId, setSelectedMemberId] = useState<string>('ALL');
-
-  // Active members excluding deactivated staff
-  const activeMembers = useMemo(() => members.filter(m => m.status !== 'DEACTIVATED'), [members]);
 
   // Flowchart 5: Fetch all employees whose manager_id = current user
   const myTeamMembers = useMemo(() => {

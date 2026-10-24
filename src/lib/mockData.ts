@@ -515,14 +515,14 @@ export const INITIAL_SYSTEM_CONFIG: SystemConfig = {
   },
   masterLists: {
     projects: [
-      'Core Infrastructure',
-      'Enterprise Expansion',
-      'UrbanGaon 2.0 Roadmap',
-      'Growth Strategy Q3',
-      'Design Systems',
-      'High Availability Infrastructure',
-      'Operations & Facilities',
-      'Compliance & Contracts'
+      'General Operations',
+      'Site Development & Civil',
+      'Sales & Client Acquisition',
+      'Procurement & Materials',
+      'Legal & Land Documentation',
+      'Finance & Accounts',
+      'IT & Digital Systems',
+      'HR & Talent Operations'
     ],
     departments: [
       'Civil',

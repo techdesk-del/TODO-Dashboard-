@@ -14,6 +14,7 @@ import { INITIAL_TASKS, INITIAL_MEMBERS } from '@/lib/mockData';
 import { broadcastTaskMutation, isTaskDeleted, unmarkTaskDeleted, globalDeletedTaskIds } from '@/lib/events';
 import { sendTaskAssignmentEmail } from '@/lib/email';
 import { isStrictCeo } from '@/lib/rosterData';
+import { computeMultiAssigneeStatus } from '@/lib/multiAssignee';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -145,8 +146,12 @@ export async function POST(req: NextRequest) {
     if (!body.scheduledDate) missing.push('scheduledDate');
     if (!body.priority) missing.push('priority');
     if (!body.department) missing.push('department');
-    if (!body.project) missing.push('project');
-    if (!body.location) missing.push('location');
+    if (!body.project || !body.project.trim()) {
+      body.project = 'General Operations';
+    }
+    if (!body.location || !body.location.trim()) {
+      body.location = 'Jaipur';
+    }
     if (!body.assignees || !Array.isArray(body.assignees) || body.assignees.length === 0) {
       missing.push('assignees');
     }
@@ -316,12 +321,120 @@ export async function POST(req: NextRequest) {
   }
 }
 
-/* ── DELETE /api/tasks (Clear all deliverables for fresh testing) ── */
+/* ── PATCH /api/tasks (Update deliverable by ?id=... or body.id) ──── */
+export async function PATCH(req: NextRequest) {
+  try {
+    await connectDB();
+    const { searchParams } = new URL(req.url);
+    const body = await req.json().catch(() => ({}));
+    const id = (searchParams.get('id') || body.id || body.taskId || '').trim();
+
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'Task ID is required' }, { status: 400 });
+    }
+
+    delete body.id;
+    delete body.taskId;
+
+    let existingTask = await TaskModel.findOne({ id }).lean();
+    if (!existingTask) {
+      if (body.fullTask && body.fullTask.title) {
+        const toInsert = {
+          ...body.fullTask,
+          id,
+          scheduledDate: body.fullTask.scheduledDate || new Date().toISOString().slice(0, 10),
+          time: body.fullTask.time || '05:00 PM',
+          priority: body.fullTask.priority || 'NORMAL',
+          status: body.fullTask.status || 'Not Started',
+          department: body.fullTask.department || 'General',
+          creator: body.fullTask.creator || {
+            id: 'mem-ops-admin',
+            name: 'Operations Admin',
+            email: 'ops@urbangaon.com',
+            role: 'ADMIN',
+            avatar: 'OA',
+          },
+          createdAt: body.fullTask.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        delete toInsert.actor;
+        delete toInsert.actorRole;
+        delete toInsert.fullTask;
+        const created = await TaskModel.create(toInsert);
+        existingTask = created.toObject();
+      } else {
+        return NextResponse.json({ success: false, error: `Task '${id}' not found in database.` }, { status: 404 });
+      }
+    }
+
+    const hasAssignees = (body.assignees && Array.isArray(body.assignees)) || (existingTask.assignees && existingTask.assignees.length > 0);
+    if (hasAssignees && !body.status) {
+      const mergedForCompute = { ...existingTask, ...body };
+      const comp = computeMultiAssigneeStatus(mergedForCompute);
+      body.status = comp.status;
+      body.progressPercent = comp.progressPercent;
+    }
+
+    const actorInput = body.actor;
+    const actorRoleInput = body.actorRole;
+    delete body.actor;
+    delete body.actorRole;
+    delete body.fullTask;
+
+    const actorRole = (typeof actorInput === 'object' && actorInput?.role)
+      || req.headers.get('x-user-role')
+      || actorRoleInput
+      || 'EMPLOYEE';
+
+    if (actorRole === 'ADMIN' || actorRole === 'SUPER_ADMIN' || body.editedByAdmin) {
+      body.editedByAdmin = true;
+    }
+
+    // Authorization: Only Admin, Super Admin, and CEO can cancel tasks
+    const callerName = (typeof actorInput === 'string' ? actorInput : actorInput?.name) || req.headers.get('x-user-name') || '';
+    const isCallerAdminOrCeo = actorRole === 'ADMIN' || actorRole === 'SUPER_ADMIN' || callerName.toLowerCase().includes('sukh sagar');
+    if (body.status === 'Cancelled' && existingTask.status !== 'Cancelled' && !isCallerAdminOrCeo) {
+      return NextResponse.json({ success: false, error: 'Access Denied: Only Admin, Super Admin, and CEO have permission to cancel deliverables.' }, { status: 403 });
+    }
+
+    const updated = await TaskModel.findOneAndUpdate(
+      { id },
+      { $set: { ...body, updatedAt: new Date().toISOString() } },
+      { new: true, lean: true }
+    );
+
+    broadcastTaskMutation({
+      action: 'UPDATED',
+      taskId: id,
+      taskTitle: (updated as any)?.title || id,
+      task: updated,
+    });
+
+    return NextResponse.json({ success: true, data: updated });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+  }
+}
+
+/* ── DELETE /api/tasks ───────────────────────────────────────────── */
 export async function DELETE(req: NextRequest) {
   try {
     await connectDB();
+    const { searchParams } = new URL(req.url);
+    const singleId = searchParams.get('id') || searchParams.get('taskId');
     const callerName = req.headers.get('x-user-name') || 'Mr. Sukh Sagar Singh Bhati';
     const callerRole = (req.headers.get('x-user-role') as 'SUPER_ADMIN' | 'ADMIN' | 'MANAGER' | 'EMPLOYEE') || 'SUPER_ADMIN';
+
+    if (singleId) {
+      const deleted = await TaskModel.findOneAndDelete({ id: singleId }).lean();
+      if (!deleted) {
+        return NextResponse.json({ success: false, error: `Task '${singleId}' not found` }, { status: 404 });
+      }
+      globalDeletedTaskIds.add(singleId);
+      broadcastTaskMutation({ action: 'DELETED', taskId: singleId, taskTitle: (deleted as any)?.title || singleId });
+      return NextResponse.json({ success: true, message: `Task '${singleId}' permanently deleted` });
+    }
 
     const result = await TaskModel.deleteMany({});
     console.log(`[API/tasks DELETE] Cleared ${result.deletedCount} tasks from MongoDB Atlas by ${callerName}`);

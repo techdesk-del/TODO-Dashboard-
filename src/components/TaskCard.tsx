@@ -3,19 +3,19 @@
 import React, { useState, useMemo } from 'react';
 import { Task, TaskPriority, TaskStatus, AssigneeInfo } from '@/types';
 import { useApp } from '@/context/AppContext';
-import { isCeoUser } from '@/lib/rosterData';
+import { isCeoUser, isStrictCeo } from '@/lib/rosterData';
 import { getTodayStr } from '@/lib/dateUtils';
 import { computeMultiAssigneeStatus } from '@/lib/multiAssignee';
-import { 
-  Clock, 
-  User, 
-  Edit3, 
-  Calendar as CalendarIcon, 
-  PauseCircle, 
-  AlertTriangle, 
-  ShieldCheck, 
-  Check, 
-  X, 
+import {
+  Clock,
+  User,
+  Edit3,
+  Calendar as CalendarIcon,
+  PauseCircle,
+  AlertTriangle,
+  ShieldCheck,
+  Check,
+  X,
   ArrowRight,
   RotateCcw,
   Trash2,
@@ -25,6 +25,9 @@ import {
   CheckCircle2,
   FileText,
   Ban
+
+
+
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -34,17 +37,17 @@ interface TaskCardProps {
 }
 
 export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
-  const { 
-    updateTask, 
-    completeTask, 
+  const {
+    updateTask,
+    completeTask,
     updateAssigneeStatus,
     reassignOrCloseAssignee,
-    holdTask, 
+    holdTask,
     escalateTask,
     seniorAdviseTask,
     seniorReassignTask,
     seniorResolveTask,
-    seniorReturnTask, 
+    seniorReturnTask,
     reopenTask,
     cancelTask,
     reassignTask,
@@ -61,7 +64,14 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const activeMembers = members.filter(m => m.status !== 'DEACTIVATED');
+  const activeMembers = useMemo(() => {
+    return members.filter(m => {
+      if (!m) return false;
+      if (isStrictCeo(m)) return false;
+      const status = String(m.status || '').toUpperCase().trim();
+      return status !== 'DEACTIVATED' && status !== 'REMOVED' && status !== 'TERMINATED' && !(m as any).isDeactivated;
+    });
+  }, [members]);
 
   // Flowchart 22: Task Cancellation & Reassignment Flow
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -117,7 +127,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
     setEditedTitle(task.title);
     setEditedScheduledDate(task.scheduledDate);
     setEditedTime(task.time);
-    setEditedAssigneeId(task.assignees[0]?.id || members[0]?.id || '');
+    setEditedAssigneeId(task.assignees[0]?.id || activeMembers[0]?.id || members[0]?.id || '');
     setEditedPriority(task.priority);
     setEditedDepartment(task.department || 'Product & Tech');
     setEditedLocation('Jaipur');
@@ -139,7 +149,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
     const list: string[] = ['Mr. Sukh Sagar Singh Bhati (CEO)'];
 
     // Add active Talent team members dynamically from roster/members
-    const talentMembers = activeMembers.filter(m => 
+    const talentMembers = activeMembers.filter(m =>
       !isCeoUser(m) && (
         (m.department && (m.department.toLowerCase().includes('talent') || m.department.toLowerCase().includes('hr'))) ||
         (m.designation && (m.designation.toLowerCase().includes('talent') || m.designation.toLowerCase().includes('hr')))
@@ -194,22 +204,22 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
     const selectedMember = members.find(m => m.id === editedAssigneeId) || members[0];
     const updatedAssignees = isCeo
       ? [
-          {
-            id: selectedMember.id,
-            name: selectedMember.name,
-            email: selectedMember.email,
-            department: editedDepartment,
-            designation: selectedMember.designation,
-            avatar: selectedMember.avatar,
-            status: task.status,
-            remarks: editedRemarks,
-          }
-        ]
-      : task.assignees.map(a => ({
-          ...a,
+        {
+          id: selectedMember.id,
+          name: selectedMember.name,
+          email: selectedMember.email,
           department: editedDepartment,
-          remarks: editedRemarks || a.remarks,
-        }));
+          designation: selectedMember.designation,
+          avatar: selectedMember.avatar,
+          status: task.status,
+          remarks: editedRemarks,
+        }
+      ]
+      : task.assignees.map(a => ({
+        ...a,
+        department: editedDepartment,
+        remarks: editedRemarks || a.remarks,
+      }));
 
     updateTask(task.id, {
       title: editedTitle,
@@ -481,10 +491,10 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                   const m = members.find(mem => mem.id === a.id || mem.email?.toLowerCase() === a.email?.toLowerCase());
                   return m?.status === 'ON_LEAVE';
                 }) && (
-                  <span className="task-pill-badge badge-on-leave" title="Assignee is on authorized leave. Reminders and auto-escalations paused.">
-                    🏖️ ON LEAVE
-                  </span>
-                )}
+                    <span className="task-pill-badge badge-on-leave" title="Assignee is on authorized leave. Reminders and auto-escalations paused.">
+                      🏖️ ON LEAVE
+                    </span>
+                  )}
 
                 {typeof task.carryForwardCount === 'number' && task.carryForwardCount > 0 ? (
                   <span className="task-pill-badge badge-carry-forward">
@@ -804,7 +814,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
             )}
           </div>
         )}
-        
+
         {/* Flowchart 3: Senior Escalation Interventions Banner & Actions */}
         {task.status === 'Escalated' && (
           <div style={{
@@ -1114,7 +1124,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
             <form onSubmit={handleConfirmEscalate} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <div className="form-field-group">
                 <label className="form-field-label">Select Senior Executive</label>
-                <select 
+                <select
                   className="form-select"
                   value={escalateTargetLeader}
                   onChange={e => setEscalateTargetLeader(e.target.value)}
@@ -1285,7 +1295,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                 border: '1px solid #fecaca',
                 fontWeight: 500
               }}>
-                 This deliverable will be permanently deleted across all devices and MongoDB Atlas.
+                This deliverable will be permanently deleted across all devices and MongoDB Atlas.
               </div>
             </div>
 
@@ -1339,8 +1349,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                   </div>
                 </div>
               </div>
-              <button 
-                className="calendar-nav-btn" 
+              <button
+                className="calendar-nav-btn"
                 onClick={() => setManageAssigneeData(prev => ({ ...prev, isOpen: false }))}
               >
                 <X size={16} />
@@ -1376,7 +1386,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
               );
               setManageAssigneeData(prev => ({ ...prev, isOpen: false }));
             }} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', marginTop: '1rem' }}>
-              
+
               {/* Action Selector: Reassign vs Close */}
               <div>
                 <label className="form-field-label" style={{ fontWeight: 700 }}>Action Required *</label>
@@ -1817,7 +1827,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                             <div
                               key={m.id}
                               onClick={() => {
-                                setSelectedNewAssigneeIds(prev => 
+                                setSelectedNewAssigneeIds(prev =>
                                   isSelected ? prev.filter(id => id !== m.id) : [...prev, m.id]
                                 );
                               }}
@@ -1835,7 +1845,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                               <input
                                 type="checkbox"
                                 checked={isSelected}
-                                onChange={() => {}}
+                                onChange={() => { }}
                                 style={{ cursor: 'pointer' }}
                               />
                               <div style={{ flex: 1, minWidth: 0 }}>
@@ -1866,7 +1876,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                           <div
                             key={a.id}
                             onClick={() => {
-                              setSelectedRemoveAssigneeIds(prev => 
+                              setSelectedRemoveAssigneeIds(prev =>
                                 isMarked ? prev.filter(id => id !== a.id) : [...prev, a.id]
                               );
                             }}
@@ -1884,7 +1894,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                             <input
                               type="checkbox"
                               checked={isMarked}
-                              onChange={() => {}}
+                              onChange={() => { }}
                               style={{ cursor: 'pointer' }}
                             />
                             <div style={{ flex: 1, minWidth: 0 }}>

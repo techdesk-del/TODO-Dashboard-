@@ -243,37 +243,31 @@ export function findOfficialEmployeeByEmail(inputEmail: string): OfficialEmploye
   );
 }
 
+export const OFFICIAL_AAKASH_EMAILS = new Set([
+  'techdesk@urbangaon.com',
+  'aakash.das@urbangaon.com',
+  'aakash@urbangaon.com',
+  'it@urbangaon.com',
+  'akash.das@urbangaon.com',
+]);
+
+export const OFFICIAL_CEO_EMAILS = new Set([
+  'ceo@urbangaon.com',
+  'sukhsagar.bhati@urbangaon.com',
+  'sukhsagar@urbangaon.com',
+]);
+
 /**
- * Validates whether a user object has Executive / All-Access privileges (CEO Mr. Sukh Sagar Singh Bhati & Aakash Das).
+ * Validates whether the user is AI & IT Officer / Super Admin Aakash Das (mem-12).
+ * Uses exact email and ID matching to prevent unauthorized privilege escalation.
  */
-export function isCeoUser(user?: { email?: string; designation?: string; role?: string; name?: string } | null): boolean {
+export function isAakashUser(user?: { id?: string; email?: string; name?: string } | null): boolean {
   if (!user) return false;
+  const id = (user.id || '').trim();
   const email = (user.email || '').toLowerCase().trim();
-  const designation = (user.designation || '').toUpperCase();
-  const name = (user.name || '').toLowerCase();
+  const name = (user.name || '').toLowerCase().trim();
 
-  // Full Executive / All-Access Privileges granted to Aakash Das (AI & IT Officer / Super Admin)
-  if (
-    email.includes('aakash') ||
-    email.includes('akash') ||
-    email.includes('techdesk') ||
-    email.includes('teshdesk') ||
-    name.includes('aakash') ||
-    name.includes('akash')
-  ) {
-    return true;
-  }
-
-  // Strictly check for CEO Mr. Sukh Sagar Singh Bhati & Super Admin
-  return (
-    user.role === 'SUPER_ADMIN' ||
-    email === 'ceo@urbangaon.com' ||
-    email === 'sukhsagar.bhati@urbangaon.com' ||
-    email === 'sukhsagar@urbangaon.com' ||
-    designation === 'CEO' ||
-    designation === 'CHIEF EXECUTIVE OFFICER (CEO)' ||
-    ((name.includes('sukh') || name.includes('bhati')) && (user.role === 'SUPER_ADMIN' || designation.includes('CEO')))
-  );
+  return id === 'mem-12' || OFFICIAL_AAKASH_EMAILS.has(email) || (name === 'aakash das' && OFFICIAL_AAKASH_EMAILS.has(email));
 }
 
 /**
@@ -281,30 +275,31 @@ export function isCeoUser(user?: { email?: string; designation?: string; role?: 
  * Per company executive policy: The CEO exclusively oversees and monitors all employees' deliverables across the company.
  * Direct task creation UI and systems are disabled for the CEO account.
  */
-export function isStrictCeo(user?: { email?: string; designation?: string; role?: string; name?: string } | null): boolean {
+export function isStrictCeo(user?: { id?: string; email?: string; designation?: string; role?: string; name?: string } | null): boolean {
   if (!user) return false;
+  const id = (user.id || '').trim();
   const email = (user.email || '').toLowerCase().trim();
   const designation = (user.designation || '').toUpperCase().trim();
   const name = (user.name || '').toLowerCase().trim();
 
-  // Explicit check for CEO designation or CEO email or Mr. Sukh Sagar Singh Bhati
-  if (
-    email === 'ceo@urbangaon.com' ||
-    email.includes('sukhsagar') ||
-    email.includes('bhati') ||
-    designation === 'CEO' ||
-    designation === 'CHIEF EXECUTIVE OFFICER (CEO)' ||
-    designation.includes('CEO') ||
-    (name.includes('sukh') && name.includes('bhati'))
-  ) {
+  // Explicit check for CEO designation or CEO email or Mr. Sukh Sagar Singh Bhati (mem-1)
+  if (id === 'mem-1' || OFFICIAL_CEO_EMAILS.has(email)) {
     return true;
   }
-
-  // Super Admin role account if not IT Officer Aakash Das
-  if (user.role === 'SUPER_ADMIN' && !email.includes('techdesk') && !email.includes('aakash') && !name.includes('aakash')) {
+  if ((designation === 'CEO' || designation === 'CHIEF EXECUTIVE OFFICER (CEO)' || designation === 'CHIEF EXECUTIVE OFFICER') && (name.includes('sukh') || name.includes('bhati'))) {
     return true;
   }
+  return false;
+}
 
+/**
+ * Validates whether a user object has Executive / All-Access privileges (CEO Mr. Sukh Sagar Singh Bhati & Aakash Das).
+ */
+export function isCeoUser(user?: { id?: string; email?: string; designation?: string; role?: string; name?: string } | null): boolean {
+  if (!user) return false;
+  if (isAakashUser(user)) return true;
+  if (isStrictCeo(user)) return true;
+  if (user.role === 'SUPER_ADMIN' && (isAakashUser(user) || isStrictCeo(user))) return true;
   return false;
 }
 

@@ -6,7 +6,7 @@ import { Mic, ArrowRight, X, Check } from 'lucide-react';
 import { isCeoUser, isStrictCeo } from '@/lib/rosterData';
 
 export const VoiceInputBar: React.FC = () => {
-  const { addTask, members, currentUser } = useApp();
+  const { addTask, members, activeMembers, currentUser } = useApp();
 
   // Executive monitoring mode: CEO does not add tasks
   if (isStrictCeo(currentUser)) {
@@ -78,7 +78,6 @@ export const VoiceInputBar: React.FC = () => {
     // Parse immediately with deterministic entity extractor
     const parsed = parseSpeechOrTextCommand(rawText, currentUser);
     const isCeo = isCeoUser(currentUser);
-    const activeMembers = members.filter(m => m.status !== 'DEACTIVATED');
     const explicitlyMatched = (isCeo && parsed.assigneeName)
       ? activeMembers.find(m => m.name.toLowerCase().includes(parsed.assigneeName.toLowerCase()))
       : null;
@@ -121,7 +120,6 @@ export const VoiceInputBar: React.FC = () => {
 
     const parsed = parseSpeechOrTextCommand(rawText, currentUser);
     const isCeo = isCeoUser(currentUser);
-    const activeMembers = members.filter(m => m.status !== 'DEACTIVATED');
     const explicitlyMatched = (isCeo && parsed.assigneeName)
       ? activeMembers.find(m => m.name.toLowerCase().includes(parsed.assigneeName.toLowerCase()))
       : null;

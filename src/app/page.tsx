@@ -33,6 +33,7 @@ export default function Home() {
     viewingAuditForTaskId,
     currentUser,
     members,
+    activeMembers,
     isCreateTaskModalOpen,
     setIsCreateTaskModalOpen,
     isExportModalOpen,
@@ -349,7 +350,7 @@ export default function Home() {
                         title="Select an employee to isolate and monitor their corporate deliverables"
                       >
                         <option value="ALL">🏢 All Monitored Staff ({tasks.filter(t => t.status !== 'Cancelled').length} tasks)</option>
-                        {members.filter(m => !isStrictCeo(m) && m.status !== 'DEACTIVATED').map(emp => (
+                        {activeMembers.filter(m => !isStrictCeo(m)).map(emp => (
                           <option key={emp.id} value={emp.id}>
                             👤 {emp.name} ({emp.department})
                           </option>
