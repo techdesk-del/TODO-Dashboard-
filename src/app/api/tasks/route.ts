@@ -9,6 +9,7 @@ import connectDB from '@/lib/db';
 import { TaskModel } from '@/models/Task';
 import { MemberModel } from '@/models/Member';
 import { AuditLogModel } from '@/models/AuditLog';
+import { InAppNotificationModel } from '@/models/InAppNotification';
 import { INITIAL_TASKS, INITIAL_MEMBERS } from '@/lib/mockData';
 import { broadcastTaskMutation, isTaskDeleted, unmarkTaskDeleted, globalDeletedTaskIds } from '@/lib/events';
 import { sendTaskAssignmentEmail } from '@/lib/email';
@@ -215,6 +216,8 @@ export async function POST(req: NextRequest) {
     // Flowchart 6: "Audit log entry created"
     const creatorName = taskPayload.creator?.name || 'Employee';
     const creatorRole = taskPayload.creator?.role || 'EMPLOYEE';
+    const creatorEmail = (taskPayload.creator?.email || req.headers.get('x-user-email') || '').toLowerCase().trim();
+
     await AuditLogModel.create({
       id: `audit-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       timestamp: new Date().toISOString(),
@@ -231,21 +234,55 @@ export async function POST(req: NextRequest) {
       notes: `Task created via Flowchart 6 lifecycle. Initial Status: ${savedTask.status}. Project: ${savedTask.project}, Dept: ${savedTask.department}, Location: ${savedTask.location}${savedTask.pastDueReason ? `. Past due justification: ${savedTask.pastDueReason}` : ''}`,
     }).catch(err => console.error('[API/tasks POST AuditLog]', err));
 
-    // Flowchart 6: "Send instant in-app and email notification to all assignees"
-    sendTaskAssignmentEmail({
-      taskTitle: savedTask.title,
-      taskId: savedTask.id,
-      assignees: normalizedAssignees.map((a: any) => ({ name: a.name, email: a.email })),
-      creatorName: creatorName,
-      creatorRole: creatorRole,
-      priority: savedTask.priority,
-      scheduledDate: savedTask.scheduledDate,
-      department: savedTask.department,
-      project: savedTask.project,
-      location: savedTask.location,
-      notes: savedTask.notes || savedTask.description,
-      pastDueReason: savedTask.pastDueReason,
-    }).catch(err => console.error('[API/tasks POST Email]', err));
+    // Deduplicate assignees by email
+    const seenAssigneeEmails = new Set<string>();
+    const uniqueAssignees: Array<{ name: string; email: string }> = [];
+    for (const a of normalizedAssignees) {
+      const email = (a.email || '').toLowerCase().trim();
+      if (email && !seenAssigneeEmails.has(email)) {
+        seenAssigneeEmails.add(email);
+        uniqueAssignees.push({ name: a.name || 'Team Member', email });
+      }
+    }
+
+    // In-app notifications for all assigned team members
+    for (const assignee of uniqueAssignees) {
+      InAppNotificationModel.create({
+        id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        recipientEmail: assignee.email,
+        recipientName: assignee.name,
+        title: `New Deliverable: "${savedTask.title}"`,
+        message: `Assigned by ${creatorName} • Priority: ${savedTask.priority} • Scheduled: ${savedTask.scheduledDate}`,
+        type: 'TASK_ASSIGNED',
+        taskId: savedTask.id,
+        read: false,
+        createdAt: new Date().toISOString(),
+      }).catch(err => console.debug('[InAppNotification Create Error]', err));
+    }
+
+    // Rule: When assigning to someone else (or Both), notify only the other assigned member(s).
+    // The creator only receives a notification if the deliverable is solely self-assigned.
+    const otherAssignees = uniqueAssignees.filter(a => a.email !== creatorEmail);
+    const assigneesToEmail = otherAssignees.length > 0 ? otherAssignees : uniqueAssignees;
+
+    if (assigneesToEmail.length > 0) {
+      sendTaskAssignmentEmail({
+        taskTitle: savedTask.title,
+        taskId: savedTask.id,
+        assignees: assigneesToEmail,
+        creatorName: creatorName,
+        creatorRole: creatorRole,
+        creatorEmail: creatorEmail,
+        priority: savedTask.priority,
+        scheduledDate: savedTask.scheduledDate,
+        time: savedTask.time,
+        department: savedTask.department,
+        project: savedTask.project,
+        location: savedTask.location,
+        notes: savedTask.notes || savedTask.description,
+        pastDueReason: savedTask.pastDueReason,
+      }).catch(err => console.error('[API/tasks POST Email]', err));
+    }
 
     // Broadcast instant real-time event to all connected devices worldwide
     broadcastTaskMutation({

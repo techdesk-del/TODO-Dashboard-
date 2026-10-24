@@ -1090,115 +1090,222 @@ export interface SendTaskAssignmentOptions {
 }
 
 export async function sendTaskAssignmentEmail(opts: SendTaskAssignmentOptions) {
-  const recipients = opts.assignees && opts.assignees.length > 0
+  const rawRecipients = opts.assignees && opts.assignees.length > 0
     ? opts.assignees
     : [{ name: opts.toName || 'Team Member', email: opts.toEmail || 'user@urbangaon.com' }];
 
-  const from = process.env.SMTP_FROM || '"UrbanGaon Task Dispatcher" <tasks@urbangaon.com>';
-  const loginUrl = opts.loginUrl || process.env.NEXTAUTH_URL || 'http://localhost:3000';
-  const priorityColor = opts.priority === 'URGENT' ? '#dc2626' : opts.priority === 'HIGH' ? '#ea580c' : '#2563eb';
+  const creatorEmail = (opts.creatorEmail || '').toLowerCase().trim();
+  const seenEmails = new Set<string>();
+
+  // If there are other assignees besides the creator, suppress sending email to the creator
+  const hasOtherAssignees = rawRecipients.some(r => {
+    const email = (r.email || '').toLowerCase().trim();
+    return email && email.includes('@') && email !== creatorEmail;
+  });
+
+  const recipients = rawRecipients.filter(r => {
+    const email = (r.email || '').toLowerCase().trim();
+    if (!email || !email.includes('@')) return false;
+    if (seenEmails.has(email)) return false;
+    // Suppress email to creator if other team members are assigned
+    if (hasOtherAssignees && creatorEmail && email === creatorEmail) return false;
+    seenEmails.add(email);
+    return true;
+  });
+
+  if (recipients.length === 0) {
+    console.log(`[Task Assignment Email] Zero valid recipients to notify for deliverable "${opts.taskTitle}". Skipping email dispatch.`);
+    return { success: true, count: 0 };
+  }
+
+  const from = process.env.SMTP_FROM || '"UrbanGaon Task Operations" <techdesk@urbangaon.com>';
+  const appBase = opts.loginUrl || process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : '') || 'https://todo-dashboard-rhvx.vercel.app';
+  const taskDirectLink = opts.taskId ? `${appBase}/?taskId=${encodeURIComponent(opts.taskId)}` : appBase;
   const executionTime = opts.time || '09:00 AM';
+
+  const priorityBg = opts.priority === 'URGENT' ? '#fee2e2' : opts.priority === 'HIGH' ? '#ffedd5' : opts.priority === 'LOW' ? '#f1f5f9' : '#eff6ff';
+  const priorityColor = opts.priority === 'URGENT' ? '#dc2626' : opts.priority === 'HIGH' ? '#ea580c' : opts.priority === 'LOW' ? '#475569' : '#2563eb';
+  const priorityBorder = opts.priority === 'URGENT' ? '#fca5a5' : opts.priority === 'HIGH' ? '#fdba74' : opts.priority === 'LOW' ? '#cbd5e1' : '#bfdbfe';
+  const priorityBarColor = opts.priority === 'URGENT' ? '#dc2626' : opts.priority === 'HIGH' ? '#ea580c' : opts.priority === 'LOW' ? '#64748b' : '#2563eb';
+
+  let sentCount = 0;
 
   try {
     const { transporter } = await createEmailTransporter();
+
     for (const recipient of recipients) {
       if (!recipient.email) continue;
+
+      const recipientEmail = (recipient.email || '').toLowerCase().trim();
+      const creatorEmail = (opts.creatorEmail || '').toLowerCase().trim();
+      const isSelfAssigned = (Boolean(creatorEmail) && recipientEmail === creatorEmail) ||
+        (Boolean(opts.creatorName) && Boolean(recipient.name) && opts.creatorName.toLowerCase().trim() === recipient.name.toLowerCase().trim());
+
+      const subject = isSelfAssigned
+        ? `[UrbanGaon] Deliverable Added: "${opts.taskTitle}" [${opts.priority}]`
+        : `[UrbanGaon] New Deliverable Assigned: "${opts.taskTitle}" [${opts.priority}]`;
+
+      const headerSubtitle = isSelfAssigned
+        ? `Operational Deliverable Scheduled • Personal Workspace`
+        : `Corporate Deliverable Assignment • Operations Management`;
+
+      const formattedRole = opts.creatorRole
+        ? opts.creatorRole.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())
+        : '';
+
+      const introHtml = isSelfAssigned
+        ? `<p style="margin: 0 0 16px 0;">You have successfully scheduled a new operational deliverable in your UrbanGaon workspace.</p>`
+        : `<p style="margin: 0 0 16px 0;"><strong>${opts.creatorName}</strong>${formattedRole ? ` (${formattedRole})` : ''} has assigned a new operational deliverable to you in the UrbanGaon workspace.</p>`;
+
       const html = `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${opts.taskTitle}</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 24px; }
-    .container { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.06); }
-    .header { background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); padding: 24px; color: #ffffff; }
-    .title { font-size: 18px; font-weight: 800; margin: 0; }
-    .content { padding: 24px; font-size: 13px; line-height: 1.6; }
-    .detail-card { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px; margin: 16px 0; }
-    .row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 12px; }
-    .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-weight: 800; font-size: 11px; color: #ffffff; background: ${priorityColor}; }
-    .cta-btn { display: inline-block; background: #2563eb; color: #ffffff !important; padding: 12px 24px; border-radius: 6px; font-weight: 700; text-decoration: none; font-size: 13px; margin-top: 16px; }
-    .footer { background: #f1f5f9; padding: 14px 24px; font-size: 11px; color: #64748b; text-align: center; }
+    body { margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; color: #1e293b; -webkit-font-smoothing: antialiased; }
+    .email-container { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #cbd5e1; overflow: hidden; box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08); }
+    .email-header { background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); padding: 26px 28px; color: #ffffff; border-bottom: 3px solid #d97706; }
+    .brand-title { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; color: #ffffff; margin: 0; }
+    .brand-subtitle { font-size: 12px; color: #93c5fd; margin-top: 4px; font-weight: 500; letter-spacing: 0.02em; }
+    .email-body { padding: 28px; font-size: 14px; line-height: 1.6; color: #334155; }
+    .greeting { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
+    .task-card { background: #f8fafc; border: 1px solid #e2e8f0; border-top: 4px solid ${priorityBarColor}; border-radius: 8px; padding: 20px; margin: 20px 0; }
+    .task-title { font-size: 16px; font-weight: 800; color: #0f172a; margin-bottom: 14px; line-height: 1.4; }
+    .meta-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .meta-table td { padding: 6px 0; vertical-align: top; }
+    .meta-label { color: #64748b; font-weight: 500; width: 38%; }
+    .meta-value { color: #0f172a; font-weight: 700; text-align: right; }
+    .priority-badge { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; background: ${priorityBg}; color: ${priorityColor}; border: 1px solid ${priorityBorder}; }
+    .status-badge { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+    .callout-box { background: #eff6ff; border-left: 3px solid #2563eb; border-radius: 4px; padding: 10px 14px; margin-top: 14px; font-size: 12px; color: #1e40af; }
+    .warning-box { background: #fff7ed; border-left: 3px solid #ea580c; border-radius: 4px; padding: 10px 14px; margin-top: 14px; font-size: 12px; color: #9a3412; }
+    .cta-container { text-align: center; margin-top: 24px; }
+    .cta-button { display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff !important; padding: 12px 28px; border-radius: 6px; font-weight: 700; font-size: 14px; text-decoration: none; box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3); }
+    .email-footer { background: #f8fafc; padding: 18px 24px; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0; text-align: center; line-height: 1.5; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <div class="title">📌 New Corporate Deliverable Assigned</div>
-      <div style="font-size: 12px; color: #93c5fd; margin-top: 4px;">Assigned by ${opts.creatorName} • Flowchart 6</div>
+  <div class="email-container">
+    <div class="email-header">
+      <div class="brand-title">UrbanGaon Intelligent Todo Platform</div>
+      <div class="brand-subtitle">${headerSubtitle}</div>
     </div>
-    <div class="content">
-      <p style="margin: 0 0 14px 0;">
-        Hello <strong>${recipient.name}</strong>,<br>
-        You have been designated as an assignee on a new corporate task in the UrbanGaon Enterprise platform.
-      </p>
+    <div class="email-body">
+      <div class="greeting">Dear ${recipient.name},</div>
+      ${introHtml}
 
-      <div class="detail-card">
-        <div style="font-size: 15px; font-weight: 800; color: #0f172a; margin-bottom: 12px;">
-          ${opts.taskTitle}
-        </div>
-        ${opts.taskDescription ? `<div style="font-size: 12px; color: #475569; margin-bottom: 12px;">${opts.taskDescription}</div>` : ''}
+      <div class="task-card">
+        <div class="task-title">${opts.taskTitle}</div>
+        ${opts.taskDescription ? `<p style="margin: 0 0 14px 0; font-size: 13px; color: #475569;">${opts.taskDescription}</p>` : ''}
 
-        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+        <table class="meta-table">
           <tr>
-            <td style="padding: 4px 0; color: #64748b;">Execution Target:</td>
-            <td style="padding: 4px 0; font-weight: 700; text-align: right;">${opts.scheduledDate} at ${executionTime}</td>
+            <td class="meta-label">📅 Target Deadline:</td>
+            <td class="meta-value">${opts.scheduledDate} at ${executionTime}</td>
           </tr>
           <tr>
-            <td style="padding: 4px 0; color: #64748b;">Priority Level:</td>
-            <td style="padding: 4px 0; text-align: right;"><span class="badge">${opts.priority}</span></td>
+            <td class="meta-label">⚡ Priority Level:</td>
+            <td class="meta-value"><span class="priority-badge">${opts.priority}</span></td>
           </tr>
           <tr>
-            <td style="padding: 4px 0; color: #64748b;">Department:</td>
-            <td style="padding: 4px 0; font-weight: 600; text-align: right;">${opts.department}</td>
+            <td class="meta-label">🔄 Initial Status:</td>
+            <td class="meta-value"><span class="status-badge">Not Started</span></td>
+          </tr>
+          <tr>
+            <td class="meta-label">🏢 Department:</td>
+            <td class="meta-value">${opts.department}</td>
           </tr>
           ${opts.project ? `
           <tr>
-            <td style="padding: 4px 0; color: #64748b;">Project:</td>
-            <td style="padding: 4px 0; font-weight: 600; text-align: right;">${opts.project}</td>
+            <td class="meta-label">📁 Project:</td>
+            <td class="meta-value">${opts.project}</td>
           </tr>` : ''}
           ${opts.location ? `
           <tr>
-            <td style="padding: 4px 0; color: #64748b;">Location:</td>
-            <td style="padding: 4px 0; font-weight: 600; text-align: right;">${opts.location}</td>
-          </tr>` : ''}
-          ${opts.pastDueReason ? `
-          <tr>
-            <td style="padding: 4px 0; color: #b91c1c;">Backdated Reason:</td>
-            <td style="padding: 4px 0; font-weight: 600; text-align: right; color: #b91c1c;">${opts.pastDueReason}</td>
+            <td class="meta-label">📍 Location:</td>
+            <td class="meta-value">${opts.location}</td>
           </tr>` : ''}
         </table>
 
         ${opts.notes ? `
-        <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #cbd5e1; font-size: 11px; color: #475569;">
-          <strong>Notes:</strong> ${opts.notes}
+        <div class="callout-box">
+          <strong>📝 Instructions / Notes:</strong> ${opts.notes}
+        </div>` : ''}
+
+        ${opts.pastDueReason ? `
+        <div class="warning-box">
+          <strong>⚠️ Backdated Justification:</strong> ${opts.pastDueReason}
         </div>` : ''}
       </div>
 
-      <div style="text-align: center;">
-        <a href="${loginUrl}" class="cta-btn">Open Workspace to Begin →</a>
+      <div class="cta-container">
+        <a href="${taskDirectLink}" class="cta-button">Open Deliverable in Workspace →</a>
       </div>
     </div>
-    <div class="footer">
-      UrbanGaon Task Operations • Automated Notification • Flowchart 6 Compliance
+    <div class="email-footer">
+      UrbanGaon Technologies Private Limited • Operations Management System<br>
+      Automated dispatch sent to ${recipient.email}. Please log in to your workspace to update progress.
     </div>
   </div>
 </body>
 </html>
       `;
 
-      await transporter.sendMail({
-        from,
-        to: recipient.email,
-        subject: `📌 New Deliverable Assigned: ${opts.taskTitle} [${opts.priority}]`,
-        html,
-      });
-      console.log(`[Task Assignment Email] Dispatched to ${recipient.email} (${recipient.name}) for deliverable: "${opts.taskTitle}"`);
+      try {
+        await transporter.sendMail({
+          from,
+          to: recipient.email,
+          subject,
+          html,
+        });
+        sentCount++;
+        console.log(`[Task Assignment Email] ✓ Dispatched successfully to ${recipient.email} (${recipient.name}) for deliverable: "${opts.taskTitle}"`);
+
+        // Record successful dispatch in EmailLogModel
+        try {
+          const { EmailLogModel } = await import('@/models/EmailLog');
+          await EmailLogModel.create({
+            id: `elog-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+            recipientEmail: recipient.email.toLowerCase(),
+            recipientName: recipient.name,
+            eventType: 'TASK_ASSIGNED',
+            subject,
+            status: 'DELIVERED',
+            attempts: 1,
+            taskId: opts.taskId,
+            deliveredAt: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+          });
+        } catch {}
+      } catch (sendErr: any) {
+        console.warn(`[Task Assignment Email] ✗ Failed sending to ${recipient.email}:`, sendErr.message || sendErr);
+        // Record failure in EmailLogModel
+        try {
+          const { EmailLogModel } = await import('@/models/EmailLog');
+          await EmailLogModel.create({
+            id: `elog-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+            recipientEmail: recipient.email.toLowerCase(),
+            recipientName: recipient.name,
+            eventType: 'TASK_ASSIGNED',
+            subject,
+            status: 'FAILED',
+            attempts: 1,
+            lastError: sendErr.message || String(sendErr),
+            taskId: opts.taskId,
+            addedToAdminSummary: true,
+            createdAt: new Date().toISOString(),
+          });
+        } catch {}
+      }
     }
-    return { success: true };
-  } catch (err) {
-    console.warn('[Task Assignment Email] Dispatch error:', err);
-    return { success: false };
+
+    return { success: true, count: sentCount };
+  } catch (err: any) {
+    console.warn('[Task Assignment Email] Dispatcher error:', err.message || err);
+    return { success: false, error: err.message || String(err) };
   }
 }
 
@@ -1685,56 +1792,18 @@ export interface SendTaskAssignedOptions {
 
 export async function sendTaskAssignedEmail(opts: SendTaskAssignedOptions) {
   try {
-    const { transporter, isTestAccount } = await createEmailTransporter();
-    const from = process.env.SMTP_FROM || '"UrbanGaon Tasks" <alerts@urbangaon.com>';
-    const appBase = opts.baseUrl || process.env.NEXTAUTH_URL || 'http://localhost:3000';
-
-    const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 20px; }
-    .card { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-    .header { background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); padding: 22px; color: #ffffff; }
-    .content { padding: 24px; font-size: 14px; line-height: 1.6; }
-    .task-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 16px 0; }
-    .btn { display: inline-block; background: #2563eb; color: #ffffff !important; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 700; font-size: 13px; margin-top: 12px; }
-    .footer { background: #f1f5f9; padding: 14px 24px; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0; text-align: center; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <div class="header">
-      <div style="font-size: 18px; font-weight: 800;">UrbanGaon Task Register • Flowchart 20</div>
-      <div style="font-size: 12px; opacity: 0.9; margin-top: 2px;">New Deliverable Assignment</div>
-    </div>
-    <div class="content">
-      <p style="margin-top: 0;">Hello <strong>${opts.toName}</strong>,</p>
-      <p>A new deliverable has been assigned to you by <strong>${opts.assignedBy}</strong>:</p>
-      <div class="task-box">
-        <div style="font-size: 16px; font-weight: 800; color: #0f172a; margin-bottom: 6px;">${opts.taskTitle}</div>
-        <div style="font-size: 12px; color: #64748b;">
-          <strong>ID:</strong> #${opts.taskId} • <strong>Scheduled:</strong> ${opts.scheduledDate} at ${opts.time}<br>
-          <strong>Priority:</strong> ${opts.priority} • <strong>Department:</strong> ${opts.department}
-        </div>
-      </div>
-      <a href="${appBase}/?taskId=${opts.taskId}" class="btn">Open Deliverable in Workspace →</a>
-    </div>
-    <div class="footer">UrbanGaon Notification Engine • Flowchart 20 Compliance</div>
-  </div>
-</body>
-</html>`;
-
-    const info = await transporter.sendMail({
-      from,
-      to: opts.toEmail,
-      subject: `📋 New Deliverable Assigned: "${opts.taskTitle}" (#${opts.taskId})`,
-      html,
+    const res = await sendTaskAssignmentEmail({
+      assignees: [{ name: opts.toName, email: opts.toEmail }],
+      taskId: opts.taskId,
+      taskTitle: opts.taskTitle,
+      creatorName: opts.assignedBy,
+      scheduledDate: opts.scheduledDate,
+      time: opts.time,
+      priority: opts.priority,
+      department: opts.department,
+      loginUrl: opts.baseUrl,
     });
-
-    return { success: true, messageId: info.messageId, isTestAccount };
+    return { success: res.success, count: res.count };
   } catch (err) {
     console.warn('[Task Assigned Email Error]:', err);
     return { success: false, error: String(err) };

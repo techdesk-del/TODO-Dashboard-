@@ -246,6 +246,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setServerError(null);
 
     if (!validateForm()) {
@@ -282,11 +283,23 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
     };
 
     try {
-      const res = await fetch('/api/tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      let res: Response;
+      try {
+        res = await fetch('/api/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      } catch (networkErr) {
+        // Resilient auto-retry if dev server was briefly busy recompiling
+        console.warn('[CreateTaskModal] Initial network call interrupted, retrying...', networkErr);
+        await new Promise(r => setTimeout(r, 600));
+        res = await fetch('/api/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      }
 
       const data = await res.json();
 
@@ -299,8 +312,8 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
         return;
       }
 
-      // Optimistically update AppContext
-      addTask(data.data || payload);
+      // Optimistically update AppContext without firing redundant /api/tasks POST
+      addTask(data.data || payload, true);
 
       setBannerNotification({
         message: `Task "${title}" created with status "Not Started" & dispatched to ${finalAssignees.length} assignee(s).`,

@@ -46,7 +46,7 @@ interface AppContextType {
   auditLogs: AuditLogEntry[];
   systemConfig: SystemConfig;
   updateSystemConfig: (cfg: Partial<SystemConfig>) => void;
-  addTask: (newTask: Partial<Task>) => Task;
+  addTask: (newTask: Partial<Task>, skipApiSync?: boolean) => Task;
   updateTask: (taskId: string, updates: Partial<Task>, note?: string) => void;
   holdTask: (taskId: string, reason: string) => void;
   escalateTask: (taskId: string, reason: string, seniorLeader: string) => void;
@@ -734,7 +734,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  const addTask = (newTaskData: Partial<Task>): Task => {
+  const addTask = (newTaskData: Partial<Task>, skipApiSync: boolean = false): Task => {
     const createdDate = newTaskData.scheduledDate || selectedDate;
     const task: Task = {
       id: newTaskData.id || `task-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -815,24 +815,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     } catch {}
 
-    // Sync to MongoDB Atlas API with confirmation
-    fetch('/api/tasks', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(task)
-    })
-      .then(async res => {
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          console.error('[Tasks] MongoDB sync error:', errData);
-        } else {
-          const data = await res.json();
-          if (data?.data) {
-            setTasks(prev => prev.map(t => t.id === task.id ? { ...data.data, isJustAdded: false } : t));
-          }
-        }
+    // Sync to MongoDB Atlas API only if not already persisted by caller (e.g., CreateTaskModal)
+    if (!skipApiSync) {
+      fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(task)
       })
-      .catch(err => console.error('[Tasks] MongoDB sync failed:', err));
+        .then(async res => {
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            console.error('[Tasks] MongoDB sync error:', errData);
+          } else {
+            const data = await res.json();
+            if (data?.data) {
+              setTasks(prev => prev.map(t => t.id === task.id ? { ...data.data, isJustAdded: false } : t));
+            }
+          }
+        })
+        .catch(err => console.error('[Tasks] MongoDB sync failed:', err));
+    }
 
     logAudit({
       taskId: task.id,
@@ -849,30 +851,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       badge: `✓ Synchronized in ${task.aiMetadata?.extractionLatencyMs || 180}ms`
     });
 
-    // Flowchart 20: Event 1 — Task Assigned (Send instant in-app and email to assignee)
-    if (task.assignees && task.assignees.length > 0) {
-      fetch('/api/notifications/dispatch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          eventType: 'TASK_ASSIGNED',
-          recipients: task.assignees.map(a => ({ email: a.email, name: a.name })),
-          title: `New Deliverable Assigned: "${task.title}"`,
-          message: `Assigned by ${task.creator?.name || currentUser.name} • Scheduled for ${task.scheduledDate} at ${task.time}`,
-          taskId: task.id,
-          taskTitle: task.title,
-          metadata: {
-            scheduledDate: task.scheduledDate,
-            time: task.time,
-            priority: task.priority,
-            department: task.department,
-            assignedBy: task.creator?.name || currentUser.name,
-          }
-        })
-      })
-        .then(() => refreshNotifications())
-        .catch(err => console.debug('[FC20 Dispatch error]', err));
-    }
+    // Refresh notifications tray
+    refreshNotifications();
 
     return task;
   };
