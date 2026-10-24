@@ -876,21 +876,35 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
             zIndex: 10
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div style={{ background: '#eff6ff', padding: '9px', borderRadius: '10px', flexShrink: 0 }}>
-              <ShieldCheck size={22} color="#2563eb" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', minWidth: 0 }}>
+            {/* Official Homepage Brand Logo */}
+            <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+              <img
+                src="/urbangaon-logo.png"
+                alt="UrbanGaon — a perfect balance"
+                style={{
+                  height: 'clamp(26px, 3.5vw, 32px)',
+                  width: 'auto',
+                  maxWidth: 'clamp(120px, 20vw, 160px)',
+                  objectFit: 'contain',
+                  display: 'block'
+                }}
+              />
             </div>
-            <div>
-              <div style={{ fontSize: '1.02rem', fontWeight: 800, color: '#0f172a' }}>
-                {authMode === 'CHOOSER' && 'todo.urbangaon.com • Welcome Portal'}
+
+            <div style={{ width: '1px', height: '24px', backgroundColor: '#cbd5e1', flexShrink: 0 }} />
+
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {authMode === 'CHOOSER' && 'Welcome Portal'}
                 {authMode === 'INVITATION_INPUT' && 'Redeem Employee Invitation'}
                 {authMode === 'INVITATION_SETUP' && 'Password Setup & First Login'}
-                {authMode === 'REQUEST_ACCESS' && 'Employee Self Sign-Up Request'}
+                {authMode === 'REQUEST_ACCESS' && 'Employee Self Sign-Up'}
                 {authMode === 'LOGIN' && 'Corporate Employee Sign In'}
                 {authMode === 'FORGOT_REQUEST' && 'Reset / Set Personal Password'}
                 {authMode === 'FORGOT_VERIFY' && 'Verify Email & Set Password'}
               </div>
-              <div style={{ fontSize: '0.73rem', color: '#64748b' }}>
+              <div style={{ fontSize: '0.72rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {authMode === 'CHOOSER' && 'Select an onboarding or login option'}
                 {authMode === 'INVITATION_INPUT' && 'Enter your invitation code or email link to proceed'}
                 {authMode === 'INVITATION_SETUP' && 'Securely establish personal password'}
