@@ -15,6 +15,7 @@ import connectDB from '@/lib/db';
 import { TaskModel } from '@/models/Task';
 import { MemberModel } from '@/models/Member';
 import { AuditLogModel } from '@/models/AuditLog';
+import { SystemConfigModel } from '@/models/SystemConfig';
 import { sendMorningDigestEmail, sendAdminDigestSummaryEmail, ChronicDelayItem } from '@/lib/email';
 import { getTodayStr, formatDateDisplay } from '@/lib/dateUtils';
 import { isNonWorkingDay } from '@/lib/holidayData';
@@ -58,8 +59,19 @@ export async function runMorningDigest(options: DigestOptions = {}): Promise<Dig
   const todayStr = getTodayStr();
   const displayDate = formatDateDisplay(todayStr);
 
+  // Fetch configured working days from SystemConfig in MongoDB
+  let configuredWorkingDays: string[] | undefined = undefined;
+  try {
+    const cfgDoc = await SystemConfigModel.findOne({ key: 'global_system_config' }).lean();
+    if (cfgDoc?.config?.workingDays && Array.isArray(cfgDoc.config.workingDays)) {
+      configuredWorkingDays = cfgDoc.config.workingDays;
+    }
+  } catch (err) {
+    console.warn('[DigestEngine] Could not load system config from DB:', err);
+  }
+
   // Flowchart D: "Is today a working day?"
-  const nonWorking = isNonWorkingDay(todayStr);
+  const nonWorking = isNonWorkingDay(todayStr, configuredWorkingDays);
   const isForce = Boolean(options.force);
 
   if (nonWorking.isNonWorking && !isForce) {

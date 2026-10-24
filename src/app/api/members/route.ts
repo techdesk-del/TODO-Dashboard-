@@ -112,13 +112,8 @@ export async function POST(req: NextRequest) {
 
     const assignedEmpId = requestedEmpId || `EMP-${Math.floor(1000 + Math.random() * 9000)}`;
 
-    // Generate avatar initials if none provided
-    const initials = avatar || name
-      .split(' ')
-      .map((part: string) => part[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+    // Use official UrbanGaon employee emblem as default corporate avatar
+    const avatarBadge = avatar || '/urbangaon-employee-emblem.png';
 
     let memberRecord;
     if (existing && allowReactivate) {
@@ -129,7 +124,7 @@ export async function POST(req: NextRequest) {
       existing.phone = phone || existing.phone || '';
       existing.employeeId = assignedEmpId;
       existing.status = status;
-      if (initials) existing.avatar = initials;
+      if (avatarBadge) existing.avatar = avatarBadge;
       if (managerId) existing.managerId = managerId;
       if (manager) existing.manager = manager;
       if (managerEmail) existing.managerEmail = managerEmail;
@@ -146,7 +141,7 @@ export async function POST(req: NextRequest) {
         role,
         designation: designation.trim(),
         department: department.trim(),
-        avatar: initials,
+        avatar: avatarBadge,
         managerId: managerId || undefined,
         manager: manager || undefined,
         managerEmail: managerEmail || undefined,
@@ -198,7 +193,7 @@ export async function POST(req: NextRequest) {
             role,
             department: department.trim(),
             designation: designation.trim(),
-            avatar: initials,
+            avatar: avatarBadge,
             isTwoFactorEnabled: false,
             hasCustomPassword: false,
             status,

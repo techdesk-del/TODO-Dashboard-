@@ -162,10 +162,10 @@ export const AdminHrPortal: React.FC = () => {
         setRetryBanner(`✓ Dispatched retry email to ${log.recipientEmail}`);
         fetchEmailLogs();
       } else {
-        setRetryBanner(`❌ Retry failed: HTTP ${res.status}`);
+        setRetryBanner(`Retry failed: HTTP ${res.status}`);
       }
     } catch (err: any) {
-      setRetryBanner(`❌ Retry error: ${err.message}`);
+      setRetryBanner(`Retry error: ${err.message}`);
     } finally {
       setRetryingEmailId(null);
     }
@@ -799,6 +799,7 @@ export const AdminHrPortal: React.FC = () => {
         department: newUserDept,
         designation: newUserDesignation.trim(),
         role: 'EMPLOYEE',
+        avatar: '/urbangaon-employee-emblem.png',
         managerId: selectedManager?.id,
         manager: selectedManager?.name,
         managerEmail: selectedManager?.email,
@@ -956,7 +957,7 @@ export const AdminHrPortal: React.FC = () => {
           bc.close();
         }
       } catch {}
-      setApprovalBanner(`⚠️ Failed to approve ${req.name}: ${err instanceof Error ? err.message : 'Network error'}. Request restored.`);
+      setApprovalBanner(`Failed to approve ${req.name}: ${err instanceof Error ? err.message : 'Network error'}. Request restored.`);
       setTimeout(() => setApprovalBanner(null), 8000);
     } finally {
       setApprovingId(null);
@@ -1031,7 +1032,7 @@ export const AdminHrPortal: React.FC = () => {
           }
         } catch {}
       }
-      setApprovalBanner(`⚠️ Could not reject ${name}: ${err instanceof Error ? err.message : 'Network error'}.`);
+      setApprovalBanner(`Could not reject ${name}: ${err instanceof Error ? err.message : 'Network error'}.`);
       setTimeout(() => setApprovalBanner(null), 8000);
     } finally {
       setRejectingId(null);
@@ -1136,10 +1137,10 @@ export const AdminHrPortal: React.FC = () => {
         {/* Quick Enterprise Badges */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '0.3rem 0.65rem', borderRadius: '6px', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
-            🏢 7 Master Depts
+            7 Master Depts
           </span>
           <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '0.3rem 0.65rem', borderRadius: '6px', background: '#f8fafc', color: '#334155', border: '1px solid #cbd5e1' }}>
-            👥 {activeMembers.length} Active Staff
+            {activeMembers.length} Active Staff
           </span>
           {pendingRequests.length > 0 && (
             <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '0.3rem 0.65rem', borderRadius: '6px', background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a' }}>
@@ -1270,7 +1271,7 @@ export const AdminHrPortal: React.FC = () => {
                           setIsUserDropdownOpen(false);
                         }}
                       >
-                        🏢 ALL EMPLOYEES — Full Company Overview ({tasks.length} Deliverables)
+                        ALL EMPLOYEES — Full Company Overview ({tasks.length} Deliverables)
                       </div>
                       {searchMatchedMembers.map(m => (
                         <div
@@ -1317,7 +1318,7 @@ export const AdminHrPortal: React.FC = () => {
               {/* 2. Flowchart A: "Filter by department or reporting manager" */}
               <div className="admin-filter-control-item">
                 <label className="admin-filter-label">
-                  🏢 DEPARTMENT FILTER:
+                  DEPARTMENT FILTER:
                 </label>
                 <select
                   className="form-select"
@@ -1343,7 +1344,7 @@ export const AdminHrPortal: React.FC = () => {
 
               <div className="admin-filter-control-item">
                 <label className="admin-filter-label">
-                  👔 REPORTING MANAGER FILTER:
+                  REPORTING MANAGER FILTER:
                 </label>
                 <select
                   className="form-select"
@@ -1575,12 +1576,12 @@ export const AdminHrPortal: React.FC = () => {
                             </div>
                         {t.holdReason && (
                           <div style={{ fontSize: '0.68rem', color: '#b45309', background: '#fef3c7', padding: '2px 6px', borderRadius: '4px', marginTop: '6px', display: 'inline-block' }}>
-                            ⏸️ Hold: {t.holdReason}
+                            Hold: {t.holdReason}
                           </div>
                         )}
                         {t.escalationReason && (
                           <div style={{ fontSize: '0.68rem', color: '#b91c1c', background: '#fee2e2', padding: '2px 6px', borderRadius: '4px', marginTop: '6px', display: 'inline-block' }}>
-                            🚨 Escalated to {t.escalatedTo || 'Senior Leadership'}: {t.escalationReason}
+                            Escalated to {t.escalatedTo || 'Senior Leadership'}: {t.escalationReason}
                           </div>
                         )}
                           </div>
@@ -1998,7 +1999,7 @@ export const AdminHrPortal: React.FC = () => {
             {/* Visual Trends Breakdown Bar */}
             <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1rem' }}>
               <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.85rem', fontWeight: 800, color: '#0f172a' }}>
-                📊 Operational Distribution
+                Operational Distribution
               </h4>
               <div style={{ display: 'flex', height: '14px', borderRadius: '6px', overflow: 'hidden', background: '#f1f5f9', marginBottom: '0.75rem' }}>
                 <div style={{ width: `${reportMetrics.totalCount ? (reportMetrics.totalCompleted / reportMetrics.totalCount) * 100 : 0}%`, background: '#22c55e' }} title={`Completed: ${reportMetrics.totalCompleted}`} />
@@ -2029,7 +2030,7 @@ export const AdminHrPortal: React.FC = () => {
             {/* Reschedule Count Per Person Leaderboard */}
             <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1rem' }}>
               <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.85rem', fontWeight: 800, color: '#0f172a' }}>
-                🔄 Reschedule Count Per Person
+                Reschedule Count Per Person
               </h4>
               <div style={{ maxHeight: '110px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 {Object.entries(reportMetrics.rescheduleMap).length === 0 ? (
@@ -2223,7 +2224,7 @@ export const AdminHrPortal: React.FC = () => {
                 <div>
                   <span style={{ color: '#64748b' }}>Admin Intervention:</span>
                   <div style={{ fontWeight: 700, color: taskToView.editedByAdmin ? '#1d4ed8' : '#64748b' }}>
-                    {taskToView.editedByAdmin ? '🛡️ Edited by Admin' : 'Standard'}
+                    {taskToView.editedByAdmin ? 'Edited by Admin' : 'Standard'}
                   </div>
                 </div>
               </div>
@@ -2248,13 +2249,13 @@ export const AdminHrPortal: React.FC = () => {
 
               {taskToView.holdReason && (
                 <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '6px', padding: '0.65rem', fontSize: '0.75rem', color: '#b45309' }}>
-                  <strong>⏸️ Hold Reason:</strong> {taskToView.holdReason}
+                  <strong>Hold Reason:</strong> {taskToView.holdReason}
                 </div>
               )}
 
               {taskToView.escalationReason && (
                 <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.65rem', fontSize: '0.75rem', color: '#b91c1c' }}>
-                  <strong>🚨 Escalation Reason:</strong> {taskToView.escalationReason} (Escalated to: {taskToView.escalatedTo || 'Leadership'})
+                  <strong>Escalation Reason:</strong> {taskToView.escalationReason} (Escalated to: {taskToView.escalatedTo || 'Leadership'})
                 </div>
               )}
 
@@ -2329,9 +2330,21 @@ export const AdminHrPortal: React.FC = () => {
           <div className="admin-form-card">
             {/* Header info */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid #f1f5f9', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                <div style={{ background: '#eff6ff', padding: '0.5rem', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <UserPlus size={18} color="#2563eb" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '50%',
+                  background: '#3085d6',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '2px solid #bfdbfe',
+                  boxShadow: '0 2px 8px rgba(48,133,214,0.25)',
+                  flexShrink: 0,
+                  overflow: 'hidden'
+                }}>
+                  <img src="/urbangaon-employee-emblem.png" alt="UrbanGaon" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%', display: 'block' }} />
                 </div>
                 <div>
                   <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
@@ -2378,7 +2391,7 @@ export const AdminHrPortal: React.FC = () => {
                     color: '#1f2937'
                   }}>
                     <div style={{ fontWeight: 800, color: '#15803d', marginBottom: '4px' }}>
-                      🎟️ Generated One-Time Set-Password Activation Credentials:
+                      Generated One-Time Set-Password Activation Credentials:
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 12px', marginBottom: '8px' }}>
                       <span style={{ color: '#64748b', fontWeight: 600 }}>Employee ID:</span>
@@ -2533,7 +2546,7 @@ export const AdminHrPortal: React.FC = () => {
                         padding: 0
                       }}
                     >
-                      🎲 Auto-Generate ID
+                      Auto-Generate ID
                     </button>
                   </div>
                   <div className="admin-input-wrapper">
@@ -2632,6 +2645,44 @@ export const AdminHrPortal: React.FC = () => {
                     </select>
                   </div>
                 </div>
+
+                {/* Official Corporate Avatar Badge */}
+                <div className="form-field-group" style={{ gridColumn: 'span 2' }}>
+                  <label className="form-field-label">Official Corporate Avatar Badge</label>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    background: '#f8fafc',
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    border: '1.5px solid #cbd5e1'
+                  }}>
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
+                      background: '#3085d6',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '2px solid #3085d6',
+                      boxShadow: '0 2px 8px rgba(48,133,214,0.25)',
+                      flexShrink: 0,
+                      overflow: 'hidden'
+                    }}>
+                      <img src="/urbangaon-employee-emblem.png" alt="UrbanGaon Logo" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%', display: 'block' }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a' }}>
+                        UrbanGaon Official Brand Emblem
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                        This official UrbanGaon blue house brand emblem will be assigned as the corporate identity avatar for this account.
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Status Note & Form Actions */}
@@ -2699,9 +2750,9 @@ export const AdminHrPortal: React.FC = () => {
             {/* Live Employee ID Card Preview */}
             <div className="corporate-id-badge-card">
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.12)', paddingBottom: '0.65rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#38bdf8', boxShadow: '0 0 8px #38bdf8' }} />
-                  <span style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.08em', color: '#94a3b8', textTransform: 'uppercase' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <img src="/urbangaon-employee-emblem.png" alt="UrbanGaon" style={{ width: '22px', height: '22px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.4)', objectFit: 'cover' }} />
+                  <span style={{ fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.08em', color: '#f1f5f9', textTransform: 'uppercase' }}>
                     UrbanGaon Corporate ID
                   </span>
                 </div>
@@ -2712,23 +2763,19 @@ export const AdminHrPortal: React.FC = () => {
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.1rem' }}>
                 <div style={{
-                  width: '54px',
-                  height: '54px',
+                  width: '56px',
+                  height: '56px',
                   borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-                  color: '#ffffff',
-                  fontWeight: 800,
-                  fontSize: '1.15rem',
+                  background: '#3085d6',
+                  border: '2.5px solid rgba(255,255,255,0.4)',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                  flexShrink: 0,
+                  overflow: 'hidden',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  border: '2px solid rgba(255,255,255,0.3)',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
-                  flexShrink: 0
+                  justifyContent: 'center'
                 }}>
-                  {newUserName.trim()
-                    ? newUserName.trim().split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2)
-                    : 'UG'}
+                  <img src="/urbangaon-employee-emblem.png" alt="UrbanGaon Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%', display: 'block' }} />
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ fontSize: '0.98rem', fontWeight: 800, color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -2919,9 +2966,9 @@ export const AdminHrPortal: React.FC = () => {
 
           {approvalBanner && (
             <div style={{
-              background: approvalBanner.includes('⚠️') ? '#fef2f2' : approvalBanner.includes('⏳') ? '#eff6ff' : '#f0fdf4',
-              border: `1px solid ${approvalBanner.includes('⚠️') ? '#fca5a5' : approvalBanner.includes('⏳') ? '#bfdbfe' : '#86efac'}`,
-              color: approvalBanner.includes('⚠️') ? '#991b1b' : approvalBanner.includes('⏳') ? '#1e40af' : '#166534',
+              background: approvalBanner.includes('') ? '#fef2f2' : approvalBanner.includes('⏳') ? '#eff6ff' : '#f0fdf4',
+              border: `1px solid ${approvalBanner.includes('') ? '#fca5a5' : approvalBanner.includes('⏳') ? '#bfdbfe' : '#86efac'}`,
+              color: approvalBanner.includes('') ? '#991b1b' : approvalBanner.includes('⏳') ? '#1e40af' : '#166534',
               padding: '0.85rem 1rem',
               borderRadius: '8px',
               fontSize: '0.82rem',
@@ -2935,7 +2982,7 @@ export const AdminHrPortal: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 {approvalBanner.includes('⏳') ? (
                   <RefreshCw size={16} className="spin" style={{ flexShrink: 0 }} />
-                ) : approvalBanner.includes('⚠️') ? (
+                ) : approvalBanner.includes('') ? (
                   <AlertCircle size={16} color="#dc2626" style={{ flexShrink: 0 }} />
                 ) : (
                   <CheckCircle2 size={16} color="#16a34a" style={{ flexShrink: 0 }} />
@@ -3336,9 +3383,9 @@ export const AdminHrPortal: React.FC = () => {
                         marginBottom: '10px'
                       }}>
                         {[
-                          { id: 'Resignation', label: '🚪 Resignation', desc: 'Voluntary separation' },
-                          { id: 'Termination', label: '⛔ Termination', desc: 'Direct separation' },
-                          { id: 'Long leave', label: '🌴 Long Leave', desc: 'Extended sabbatical' },
+                          { id: 'Resignation', label: 'Resignation', desc: 'Voluntary separation' },
+                          { id: 'Termination', label: 'Termination', desc: 'Direct separation' },
+                          { id: 'Long leave', label: 'Long Leave', desc: 'Extended sabbatical' },
                         ].map(type => {
                           const isSelected = deactivationType === type.id;
                           return (
@@ -3388,7 +3435,7 @@ export const AdminHrPortal: React.FC = () => {
                               />
                             </div>
                             <div style={{ fontSize: '0.7rem', color: '#b45309', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '6px', padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span>🔒</span>
+                              
                               <span><strong>Protocol:</strong> Block login immediately after last working day ({lastWorkingDay}). Deliverables reassigned.</span>
                             </div>
                           </div>
@@ -3412,7 +3459,7 @@ export const AdminHrPortal: React.FC = () => {
                               />
                             </div>
                             <div style={{ fontSize: '0.7rem', color: '#991b1b', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span>⛔</span>
+                              
                               <span><strong>Protocol:</strong> Block login immediately after effective date ({effectiveDate}). Session terminated.</span>
                             </div>
                           </div>
@@ -3450,7 +3497,7 @@ export const AdminHrPortal: React.FC = () => {
                             </div>
                           </div>
                           <div style={{ fontSize: '0.7rem', color: '#166534', background: '#dcfce7', border: '1px solid #86efac', borderRadius: '6px', padding: '6px 8px', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span>🌴</span>
+                            
                             <span><strong>Protocol:</strong> Mark On Leave, block login until return date ({leaveEndDate || 'Indefinite'}). Tasks reallocated.</span>
                           </div>
                         </div>
@@ -3546,107 +3593,207 @@ export const AdminHrPortal: React.FC = () => {
                   </form>
                 </div>
 
-                {/* Right Card: Tasks Being Transferred */}
-                <div style={{
-                  background: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '10px',
-                  padding: '1.25rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.75rem'
-                }}>
+                {/* Right Column: Tasks to Transfer & Governance Audit Summary */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {/* Right Card 1: Tasks Being Transferred */}
                   <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    paddingBottom: '0.5rem',
-                    borderBottom: '1px solid #f1f5f9'
-                  }}>
-                    <div>
-                      <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>
-                        Tasks to Transfer ({departingActiveTasks.length})
-                      </div>
-                      <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                        From {departingMember?.name?.split(' ')[0] || 'Staff'} ➔ {successorMember?.name?.split(' ')[0] || 'Successor'}
-                      </div>
-                    </div>
-                    <span style={{
-                      fontSize: '0.68rem',
-                      fontWeight: 700,
-                      background: departingActiveTasks.length > 0 ? '#fef3c7' : '#dcfce7',
-                      color: departingActiveTasks.length > 0 ? '#92400e' : '#166534',
-                      padding: '2px 7px',
-                      borderRadius: '999px'
-                    }}>
-                      {departingActiveTasks.length} active
-                    </span>
-                  </div>
-
-                  {/* Clean, compact task cards */}
-                  <div style={{
+                    background: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '10px',
+                    padding: '1.25rem',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '0.5rem',
-                    maxHeight: '420px',
-                    overflowY: 'auto',
-                    paddingRight: '4px'
+                    gap: '0.75rem'
                   }}>
-                    {departingActiveTasks.map(t => (
-                      <div
-                        key={t.id}
-                        style={{
-                          background: '#f8fafc',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '6px',
-                          padding: '0.6rem 0.75rem',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '0.3rem'
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-                          <span style={{
-                            fontSize: '0.62rem',
-                            fontWeight: 800,
-                            padding: '1px 5px',
-                            borderRadius: '3px',
-                            background: t.priority === 'URGENT' ? '#fee2e2' : t.priority === 'HIGH' ? '#ffedd5' : '#f1f5f9',
-                            color: t.priority === 'URGENT' ? '#991b1b' : t.priority === 'HIGH' ? '#9a3412' : '#475569'
-                          }}>
-                            {t.priority}
-                          </span>
-                          <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
-                            {t.scheduledDate} • {t.time}
-                          </span>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      paddingBottom: '0.5rem',
+                      borderBottom: '1px solid #f1f5f9'
+                    }}>
+                      <div>
+                        <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>
+                          Tasks to Transfer ({departingActiveTasks.length})
                         </div>
-                        <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f172a' }}>
-                          {t.title}
-                        </div>
-                        <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
-                          {t.department} • {t.project || 'General'}
+                        <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                          From {departingMember?.name?.split(' ')[0] || 'Staff'} ➔ {successorMember?.name?.split(' ')[0] || 'Successor'}
                         </div>
                       </div>
-                    ))}
-
-                    {departingActiveTasks.length === 0 && (
-                      <div style={{
-                        padding: '2rem 1rem',
-                        textAlign: 'center',
-                        color: '#64748b',
-                        background: '#f8fafc',
-                        borderRadius: '6px',
-                        border: '1px dashed #cbd5e1'
+                      <span style={{
+                        fontSize: '0.68rem',
+                        fontWeight: 700,
+                        background: departingActiveTasks.length > 0 ? '#fef3c7' : '#dcfce7',
+                        color: departingActiveTasks.length > 0 ? '#92400e' : '#166534',
+                        padding: '2px 7px',
+                        borderRadius: '999px'
                       }}>
-                        <CheckCircle2 size={24} color="#16a34a" style={{ margin: '0 auto 0.5rem auto' }} />
-                        <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#166534' }}>
-                          0 In-Flight Deliverables
+                        {departingActiveTasks.length} active
+                      </span>
+                    </div>
+
+                    {/* Clean, compact task cards */}
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.5rem',
+                      maxHeight: '340px',
+                      overflowY: 'auto',
+                      paddingRight: '4px'
+                    }}>
+                      {departingActiveTasks.map(t => (
+                        <div
+                          key={t.id}
+                          style={{
+                            background: '#f8fafc',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '6px',
+                            padding: '0.6rem 0.75rem',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.3rem'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                            <span style={{
+                              fontSize: '0.62rem',
+                              fontWeight: 800,
+                              padding: '1px 5px',
+                              borderRadius: '3px',
+                              background: t.priority === 'URGENT' ? '#fee2e2' : t.priority === 'HIGH' ? '#ffedd5' : '#f1f5f9',
+                              color: t.priority === 'URGENT' ? '#991b1b' : t.priority === 'HIGH' ? '#9a3412' : '#475569'
+                            }}>
+                              {t.priority}
+                            </span>
+                            <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
+                              {t.scheduledDate} • {t.time}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f172a' }}>
+                            {t.title}
+                          </div>
+                          <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
+                            {t.department} • {t.project || 'General'}
+                          </div>
                         </div>
-                        <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>
-                          This employee holds no active tasks. Deactivation can proceed directly.
+                      ))}
+
+                      {departingActiveTasks.length === 0 && (
+                        <div style={{
+                          padding: '1.5rem 1rem',
+                          textAlign: 'center',
+                          color: '#64748b',
+                          background: '#f8fafc',
+                          borderRadius: '6px',
+                          border: '1px dashed #cbd5e1'
+                        }}>
+                          <CheckCircle2 size={22} color="#16a34a" style={{ margin: '0 auto 0.4rem auto' }} />
+                          <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#166534' }}>
+                            0 In-Flight Deliverables
+                          </div>
+                          <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>
+                            This employee holds no active tasks. Deactivation can proceed directly.
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right Card 2: Departing Employee Profile Summary */}
+                  {departingMember && (
+                    <div style={{
+                      background: '#ffffff',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '10px',
+                      padding: '1.1rem 1.25rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.65rem'
+                    }}>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span>Departing Personnel Profile</span>
+                        <span style={{ fontSize: '0.66rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: '#fee2e2', color: '#991b1b' }}>
+                          Target Account
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0.6rem 0.75rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+                        <div style={{
+                          width: '38px',
+                          height: '38px',
+                          borderRadius: '50%',
+                          background: '#3085d6',
+                          color: '#ffffff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 800,
+                          fontSize: '0.82rem',
+                          overflow: 'hidden',
+                          flexShrink: 0
+                        }}>
+                          {departingMember.avatar?.startsWith('/') || departingMember.avatar?.startsWith('http') ? (
+                            <img src={departingMember.avatar} alt={departingMember.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            departingMember.avatar || departingMember.name?.slice(0, 2).toUpperCase()
+                          )}
+                        </div>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {departingMember.name}
+                          </div>
+                          <div style={{ fontSize: '0.72rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {departingMember.designation || 'Specialist'} • {departingMember.department}
+                          </div>
                         </div>
                       </div>
-                    )}
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.72rem', marginTop: '2px' }}>
+                        <div style={{ background: '#f8fafc', padding: '6px 8px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                          <span style={{ color: '#64748b', display: 'block', fontSize: '0.64rem', fontWeight: 600 }}>Employee ID:</span>
+                          <span style={{ fontWeight: 700, color: '#0f172a' }}>{departingMember.employeeId || 'EMP-2026'}</span>
+                        </div>
+                        <div style={{ background: '#f8fafc', padding: '6px 8px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                          <span style={{ color: '#64748b', display: 'block', fontSize: '0.64rem', fontWeight: 600 }}>Successor Assignee:</span>
+                          <span style={{ fontWeight: 700, color: '#15803d' }}>{successorMember?.name?.split(' ')[0] || 'Unassigned'}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Right Card 3: FC 18 Security & Protocol Governance Checklist */}
+                  <div style={{
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '10px',
+                    padding: '1.1rem 1.25rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.5rem'
+                  }}>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#334155', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Shield size={14} color="#0284c7" />
+                      <span>FC 18 Deactivation & Security Governance Protocol</span>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.71rem', color: '#475569', marginTop: '2px' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                        <CheckCircle2 size={13} color="#16a34a" style={{ flexShrink: 0, marginTop: '2px' }} />
+                        <span><strong>Immediate Access Revocation:</strong> Active sessions terminated & account locked in MongoDB Atlas.</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                        <CheckCircle2 size={13} color="#16a34a" style={{ flexShrink: 0, marginTop: '2px' }} />
+                        <span><strong>Atomic Deliverable Handover:</strong> Active tasks smoothly transferred to designated successor.</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                        <CheckCircle2 size={13} color="#16a34a" style={{ flexShrink: 0, marginTop: '2px' }} />
+                        <span><strong>Immutable Audit Log:</strong> Action logged with timestamp, handover remarks & actor credentials.</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                        <CheckCircle2 size={13} color="#16a34a" style={{ flexShrink: 0, marginTop: '2px' }} />
+                        <span><strong>Email Schedule Suppression:</strong> Daily morning reminder digests paused automatically.</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -3807,7 +3954,7 @@ export const AdminHrPortal: React.FC = () => {
           }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ fontSize: '1.25rem' }}>🏢</span>
+                
                 <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
                   UrbanGaon Holidays for Financial Year 2026-27
                 </h3>
@@ -3892,7 +4039,7 @@ export const AdminHrPortal: React.FC = () => {
                         alignItems: 'center',
                         gap: '4px'
                       }}>
-                        <span>⏸️</span> Auto-Paused (Zero Dispatches)
+                         Auto-Paused (Zero Dispatches)
                       </span>
                     </td>
                   </tr>
@@ -3961,7 +4108,7 @@ export const AdminHrPortal: React.FC = () => {
           }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '1.2rem' }}>📧</span>
+                
                 <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0369a1' }}>
                   Employee Directory &amp; Corporate Email Management
                 </h3>
@@ -3987,16 +4134,28 @@ export const AdminHrPortal: React.FC = () => {
           </div>
 
           {/* Filter Bar */}
-          <div className="admin-filter-bar" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <div style={{ position: 'relative', flex: '1 1 240px', minWidth: '200px' }}>
-              <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+          <div style={{
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '10px',
+            padding: '0.75rem 1rem',
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: '0.75rem',
+            flexWrap: 'wrap',
+            width: '100%',
+            boxSizing: 'border-box'
+          }}>
+            <div style={{ position: 'relative', flex: '1 1 260px', minWidth: '220px' }}>
+              <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', pointerEvents: 'none' }} />
               <input
                 type="text"
                 className="form-input"
                 placeholder="Search staff by name, email, employee ID, role..."
                 value={directorySearchQuery}
                 onChange={e => setDirectorySearchQuery(e.target.value)}
-                style={{ paddingLeft: '32px', width: '100%', fontSize: '0.78rem' }}
+                style={{ paddingLeft: '32px', width: '100%', fontSize: '0.78rem', height: '36px', boxSizing: 'border-box' }}
               />
             </div>
 
@@ -4004,7 +4163,7 @@ export const AdminHrPortal: React.FC = () => {
               className="form-select"
               value={directoryDeptFilter}
               onChange={e => setDirectoryDeptFilter(e.target.value)}
-              style={{ fontSize: '0.78rem', minWidth: '150px' }}
+              style={{ fontSize: '0.78rem', minWidth: '160px', height: '36px', padding: '0 0.5rem', flexShrink: 0 }}
             >
               <option value="ALL">All Departments</option>
               {['AI & IT Operations', 'Executive Management', 'Full-Stack Engineering', 'Product & UI/UX', 'Talent HR & People', 'Sales', 'Accounts', 'Legal Team', 'Marketing & Growth'].map(d => (
@@ -4016,7 +4175,7 @@ export const AdminHrPortal: React.FC = () => {
               className="form-select"
               value={directoryStatusFilter}
               onChange={e => setDirectoryStatusFilter(e.target.value)}
-              style={{ fontSize: '0.78rem', minWidth: '130px' }}
+              style={{ fontSize: '0.78rem', minWidth: '140px', height: '36px', padding: '0 0.5rem', flexShrink: 0 }}
             >
               <option value="ALL">All Statuses</option>
               <option value="ACTIVE">Active</option>
@@ -4034,7 +4193,7 @@ export const AdminHrPortal: React.FC = () => {
                   setDirectoryDeptFilter('ALL');
                   setDirectoryStatusFilter('ALL');
                 }}
-                style={{ fontSize: '0.75rem', padding: '0.4rem 0.65rem' }}
+                style={{ fontSize: '0.75rem', padding: '0 0.85rem', height: '36px', flexShrink: 0, display: 'flex', alignItems: 'center' }}
               >
                 Reset Filters
               </button>
@@ -4070,9 +4229,14 @@ export const AdminHrPortal: React.FC = () => {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          border: isAakashUser(member) ? '1px solid #a7f3d0' : '1px solid #bfdbfe'
+                          border: isAakashUser(member) ? '1px solid #a7f3d0' : '1px solid #bfdbfe',
+                          overflow: 'hidden'
                         }}>
-                          {member.avatar || member.name.slice(0, 2).toUpperCase()}
+                          {member.avatar?.startsWith('/') || member.avatar?.startsWith('http') ? (
+                            <img src={member.avatar} alt={member.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            member.avatar || member.name.slice(0, 2).toUpperCase()
+                          )}
                         </div>
                         <div>
                           <div style={{ fontWeight: 700, color: '#0f172a' }}>
@@ -4173,7 +4337,7 @@ export const AdminHrPortal: React.FC = () => {
                           }}
                           title={`Return ${member.name} from leave`}
                         >
-                          ↩️ Return to Active
+                          Return to Active
                         </button>
                       ) : (
                         <button
@@ -4203,7 +4367,7 @@ export const AdminHrPortal: React.FC = () => {
                           }}
                           title={`Mark ${member.name} on leave with start & end date`}
                         >
-                          🏖️ Mark On Leave
+                          Mark On Leave
                         </button>
                       )}
                     </td>
@@ -4973,7 +5137,7 @@ export const AdminHrPortal: React.FC = () => {
             <div className="stream-modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <div style={{ background: '#fef3c7', padding: '6px', borderRadius: '8px' }}>
-                  <span style={{ fontSize: '1.2rem' }}>🏖️</span>
+                  
                 </div>
                 <div>
                   <h3 style={{ fontSize: '1.02rem', fontWeight: 800, color: '#92400e', margin: 0 }}>
@@ -5000,7 +5164,7 @@ export const AdminHrPortal: React.FC = () => {
               </div>
 
               <div style={{ fontSize: '0.74rem', color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '6px', padding: '0.55rem 0.75rem', marginBottom: '0.85rem', lineHeight: 1.45 }}>
-                📋 <strong>Flowchart 23 Automated Protocol:</strong> When marked on leave, the system pauses automated morning reminders for this employee, attaches the on-leave badge to their active deliverables, and dispatches notices to task creators and reporting managers.
+                <strong>Flowchart 23 Automated Protocol:</strong> When marked on leave, the system pauses automated morning reminders for this employee, attaches the on-leave badge to their active deliverables, and dispatches notices to task creators and reporting managers.
               </div>
 
               <form onSubmit={async (e) => {
@@ -5065,7 +5229,7 @@ export const AdminHrPortal: React.FC = () => {
                       }}
                     >
                       <div style={{ fontWeight: 800, fontSize: '0.78rem', color: leaveTaskAction === 'AUTO_EXTEND' ? '#1d4ed8' : '#0f172a' }}>
-                        📅 Auto-extend due date
+                        Auto-extend due date
                       </div>
                       <div style={{ fontSize: '0.67rem', color: '#64748b', marginTop: '2px', lineHeight: 1.3 }}>
                         Automatically push due date to return date
@@ -5084,7 +5248,7 @@ export const AdminHrPortal: React.FC = () => {
                       }}
                     >
                       <div style={{ fontWeight: 800, fontSize: '0.78rem', color: leaveTaskAction === 'FLAG_ADMIN' ? '#c2410c' : '#0f172a' }}>
-                        🚩 Flag for Admin decision
+                        Flag for Admin decision
                       </div>
                       <div style={{ fontSize: '0.67rem', color: '#64748b', marginTop: '2px', lineHeight: 1.3 }}>
                         Flag task for managerial review & reassignment

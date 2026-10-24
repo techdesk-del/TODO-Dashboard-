@@ -472,7 +472,7 @@ export const CeoPortal: React.FC = () => {
             {pendingBlockersCount} <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748b' }}>Items</span>
           </div>
           <div style={{ fontSize: '0.72rem', color: pendingBlockersCount > 0 ? '#b45309' : '#059669', fontWeight: 600, marginTop: '2px' }}>
-            {pendingBlockersCount > 0 ? '⚠️ Requires leadership intervention' : '✓ Zero critical halts'}
+            {pendingBlockersCount > 0 ? 'Requires leadership intervention' : '✓ Zero critical halts'}
           </div>
           {/* Micro Bar */}
           <div style={{ width: '100%', height: '4px', background: '#f1f5f9', borderRadius: '999px', overflow: 'hidden', marginTop: '4px' }}>
@@ -661,8 +661,7 @@ export const CeoPortal: React.FC = () => {
                       justifyContent: 'center',
                       fontSize: '0.65rem'
                     }}>
-                      🏢
-                    </div>
+                      </div>
                     <span>All Company Members</span>
                   </div>
                   <span style={{ fontSize: '0.7rem', color: '#64748b', background: '#f1f5f9', padding: '1px 6px', borderRadius: '4px' }}>
@@ -711,9 +710,14 @@ export const CeoPortal: React.FC = () => {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          flexShrink: 0
+                          flexShrink: 0,
+                          overflow: 'hidden'
                         }}>
-                          {m.avatar || m.name.slice(0, 2).toUpperCase()}
+                          {m.avatar?.startsWith('/') || m.avatar?.startsWith('http') ? (
+                            <img src={m.avatar} alt={m.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                          ) : (
+                            m.avatar || m.name.slice(0, 2).toUpperCase()
+                          )}
                         </div>
                         <div style={{ minWidth: 0 }}>
                           <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -883,9 +887,14 @@ export const CeoPortal: React.FC = () => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 2px 5px rgba(5, 150, 105, 0.25)'
+              boxShadow: '0 2px 5px rgba(5, 150, 105, 0.25)',
+              overflow: 'hidden'
             }}>
-              {activeMember.avatar || activeMember.name.slice(0, 2).toUpperCase()}
+              {activeMember.avatar?.startsWith('/') || activeMember.avatar?.startsWith('http') ? (
+                <img src={activeMember.avatar} alt={activeMember.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+              ) : (
+                activeMember.avatar || activeMember.name.slice(0, 2).toUpperCase()
+              )}
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1095,9 +1104,14 @@ export const CeoPortal: React.FC = () => {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          flexShrink: 0
+                          flexShrink: 0,
+                          overflow: 'hidden'
                         }}>
-                          {task.assignees?.[0]?.avatar || task.assignees?.[0]?.name?.slice(0, 2).toUpperCase() || 'TM'}
+                          {task.assignees?.[0]?.avatar?.startsWith('/') || task.assignees?.[0]?.avatar?.startsWith('http') ? (
+                            <img src={task.assignees[0].avatar} alt={task.assignees[0].name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                          ) : (
+                            task.assignees?.[0]?.avatar || task.assignees?.[0]?.name?.slice(0, 2).toUpperCase() || 'TM'
+                          )}
                         </div>
                         <div style={{ minWidth: 0 }}>
                           <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap' }}>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { SystemConfig, Role, TaskStatus } from '@/types';
 import { 
@@ -93,11 +93,43 @@ export const SystemConfigModal: React.FC = () => {
   const [requireDualApproval, setRequireDualApproval] = useState<boolean>(systemConfig.requireDualSuperAdminApproval ?? false);
   const [saveBanner, setSaveBanner] = useState<string | null>(null);
 
-  // Toggle working days
+  // Synchronize local form state whenever systemConfig updates from DB/context
+  useEffect(() => {
+    if (systemConfig) {
+      if (systemConfig.emailScheduleTime) setEmailTime(systemConfig.emailScheduleTime);
+      if (systemConfig.workingDays && Array.isArray(systemConfig.workingDays)) {
+        setWorkingDays([...systemConfig.workingDays]);
+      }
+      if (systemConfig.holidaysActive !== undefined) setHolidaysActive(systemConfig.holidaysActive);
+    }
+  }, [systemConfig.emailScheduleTime, systemConfig.workingDays, systemConfig.holidaysActive]);
+
+  // Toggle working days with instant real-time persistence
   const handleToggleWorkingDay = (day: string) => {
-    setWorkingDays(prev => 
-      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
-    );
+    const nextDays = workingDays.includes(day)
+      ? workingDays.filter(d => d !== day)
+      : [...workingDays, day];
+
+    setWorkingDays(nextDays);
+    updateSystemConfig({ workingDays: nextDays });
+    setSaveBanner(`✓ Working days updated: ${day} ${nextDays.includes(day) ? 'added' : 'removed'} (Saved to Cloud & Local Storage)`);
+    setTimeout(() => setSaveBanner(null), 3500);
+  };
+
+  // Dedicated Save for Email Schedule Settings Tab
+  const handleSaveEmailScheduleTab = (e: React.MouseEvent) => {
+    e.preventDefault();
+    updateSystemConfig({
+      emailScheduleTime: emailTime,
+      workingDays,
+      holidaysActive
+    });
+    setSaveBanner(`✓ Email schedule saved: ${workingDays.length} working days active (${workingDays.join(', ')}) at ${emailTime}`);
+    setBannerNotification({
+      message: `Email Schedule successfully saved: ${workingDays.join(', ')} at ${emailTime}`,
+      badge: '✓ SCHEDULE SAVED'
+    });
+    setTimeout(() => setSaveBanner(null), 4000);
   };
 
   // Add custom status
@@ -175,7 +207,7 @@ export const SystemConfigModal: React.FC = () => {
 
       setBannerNotification({
         message: `Approval request for ${newVersionNumber} sent to second Super Admin. Changes held in staging.`,
-        badge: '🔒 Dual Approval Pending'
+        badge: 'Dual Approval Pending'
       });
 
       setSaveBanner(`Approval request dispatched to second Super Admin for ${newVersionNumber}!`);
@@ -387,7 +419,7 @@ export const SystemConfigModal: React.FC = () => {
         body: JSON.stringify({
           eventType: 'CONFIG_ROLLBACK',
           recipients: adminRecipients.length > 0 ? adminRecipients : [{ email: currentUser.email || 'admin@urbangaon.com', name: currentUser.name || 'Super Admin' }],
-          title: `🚨 Config Rolled Back to ${restoredVersion}`,
+          title: `Config Rolled Back to ${restoredVersion}`,
           message: `Super Admin ${currentUser.name} triggered a configuration rollback from ${systemConfig.versionBaseline} to ${restoredVersion}. Reason: "${problemReason}". Previous configuration restored.`,
           metadata: {
             restoredVersion,
@@ -802,13 +834,62 @@ export const SystemConfigModal: React.FC = () => {
                   <input
                     type="checkbox"
                     checked={holidaysActive}
-                    onChange={e => setHolidaysActive(e.target.checked)}
+                    onChange={e => {
+                      const val = e.target.checked;
+                      setHolidaysActive(val);
+                      updateSystemConfig({ holidaysActive: val });
+                    }}
                   />
                   <span>Automatically pause reminders on official Gazetted Company Holidays</span>
                 </label>
                 <span style={{ fontSize: '0.7rem', color: '#64748b', marginLeft: '22px' }}>
                   Synchronizes with UrbanGaon Official FY 2026-27 Holiday Roster (Republic Day, Holi, Diwali, etc.).
                 </span>
+              </div>
+
+              {/* Direct Save Action Bar for Email Schedule Settings */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0.85rem 1rem',
+                background: '#f8fafc',
+                border: '1px solid #cbd5e1',
+                borderRadius: '8px',
+                marginTop: '0.5rem',
+                flexWrap: 'wrap',
+                gap: '0.75rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{
+                    fontSize: '0.75rem',
+                    color: workingDays.includes('Saturday') ? '#1e40af' : '#475569',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    <CheckCircle2 size={15} color="#2563eb" />
+                    <span>Active Schedule: <strong>{workingDays.length} Days</strong> ({workingDays.join(', ')})</span>
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleSaveEmailScheduleTab}
+                  className="btn-primary"
+                  style={{
+                    fontSize: '0.78rem',
+                    padding: '0.45rem 1rem',
+                    background: '#0284c7',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <Check size={14} />
+                  Save Email Schedule Settings
+                </button>
               </div>
             </div>
           )}

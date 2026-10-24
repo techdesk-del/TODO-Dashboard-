@@ -57,7 +57,9 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
   const [description, setDescription] = useState('');
   const [assigneeMode, setAssigneeMode] = useState<'Self' | 'Others' | 'Both'>('Self');
   const [selectedOthersIds, setSelectedOthersIds] = useState<string[]>([]);
-  const [project, setProject] = useState(systemConfig?.masterLists?.projects?.[0] || 'Core Infrastructure');
+  const [project, setProject] = useState(systemConfig?.masterLists?.projects?.[0] || 'General Operations');
+  const [isCustomProject, setIsCustomProject] = useState(false);
+  const [customProjectName, setCustomProjectName] = useState('');
   const [location, setLocation] = useState(systemConfig?.masterLists?.locations?.[0] || 'Jaipur');
   const [department, setDepartment] = useState(currentUser.department || systemConfig?.masterLists?.departments?.[0] || 'Civil');
   const [dueDate, setDueDate] = useState(selectedDate || getTodayStr());
@@ -82,7 +84,9 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
     setSpeechTranscript('');
     setAssigneeMode('Self');
     setSelectedOthersIds([]);
-    setProject(systemConfig?.masterLists?.projects?.[0] || 'Core Infrastructure');
+    setProject(systemConfig?.masterLists?.projects?.[0] || 'General Operations');
+    setIsCustomProject(false);
+    setCustomProjectName('');
     setLocation(systemConfig?.masterLists?.locations?.[0] || 'Jaipur');
     setDepartment(currentUser.department || systemConfig?.masterLists?.departments?.[0] || 'Civil');
     setDueDate(selectedDate || getTodayStr());
@@ -263,6 +267,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
     setIsSubmitting(true);
     const finalAssignees = getAssignees();
     const taskId = `task-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const finalProject = isCustomProject ? (customProjectName.trim() || 'General Operations') : (project || 'General Operations');
 
     const payload = {
       id: taskId,
@@ -273,7 +278,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
       time: dueTime,
       priority,
       status: 'Not Started', // Flowchart 6: Set initial status to Not Started
-      project,
+      project: finalProject,
       location,
       department,
       creator: {
@@ -801,9 +806,14 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 fontSize: '0.65rem',
-                                fontWeight: 700
+                                fontWeight: 700,
+                                overflow: 'hidden'
                               }}>
-                                {member.avatar || member.name.slice(0, 2).toUpperCase()}
+                                {member.avatar?.startsWith('/') || member.avatar?.startsWith('http') ? (
+                                  <img src={member.avatar} alt={member.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                  member.avatar || member.name.slice(0, 2).toUpperCase()
+                                )}
                               </span>
                               <span style={{ fontWeight: 600, color: '#1e293b' }}>{member.name}</span>
                               <span style={{ color: '#64748b', fontSize: '0.72rem' }}>
@@ -846,43 +856,75 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
             gap: '1rem',
             marginBottom: '1.25rem'
           }}>
-            {/* Project */}
+            {/* Project / Operational Initiative */}
             <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.82rem',
-                fontWeight: 700,
-                color: missingFields.includes('project') ? '#dc2626' : '#334155',
-                marginBottom: '0.35rem'
-              }}>
-                Project *
-              </label>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                <label style={{
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  color: '#334155'
+                }}>
+                  Project / Initiative
+                </label>
+                <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>
+                  (Optional)
+                </span>
+              </div>
               <select
-                value={project}
-                onChange={(e) => setProject(e.target.value)}
+                value={isCustomProject ? '__CUSTOM__' : project}
+                onChange={(e) => {
+                  if (e.target.value === '__CUSTOM__') {
+                    setIsCustomProject(true);
+                  } else {
+                    setIsCustomProject(false);
+                    setProject(e.target.value);
+                  }
+                }}
                 style={{
                   width: '100%',
                   padding: '8px 10px',
                   fontSize: '0.84rem',
                   borderRadius: '8px',
-                  border: missingFields.includes('project') ? '2px solid #ef4444' : '1px solid #cbd5e1',
+                  border: '1px solid #cbd5e1',
                   background: '#ffffff',
                   outline: 'none'
                 }}
               >
                 {(systemConfig?.masterLists?.projects || [
-                  'Core Infrastructure',
-                  'Enterprise Expansion',
-                  'UrbanGaon 2.0 Roadmap',
-                  'Growth Strategy Q3',
-                  'Design Systems',
-                  'High Availability Infrastructure',
-                  'Operations & Facilities',
-                  'Compliance & Contracts'
+                  'General Operations',
+                  'Site Development & Civil',
+                  'Sales & Client Acquisition',
+                  'Procurement & Materials',
+                  'Legal & Land Documentation',
+                  'Finance & Accounts',
+                  'IT & Digital Systems',
+                  'HR & Talent Operations'
                 ]).map(p => (
                   <option key={p} value={p}>{p}</option>
                 ))}
+                <option value="__CUSTOM__">Enter Custom Project / Site Name...</option>
               </select>
+
+              {isCustomProject && (
+                <div style={{ marginTop: '0.45rem' }}>
+                  <input
+                    type="text"
+                    value={customProjectName}
+                    onChange={(e) => setCustomProjectName(e.target.value)}
+                    placeholder="Enter project or site name (e.g. Sunrise Enclave, Villa Project, Client Demo...)"
+                    style={{
+                      width: '100%',
+                      padding: '7px 10px',
+                      fontSize: '0.82rem',
+                      borderRadius: '6px',
+                      border: '1.5px solid #3b82f6',
+                      background: '#eff6ff',
+                      outline: 'none'
+                    }}
+                    autoFocus
+                  />
+                </div>
+              )}
             </div>
 
             {/* Location */}

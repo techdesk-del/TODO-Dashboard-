@@ -1199,7 +1199,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                 color: '#1e40af',
                 lineHeight: 1.45
               }}>
-                🎟️ <strong>Invitation Verification:</strong> Enter the invitation code (e.g. <code>INV-XXXX</code>) from your welcome email or HR provisioning letter.
+                <strong>Invitation Verification:</strong> Enter the invitation code (e.g. <code>INV-XXXX</code>) from your welcome email or HR provisioning letter.
               </div>
 
               {/* SPECIFIC FLOWCHART 1 ERROR ALERT: "Show error ask Admin to resend" */}
@@ -1234,7 +1234,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                     color: '#881337',
                     fontWeight: 700
                   }}>
-                    📢 Resolution: Please contact your System Administrator or Talent HR team to resend an updated invitation link.
+                    Resolution: Please contact your System Administrator or Talent HR team to resend an updated invitation link.
                   </div>
                   <div style={{ marginTop: '0.45rem', display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <button
@@ -1543,7 +1543,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                     color: '#065f46',
                     lineHeight: 1.45
                   }}>
-                    📝 <strong>Employee Self Sign-Up:</strong> Submit your details below. Once Talent HR verifies your department and employment status, your official account will be provisioned.
+                    <strong>Employee Self Sign-Up:</strong> Submit your details below. Once Talent HR verifies your department and employment status, your official account will be provisioned.
                   </div>
 
                   <div>
@@ -2139,7 +2139,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                 color: '#1e40af',
                 lineHeight: 1.5
               }}>
-                📧 <strong>Self-Service Password Setup:</strong> Enter your corporate email address below. A 6-digit verification code will be sent to your inbox to authenticate and set your personal password.
+                <strong>Self-Service Password Setup:</strong> Enter your corporate email address below. A 6-digit verification code will be sent to your inbox to authenticate and set your personal password.
               </div>
 
               <div>
@@ -2401,7 +2401,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                       cursor: 'pointer'
                     }}
                   >
-                    🔄 Resend Reset Link
+                    Resend Reset Link
                   </button>
                 </div>
               )}
@@ -2493,7 +2493,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
             color: '#64748b',
             lineHeight: 1.45
           }}>
-            🔒 <strong>UrbanGaon Security Protocol:</strong> Secure invitation tokens, encrypted credentials, and verified role routing ensure complete enterprise confidentiality.
+            <strong>UrbanGaon Security Protocol:</strong> Secure invitation tokens, encrypted credentials, and verified role routing ensure complete enterprise confidentiality.
           </div>
         </div>
       </div>

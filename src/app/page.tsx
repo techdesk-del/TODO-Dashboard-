@@ -349,10 +349,10 @@ export default function Home() {
                         }}
                         title="Select an employee to isolate and monitor their corporate deliverables"
                       >
-                        <option value="ALL">🏢 All Monitored Staff ({tasks.filter(t => t.status !== 'Cancelled').length} tasks)</option>
+                        <option value="ALL">All Monitored Staff ({tasks.filter(t => t.status !== 'Cancelled').length} tasks)</option>
                         {activeMembers.filter(m => !isStrictCeo(m)).map(emp => (
                           <option key={emp.id} value={emp.id}>
-                            👤 {emp.name} ({emp.department})
+                            {emp.name} ({emp.department})
                           </option>
                         ))}
                       </select>

@@ -194,7 +194,7 @@ export const ManagerTeamView: React.FC = () => {
 
     setBannerNotification({
       message: `Deliverable flagged to Admin HR with reason: "${adminEscalateReason.trim()}".`,
-      badge: '🚨 Flagged to Admin'
+      badge: 'Flagged to Admin'
     });
 
     setTaskToEscalateAdmin(null);
@@ -570,7 +570,7 @@ export const ManagerTeamView: React.FC = () => {
 
                           {t.notes && (
                             <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '2px' }}>
-                              📝 {t.notes}
+                              {t.notes}
                             </div>
                           )}
                         </td>
@@ -721,7 +721,7 @@ export const ManagerTeamView: React.FC = () => {
           <div className="stream-modal-card" style={{ maxWidth: '480px' }} onClick={e => e.stopPropagation()}>
             <div className="stream-modal-header">
               <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: 0 }}>
-                👥 Reassign Deliverable
+                Reassign Deliverable
               </h3>
               <button className="calendar-nav-btn" onClick={() => setTaskToReassign(null)}><X size={16} /></button>
             </div>
@@ -820,7 +820,7 @@ export const ManagerTeamView: React.FC = () => {
           <div className="stream-modal-card" style={{ maxWidth: '500px' }} onClick={e => e.stopPropagation()}>
             <div className="stream-modal-header">
               <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: 0 }}>
-                ⚖️ Review Delay Justification
+                Review Delay Justification
               </h3>
               <button className="calendar-nav-btn" onClick={() => setTaskReasonDecision(null)}><X size={16} /></button>
             </div>
@@ -937,7 +937,7 @@ export const ManagerTeamView: React.FC = () => {
           <div className="stream-modal-card" style={{ maxWidth: '460px' }} onClick={e => e.stopPropagation()}>
             <div className="stream-modal-header">
               <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: 0 }}>
-                📝 Add Managerial Note
+                Add Managerial Note
               </h3>
               <button className="calendar-nav-btn" onClick={() => setTaskToComment(null)}><X size={16} /></button>
             </div>

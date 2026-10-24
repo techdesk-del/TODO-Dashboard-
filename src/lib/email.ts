@@ -101,7 +101,7 @@ export function generateDigestHtml(opts: SendDigestOptions): string {
       </div>
 
       <!-- Flowchart D: Overdue Deliverables with direct links & reason requests -->
-      <div class="section-title title-red">⚠️ Overdue Deliverables (Requires Immediate Resolution)</div>
+      <div class="section-title title-red">Overdue Deliverables (Requires Immediate Resolution)</div>
       ${
         overdueTasks.length === 0
           ? '<div class="empty-badge">✓ Zero overdue deliverables. Excellent punctuality!</div>'
@@ -113,11 +113,11 @@ export function generateDigestHtml(opts: SendDigestOptions): string {
               <div class="task-name">${t.title}</div>
               <div class="task-meta">Scheduled: ${t.scheduledDate} at ${t.time} • Priority: ${t.priority} • Department: ${t.department}</div>
               <div style="margin-top: 4px;">
-                <a href="${appBase}/?taskId=${t.id}" class="task-link">🔗 View Deliverable #${t.id} →</a>
+                <a href="${appBase}/?taskId=${t.id}" class="task-link">View Deliverable #${t.id} →</a>
               </div>
               ${!hasReason ? `
                 <div class="reason-missing-box">
-                  <strong>⚠️ Delay Reason Missing (Flowchart 21):</strong> As per corporate governance, please <a href="${appBase}/?taskId=${t.id}" style="color: #b91c1c; font-weight: 700; text-decoration: underline;">click here to enter delay justification</a>.
+                  <strong>Delay Reason Missing (Flowchart 21):</strong> As per corporate governance, please <a href="${appBase}/?taskId=${t.id}" style="color: #b91c1c; font-weight: 700; text-decoration: underline;">click here to enter delay justification</a>.
                 </div>
               ` : `
                 <div style="font-size: 11px; color: #b45309; margin-top: 4px;">
@@ -130,7 +130,7 @@ export function generateDigestHtml(opts: SendDigestOptions): string {
       }
 
       <!-- Today Tasks with direct link -->
-      <div class="section-title title-amber">⏰ Deliverables Due Today</div>
+      <div class="section-title title-amber">Deliverables Due Today</div>
       ${
         todayTasks.length === 0
           ? '<div class="empty-badge">No deliverables scheduled for today.</div>'
@@ -139,14 +139,14 @@ export function generateDigestHtml(opts: SendDigestOptions): string {
               <div class="task-name">${t.title}</div>
               <div class="task-meta">Execution Target: ${t.time} • Priority: ${t.priority} • Department: ${t.department}</div>
               <div style="margin-top: 4px;">
-                <a href="${appBase}/?taskId=${t.id}" class="task-link">🔗 Open Deliverable #${t.id} →</a>
+                <a href="${appBase}/?taskId=${t.id}" class="task-link">Open Deliverable #${t.id} →</a>
               </div>
             </div>
           `).join('')
       }
 
       <!-- Upcoming Tasks with direct link -->
-      <div class="section-title title-blue">📅 Upcoming Deliverables This Week</div>
+      <div class="section-title title-blue">Upcoming Deliverables This Week</div>
       ${
         upcomingTasks.length === 0
           ? '<div class="empty-badge">No upcoming deliverables this week.</div>'
@@ -155,7 +155,7 @@ export function generateDigestHtml(opts: SendDigestOptions): string {
               <div class="task-name">${t.title}</div>
               <div class="task-meta">Due: ${t.scheduledDate} at ${t.time} • Priority: ${t.priority}</div>
               <div style="margin-top: 4px;">
-                <a href="${appBase}/?taskId=${t.id}" class="task-link">🔗 Open Deliverable #${t.id} →</a>
+                <a href="${appBase}/?taskId=${t.id}" class="task-link">Open Deliverable #${t.id} →</a>
               </div>
             </div>
           `).join('')
@@ -180,7 +180,7 @@ export async function sendMorningDigestEmail(opts: SendDigestOptions) {
     info = await transporter.sendMail({
       from,
       to: opts.toEmail,
-      subject: `📋 Daily Operational Focus: ${opts.dateString} — ${opts.toName}`,
+      subject: `Daily Operational Focus: ${opts.dateString} — ${opts.toName}`,
       html,
     });
   } catch (sendErr) {
@@ -197,7 +197,7 @@ export async function sendMorningDigestEmail(opts: SendDigestOptions) {
     info = await fallbackTransporter.sendMail({
       from,
       to: opts.toEmail,
-      subject: `📋 Daily Operational Focus: ${opts.dateString} — ${opts.toName}`,
+      subject: `Daily Operational Focus: ${opts.dateString} — ${opts.toName}`,
       html,
     });
   }
@@ -295,7 +295,7 @@ export async function sendAdminDigestSummaryEmail(opts: SendAdminDigestSummaryOp
       </div>
 
       <!-- Chronic Delays Table (Reporting Managers CC'd) -->
-      <div class="section-title" style="color: #b45309;">⚠️ Chronic Delays (&gt;3 Days Overdue — Managers Copied)</div>
+      <div class="section-title" style="color: #b45309;">Chronic Delays (&gt;3 Days Overdue — Managers Copied)</div>
       ${chronicDelays.length === 0 ? '<p style="font-size: 12px; color: #16a34a;">Zero chronic delays across all teams.</p>' : `
         <table class="table">
           <thead>
@@ -321,7 +321,7 @@ export async function sendAdminDigestSummaryEmail(opts: SendAdminDigestSummaryOp
 
       <!-- Delivery Failures Table -->
       ${failedDeliveries.length > 0 ? `
-        <div class="section-title" style="color: #dc2626; margin-top: 24px;">🚨 Dispatch Failures (Retries Exhausted)</div>
+        <div class="section-title" style="color: #dc2626; margin-top: 24px;">Dispatch Failures (Retries Exhausted)</div>
         <table class="table">
           <thead>
             <tr>
@@ -356,7 +356,7 @@ export async function sendAdminDigestSummaryEmail(opts: SendAdminDigestSummaryOp
       from,
       to: adminEmail,
       cc: managerEmails.length > 0 ? managerEmails : undefined,
-      subject: `🚨 Daily Digest Summary to Admin: ${dateString} (${failedDeliveries.length} failures, ${chronicDelays.length} chronic delays)`,
+      subject: `Daily Digest Summary to Admin: ${dateString} (${failedDeliveries.length} failures, ${chronicDelays.length} chronic delays)`,
       html,
     });
   } catch (err) {
@@ -430,7 +430,7 @@ export function generatePasswordResetHtml(opts: SendPasswordResetOptions): strin
           Click Here to Reset Password →
         </a>
         <div style="font-size: 11px; color: #64748b; margin-top: 8px;">
-          ⏱ This one-time link will expire in ${expiresMinutes} minutes.
+          This one-time link will expire in ${expiresMinutes} minutes.
         </div>
       </div>
       ` : ''}
@@ -438,7 +438,7 @@ export function generatePasswordResetHtml(opts: SendPasswordResetOptions): strin
       <div class="code-box">
         <div class="code-label">Or Use One-Time Verification Code</div>
         <div class="code-value">${resetCode}</div>
-        <div class="validity-tag">⏱ Valid for the next ${expiresMinutes} minutes</div>
+        <div class="validity-tag">Valid for the next ${expiresMinutes} minutes</div>
       </div>
 
       <div class="instructions">
@@ -446,7 +446,7 @@ export function generatePasswordResetHtml(opts: SendPasswordResetOptions): strin
       </div>
 
       <div class="warning">
-        🔒 <strong>Security Notice:</strong> If you did not request this verification link, please ignore this email or alert the IT Operations Desk at <a href="mailto:techdesk@urbangaon.com" style="color: #2563eb;">techdesk@urbangaon.com</a>. Never share this link or code with anyone.
+        <strong>Security Notice:</strong> If you did not request this verification link, please ignore this email or alert the IT Operations Desk at <a href="mailto:techdesk@urbangaon.com" style="color: #2563eb;">techdesk@urbangaon.com</a>. Never share this link or code with anyone.
       </div>
     </div>
     <div class="footer">
@@ -468,7 +468,7 @@ export async function sendPasswordResetEmail(opts: SendPasswordResetOptions) {
     info = await transporter.sendMail({
       from,
       to: opts.toEmail,
-      subject: `🔐 UrbanGaon Account Verification Code: ${opts.resetCode}`,
+      subject: `UrbanGaon Account Verification Code: ${opts.resetCode}`,
       html,
     });
   } catch (sendErr) {
@@ -485,7 +485,7 @@ export async function sendPasswordResetEmail(opts: SendPasswordResetOptions) {
     info = await fallbackTransporter.sendMail({
       from,
       to: opts.toEmail,
-      subject: `🔐 UrbanGaon Account Verification Code: ${opts.resetCode}`,
+      subject: `UrbanGaon Account Verification Code: ${opts.resetCode}`,
       html,
     });
   }
@@ -560,8 +560,7 @@ export function generateWelcomeEmailHtml(opts: SendWelcomeEmailOptions): string 
     </div>
     <div class="content">
       <div class="greeting">
-        Welcome to UrbanGaon, <strong>${toName}</strong>! 🎉
-      </div>
+        Welcome to UrbanGaon, <strong>${toName}</strong>! </div>
       <div class="intro-text">
         Your official corporate account has been provisioned on the UrbanGaon Executive Task Register platform. Below are your official onboarding credentials:
       </div>
@@ -603,7 +602,7 @@ export function generateWelcomeEmailHtml(opts: SendWelcomeEmailOptions): string 
       </div>
 
       <div class="instructions">
-        <strong>📋 Getting Started:</strong>
+        <strong>Getting Started:</strong>
         <ol style="margin: 8px 0 0 0; padding-left: 20px;">
           <li>Click the button above to navigate to the UrbanGaon sign-in portal.</li>
           <li>Enter your corporate email (<strong>${toEmail}</strong>) and temporary password <code>${initialPassword}</code>.</li>
@@ -612,7 +611,7 @@ export function generateWelcomeEmailHtml(opts: SendWelcomeEmailOptions): string 
       </div>
 
       <div class="warning">
-        🔒 <strong>Confidentiality Notice:</strong> This email contains sensitive enterprise credentials. Do not forward or share these details. If you did not expect this communication or require technical assistance, contact the UrbanGaon IT Operations Desk at <a href="mailto:techdesk@urbangaon.com" style="color: #2563eb;">techdesk@urbangaon.com</a>.
+        <strong>Confidentiality Notice:</strong> This email contains sensitive enterprise credentials. Do not forward or share these details. If you did not expect this communication or require technical assistance, contact the UrbanGaon IT Operations Desk at <a href="mailto:techdesk@urbangaon.com" style="color: #2563eb;">techdesk@urbangaon.com</a>.
       </div>
     </div>
     <div class="footer">
@@ -634,7 +633,7 @@ export async function sendWelcomeCredentialsEmail(opts: SendWelcomeEmailOptions)
     info = await transporter.sendMail({
       from,
       to: opts.toEmail,
-      subject: `🎉 Welcome to UrbanGaon — Official Credentials & Account Provisioned (${opts.toName})`,
+      subject: `Welcome to UrbanGaon — Official Credentials & Account Provisioned (${opts.toName})`,
       html,
     });
   } catch (sendErr) {
@@ -651,7 +650,7 @@ export async function sendWelcomeCredentialsEmail(opts: SendWelcomeEmailOptions)
     info = await fallbackTransporter.sendMail({
       from,
       to: opts.toEmail,
-      subject: `🎉 Welcome to UrbanGaon — Official Credentials & Account Provisioned (${opts.toName})`,
+      subject: `Welcome to UrbanGaon — Official Credentials & Account Provisioned (${opts.toName})`,
       html,
     });
   }
@@ -703,12 +702,12 @@ export async function sendSecurityLockoutAlertEmail(opts: {
 <body>
   <div class="container">
     <div class="header">
-      <div class="title">🚨 Security Alert: Account Temporarily Locked</div>
+      <div class="title">Security Alert: Account Temporarily Locked</div>
       <div class="subhead">UrbanGaon Identity & Access Management • Flowchart 5 Compliance</div>
     </div>
     <div class="content">
       <div class="alert-banner">
-        ⚠️ 5 consecutive failed login attempts were detected for your corporate account (<strong>${opts.toEmail}</strong>). To protect enterprise resources, this account has been locked for <strong>${duration} minutes</strong>.
+        5 consecutive failed login attempts were detected for your corporate account (<strong>${opts.toEmail}</strong>). To protect enterprise resources, this account has been locked for <strong>${duration} minutes</strong>.
       </div>
       <p style="font-size: 14px; line-height: 1.6; margin: 0 0 14px 0;">
         Hello <strong>${opts.toName}</strong>,<br>
@@ -740,7 +739,7 @@ export async function sendSecurityLockoutAlertEmail(opts: {
     await transporter.sendMail({
       from,
       to: opts.toEmail,
-      subject: `🚨 Security Alert: Account Locked for 15 Minutes — 5 Failed Login Attempts (${opts.toName})`,
+      subject: `Security Alert: Account Locked for 15 Minutes — 5 Failed Login Attempts (${opts.toName})`,
       html,
     });
     console.log(`[Security Alert] Lockout alert email sent to ${opts.toEmail}`);
@@ -783,7 +782,7 @@ export async function sendTwoFactorOtpEmail(opts: {
 <body>
   <div class="container">
     <div class="header">
-      <div class="title">🔐 Two-Step Verification Code</div>
+      <div class="title">Two-Step Verification Code</div>
       <div class="subhead">${opts.role === 'SUPER_ADMIN' ? 'Super Admin / Director' : 'Admin / Talent HR'} Secure Access Authorization</div>
     </div>
     <div class="content">
@@ -793,7 +792,7 @@ export async function sendTwoFactorOtpEmail(opts: {
       </p>
       <div class="otp-display">${opts.otpCode}</div>
       <p style="font-size: 12px; color: #b45309; background: #fef3c7; border: 1px solid #fcd34d; padding: 8px 12px; border-radius: 6px; font-weight: 600; margin: 16px 0;">
-        ⏱️ This verification code expires in 10 minutes. Under Flowchart 5 protocol, 1 retry is permitted upon error.
+        This verification code expires in 10 minutes. Under Flowchart 5 protocol, 1 retry is permitted upon error.
       </p>
       <div class="notice">
         If you did not initiate this login request, change your corporate password immediately.
@@ -812,7 +811,7 @@ export async function sendTwoFactorOtpEmail(opts: {
     await transporter.sendMail({
       from,
       to: opts.toEmail,
-      subject: `🔐 Your UrbanGaon 2-Step Verification Code: ${opts.otpCode} (${opts.role})`,
+      subject: `Your UrbanGaon 2-Step Verification Code: ${opts.otpCode} (${opts.role})`,
       html,
     });
     console.log(`[2FA OTP] Code sent to ${opts.toEmail}`);
@@ -859,7 +858,7 @@ export async function sendSetPasswordEmail(opts: {
 <body>
   <div class="container">
     <div class="header">
-      <div class="title">🎉 Welcome to UrbanGaon!</div>
+      <div class="title">Welcome to UrbanGaon!</div>
       <div class="subhead">Official Employee Account Approved • Flowchart 3 Provisioning</div>
     </div>
     <div class="content">
@@ -870,11 +869,11 @@ export async function sendSetPasswordEmail(opts: {
 
       <div class="card">
         <div style="font-weight: 800; color: #065f46; margin-bottom: 8px; font-size: 14px;">Official Corporate Assignment</div>
-        <div style="margin-bottom: 4px;">👤 <strong>Assigned Employee ID:</strong> <code>${opts.employeeId}</code></div>
-        <div style="margin-bottom: 4px;">🏢 <strong>Department:</strong> ${opts.department}</div>
-        <div style="margin-bottom: 4px;">💼 <strong>Designation:</strong> ${opts.designation}</div>
-        <div>👥 <strong>Designated Manager:</strong> ${opts.manager || 'Talent Management Desk'}</div>
-        <div style="margin-top: 8px; font-weight: 700; color: #047857;">🎟️ <strong>Invitation Code:</strong> <code>${opts.inviteCode}</code></div>
+        <div style="margin-bottom: 4px;"><strong>Assigned Employee ID:</strong> <code>${opts.employeeId}</code></div>
+        <div style="margin-bottom: 4px;"><strong>Department:</strong> ${opts.department}</div>
+        <div style="margin-bottom: 4px;"><strong>Designation:</strong> ${opts.designation}</div>
+        <div><strong>Designated Manager:</strong> ${opts.manager || 'Talent Management Desk'}</div>
+        <div style="margin-top: 8px; font-weight: 700; color: #047857;"><strong>Invitation Code:</strong> <code>${opts.inviteCode}</code></div>
       </div>
 
       <p style="font-size: 13px; color: #475569; line-height: 1.5;">
@@ -903,7 +902,7 @@ export async function sendSetPasswordEmail(opts: {
     await transporter.sendMail({
       from,
       to: opts.toEmail,
-      subject: `🎉 Account Approved: Set Your UrbanGaon Corporate Password (${opts.employeeId})`,
+      subject: `Account Approved: Set Your UrbanGaon Corporate Password (${opts.employeeId})`,
       html,
     });
     console.log(`[Set-Password Email] Dispatched to ${opts.toEmail}`);
@@ -948,7 +947,7 @@ export async function sendManagerNewHireNotificationEmail(opts: {
 <body>
   <div class="container">
     <div class="header">
-      <div class="title">👥 New Team Member Assigned</div>
+      <div class="title">New Team Member Assigned</div>
       <div style="font-size: 12px; opacity: 0.9; margin-top: 4px;">Talent HR Notification • Flowchart 3</div>
     </div>
     <div class="content">
@@ -958,10 +957,10 @@ export async function sendManagerNewHireNotificationEmail(opts: {
       </p>
 
       <div class="box">
-        <div>👤 <strong>Employee:</strong> ${opts.employeeName}</div>
-        <div>🆔 <strong>Employee ID:</strong> <code>${opts.employeeId}</code></div>
-        <div>🏢 <strong>Department:</strong> ${opts.department}</div>
-        <div>💼 <strong>Designation:</strong> ${opts.designation}</div>
+        <div><strong>Employee:</strong> ${opts.employeeName}</div>
+        <div><strong>Employee ID:</strong> <code>${opts.employeeId}</code></div>
+        <div><strong>Department:</strong> ${opts.department}</div>
+        <div><strong>Designation:</strong> ${opts.designation}</div>
         <div>⏳ <strong>Status:</strong> Pending First Login (Invitation Dispatched)</div>
       </div>
 
@@ -982,7 +981,7 @@ export async function sendManagerNewHireNotificationEmail(opts: {
     await transporter.sendMail({
       from,
       to: opts.managerEmail,
-      subject: `👥 Team Notification: ${opts.employeeName} added to your department (${opts.department})`,
+      subject: `Team Notification: ${opts.employeeName} added to your department (${opts.department})`,
       html,
     });
     console.log(`[Manager Alert] Sent to ${opts.managerEmail}`);
@@ -1203,41 +1202,41 @@ export async function sendTaskAssignmentEmail(opts: SendTaskAssignmentOptions) {
 
         <table class="meta-table">
           <tr>
-            <td class="meta-label">📅 Target Deadline:</td>
+            <td class="meta-label">Target Deadline:</td>
             <td class="meta-value">${opts.scheduledDate} at ${executionTime}</td>
           </tr>
           <tr>
-            <td class="meta-label">⚡ Priority Level:</td>
+            <td class="meta-label">Priority Level:</td>
             <td class="meta-value"><span class="priority-badge">${opts.priority}</span></td>
           </tr>
           <tr>
-            <td class="meta-label">🔄 Initial Status:</td>
+            <td class="meta-label">Initial Status:</td>
             <td class="meta-value"><span class="status-badge">Not Started</span></td>
           </tr>
           <tr>
-            <td class="meta-label">🏢 Department:</td>
+            <td class="meta-label">Department:</td>
             <td class="meta-value">${opts.department}</td>
           </tr>
           ${opts.project ? `
           <tr>
-            <td class="meta-label">📁 Project:</td>
+            <td class="meta-label">Project:</td>
             <td class="meta-value">${opts.project}</td>
           </tr>` : ''}
           ${opts.location ? `
           <tr>
-            <td class="meta-label">📍 Location:</td>
+            <td class="meta-label">Location:</td>
             <td class="meta-value">${opts.location}</td>
           </tr>` : ''}
         </table>
 
         ${opts.notes ? `
         <div class="callout-box">
-          <strong>📝 Instructions / Notes:</strong> ${opts.notes}
+          <strong>Instructions / Notes:</strong> ${opts.notes}
         </div>` : ''}
 
         ${opts.pastDueReason ? `
         <div class="warning-box">
-          <strong>⚠️ Backdated Justification:</strong> ${opts.pastDueReason}
+          <strong>Backdated Justification:</strong> ${opts.pastDueReason}
         </div>` : ''}
       </div>
 
@@ -1361,7 +1360,7 @@ export async function sendOffboardingSummaryEmail(opts: {
     await transporter.sendMail({
       from,
       to: opts.employeeEmail,
-      subject: `📋 Account Status Notice: ${opts.deactivationType} Handover Summary`,
+      subject: `Account Status Notice: ${opts.deactivationType} Handover Summary`,
       html,
     });
     console.log(`[Offboarding Summary Email] Dispatched to ${opts.employeeEmail}`);
@@ -1424,7 +1423,7 @@ export async function sendHandoverNotificationToManagerEmail(opts: {
     await transporter.sendMail({
       from,
       to: opts.managerEmail,
-      subject: `👥 Team Handover Notice: ${opts.departingName} → ${opts.successorName} (${opts.reassignedCount} Tasks)`,
+      subject: `Team Handover Notice: ${opts.departingName} → ${opts.successorName} (${opts.reassignedCount} Tasks)`,
       html,
     });
     console.log(`[Manager Handover Email] Dispatched to ${opts.managerEmail}`);
@@ -1454,7 +1453,7 @@ export async function sendTaskEscalatedEmail(opts: {
 <body style="font-family: Arial, sans-serif; background: #f8fafc; padding: 20px;">
   <div style="max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1.5px solid #fecdd3; overflow: hidden;">
     <div style="background: #e11d48; color: white; padding: 20px 24px;">
-      <h2 style="margin: 0; font-size: 18px;">🚨 Deliverable Escalated to Leadership</h2>
+      <h2 style="margin: 0; font-size: 18px;">Deliverable Escalated to Leadership</h2>
       <p style="margin: 4px 0 0 0; font-size: 13px; color: #ffe4e6;">Flowchart 17 / 20 Governance Alert</p>
     </div>
     <div style="padding: 24px;">
@@ -1474,7 +1473,7 @@ export async function sendTaskEscalatedEmail(opts: {
     await transporter.sendMail({
       from,
       to: opts.seniorEmail,
-      subject: `🚨 Action Required: Deliverable Escalated by ${opts.escalatedBy} — "${opts.taskTitle}"`,
+      subject: `Action Required: Deliverable Escalated by ${opts.escalatedBy} — "${opts.taskTitle}"`,
       html,
     });
     return { success: true };
@@ -1501,7 +1500,7 @@ export async function sendTaskReopenedEmail(opts: {
 <body style="font-family: Arial, sans-serif; background: #f8fafc; padding: 20px;">
   <div style="max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1.5px solid #bfdbfe; overflow: hidden;">
     <div style="background: #2563eb; color: white; padding: 20px 24px;">
-      <h2 style="margin: 0; font-size: 18px;">🔄 Deliverable Reopened Notice</h2>
+      <h2 style="margin: 0; font-size: 18px;">Deliverable Reopened Notice</h2>
       <p style="margin: 4px 0 0 0; font-size: 13px; color: #bfdbfe;">Flowchart 10 / 20 Operational Alert</p>
     </div>
     <div style="padding: 24px;">
@@ -1520,7 +1519,7 @@ export async function sendTaskReopenedEmail(opts: {
       await transporter.sendMail({
         from,
         to: opts.assigneeEmails.join(', '),
-        subject: `🔄 Reopened: "${opts.taskTitle}" (by ${opts.reopenedBy})`,
+        subject: `Reopened: "${opts.taskTitle}" (by ${opts.reopenedBy})`,
         html,
       });
     }
@@ -1569,7 +1568,7 @@ export async function sendReasonDecisionEmail(opts: {
     await transporter.sendMail({
       from,
       to: opts.employeeEmail,
-      subject: `${isApproved ? '✓' : '⚠️'} Delay Reason ${opts.decision}: "${opts.taskTitle}"`,
+      subject: `${isApproved ? '✓' : ''} Delay Reason ${opts.decision}: "${opts.taskTitle}"`,
       html,
     });
     return { success: true };
@@ -1599,7 +1598,7 @@ export async function sendWeeklyDigestEmail(opts: {
 <body style="font-family: Arial, sans-serif; background: #f8fafc; padding: 20px;">
   <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #cbd5e1; overflow: hidden;">
     <div style="background: linear-gradient(135deg, #1e1b4b, #312e81); color: white; padding: 24px;">
-      <h2 style="margin: 0; font-size: 20px;">📊 Executive Weekly Operations Digest</h2>
+      <h2 style="margin: 0; font-size: 20px;">Executive Weekly Operations Digest</h2>
       <p style="margin: 6px 0 0 0; font-size: 13px; color: #cbd5e1;">Flowchart 20 Compliance: Organization-Wide Velocity</p>
     </div>
     <div style="padding: 24px;">
@@ -1631,7 +1630,7 @@ export async function sendWeeklyDigestEmail(opts: {
     await transporter.sendMail({
       from,
       to: opts.directorEmail,
-      subject: `📊 Executive Weekly Digest: ${opts.timelyRatio} Timely Completion (${opts.totalCompanyTasks} Deliverables)`,
+      subject: `Executive Weekly Digest: ${opts.timelyRatio} Timely Completion (${opts.totalCompanyTasks} Deliverables)`,
       html,
     });
     return { success: true };
@@ -1667,10 +1666,10 @@ export async function sendOverdueAutoFlagEmail(opts: SendOverdueAutoFlagOptions)
     const appBase = opts.baseUrl || process.env.NEXTAUTH_URL || 'http://localhost:3000';
 
     const statusBadge = opts.isEscalated
-      ? '<span style="background: #fee2e2; color: #b91c1c; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 12px; border: 1px solid #fca5a5;">🚨 AUTO-ESCALATED TO MANAGER</span>'
+      ? '<span style="background: #fee2e2; color: #b91c1c; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 12px; border: 1px solid #fca5a5;">AUTO-ESCALATED TO MANAGER</span>'
       : opts.hasReason
-      ? '<span style="background: #fff7ed; color: #c2410c; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 12px; border: 1px solid #fed7aa;">⚠️ OVERDUE (REASON RECORDED)</span>'
-      : '<span style="background: #fef2f2; color: #dc2626; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 12px; border: 1px solid #fecaca;">🚨 PENDING NO REASON (ACTION REQUIRED)</span>';
+      ? '<span style="background: #fff7ed; color: #c2410c; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 12px; border: 1px solid #fed7aa;">OVERDUE (REASON RECORDED)</span>'
+      : '<span style="background: #fef2f2; color: #dc2626; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 12px; border: 1px solid #fecaca;">PENDING NO REASON (ACTION REQUIRED)</span>';
 
     const headerBg = opts.isEscalated
       ? 'linear-gradient(135deg, #991b1b 0%, #dc2626 100%)'
@@ -1716,7 +1715,7 @@ export async function sendOverdueAutoFlagEmail(opts: SendOverdueAutoFlagOptions)
           <strong>Deliverable ID:</strong> #${opts.taskId} • <strong>Scheduled Due Date:</strong> ${opts.scheduledDate}
         </div>
         <div style="font-size: 12px; color: #b91c1c; font-weight: 700;">
-          ⏱ <strong>Days Overdue:</strong> ${opts.daysOverdue} day${opts.daysOverdue !== 1 ? 's' : ''}
+          <strong>Days Overdue:</strong> ${opts.daysOverdue} day${opts.daysOverdue !== 1 ? 's' : ''}
         </div>
         ${opts.hasReason && opts.delayReason ? `
           <div style="margin-top: 10px; padding: 8px 12px; background: #fff7ed; border-left: 3px solid #ea580c; border-radius: 4px; font-size: 12px; color: #9a3412;">
@@ -1724,12 +1723,12 @@ export async function sendOverdueAutoFlagEmail(opts: SendOverdueAutoFlagOptions)
           </div>
         ` : `
           <div style="margin-top: 10px; padding: 8px 12px; background: #fef2f2; border-left: 3px solid #dc2626; border-radius: 4px; font-size: 12px; color: #991b1b;">
-            ⚠️ <strong>Action Required:</strong> No delay explanation has been recorded. Per corporate policy, please document the root cause on your dashboard immediately.
+            <strong>Action Required:</strong> No delay explanation has been recorded. Per corporate policy, please document the root cause on your dashboard immediately.
           </div>
         `}
         ${opts.isEscalated ? `
           <div style="margin-top: 10px; padding: 8px 12px; background: #fee2e2; border-left: 3px solid #b91c1c; border-radius: 4px; font-size: 12px; color: #7f1d1d; font-weight: 700;">
-            🚨 Escalation: This deliverable has been automatically escalated to reporting manager (${opts.managerName || 'Management'}) for leadership guidance.
+            Escalation: This deliverable has been automatically escalated to reporting manager (${opts.managerName || 'Management'}) for leadership guidance.
           </div>
         ` : ''}
       </div>
@@ -1751,10 +1750,10 @@ export async function sendOverdueAutoFlagEmail(opts: SendOverdueAutoFlagOptions)
       : undefined;
 
     const subject = opts.isEscalated
-      ? `🚨 [ESCALATION] Overdue Deliverable #${opts.taskId}: "${opts.taskTitle}" (${opts.daysOverdue}d overdue)`
+      ? `[ESCALATION] Overdue Deliverable #${opts.taskId}: "${opts.taskTitle}" (${opts.daysOverdue}d overdue)`
       : opts.hasReason
-      ? `⚠️ [Overdue - Reason Logged] Deliverable #${opts.taskId}: "${opts.taskTitle}"`
-      : `🚨 [Action Required: No Reason] Overdue Deliverable #${opts.taskId}: "${opts.taskTitle}"`;
+      ? `[Overdue - Reason Logged] Deliverable #${opts.taskId}: "${opts.taskTitle}"`
+      : `[Action Required: No Reason] Overdue Deliverable #${opts.taskId}: "${opts.taskTitle}"`;
 
     const info = await transporter.sendMail({
       from,
@@ -1829,7 +1828,7 @@ export async function sendTaskCancelledEmail(opts: SendTaskCancelledOptions) {
     const appBase = opts.baseUrl || process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : '') || 'https://todo-dashboard-rhvx.vercel.app';
     const taskDirectLink = opts.taskId ? `${appBase}/?taskId=${encodeURIComponent(opts.taskId)}` : appBase;
 
-    const subject = `[UrbanGaon] 🚫 Deliverable Cancelled: "${opts.taskTitle}"`;
+    const subject = `[UrbanGaon] Deliverable Cancelled: "${opts.taskTitle}"`;
 
     const html = `<!DOCTYPE html>
 <html>
@@ -1867,7 +1866,7 @@ export async function sendTaskCancelledEmail(opts: SendTaskCancelledOptions) {
       </p>
 
       <div class="task-card">
-        <div class="task-title">🚫 ${opts.taskTitle}</div>
+        <div class="task-title">${opts.taskTitle}</div>
         <div style="font-size: 12px; color: #64748b; margin-bottom: 8px;">
           <strong>Deliverable ID:</strong> #${opts.taskId} ${opts.department ? `• <strong>Dept:</strong> ${opts.department}` : ''}
         </div>
@@ -1876,7 +1875,7 @@ export async function sendTaskCancelledEmail(opts: SendTaskCancelledOptions) {
           "${opts.cancellationReason}"
         </div>
         <div class="info-note">
-          ℹ️ Per corporate governance, this deliverable has been excluded from all active rosters and performance reports.
+          Per corporate governance, this deliverable has been excluded from all active rosters and performance reports.
         </div>
       </div>
 
@@ -1955,7 +1954,7 @@ export async function sendConfigRollbackEmail(opts: SendConfigRollbackEmailOptio
 <body>
   <div class="card">
     <div class="header">
-      <div style="font-size: 18px; font-weight: 800;">🚨 Configuration Rollback Alert • Flowchart 24</div>
+      <div style="font-size: 18px; font-weight: 800;">Configuration Rollback Alert • Flowchart 24</div>
       <div style="font-size: 12px; opacity: 0.9; margin-top: 2px;">UrbanGaon System Governance Notification</div>
     </div>
     <div class="content">
@@ -1981,7 +1980,7 @@ export async function sendConfigRollbackEmail(opts: SendConfigRollbackEmailOptio
     const info = await transporter.sendMail({
       from,
       to: opts.adminEmail,
-      subject: `🚨 [Rollback Notice] System Config rolled back to ${opts.restoredVersion}`,
+      subject: `[Rollback Notice] System Config rolled back to ${opts.restoredVersion}`,
       html,
     });
 

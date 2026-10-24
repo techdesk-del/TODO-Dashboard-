@@ -266,7 +266,7 @@ export const Header: React.FC = () => {
             }}
             title="Executive Oversight Active — Real-time Deliverable Monitoring across all employees"
           >
-            <span style={{ fontSize: '0.82rem' }}>🛡️</span>
+            
             <span>Executive Monitor</span>
           </div>
         )}
@@ -565,7 +565,7 @@ export const Header: React.FC = () => {
                   color: '#64748b',
                   textAlign: 'center'
                 }}>
-                  🛡️ Zero spam policy • Auto-suppressed on Sundays & Holidays
+                  Zero spam policy • Auto-suppressed on Sundays & Holidays
                 </div>
               </div>
             </>
@@ -763,12 +763,12 @@ export const Header: React.FC = () => {
                       {inAppNotifications.length > 0 ? (
                         inAppNotifications.map(notif => {
                           const typeBadge =
-                            notif.type === 'TASK_ASSIGNED' ? { label: '📋 ASSIGNED', bg: '#eff6ff', color: '#1d4ed8' } :
-                            notif.type === 'TASK_ESCALATED' ? { label: '🚨 ESCALATED', bg: '#fef2f2', color: '#b91c1c' } :
-                            notif.type === 'TASK_REOPENED' ? { label: '↩️ REOPENED', bg: '#f0f9ff', color: '#0369a1' } :
-                            notif.type === 'REASON_STATUS_CHANGED' ? { label: '⚖️ DECISION', bg: '#ecfdf5', color: '#047857' } :
-                            notif.type === 'CHRONIC_DELAY' ? { label: '⚠️ DELAY ALERT', bg: '#fff7ed', color: '#c2410c' } :
-                            { label: '📢 NOTICE', bg: '#f8fafc', color: '#475569' };
+                            notif.type === 'TASK_ASSIGNED' ? { label: 'ASSIGNED', bg: '#eff6ff', color: '#1d4ed8' } :
+                            notif.type === 'TASK_ESCALATED' ? { label: 'ESCALATED', bg: '#fef2f2', color: '#b91c1c' } :
+                            notif.type === 'TASK_REOPENED' ? { label: 'REOPENED', bg: '#f0f9ff', color: '#0369a1' } :
+                            notif.type === 'REASON_STATUS_CHANGED' ? { label: 'DECISION', bg: '#ecfdf5', color: '#047857' } :
+                            notif.type === 'CHRONIC_DELAY' ? { label: 'DELAY ALERT', bg: '#fff7ed', color: '#c2410c' } :
+                            { label: 'NOTICE', bg: '#f8fafc', color: '#475569' };
 
                           return (
                             <div
@@ -818,7 +818,7 @@ export const Header: React.FC = () => {
                         })
                       ) : (
                         <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#64748b', fontSize: '0.75rem' }}>
-                          🎉 Zero pending in-app alerts. You are completely up to date!
+                          Zero pending in-app alerts. You are completely up to date!
                         </div>
                       )}
                     </div>
@@ -909,7 +909,7 @@ export const Header: React.FC = () => {
 
                         {pendingCount === 0 && (
                           <div style={{ padding: '1.5rem', textAlign: 'center', color: '#64748b', fontSize: '0.75rem' }}>
-                            🎉 No overdue pending deliverables. All tasks are up to date!
+                            No overdue pending deliverables. All tasks are up to date!
                           </div>
                         )}
                       </div>
@@ -997,7 +997,13 @@ export const Header: React.FC = () => {
             tabIndex={0}
             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setIsRoleMenuOpen(prev => !prev); }}
           >
-            <div className="avatar-circle">{isMounted ? currentUser.avatar : 'GU'}</div>
+            <div className="avatar-circle">
+              {isMounted && (currentUser.avatar?.startsWith('/') || currentUser.avatar?.startsWith('http')) ? (
+                <img src={currentUser.avatar} alt={currentUser.name} />
+              ) : (
+                isMounted ? (currentUser.avatar || 'AD') : 'GU'
+              )}
+            </div>
             <div className="user-info-text">
               <span className="user-name">{isMounted ? getDisplayName(currentUser.name) : 'Guest'}</span>
               <span className="user-role-label">{isMounted ? currentUser.role.replace('_', ' ') : 'EMPLOYEE'}</span>
@@ -1038,9 +1044,14 @@ export const Header: React.FC = () => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  flexShrink: 0
+                  flexShrink: 0,
+                  overflow: 'hidden'
                 }}>
-                  {currentUser.avatar || 'AD'}
+                  {currentUser.avatar?.startsWith('/') || currentUser.avatar?.startsWith('http') ? (
+                    <img src={currentUser.avatar} alt={currentUser.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    currentUser.avatar || 'AD'
+                  )}
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>

@@ -106,7 +106,7 @@ export function useTaskDeadlines() {
 
         // Desktop Web Notification
         if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-          new Notification(`⚠️ UrbanGaon: ${overdueTasks.length} Pending Deliverable(s) Overdue`, {
+          new Notification(`UrbanGaon: ${overdueTasks.length} Pending Deliverable(s) Overdue`, {
             body: `You have ${overdueTasks.length} pending task(s) from previous dates awaiting completion or rescheduling.`,
             icon: '/favicon.ico',
           });
@@ -114,8 +114,8 @@ export function useTaskDeadlines() {
 
         // Top Banner Notification
         setBannerNotification({
-          message: `⚠️ Attention Required: ${overdueTasks.length} pending deliverable(s) are overdue from previous dates (e.g. ${overdueTasks[0]?.scheduledDate})`,
-          badge: '⏰ Action Required'
+          message: `Attention Required: ${overdueTasks.length} pending deliverable(s) are overdue from previous dates (e.g. ${overdueTasks[0]?.scheduledDate})`,
+          badge: 'Action Required'
         });
       }
 
@@ -129,15 +129,15 @@ export function useTaskDeadlines() {
         } catch {}
 
         if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-          new Notification(`⏰ Task Due Soon: ${task.title}`, {
+          new Notification(`Task Due Soon: ${task.title}`, {
             body: `Target time is ${task.time} (${task.priority} Priority). Click to review deliverable.`,
             icon: '/favicon.ico',
           });
         }
 
         setBannerNotification({
-          message: `⏰ Task Due Soon: '${task.title}' at ${task.time} today (${task.priority})`,
-          badge: '⚠️ Upcoming Due'
+          message: `Task Due Soon: '${task.title}' at ${task.time} today (${task.priority})`,
+          badge: 'Upcoming Due'
         });
       });
     };

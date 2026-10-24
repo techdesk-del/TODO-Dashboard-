@@ -284,7 +284,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
       <div className="inline-edit-card">
         <div className="inline-edit-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <span className="inline-badge">✏️ INLINE EDITING MODE ACTIVE</span>
+            <span className="inline-badge">INLINE EDITING MODE ACTIVE</span>
             <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
               • User modifying scheduled deliverable
             </span>
@@ -396,7 +396,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
 
         <div className="inline-actions-row">
           <div className="click-to-save-hint">
-            👉 CLICK HERE TO SAVE <ArrowRight size={14} />
+            CLICK HERE TO SAVE <ArrowRight size={14} />
           </div>
 
           {/* CEO-Only Delete Button */}
@@ -483,7 +483,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
               <div className="task-badges-row">
                 {isOverdue && (
                   <span className="task-pill-badge badge-overdue" title={hasDelayReason ? `Delay Reason: "${task.delayReason || task.pastDueReason}"` : 'Overdue without recorded reason requires justification'}>
-                    {hasDelayReason ? '⚠️ OVERDUE (REASON RECORDED)' : '🚨 PENDING NO REASON'}
+                    {hasDelayReason ? 'OVERDUE (REASON RECORDED)' : 'PENDING NO REASON'}
                   </span>
                 )}
 
@@ -492,25 +492,25 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                   return m?.status === 'ON_LEAVE';
                 }) && (
                     <span className="task-pill-badge badge-on-leave" title="Assignee is on authorized leave. Reminders and auto-escalations paused.">
-                      🏖️ ON LEAVE
+                      ON LEAVE
                     </span>
                   )}
 
                 {typeof task.carryForwardCount === 'number' && task.carryForwardCount > 0 ? (
                   <span className="task-pill-badge badge-carry-forward">
-                    🔄 CARRIED FORWARD ({task.carryForwardCount})
+                    CARRIED FORWARD ({task.carryForwardCount})
                   </span>
                 ) : null}
 
                 {(task.editedByAdmin || task.notes?.toLowerCase().includes('edited by admin')) && (
                   <span className="task-pill-badge badge-edited-admin" title="Administrative Intervention: Edited by Admin">
-                    🛡️ Edited by Admin
+                    Edited by Admin
                   </span>
                 )}
 
                 {(comp.status === 'Cancelled' || task.status === 'Cancelled') && (
                   <span className="task-pill-badge badge-cancelled">
-                    🚫 CANCELLED
+                    CANCELLED
                   </span>
                 )}
 
@@ -528,37 +528,37 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
 
                 {comp.status === 'On Hold' && (
                   <span className="task-pill-badge badge-hold">
-                    ⏸️ ON HOLD
+                    ON HOLD
                   </span>
                 )}
 
                 {comp.status === 'Escalated' && (
                   <span className="task-pill-badge badge-escalated">
-                    🚨 ESCALATED TO {task.escalatedTo || 'SENIOR'}
+                    ESCALATED TO {task.escalatedTo || 'SENIOR'}
                   </span>
                 )}
 
                 {comp.status === 'Pending Notice' && (
                   <span className="task-pill-badge badge-pending-notice">
-                    ⚠️ PENDING NOTICE (OVERDUE)
+                    PENDING NOTICE (OVERDUE)
                   </span>
                 )}
 
                 {comp.status === 'Not Started' && (
                   <span className="task-pill-badge badge-not-started">
-                    🆕 NOT STARTED
+                    NOT STARTED
                   </span>
                 )}
 
                 {comp.status === 'In Progress' && (
                   <span className="task-pill-badge badge-in-progress">
-                    ⚡ IN PROCESS
+                    IN PROCESS
                   </span>
                 )}
 
                 {task.assignees.length > 1 && (
                   <span className="task-pill-badge badge-multi-progress">
-                    👥 {comp.progressText}
+                    {comp.progressText}
                   </span>
                 )}
               </div>
@@ -733,6 +733,24 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
             <span>{task.time}</span>
           </div>
 
+          {task.project && (
+            <span style={{
+              fontSize: '0.68rem',
+              fontWeight: 700,
+              padding: '2px 7px',
+              borderRadius: '4px',
+              background: '#f1f5f9',
+              color: '#334155',
+              border: '1px solid #e2e8f0',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              flexShrink: 0
+            }}>
+              {task.project}
+            </span>
+          )}
+
           <div className="task-meta-item" style={{ flex: '1 1 auto', minWidth: '220px' }}>
             <User size={13} color="#64748b" />
             <span>
@@ -769,7 +787,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
             justifyContent: 'space-between',
             gap: '6px'
           }}>
-            <span>🚫 <strong>Cancellation Rationale:</strong> {task.cancellationReason}</span>
+            <span><strong>Cancellation Rationale:</strong> {task.cancellationReason}</span>
             <span style={{ color: '#dc2626', fontSize: '0.68rem', fontWeight: 600, flexShrink: 0 }}>
               Excluded from Performance Reports
             </span>
@@ -806,7 +824,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
             justifyContent: 'space-between',
             gap: '6px'
           }}>
-            <span>📝 <strong>FC 21 Delay Justification:</strong> {task.delayReason}</span>
+            <span><strong>FC 21 Delay Justification:</strong> {task.delayReason}</span>
             {task.delayReasonSubmittedAt && (
               <span style={{ color: '#c2410c', fontSize: '0.68rem', flexShrink: 0 }}>
                 Submitted: {new Date(task.delayReasonSubmittedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })} {new Date(task.delayReasonSubmittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -859,14 +877,14 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                   onClick={() => setSeniorActionModal({ isOpen: true, action: 'advise', note: '', targetAssigneeId: activeMembers[0]?.id || '' })}
                   style={{ fontSize: '0.68rem', fontWeight: 700, padding: '3px 8px', borderRadius: '4px', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', cursor: 'pointer' }}
                 >
-                  💡 Advise
+                  Advise
                 </button>
                 <button
                   type="button"
                   onClick={() => setSeniorActionModal({ isOpen: true, action: 'reassign', note: '', targetAssigneeId: activeMembers[0]?.id || '' })}
                   style={{ fontSize: '0.68rem', fontWeight: 700, padding: '3px 8px', borderRadius: '4px', background: '#f8fafc', color: '#0f172a', border: '1px solid #cbd5e1', cursor: 'pointer' }}
                 >
-                  👥 Reassign
+                  Reassign
                 </button>
                 <button
                   type="button"
@@ -880,7 +898,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                   onClick={() => setSeniorActionModal({ isOpen: true, action: 'return', note: '', targetAssigneeId: activeMembers[0]?.id || '' })}
                   style={{ fontSize: '0.68rem', fontWeight: 700, padding: '3px 8px', borderRadius: '4px', background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa', cursor: 'pointer' }}
                 >
-                  ↩️ Return
+                  Return
                 </button>
               </div>
             )}
@@ -890,13 +908,13 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
         {/* Resolved or Advised Banners */}
         {task.seniorAdvisoryComment && (
           <div style={{ fontSize: '0.72rem', color: '#1d4ed8', background: '#eff6ff', border: '1px solid #bfdbfe', padding: '0.35rem 0.65rem', borderRadius: '6px', marginLeft: '28px' }}>
-            <strong>💡 Senior Advisory Guidance:</strong> {task.seniorAdvisoryComment}
+            <strong>Senior Advisory Guidance:</strong> {task.seniorAdvisoryComment}
           </div>
         )}
 
         {task.seniorReturnReason && (
           <div style={{ fontSize: '0.72rem', color: '#c2410c', background: '#fff7ed', border: '1px solid #fed7aa', padding: '0.35rem 0.65rem', borderRadius: '6px', marginLeft: '28px' }}>
-            <strong>↩️ Returned by Senior:</strong> {task.seniorReturnReason}
+            <strong>Returned by Senior:</strong> {task.seniorReturnReason}
           </div>
         )}
 
@@ -911,7 +929,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
           <div className="multi-assignee-breakdown-card">
             <div className="multi-assignee-header">
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span>👥</span> Multi-Assignee Breakdown ({task.assignees.length} {task.assignees.length === 1 ? 'member' : 'members'} • {comp.progressText}):
+                 Multi-Assignee Breakdown ({task.assignees.length} {task.assignees.length === 1 ? 'member' : 'members'} • {comp.progressText}):
               </span>
               <span style={{ color: comp.progressPercent === 100 ? '#15803d' : '#2563eb', fontWeight: 800 }}>
                 {comp.progressPercent}% Completed
@@ -943,9 +961,14 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                         justifyContent: 'center',
                         fontSize: '0.66rem',
                         fontWeight: 700,
-                        flexShrink: 0
+                        flexShrink: 0,
+                        overflow: 'hidden'
                       }}>
-                        {a.avatar || a.name.slice(0, 2).toUpperCase()}
+                        {a.avatar?.startsWith('/') || a.avatar?.startsWith('http') ? (
+                          <img src={a.avatar} alt={a.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                        ) : (
+                          a.avatar || a.name.slice(0, 2).toUpperCase()
+                        )}
                       </span>
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={{ fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -980,8 +1003,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                           <option value="Not Started">Not Started</option>
                           <option value="In Progress">In Progress</option>
                           <option value="Done">✓ Done</option>
-                          <option value="On Hold">⏸️ On Hold</option>
-                          <option value="Escalated">🚨 Escalated</option>
+                          <option value="On Hold">On Hold</option>
+                          <option value="Escalated">Escalated</option>
                           <option value="Cancelled">Cancelled</option>
                         </select>
                       ) : (
@@ -1027,7 +1050,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                           }}
                           title="Assignee left or resigned? Reassign or close this component"
                         >
-                          ⚙️ Shift/Close
+                          Shift/Close
                         </button>
                       )}
                     </div>
@@ -1045,7 +1068,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
           <div className="stream-modal-card" style={{ maxWidth: '480px' }} onClick={e => e.stopPropagation()}>
             <div className="stream-modal-header">
               <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#92400e' }}>
-                ⏸️ Put Task On Hold (Governance Rule)
+                Put Task On Hold (Governance Rule)
               </h3>
               <button className="calendar-nav-btn" onClick={() => setShowHoldModal(false)}><X size={16} /></button>
             </div>
@@ -1079,7 +1102,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
           <div className="stream-modal-card" style={{ maxWidth: '480px' }} onClick={e => e.stopPropagation()}>
             <div className="stream-modal-header">
               <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#c2410c' }}>
-                📝 Document Overdue Delay Reason
+                Document Overdue Delay Reason
               </h3>
               <button className="calendar-nav-btn" onClick={() => setShowDelayReasonModal(false)}><X size={16} /></button>
             </div>
@@ -1114,7 +1137,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
           <div className="stream-modal-card" style={{ maxWidth: '500px' }} onClick={e => e.stopPropagation()}>
             <div className="stream-modal-header">
               <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#dc2626' }}>
-                🚨 Escalate Deliverable to Senior Leadership
+                Escalate Deliverable to Senior Leadership
               </h3>
               <button className="calendar-nav-btn" onClick={() => setShowEscalateModal(false)}><X size={16} /></button>
             </div>
@@ -1168,7 +1191,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
         <div className="stream-overlay" onClick={() => setShowRescheduleModal(false)}>
           <div className="stream-modal-card" style={{ maxWidth: '420px' }} onClick={e => e.stopPropagation()}>
             <div className="stream-modal-header">
-              <h3 style={{ fontSize: '1rem', fontWeight: 700 }}>📅 Reschedule Deliverable</h3>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700 }}>Reschedule Deliverable</h3>
               <button className="calendar-nav-btn" onClick={() => setShowRescheduleModal(false)}><X size={16} /></button>
             </div>
             <form onSubmit={handleConfirmReschedule} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -1277,9 +1300,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                   {task.title}
                 </div>
                 <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.72rem', color: '#64748b', marginTop: '0.35rem', flexWrap: 'wrap' }}>
-                  <span>📅 {task.scheduledDate}</span>
-                  <span>⏰ {task.time}</span>
-                  <span>🏷️ {task.department}</span>
+                  <span>{task.scheduledDate}</span>
+                  <span>{task.time}</span>
+                  <span>{task.department}</span>
                   <span className={getPriorityBadgeClass(task.priority)} style={{ padding: '0.1rem 0.35rem', fontSize: '0.65rem' }}>
                     {task.priority}
                   </span>
@@ -1508,10 +1531,10 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
           <div className="stream-modal-card" style={{ maxWidth: '480px' }} onClick={e => e.stopPropagation()}>
             <div className="stream-modal-header">
               <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                {seniorActionModal.action === 'advise' && '💡 Provide Senior Advisory Guidance'}
-                {seniorActionModal.action === 'reassign' && '👥 Reassign Escalated Deliverable'}
+                {seniorActionModal.action === 'advise' && 'Provide Senior Advisory Guidance'}
+                {seniorActionModal.action === 'reassign' && 'Reassign Escalated Deliverable'}
                 {seniorActionModal.action === 'resolve' && '✓ Resolve Escalated Deliverable'}
-                {seniorActionModal.action === 'return' && '↩️ Return Deliverable to Assignee'}
+                {seniorActionModal.action === 'return' && 'Return Deliverable to Assignee'}
               </h3>
               <button className="calendar-nav-btn" onClick={() => setSeniorActionModal(prev => ({ ...prev, isOpen: false }))}><X size={16} /></button>
             </div>
@@ -1629,7 +1652,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
               </div>
 
               <div style={{ fontSize: '0.75rem', color: '#b91c1c', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', padding: '0.55rem 0.75rem', marginBottom: '0.85rem', lineHeight: 1.45 }}>
-                ⚠️ <strong>Policy:</strong> Cancelling this deliverable marks its status as <strong>Cancelled</strong>, sets all assignees to Cancelled, notifies all assignees and creator, and <strong>strictly excludes this task from all performance ratio calculations</strong>.
+                <strong>Policy:</strong> Cancelling this deliverable marks its status as <strong>Cancelled</strong>, sets all assignees to Cancelled, notifies all assignees and creator, and <strong>strictly excludes this task from all performance ratio calculations</strong>.
               </div>
 
               <form onSubmit={async (e) => {
@@ -1763,7 +1786,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                       }}
                     >
                       <div style={{ fontWeight: 800, fontSize: '0.78rem', color: reassignMode === 'REPLACE_ALL' ? '#1d4ed8' : '#0f172a' }}>
-                        🔄 Replace all
+                        Replace all
                       </div>
                       <div style={{ fontSize: '0.67rem', color: '#64748b', marginTop: '2px' }}>
                         Remove old, add new
@@ -1783,7 +1806,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                       }}
                     >
                       <div style={{ fontWeight: 800, fontSize: '0.78rem', color: reassignMode === 'ADD_ALONGSIDE' ? '#047857' : '#0f172a' }}>
-                        ➕ Add alongside
+                        Add alongside
                       </div>
                       <div style={{ fontSize: '0.67rem', color: '#64748b', marginTop: '2px' }}>
                         Keep old, add new
@@ -1803,7 +1826,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                       }}
                     >
                       <div style={{ fontWeight: 800, fontSize: '0.78rem', color: reassignMode === 'REMOVE_SPECIFIC' ? '#b91c1c' : '#0f172a' }}>
-                        ➖ Remove specific
+                        Remove specific
                       </div>
                       <div style={{ fontSize: '0.67rem', color: '#64748b', marginTop: '2px' }}>
                         Remove selected only

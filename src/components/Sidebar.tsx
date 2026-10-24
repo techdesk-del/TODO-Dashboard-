@@ -122,7 +122,7 @@ export const Sidebar: React.FC = () => {
     if (!isCeo) {
       setBannerNotification({
         message: `Access Denied: The Executive CEO Portal is strictly restricted to Mr. Sukh Sagar Singh Bhati (CEO). You are currently logged in as ${currentUser.name} (${currentUser.designation}).`,
-        badge: "🔒 CEO Only"
+        badge: "CEO Only"
       });
       return;
     }
@@ -179,7 +179,7 @@ export const Sidebar: React.FC = () => {
             title="Click to open CEO Executive Command Center"
           >
             <div className="ceo-title-group">
-              <span className="ceo-crown-icon">👑</span>
+              
               <span className="ceo-title-text">
                 CEO Access
               </span>
@@ -286,7 +286,7 @@ export const Sidebar: React.FC = () => {
                 }}
               >
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                  <span>📍 Today ({formatDateDayMonth(todayStr)})</span>
+                  <span>Today ({formatDateDayMonth(todayStr)})</span>
                   <span style={{ fontSize: '0.68rem', opacity: 0.75 }}>{todayCount} Active Deliverables</span>
                 </div>
                 <span className="filter-badge-count">{todayCount}</span>
@@ -302,7 +302,7 @@ export const Sidebar: React.FC = () => {
                 }}
               >
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                  <span>⚡ Tomorrow ({formatDateDayMonth(tomorrowStr)})</span>
+                  <span>Tomorrow ({formatDateDayMonth(tomorrowStr)})</span>
                   <span style={{ fontSize: '0.68rem', opacity: 0.75 }}>{tomorrowCount} Scheduled Deliverables</span>
                 </div>
                 <span className="filter-badge-count">{tomorrowCount}</span>
@@ -325,7 +325,7 @@ export const Sidebar: React.FC = () => {
                   }}
                 >
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                    <span style={{ fontWeight: 800, color: '#be123c' }}>⚠️ Pending / Overdue</span>
+                    <span style={{ fontWeight: 800, color: '#be123c' }}>Pending / Overdue</span>
                     <span style={{ fontSize: '0.68rem', color: '#e11d48' }}>{overdueCount} Unfinished Tasks</span>
                   </div>
                   <span className="filter-badge-count" style={{ background: '#e11d48', color: '#ffffff' }}>
@@ -482,7 +482,7 @@ export const Sidebar: React.FC = () => {
         </div>
 
         <div className="sidebar-footer-note">
-          💡 <strong>Live Date Sync:</strong> Today is <strong>{formatDateDisplay(todayStr)}</strong>. Click any date to plan ahead.
+          <strong>Live Date Sync:</strong> Today is <strong>{formatDateDisplay(todayStr)}</strong>. Click any date to plan ahead.
         </div>
       </aside>
     </>

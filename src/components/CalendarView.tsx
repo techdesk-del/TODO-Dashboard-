@@ -310,8 +310,8 @@ export const CalendarView: React.FC = () => {
                 onChange={e => setSelectedEmployeeId(e.target.value)}
                 title="Switch employee calendar view as Admin"
               >
-                <option value="ME">👤 My Deliverables</option>
-                <option value="ALL">🏢 All Employees (Department)</option>
+                <option value="ME">My Deliverables</option>
+                <option value="ALL">All Employees (Department)</option>
                 <optgroup label="Direct Team Members">
                   {activeMembers.map(m => (
                     <option key={m.id} value={m.id}>
@@ -414,7 +414,7 @@ export const CalendarView: React.FC = () => {
             <AlertTriangle size={12} color="#dc2626" /> Overdue (Red Flag)
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700, color: '#92400e', background: '#fef3c7', padding: '2px 6px', borderRadius: '4px' }}>
-            🎉 Gazetted Holiday
+            Gazetted Holiday
           </span>
         </div>
 
@@ -626,7 +626,7 @@ export const CalendarView: React.FC = () => {
                             }}
                             title={`${t.title} [${t.status}] — Click for detail popup`}
                           >
-                            {taskOverdue && '⚠️ '}
+                            {taskOverdue && ''}
                             {t.title}
                           </div>
                         );
@@ -758,7 +758,7 @@ export const CalendarView: React.FC = () => {
                       >
                         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '4px' }}>
                           <span style={{ fontSize: '0.75rem', fontWeight: 700, color: taskOverdue ? '#991b1b' : '#0f172a', lineHeight: 1.2 }}>
-                            {taskOverdue && '⚠️ '}
+                            {taskOverdue && ''}
                             {t.title}
                           </span>
                         </div>
@@ -980,7 +980,7 @@ export const CalendarView: React.FC = () => {
             <div className="stream-modal-header">
               <div>
                 <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                  📅 Deliverables for {formatDateDisplay(inspectDate)}
+                  Deliverables for {formatDateDisplay(inspectDate)}
                 </h3>
                 <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
                   {inspectedDateTasks.length} task(s) on this date • Quick completion & status changes
@@ -1009,7 +1009,7 @@ export const CalendarView: React.FC = () => {
                   >
                     <div>
                       <div style={{ fontWeight: 800, fontSize: '0.82rem', color: taskOverdue ? '#991b1b' : '#0f172a' }}>
-                        {taskOverdue && '⚠️ '}
+                        {taskOverdue && ''}
                         {t.title}
                       </div>
                       <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '2px' }}>
@@ -1152,13 +1152,13 @@ export const CalendarView: React.FC = () => {
 
               {activeTaskDetail.holdReason && (
                 <div style={{ background: '#fef3c7', border: '1px solid #fde68a', color: '#92400e', padding: '0.5rem', borderRadius: '6px' }}>
-                  <strong>⏸️ Hold Justification:</strong> {activeTaskDetail.holdReason}
+                  <strong>Hold Justification:</strong> {activeTaskDetail.holdReason}
                 </div>
               )}
 
               {activeTaskDetail.escalationReason && (
                 <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', color: '#991b1b', padding: '0.5rem', borderRadius: '6px' }}>
-                  <strong>🚨 Escalation Note:</strong> {activeTaskDetail.escalationReason}
+                  <strong>Escalation Note:</strong> {activeTaskDetail.escalationReason}
                 </div>
               )}
 

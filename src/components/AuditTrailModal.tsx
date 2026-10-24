@@ -448,7 +448,7 @@ export const AuditTrailModal: React.FC = () => {
           {/* 1. Date Range: Start Date & End Date */}
           <div>
             <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 800, color: '#475569', marginBottom: '3px' }}>
-              📅 START DATE:
+              START DATE:
             </label>
             <input
               type="date"
@@ -461,7 +461,7 @@ export const AuditTrailModal: React.FC = () => {
 
           <div>
             <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 800, color: '#475569', marginBottom: '3px' }}>
-              📅 END DATE:
+              END DATE:
             </label>
             <input
               type="date"
@@ -475,7 +475,7 @@ export const AuditTrailModal: React.FC = () => {
           {/* 2. User Selector */}
           <div>
             <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 800, color: '#475569', marginBottom: '3px' }}>
-              👤 OPERATOR / USER:
+              OPERATOR / USER:
             </label>
             <select
               className="form-select"
@@ -495,7 +495,7 @@ export const AuditTrailModal: React.FC = () => {
           {/* 3. Task ID */}
           <div>
             <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 800, color: '#475569', marginBottom: '3px' }}>
-              🎯 TASK ID:
+              TASK ID:
             </label>
             <input
               type="text"
@@ -510,7 +510,7 @@ export const AuditTrailModal: React.FC = () => {
           {/* 4. Action Type */}
           <div>
             <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 800, color: '#475569', marginBottom: '3px' }}>
-              ⚡ ACTION TYPE:
+              ACTION TYPE:
             </label>
             <select
               className="form-select"
@@ -612,7 +612,7 @@ export const AuditTrailModal: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', background: '#eff6ff', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
             <div>
               <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#1e3a8a' }}>
-                🔍 Single Task Forensic Lifecycle
+                Single Task Forensic Lifecycle
               </div>
               <div style={{ fontSize: '0.72rem', color: '#3b82f6' }}>
                 Chronological timeline of all status transitions, reassignments, reopens &amp; field mutations

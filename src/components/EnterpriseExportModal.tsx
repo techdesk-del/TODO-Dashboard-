@@ -312,7 +312,7 @@ export const EnterpriseExportModal: React.FC<EnterpriseExportModalProps> = ({
 
           {exportType === 'WHOLE_TASKS' && (
             <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-              ℹ️ Exporting complete inventory of matching deliverables with no date restrictions.
+              Exporting complete inventory of matching deliverables with no date restrictions.
             </div>
           )}
         </div>
@@ -342,7 +342,7 @@ export const EnterpriseExportModal: React.FC<EnterpriseExportModalProps> = ({
         {/* Flowchart E Structure Preview */}
         <div style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0.75rem', marginBottom: '1rem', fontSize: '0.74rem' }}>
           <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: '4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span>📊 Workbook Output Schema:</span>
+            <span>Workbook Output Schema:</span>
             <span style={{ color: '#059669', fontWeight: 800 }}>
               {filteredTasks.length} Tasks • ~{estimatedAssigneeRows} Rows
             </span>

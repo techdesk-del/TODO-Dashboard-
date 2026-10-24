@@ -157,7 +157,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (open && isStrictCeo(currentUser)) {
       setBannerNotification({
         message: 'Executive Monitoring Mode: CEO role oversees all staff deliverables across the company. Direct task creation is disabled for this role.',
-        badge: '🔒 Executive Monitor'
+        badge: 'Executive Monitor'
       });
       return;
     }
@@ -435,6 +435,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       })
       .catch(() => {});
+
+    // Restore SystemConfig from localStorage for instant offline hydration
+    try {
+      const savedConfig = localStorage.getItem('urbangaon_system_config_v2');
+      if (savedConfig) {
+        const parsed = JSON.parse(savedConfig);
+        if (parsed && typeof parsed === 'object') {
+          setSystemConfig(prev => ({ ...prev, ...parsed }));
+        }
+      }
+    } catch (e) {
+      console.warn('[AppContext] systemConfig localStorage restore failed', e);
+    }
+
+    // Live sync SystemConfig from MongoDB Atlas
+    fetch(`/api/system-config?_t=${Date.now()}`, { cache: 'no-store' })
+      .then(res => res.json())
+      .then(json => {
+        if (json.success && json.data) {
+          setSystemConfig(json.data);
+          try {
+            localStorage.setItem('urbangaon_system_config_v2', JSON.stringify(json.data));
+          } catch {}
+        }
+      })
+      .catch(err => console.debug('[AppContext] system-config fetch failed:', err));
   }, [refreshFromDB]);
 
   // ── Real-Time Synchronization Engine ────────────────────────────
@@ -485,7 +511,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               });
               setBannerNotification({
                 message: `New deliverable "${data.taskTitle || data.task.title}" synced live across team`,
-                badge: '⚡ Realtime Synced'
+                badge: 'Realtime Synced'
               });
               return;
             } else if (data.action === 'UPDATED' && data.taskId) {
@@ -513,7 +539,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               });
               setBannerNotification({
                 message: `Deliverable "${data.taskTitle || data.taskId}" was deleted across connected devices`,
-                badge: '⚡ Realtime Synced'
+                badge: 'Realtime Synced'
               });
               return;
             } else if (data.action === 'DELETED_ALL') {
@@ -780,7 +806,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('[Security / Role Guard] CEO account is dedicated to deliverable monitoring & governance. Task creation is disabled.');
       setBannerNotification({
         message: 'Executive Monitoring Mode: CEO role oversees all staff deliverables across the company. Direct task creation is disabled for this role.',
-        badge: '🔒 Executive Monitor'
+        badge: 'Executive Monitor'
       });
       return {} as Task;
     }
@@ -1015,7 +1041,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setBannerNotification({
       message: `Escalated to ${seniorLeader}. Instant notification dispatched.`,
-      badge: '🚨 Escalated'
+      badge: 'Escalated'
     });
 
     // Flowchart 20: Event 2 — Task Escalated (Send instant in-app and email to senior and manager)
@@ -1173,7 +1199,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setBannerNotification({
       message: 'Deliverable returned to original assignee with documented instructions.',
-      badge: '↩️ Returned to Assignee'
+      badge: 'Returned to Assignee'
     });
 
     // Flowchart 20: Event 4 — Reason rejected or returned (Send instant in-app and email to assignee)
@@ -1369,12 +1395,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const addMember = async (memberData: Partial<TeamMember>): Promise<TeamMember> => {
     const rawName = memberData.name?.trim() || 'New Staff';
-    const initials = memberData.avatar || rawName
-      .split(' ')
-      .map(part => part[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+    const defaultAvatar = memberData.avatar || '/urbangaon-employee-emblem.png';
 
     const cleanEmail = memberData.email?.trim().toLowerCase() || `staff.${Date.now()}@urbangaon.com`;
     const assignedEmpId = memberData.employeeId || memberData.id || `EMP-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -1391,7 +1412,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       managerId: memberData.managerId,
       manager: memberData.manager,
       managerEmail: memberData.managerEmail,
-      avatar: initials,
+      avatar: defaultAvatar,
       status: memberData.status || 'Pending First Login',
       totalTasks: 0,
       completedTasks: 0,
@@ -1761,7 +1782,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       setBannerNotification({
         message: data.message,
-        badge: '🏖️ Staff On Leave'
+        badge: 'Staff On Leave'
       });
 
       return { success: true, message: data.message };
@@ -1926,7 +1947,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         body: JSON.stringify({
           eventType: 'TASK_CANCELLED',
           recipients: notificationRecipients,
-          title: `🚫 Deliverable Cancelled: "${targetTask.title}"`,
+          title: `Deliverable Cancelled: "${targetTask.title}"`,
           message: `Deliverable #${targetTask.id} was marked as Cancelled by ${currentUser.name}. Mandatory justification: "${reason.trim()}". Excluded from performance reports.`,
           taskId: targetTask.id,
           taskTitle: targetTask.title,
@@ -1955,7 +1976,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setBannerNotification({
       message: `Deliverable "${targetTask.title}" marked as Cancelled. Excluded from performance metrics.`,
-      badge: '🚫 Task Cancelled'
+      badge: 'Task Cancelled'
     });
   };
 
@@ -2095,7 +2116,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setBannerNotification({
       message: `Reassigned "${targetTask.title}" (${mode}). Added: ${addedMembers.length}, Removed: ${removedAssignees.length}.`,
-      badge: '👥 Task Reassigned'
+      badge: 'Task Reassigned'
     });
   };
 
@@ -2365,7 +2386,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateSystemConfig = (cfg: Partial<SystemConfig>) => {
-    setSystemConfig(prev => ({ ...prev, ...cfg }));
+    setSystemConfig(prev => {
+      const nextConfig = { ...prev, ...cfg };
+      try {
+        localStorage.setItem('urbangaon_system_config_v2', JSON.stringify(nextConfig));
+      } catch {}
+      return nextConfig;
+    });
+
+    // Real-time synchronization with MongoDB Atlas
+    fetch('/api/system-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        config: cfg,
+        actor: currentUser?.name || 'Admin',
+        actorRole: currentUser?.role || 'SUPER_ADMIN',
+        notes: `System configuration updated: ${Object.keys(cfg).join(', ')}`
+      })
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.data) {
+          setSystemConfig(data.data);
+          try {
+            localStorage.setItem('urbangaon_system_config_v2', JSON.stringify(data.data));
+          } catch {}
+        }
+      })
+      .catch(err => console.error('[AppContext] Failed to sync system-config to MongoDB Atlas:', err));
+
     logAudit({
       action: 'CONFIG_CHANGED',
       fieldChanged: 'System Configuration Updated',

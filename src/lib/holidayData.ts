@@ -27,7 +27,7 @@ export const OFFICIAL_HOLIDAYS_2026_27: CompanyHoliday[] = [
     name: 'Independence Day',
     days: 1,
     description: 'National Gazetted Holiday • Celebrating National Freedom',
-    icon: '🇮🇳'
+    icon: ''
   },
   {
     sNo: 2,
@@ -36,7 +36,7 @@ export const OFFICIAL_HOLIDAYS_2026_27: CompanyHoliday[] = [
     name: 'Raksha Bandhan',
     days: 1,
     description: 'Festival of Siblinghood & Protection',
-    icon: '✨'
+    icon: ''
   },
   {
     sNo: 3,
@@ -45,7 +45,7 @@ export const OFFICIAL_HOLIDAYS_2026_27: CompanyHoliday[] = [
     name: 'Diwali',
     days: 1,
     description: 'Festival of Lights & Prosperity',
-    icon: '🪔'
+    icon: ''
   },
   {
     sNo: 4,
@@ -54,7 +54,7 @@ export const OFFICIAL_HOLIDAYS_2026_27: CompanyHoliday[] = [
     name: 'Govardhan Pooja',
     days: 1,
     description: 'Post-Diwali Govardhan Festivity',
-    icon: '🕉️'
+    icon: ''
   },
   {
     sNo: 5,
@@ -63,7 +63,7 @@ export const OFFICIAL_HOLIDAYS_2026_27: CompanyHoliday[] = [
     name: 'Bhai Dooj',
     days: 1,
     description: 'Bhai Dooj Celebrations',
-    icon: '🌟'
+    icon: ''
   },
   {
     sNo: 6,
@@ -72,7 +72,7 @@ export const OFFICIAL_HOLIDAYS_2026_27: CompanyHoliday[] = [
     name: 'Makar Sankranti',
     days: 1,
     description: 'Harvest & Solar Transition Festival',
-    icon: '🪁'
+    icon: ''
   },
   {
     sNo: 7,
@@ -81,7 +81,7 @@ export const OFFICIAL_HOLIDAYS_2026_27: CompanyHoliday[] = [
     name: 'Republic Day',
     days: 1,
     description: 'National Gazetted Holiday • Constitution of India',
-    icon: '🇮🇳'
+    icon: ''
   },
   {
     sNo: 8,
@@ -90,7 +90,7 @@ export const OFFICIAL_HOLIDAYS_2026_27: CompanyHoliday[] = [
     name: 'Holi',
     days: 1,
     description: 'Festival of Colors & Spring Renewal',
-    icon: '🎨'
+    icon: ''
   }
 ];
 
@@ -125,7 +125,7 @@ export function isSundayDate(dateStr: string): boolean {
  * Comprehensive check for non-working days (Company Holiday or Sunday).
  * Returns suppression rationale for email dispatcher and cron daemon.
  */
-export function isNonWorkingDay(dateStr: string): {
+export function isNonWorkingDay(dateStr: string, workingDays?: string[]): {
   isNonWorking: boolean;
   reason?: string;
   holiday?: CompanyHoliday;
@@ -143,7 +143,20 @@ export function isNonWorkingDay(dateStr: string): {
     };
   }
 
-  if (isSunday) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dateObj = new Date(y, m - 1, d);
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const dayName = dayNames[dateObj.getDay()];
+
+  if (workingDays && Array.isArray(workingDays) && workingDays.length > 0) {
+    if (!workingDays.includes(dayName)) {
+      return {
+        isNonWorking: true,
+        reason: `${dayName} (Non-Working Day)`,
+        isSunday
+      };
+    }
+  } else if (isSunday) {
     return {
       isNonWorking: true,
       reason: 'Sunday (Weekly Off)',

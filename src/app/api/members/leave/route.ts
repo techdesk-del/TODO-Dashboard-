@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
       await dispatchNotificationFlow({
         eventType: 'TASK_ASSIGNED',
         recipients: recipientsToNotify,
-        title: `🏖️ Staff Leave Alert: ${member.name} (${leaveStartDate} to ${leaveEndDate})`,
+        title: `Staff Leave Alert: ${member.name} (${leaveStartDate} to ${leaveEndDate})`,
         message: `${member.name} has been marked On Leave from ${leaveStartDate} to ${leaveEndDate}. Reminders paused. ${affectedTasks.length} task(s) fall within this leave window (Action: ${taskDueAction === 'AUTO_EXTEND' ? 'Auto-extended' : 'Flagged for review'}).`,
         metadata: {
           leaveStartDate,

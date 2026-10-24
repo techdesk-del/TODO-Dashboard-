@@ -241,7 +241,7 @@ export const MorningDigestPreviewModal: React.FC = () => {
         }}>
           <div><strong>From:</strong> UrbanGaon Executive Dispatcher &lt;techdesk@urbangaon.com&gt;</div>
           <div><strong>To:</strong> {previewMode === 'ALL_STAFF' ? 'All Active Employees with Pending Deliverables' : `${currentUser.name} <${currentUser.email}>`}</div>
-          <div><strong>Subject:</strong> 📋 Daily Operational Focus: {displayDate} — {currentUser.name}</div>
+          <div><strong>Subject:</strong> Daily Operational Focus: {displayDate} — {currentUser.name}</div>
           <div><strong>Automated Cron Time:</strong> 08:30 AM IST Daily (Verified via Corporate Gmail SMTP)</div>
         </div>
 
