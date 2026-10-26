@@ -45,7 +45,9 @@ export type AuthViewMode =
   | 'FORGOT_VERIFY';
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode }) => {
-  const { setCurrentUser, currentUser, members, setActiveView, setBannerNotification, logAudit } = useApp();
+  const { setCurrentUser, currentUser, members, setActiveView, setBannerNotification, logAudit, purgedMemberIds = [], purgedMemberEmails = [] } = useApp();
+  const [extraPurgedIds, setExtraPurgedIds] = useState<string[]>([]);
+  const [extraPurgedEmails, setExtraPurgedEmails] = useState<string[]>([]);
 
   // View mode - defaults directly to LOGIN so first screen shown is corporate sign in
   const [authMode, setAuthMode] = useState<AuthViewMode>(initialMode || 'LOGIN');
@@ -191,8 +193,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
           if (json.success && Array.isArray(json.data) && json.data.length > 0) {
             setExtraMembers(json.data);
           }
+          if (json.purgedIds && Array.isArray(json.purgedIds)) {
+            setExtraPurgedIds(json.purgedIds);
+          }
+          if (json.purgedEmails && Array.isArray(json.purgedEmails)) {
+            setExtraPurgedEmails(json.purgedEmails.map((e: string) => e.toLowerCase().trim()));
+          }
         })
         .catch(() => { });
+
+      try {
+        const cached = localStorage.getItem('urbangaon_purged_members_v1');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed.ids)) setExtraPurgedIds(parsed.ids);
+          if (Array.isArray(parsed.emails)) setExtraPurgedEmails(parsed.emails.map((e: string) => e.toLowerCase().trim()));
+        }
+      } catch {}
     }
     return () => {
       clearCloseTimer();
@@ -216,6 +233,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
       overdueTasks?: number;
       velocity?: number;
     }> = [];
+
+    const allPurgedIds = new Set<string>([
+      ...(purgedMemberIds || []),
+      ...extraPurgedIds,
+    ]);
+    const allPurgedEmails = new Set<string>([
+      ...(purgedMemberEmails || []).map(e => e.toLowerCase().trim()),
+      ...extraPurgedEmails.map(e => e.toLowerCase().trim()),
+    ]);
 
     const seenEmails = new Set<string>();
     const seenIds = new Set<string>();
@@ -242,6 +268,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
       const isDeact = s === 'DEACTIVATED' || s === 'REMOVED' || s === 'TERMINATED' || s === 'EXITED' || (m as unknown as { isDeactivated?: boolean }).isDeactivated === true;
       if (seenIds.has(cleanId) || seenEmails.has(cleanEmail)) continue;
       if (deactivatedIds.has(cleanId) || deactivatedEmails.has(cleanEmail) || isDeact) {
+        continue;
+      }
+      if (allPurgedIds.has(cleanId) || allPurgedEmails.has(cleanEmail)) {
         continue;
       }
 
@@ -277,6 +306,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
     for (const o of OFFICIAL_ROSTER) {
       const cleanEmail = o.email.toLowerCase().trim();
       const cleanId = o.id.trim();
+      if (allPurgedIds.has(cleanId) || allPurgedEmails.has(cleanEmail)) continue;
+      if (o.aliases?.some(a => allPurgedEmails.has(a.toLowerCase().trim()))) continue;
       if (deactivatedIds.has(cleanId) || deactivatedEmails.has(cleanEmail)) continue;
       if (seenIds.has(cleanId) || seenEmails.has(cleanEmail)) continue;
 
@@ -1803,7 +1834,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                         Selected: <strong>{selectedEmployee.name}</strong> ({selectedEmployee.designation})
                       </span>
                     ) : (
-                      <span>Choose Employee from Directory ({allDirectoryMembers.length} Members)</span>
+                      <span suppressHydrationWarning>Choose Employee from Directory ({allDirectoryMembers.length} Members)</span>
                     )}
                   </span>
                   <span style={{ fontSize: '0.72rem', color: '#2563eb', fontWeight: 700 }}>

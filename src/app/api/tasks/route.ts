@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import { TaskModel } from '@/models/Task';
 import { MemberModel } from '@/models/Member';
+import { PurgedMemberModel } from '@/models/PurgedMember';
 import { AuditLogModel } from '@/models/AuditLog';
 import { InAppNotificationModel } from '@/models/InAppNotification';
 import { INITIAL_TASKS, INITIAL_MEMBERS } from '@/lib/mockData';
@@ -27,8 +28,14 @@ async function seedIfEmpty(forceSeed = false) {
 
   const memberCount = await MemberModel.countDocuments();
   if (memberCount === 0) {
-    await MemberModel.insertMany(INITIAL_MEMBERS, { ordered: false });
-    console.log(`[API/tasks] ✓ Seeded ${INITIAL_MEMBERS.length} members`);
+    const purgedRecords = await PurgedMemberModel.find({}).lean().exec();
+    const purgedIds = new Set(purgedRecords.map(p => p.id));
+    const purgedEmails = new Set(purgedRecords.map(p => p.email.toLowerCase().trim()));
+    const allowed = INITIAL_MEMBERS.filter(m => !purgedIds.has(m.id) && !purgedEmails.has(m.email.toLowerCase().trim()));
+    if (allowed.length > 0) {
+      await MemberModel.insertMany(allowed, { ordered: false });
+    }
+    console.log(`[API/tasks] ✓ Seeded ${allowed.length} members`);
   }
 
   if (forceSeed) {

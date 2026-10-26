@@ -10,20 +10,27 @@ import connectDB from '@/lib/db';
 import { MemberModel } from '@/models/Member';
 import { UserModel } from '@/models/User';
 import { InvitationModel } from '@/models/Invitation';
+import { PurgedMemberModel } from '@/models/PurgedMember';
 import { AuditLogModel } from '@/models/AuditLog';
 import { hashPassword } from '@/lib/auth';
 import { INITIAL_MEMBERS } from '@/lib/mockData';
 import { syncOfficialRosterToDB } from '@/lib/rosterSync';
 import { sendSetPasswordEmail } from '@/lib/email';
 import { broadcastMemberMutation } from '@/lib/events';
-import { isCeoUser } from '@/lib/rosterData';
+import { isCeoUser, OFFICIAL_ROSTER } from '@/lib/rosterData';
 
 async function seedMembersIfEmpty() {
   const count = await MemberModel.countDocuments();
   if (count === 0) {
     console.log('[API/members] Empty collection — seeding with official team roster...');
-    await MemberModel.insertMany(INITIAL_MEMBERS, { ordered: false });
-    console.log(`[API/members] ✓ Seeded ${INITIAL_MEMBERS.length} members`);
+    const purgedRecords = await PurgedMemberModel.find({}).lean().exec();
+    const purgedIds = new Set(purgedRecords.map(p => p.id));
+    const purgedEmails = new Set(purgedRecords.map(p => p.email.toLowerCase().trim()));
+    const allowed = INITIAL_MEMBERS.filter(m => !purgedIds.has(m.id) && !purgedEmails.has(m.email.toLowerCase().trim()));
+    if (allowed.length > 0) {
+      await MemberModel.insertMany(allowed, { ordered: false });
+    }
+    console.log(`[API/members] ✓ Seeded ${allowed.length} members`);
   }
 }
 
@@ -34,11 +41,18 @@ export async function GET() {
     // Keep roster in sync with official designations and roles
     await syncOfficialRosterToDB().catch(() => {});
 
-    const members = await MemberModel.find({}).lean().exec();
+    const purgedRecords = await PurgedMemberModel.find({}).lean().exec();
+    const purgedIds = new Set(purgedRecords.map(p => p.id));
+    const purgedEmails = new Set(purgedRecords.map(p => p.email.toLowerCase().trim()));
+
+    const rawMembers = await MemberModel.find({}).lean().exec();
+    const members = rawMembers.filter(m => !purgedIds.has(m.id) && !purgedEmails.has(m.email?.toLowerCase().trim()));
 
     return NextResponse.json({
       success: true,
       data: members,
+      purgedIds: Array.from(purgedIds),
+      purgedEmails: Array.from(purgedEmails),
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
@@ -420,24 +434,55 @@ export async function DELETE(req: NextRequest) {
       ]
     }).exec();
 
+    let memberName = member?.name;
+    let memberEmail = (member?.email || targetEmail).toLowerCase().trim();
+    let memberEmpId = member?.id || targetId;
+    let memberDept = member?.department || '';
+    let memberDesig = member?.designation || '';
+
     if (!member) {
-      return NextResponse.json({ success: false, error: 'Employee record not found in database' }, { status: 404 });
+      const officialEmp = OFFICIAL_ROSTER.find(
+        o => o.id === targetId || o.email.toLowerCase() === targetEmail || o.aliases?.some(a => a.toLowerCase() === targetEmail)
+      );
+      if (officialEmp) {
+        memberName = officialEmp.name;
+        memberEmail = officialEmp.email.toLowerCase().trim();
+        memberEmpId = officialEmp.id;
+        memberDept = officialEmp.department;
+        memberDesig = officialEmp.designation;
+      } else {
+        return NextResponse.json({ success: false, error: 'Employee record not found in database or corporate roster' }, { status: 404 });
+      }
     }
 
-    if (isCeoUser(member)) {
+    if (isCeoUser({ id: memberEmpId, email: memberEmail, name: memberName })) {
       return NextResponse.json({ success: false, error: 'Executive Command Protection: CEO account cannot be deleted' }, { status: 403 });
     }
 
-    const memberName = member.name;
-    const memberEmail = member.email;
-    const memberEmpId = member.id;
+    // 1. Permanently register in PurgedMemberModel tombstone collection
+    await PurgedMemberModel.findOneAndUpdate(
+      { $or: [{ id: memberEmpId }, { email: memberEmail }] },
+      {
+        $set: {
+          id: memberEmpId,
+          email: memberEmail,
+          name: memberName,
+          department: memberDept,
+          designation: memberDesig,
+          purgedAt: new Date().toISOString(),
+          purgedBy: body.actor || 'Super Admin',
+          reason: 'Account Deactivation & Mandatory Handover Purge',
+        }
+      },
+      { upsert: true }
+    ).exec();
 
-    // Permanently purge from collections
-    await MemberModel.deleteOne({ id: memberEmpId }).exec();
-    await UserModel.deleteMany({ $or: [{ id: memberEmpId }, { email: memberEmail.toLowerCase() }] }).exec();
-    await InvitationModel.deleteMany({ $or: [{ id: memberEmpId }, { email: memberEmail.toLowerCase() }] }).exec();
+    // 2. Permanently purge from collections
+    await MemberModel.deleteMany({ $or: [{ id: memberEmpId }, { email: memberEmail }] }).exec();
+    await UserModel.deleteMany({ $or: [{ id: memberEmpId }, { email: memberEmail }] }).exec();
+    await InvitationModel.deleteMany({ $or: [{ id: memberEmpId }, { email: memberEmail }] }).exec();
 
-    // Broadcast realtime event across all clients
+    // 3. Broadcast realtime event across all clients
     broadcastMemberMutation({
       action: 'DELETED',
       memberId: memberEmpId,
@@ -445,7 +490,7 @@ export async function DELETE(req: NextRequest) {
       memberEmail,
     });
 
-    // Create Audit Log
+    // 4. Create Audit Log
     try {
       const actorName = body.actor || 'Super Admin';
       const actorRole = body.actorRole || 'SUPER_ADMIN';
@@ -454,19 +499,21 @@ export async function DELETE(req: NextRequest) {
         timestamp: new Date().toISOString(),
         action: 'DELETED',
         fieldChanged: `Employee Account Permanently Purged (${memberName})`,
-        oldValue: JSON.stringify({ id: memberEmpId, name: memberName, email: memberEmail, status: member.status }),
+        oldValue: JSON.stringify({ id: memberEmpId, name: memberName, email: memberEmail }),
         newValue: 'PERMANENTLY_PURGED',
         actor: actorName,
         actorRole: actorRole,
         ipAddress: req.headers.get('x-forwarded-for') || '127.0.0.1',
         deviceInfo: req.headers.get('user-agent') || 'Admin Dashboard',
-        notes: `Permanently removed employee record for ${memberName} (${memberEmail}) from database.`,
+        notes: `Permanently purged employee record for ${memberName} (${memberEmail}) from corporate database and registered tombstone.`,
       });
     } catch {}
 
     return NextResponse.json({
       success: true,
-      message: `Employee ${memberName} permanently removed from system.`
+      message: `Employee ${memberName} permanently purged from system.`,
+      purgedId: memberEmpId,
+      purgedEmail: memberEmail,
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Unknown error';

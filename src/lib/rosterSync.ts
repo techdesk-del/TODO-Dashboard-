@@ -4,6 +4,7 @@
 import connectDB from '@/lib/db';
 import { MemberModel } from '@/models/Member';
 import { UserModel } from '@/models/User';
+import { PurgedMemberModel } from '@/models/PurgedMember';
 import { hashPassword } from '@/lib/auth';
 import { OFFICIAL_ROSTER } from './rosterData';
 
@@ -20,7 +21,25 @@ export async function syncOfficialRosterToDB(): Promise<void> {
     await connectDB();
     const defaultPasswordHash = await hashPassword('123');
 
+    // Fetch all purged employees so we never resurrect purged accounts
+    const purgedRecords = await PurgedMemberModel.find({}).lean().exec();
+    const purgedIds = new Set(purgedRecords.map(p => p.id));
+    const purgedEmails = new Set(purgedRecords.map(p => p.email.toLowerCase().trim()));
+
     for (const emp of OFFICIAL_ROSTER) {
+      const empEmailClean = emp.email.toLowerCase().trim();
+      const empAliases = emp.aliases ? emp.aliases.map(a => a.toLowerCase().trim()) : [];
+      const isPurged = purgedIds.has(emp.id) ||
+        purgedEmails.has(empEmailClean) ||
+        empAliases.some(a => purgedEmails.has(a));
+
+      if (isPurged) {
+        // Guarantee no leftover or resurrected records in MemberModel or UserModel
+        await MemberModel.deleteMany({ $or: [{ id: emp.id }, { email: empEmailClean }] }).exec();
+        await UserModel.deleteMany({ $or: [{ id: emp.id }, { email: empEmailClean }] }).exec();
+        continue;
+      }
+
       // 1. Sync MemberModel without overwriting existing deactivation or on-leave status
       const existingMember = await MemberModel.findOne({ id: emp.id });
       const currentStatus = (existingMember?.status === 'DEACTIVATED' || existingMember?.status === 'ON_LEAVE')

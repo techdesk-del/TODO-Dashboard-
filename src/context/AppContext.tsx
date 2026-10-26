@@ -120,6 +120,8 @@ interface AppContextType {
   refreshNotifications: () => Promise<void>;
   markNotificationRead: (id: string) => Promise<void>;
   markAllNotificationsRead: () => Promise<void>;
+  purgedMemberIds: string[];
+  purgedMemberEmails: string[];
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -129,6 +131,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(true);
   const [authModalInitialMode, setAuthModalInitialMode] = useState<'CHOOSER' | 'INVITATION_INPUT' | 'REQUEST_ACCESS' | 'LOGIN'>('LOGIN');
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [purgedMemberIds, setPurgedMemberIds] = useState<string[]>([]);
+  const [purgedMemberEmails, setPurgedMemberEmails] = useState<string[]>([]);
   const [members, setMembers] = useState<TeamMember[]>(INITIAL_MEMBERS);
 
   // Real-time active members list: strictly excludes any DEACTIVATED, REMOVED, or TERMINATED accounts
@@ -236,11 +240,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       if (res.ok) {
         const json = await res.json();
-        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-          setMembers(json.data);
+        if (json.success && Array.isArray(json.data)) {
+          const pIds: string[] = Array.isArray(json.purgedIds) ? json.purgedIds : [];
+          const pEmails: string[] = Array.isArray(json.purgedEmails) ? json.purgedEmails.map((e: string) => e.toLowerCase().trim()) : [];
+
+          setPurgedMemberIds(pIds);
+          setPurgedMemberEmails(pEmails);
+          try {
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('urbangaon_purged_members_v1', JSON.stringify({ ids: pIds, emails: pEmails }));
+            }
+          } catch {}
+
+          const pIdSet = new Set(pIds);
+          const pEmailSet = new Set(pEmails);
+          const filteredMembers = json.data.filter((m: TeamMember) => 
+            m && !pIdSet.has(m.id) && !pEmailSet.has(m.email?.toLowerCase().trim())
+          );
+          setMembers(filteredMembers);
+
           // Flowchart 23 Node 7: "On return date restore reminders and status"
           const todayStr = getTodayStr();
-          const returningMembers = json.data.filter(
+          const returningMembers = filteredMembers.filter(
             (m: TeamMember) => m.status === 'ON_LEAVE' && m.leaveEndDate && m.leaveEndDate < todayStr
           );
           for (const rm of returningMembers) {
@@ -336,6 +357,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ── Load persisted data / fetch from API on mount
   useEffect(() => {
     // Check localStorage first for instant hydration
+    try {
+      const cachedPurged = localStorage.getItem('urbangaon_purged_members_v1');
+      if (cachedPurged) {
+        const parsed = JSON.parse(cachedPurged);
+        const pIds = Array.isArray(parsed.ids) ? parsed.ids : [];
+        const pEmails = Array.isArray(parsed.emails) ? parsed.emails.map((e: string) => e.toLowerCase().trim()) : [];
+        if (pIds.length > 0) setPurgedMemberIds(pIds);
+        if (pEmails.length > 0) setPurgedMemberEmails(pEmails);
+        if (pIds.length > 0 || pEmails.length > 0) {
+          const pIdSet = new Set(pIds);
+          const pEmailSet = new Set(pEmails);
+          setMembers(prev => prev.filter(m => !pIdSet.has(m.id) && !pEmailSet.has(m.email?.toLowerCase().trim())));
+        }
+      }
+    } catch {}
+
     try {
       const savedTasks = localStorage.getItem('urbangaon_tasks_v2');
       if (savedTasks) {
@@ -565,6 +602,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 return isMatch ? { ...m, status: 'DEACTIVATED' as const, activeTasks: 0 } : m;
               }));
             } else if (data.action === 'DELETED') {
+              if (data.memberId) setPurgedMemberIds(prev => Array.from(new Set([...prev, data.memberId])));
+              if (data.memberEmail) setPurgedMemberEmails(prev => Array.from(new Set([...prev, data.memberEmail.toLowerCase().trim()])));
               setMembers(prev => prev.filter(m => {
                 const isMatch = m.id === data.memberId ||
                   (data.memberEmail && m.email.toLowerCase() === data.memberEmail.toLowerCase()) ||
@@ -1700,6 +1739,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const targetEmpId = target?.id || memberId;
     const targetName = target?.name || memberId;
     const targetEmail = target?.email || '';
+    const targetCleanEmail = targetEmail.toLowerCase().trim();
+
+    // Register tombstone immediately in local state and localStorage
+    setPurgedMemberIds(prev => Array.from(new Set([...prev, targetEmpId])));
+    if (targetCleanEmail) {
+      setPurgedMemberEmails(prev => Array.from(new Set([...prev, targetCleanEmail])));
+    }
+    try {
+      if (typeof window !== 'undefined') {
+        const cached = localStorage.getItem('urbangaon_purged_members_v1');
+        const parsed = cached ? JSON.parse(cached) : { ids: [], emails: [] };
+        parsed.ids = Array.from(new Set([...(parsed.ids || []), targetEmpId]));
+        if (targetCleanEmail) {
+          parsed.emails = Array.from(new Set([...(parsed.emails || []), targetCleanEmail]));
+        }
+        localStorage.setItem('urbangaon_purged_members_v1', JSON.stringify(parsed));
+      }
+    } catch {}
 
     const res = await fetch(`/api/members?id=${encodeURIComponent(targetEmpId)}`, {
       method: 'DELETE',
@@ -1716,7 +1773,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     // Optimistically remove from state
-    setMembers(prev => prev.filter(m => m.id !== targetEmpId && m.email.toLowerCase() !== targetEmail.toLowerCase()));
+    setMembers(prev => prev.filter(m => m.id !== targetEmpId && m.email.toLowerCase().trim() !== targetCleanEmail));
 
     // Broadcast across tabs
     try {
@@ -2528,6 +2585,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         refreshFromDB,
         refreshMembersFromDB,
         logAudit,
+        purgedMemberIds,
+        purgedMemberEmails,
         isAuthModalOpen,
         setIsAuthModalOpen,
         authModalInitialMode,

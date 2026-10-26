@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import { UserModel } from '@/models/User';
 import { MemberModel } from '@/models/Member';
+import { PurgedMemberModel } from '@/models/PurgedMember';
 import { AuditLogModel } from '@/models/AuditLog';
 import { verifyPassword, hashPassword, signJwtToken } from '@/lib/auth';
 import { findOfficialEmployeeByEmail, syncOfficialRosterToDB } from '@/lib/rosterSync';
@@ -31,6 +32,25 @@ export async function POST(req: NextRequest) {
     const cleanEmail = String(email).trim().toLowerCase();
     const emailRegex = new RegExp(`^${cleanEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
     const officialEmp = findOfficialEmployeeByEmail(cleanEmail);
+
+    // Guard against permanently purged accounts (Flowchart 4)
+    const isPurged = await PurgedMemberModel.findOne({
+      $or: [
+        { email: cleanEmail },
+        { email: emailRegex },
+        ...(officialEmp ? [{ id: officialEmp.id }] : []),
+      ]
+    }).lean().exec();
+
+    if (isPurged) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Access Denied: This account has been permanently purged and removed from corporate records.',
+        },
+        { status: 403 }
+      );
+    }
 
     let user = await UserModel.findOne(
       officialEmp
