@@ -2,16 +2,16 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
-import { 
-  ShieldCheck, 
-  Lock, 
-  Mail, 
-  X, 
-  KeyRound, 
-  AlertCircle, 
-  CheckCircle2, 
-  Building2, 
-  ChevronRight, 
+import {
+  ShieldCheck,
+  Lock,
+  Mail,
+  X,
+  KeyRound,
+  AlertCircle,
+  CheckCircle2,
+  Building2,
+  ChevronRight,
   UserCheck,
   ArrowLeft,
   Send,
@@ -35,18 +35,18 @@ interface AuthModalProps {
   initialMode?: 'CHOOSER' | 'INVITATION_INPUT' | 'REQUEST_ACCESS' | 'LOGIN';
 }
 
-export type AuthViewMode = 
-  | 'CHOOSER' 
-  | 'INVITATION_INPUT' 
-  | 'INVITATION_SETUP' 
-  | 'REQUEST_ACCESS' 
-  | 'LOGIN' 
-  | 'FORGOT_REQUEST' 
+export type AuthViewMode =
+  | 'CHOOSER'
+  | 'INVITATION_INPUT'
+  | 'INVITATION_SETUP'
+  | 'REQUEST_ACCESS'
+  | 'LOGIN'
+  | 'FORGOT_REQUEST'
   | 'FORGOT_VERIFY';
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode }) => {
   const { setCurrentUser, currentUser, members, setActiveView, setBannerNotification, logAudit } = useApp();
-  
+
   // View mode - defaults directly to LOGIN so first screen shown is corporate sign in
   const [authMode, setAuthMode] = useState<AuthViewMode>(initialMode || 'LOGIN');
 
@@ -192,7 +192,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
             setExtraMembers(json.data);
           }
         })
-        .catch(() => {});
+        .catch(() => { });
     }
     return () => {
       clearCloseTimer();
@@ -377,6 +377,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
       setError('Passwords do not match. Please ensure both fields are identical.');
       return;
     }
+    //
+
 
     setLoading(true);
 
@@ -425,7 +427,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
         localStorage.setItem('urbangaon_auth_user_v2', payload);
         sessionStorage.setItem('urbangaon_auth_user_v2', payload);
         sessionStorage.setItem('urbangaon_session_active', 'true');
-      } catch {}
+      } catch { }
 
       // Flowchart 5: Log onboarding login in audit trail
       try {
@@ -438,7 +440,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
           actorRole: data.user.role,
           notes: `Official invitation credentials activated under corporate security protocol.`
         });
-      } catch {}
+      } catch { }
 
       // Flowchart 5: Role-based Dashboard Navigation
       if (isCeoUser(data.user) || data.user.role === 'SUPER_ADMIN') {
@@ -611,7 +613,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
         localStorage.setItem('urbangaon_auth_user_v2', payload);
         sessionStorage.setItem('urbangaon_auth_user_v2', payload);
         sessionStorage.setItem('urbangaon_session_active', 'true');
-      } catch {}
+      } catch { }
 
       // Flowchart 5: "Log successful login in audit trail"
       try {
@@ -622,11 +624,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
           newValue: `${userObj.name} (${userObj.role})`,
           actor: userObj.name,
           actorRole: userObj.role,
-          notes: `Successful login verified under corporate security protocol. Role routed to ${
-            isCeoUser(userObj) || userObj.role === 'SUPER_ADMIN' ? 'Super Admin Dashboard (CEO Portal)' :
-            userObj.role === 'ADMIN' ? 'Admin / Talent HR Dashboard' :
-            userObj.role === 'MANAGER' ? 'Manager Dashboard (My Team View)' : 'Employee Workspace'
-          }.`
+          notes: `Successful login verified under corporate security protocol. Role routed to ${isCeoUser(userObj) || userObj.role === 'SUPER_ADMIN' ? 'Super Admin Dashboard (CEO Portal)' :
+              userObj.role === 'ADMIN' ? 'Admin / Talent HR Dashboard' :
+                userObj.role === 'MANAGER' ? 'Manager Dashboard (My Team View)' : 'Employee Workspace'
+            }.`
         });
       } catch (auditErr) {
         console.warn('[AuthModal] Audit log note:', auditErr);
@@ -698,7 +699,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
     }
   };
 
-  
+
 
   // Step 2: Verify Code and Set New Password
   const handleResetPasswordSubmit = async (e: React.FormEvent) => {
@@ -777,7 +778,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
         localStorage.setItem('urbangaon_auth_user_v2', payload);
         sessionStorage.setItem('urbangaon_auth_user_v2', payload);
         sessionStorage.setItem('urbangaon_session_active', 'true');
-      } catch {}
+      } catch { }
 
       // Flowchart 5: Log reset password login in audit trail
       try {
@@ -790,7 +791,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
           actorRole: data.user.role,
           notes: `Personal password configured and authenticated under corporate security protocol.`
         });
-      } catch {}
+      } catch { }
 
       // Flowchart 5: Role-based Dashboard Navigation
       if (isCeoUser(data.user) || data.user.role === 'SUPER_ADMIN') {
@@ -832,21 +833,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
   };
 
   return (
-    <div 
-      className="stream-overlay" 
+    <div
+      className="stream-overlay"
       onClick={e => {
         if (e.target === e.currentTarget) {
           handleModalClose();
         }
       }}
     >
-      <div 
-        className="stream-modal-card auth-modal-responsive-card" 
-        style={{ 
-          maxWidth: '520px', 
-          width: '95vw', 
-          maxHeight: 'min(90vh, 90dvh)', 
-          borderRadius: '16px', 
+      <div
+        className="stream-modal-card auth-modal-responsive-card"
+        style={{
+          maxWidth: '520px',
+          width: '95vw',
+          maxHeight: 'min(90vh, 90dvh)',
+          borderRadius: '16px',
           display: 'flex',
           flexDirection: 'column',
           backgroundColor: '#ffffff',
@@ -854,17 +855,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
           overflow: 'hidden',
           padding: 0,
           margin: 'auto'
-        }} 
+        }}
         onClick={e => e.stopPropagation()}
         onMouseDown={e => e.stopPropagation()}
         onMouseUp={e => e.stopPropagation()}
       >
         {/* Sticky Modal Header */}
-        <div 
-          className="stream-modal-header" 
-          style={{ 
+        <div
+          className="stream-modal-header"
+          style={{
             flexShrink: 0,
-            padding: 'clamp(0.75rem, 2vw, 1rem) clamp(0.9rem, 2.5vw, 1.35rem)', 
+            padding: 'clamp(0.75rem, 2vw, 1rem) clamp(0.9rem, 2.5vw, 1.35rem)',
             borderBottom: '1px solid #e2e8f0',
             backgroundColor: '#ffffff',
             display: 'flex',
@@ -921,11 +922,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
         </div>
 
         {/* Scrollable Modal Body Container (Prevents viewport clipping on small screens / mobile) */}
-        <div 
+        <div
           className="stream-modal-scroll-body"
-          style={{ 
-            flex: 1, 
-            overflowY: 'auto', 
+          style={{
+            flex: 1,
+            overflowY: 'auto',
             overflowX: 'hidden',
             padding: 'clamp(0.85rem, 2.5vw, 1.35rem)',
             display: 'flex',
@@ -1230,9 +1231,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#be123c', fontWeight: 800, fontSize: '0.85rem' }}>
                     <AlertTriangle size={18} />
                     <span>
-                      {invitationErrorDetails.isExpired ? 'Invitation Code Has Expired' : 
-                       invitationErrorDetails.isUsed ? 'Invitation Already Redeemed' : 
-                       'Invalid Invitation Code'}
+                      {invitationErrorDetails.isExpired ? 'Invitation Code Has Expired' :
+                        invitationErrorDetails.isUsed ? 'Invitation Already Redeemed' :
+                          'Invalid Invitation Code'}
                     </span>
                   </div>
                   <div style={{ fontSize: '0.76rem', color: '#9f1239', lineHeight: 1.45 }}>
@@ -1315,7 +1316,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                 </div>
 
 
-                
+
 
                 <div style={{ display: 'flex', gap: '8px', marginTop: '0.5rem', flexWrap: 'wrap' }}>
                   <button
@@ -2125,14 +2126,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                     cursor: isAccountLocked ? 'not-allowed' : 'pointer'
                   }}
                 >
-                  {isAccountLocked 
-                    ? 'Account Frozen (15 Mins)' 
-                    : (loading 
-                      ? 'Authenticating...' 
-                      : (requires2FA 
-                        ? (twoFactorRetriesLeft !== null && twoFactorRetriesLeft < 2 
-                            ? `Authorize Session with OTP (${twoFactorRetriesLeft} Retry Left)` 
-                            : 'Authorize Session with OTP') 
+                  {isAccountLocked
+                    ? 'Account Frozen (15 Mins)'
+                    : (loading
+                      ? 'Authenticating...'
+                      : (requires2FA
+                        ? (twoFactorRetriesLeft !== null && twoFactorRetriesLeft < 2
+                          ? `Authorize Session with OTP (${twoFactorRetriesLeft} Retry Left)`
+                          : 'Authorize Session with OTP')
                         : 'Sign In Securely'))}
                 </button>
               </form>

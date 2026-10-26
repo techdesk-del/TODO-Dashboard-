@@ -22,6 +22,7 @@ interface CronCache {
   isInitialized: boolean;
   lastDigestDate: string | null;
   lastRolloverDate: string | null;
+  lastOverdueHour: string | null;
 }
 
 declare global {
@@ -32,7 +33,8 @@ declare global {
 const cache: CronCache = global.__cronCache ?? { 
   isInitialized: false,
   lastDigestDate: null,
-  lastRolloverDate: null
+  lastRolloverDate: null,
+  lastOverdueHour: null,
 };
 global.__cronCache = cache;
 
@@ -157,7 +159,17 @@ export function initServerCron() {
   // 3. Hourly Overdue & No-Reason Auto-Flag Routine (Flowchart 21)
   cron.schedule('0 * * * *', async () => {
     try {
-      console.log('[Cron Hourly IST] Running Flowchart 21 overdue & no-reason evaluation...');
+      const now = new Date();
+      const istString = now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+      const currentHourKey = `${getTodayStr()}-H${new Date(istString).getHours()}`;
+
+      if (cache.lastOverdueHour === currentHourKey) {
+        console.log(`[Cron Hourly IST] Already evaluated for hour ${currentHourKey}, skipping duplicate run.`);
+        return;
+      }
+      cache.lastOverdueHour = currentHourKey;
+
+      console.log(`[Cron Hourly IST] Running Flowchart 21 overdue & no-reason evaluation (${currentHourKey})...`);
       await runOverdueAndNoReasonEvaluation({
         thresholdDays: 3,
         sendNotifications: true,

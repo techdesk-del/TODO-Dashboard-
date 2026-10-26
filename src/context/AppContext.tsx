@@ -1333,12 +1333,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setTasks(updatedTasks);
     }
 
-    // Trigger server-side evaluation for email alerts & MongoDB persistence
+    // Trigger server-side evaluation for MongoDB persistence without triggering duplicate email blasts
     try {
       fetch('/api/tasks/evaluate-overdue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ thresholdDays: 3, sendNotifications: true })
+        body: JSON.stringify({ thresholdDays: 3, sendNotifications: false })
       }).catch(err => console.debug('[FC21 Server Sync Failed]', err));
     } catch {}
 
