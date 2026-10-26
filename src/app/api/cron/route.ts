@@ -11,20 +11,92 @@ import { runMorningDigest } from '@/lib/digestEngine';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function GET() {
-  initServerCron();
-  return NextResponse.json({
-    success: true,
-    status: 'ACTIVE',
-    timezone: 'Asia/Kolkata (IST)',
-    jobs: [
-      { name: 'Morning Email Digest', cronSchedule: '08:30 AM IST Daily (30 8 * * *)' },
-      { name: 'Nightly Carry-Forward Rollover', cronSchedule: '00:05 AM IST Daily (5 0 * * *)' },
-      { name: 'Overdue & SLA Engine', cronSchedule: 'Hourly IST (0 * * * *)' },
-      { name: 'Data Retention & Archive', cronSchedule: '02:00 AM IST Daily (0 2 * * *)' },
-    ],
-    timestamp: new Date().toISOString(),
-  });
+export const maxDuration = 60;
+
+export async function GET(req: NextRequest) {
+  try {
+    initServerCron();
+    const { searchParams } = new URL(req.url);
+    const action = searchParams.get('action');
+
+    // 1. Overdue and No-Reason Engine (Hourly IST Vercel Cron)
+    if (action === 'overdue') {
+      const { runOverdueAndNoReasonEvaluation } = await import('@/lib/overdueEngine');
+      const origin = req.headers.get('origin') || process.env.NEXTAUTH_URL || 'https://todo.urbangaon.com';
+      const result = await runOverdueAndNoReasonEvaluation({
+        thresholdDays: 3,
+        sendNotifications: true,
+        baseUrl: origin,
+      });
+      return NextResponse.json({
+        success: true,
+        action: 'overdue',
+        data: result,
+        message: `Overdue and No-Reason evaluation executed via Vercel Cron: ${result.overdueCount} overdue, ${result.notificationsDispatched} notifications sent.`,
+      });
+    }
+
+    // 2. Morning Email Digest (08:30 AM IST Vercel Cron)
+    if (action === 'digest') {
+      const origin = req.headers.get('origin') || process.env.NEXTAUTH_URL || 'https://todo.urbangaon.com';
+      const result = await runMorningDigest({
+        force: searchParams.get('force') === 'true',
+        origin,
+        actor: 'Vercel Cron 08:30 AM IST',
+      });
+      return NextResponse.json({
+        success: true,
+        action: 'digest',
+        data: result,
+      });
+    }
+
+    // 3. Nightly Carry-Forward Rollover (00:05 AM IST Vercel Cron)
+    if (action === 'rollover') {
+      const result = await executeNightlyRollover({
+        actor: 'Vercel Cron 00:05 AM IST',
+      });
+      return NextResponse.json({
+        success: true,
+        action: 'rollover',
+        data: result,
+      });
+    }
+
+    // 4. Data Retention & Archive (02:00 AM IST Vercel Cron)
+    if (action === 'retention') {
+      const { executeDataRetention } = await import('@/lib/retentionEngine');
+      const result = await executeDataRetention({
+        taskRetentionDays: 365,
+        auditRetentionDays: 730,
+        actor: 'Vercel Cron 02:00 AM IST (Flowchart 25)',
+        actorRole: 'SUPER_ADMIN',
+      });
+      return NextResponse.json({
+        success: true,
+        action: 'retention',
+        data: result,
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      status: 'ACTIVE',
+      environment: process.env.VERCEL ? 'Vercel Serverless' : 'Node.js Local',
+      timezone: 'Asia/Kolkata (IST)',
+      jobs: [
+        { name: 'Morning Email Digest', cronSchedule: '08:30 AM IST Daily (0 3 * * * UTC)' },
+        { name: 'Nightly Carry-Forward Rollover', cronSchedule: '00:05 AM IST Daily (35 18 * * * UTC)' },
+        { name: 'Overdue & SLA Engine', cronSchedule: 'Hourly IST (0 * * * * UTC)' },
+        { name: 'Data Retention & Archive', cronSchedule: '02:00 AM IST Daily (30 20 * * * UTC)' },
+      ],
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Cron execution failed';
+    console.error('[API/cron GET error]', msg);
+    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+  }
 }
 
 export async function POST(req: NextRequest) {

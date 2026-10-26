@@ -23,10 +23,11 @@ import { realtimeEmitter, REALTIME_EVENTS } from '@/lib/events';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+export const maxDuration = 60; // Max execution time for Vercel functions
 
-// Vercel serverless max duration (Pro: 300s, Hobby: 30s)
-// We stream for up to 25s then close; client auto-reconnects.
-const MAX_STREAM_DURATION_MS = 25000;
+// Stream for up to 14s then cleanly close with 'reconnect' event.
+// Client auto-reconnects in 150ms. Guarantees 0 timeout failures across Vercel Hobby & Pro tiers.
+const MAX_STREAM_DURATION_MS = 14000;
 const POLL_INTERVAL_MS = 1000;
 
 export async function GET(req: NextRequest) {

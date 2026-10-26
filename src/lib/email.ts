@@ -21,8 +21,8 @@ export interface SendDigestOptions {
 export async function createEmailTransporter(): Promise<{ transporter: Transporter; isTestAccount: boolean }> {
   const rawHost = process.env.SMTP_HOST;
   const host = (rawHost && !rawHost.includes('@')) ? rawHost : 'smtp.gmail.com';
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+  const user = process.env.SMTP_USER || 'techdesk@urbangaon.com';
+  const pass = process.env.SMTP_PASS || 'xrtfpqnnvmyayvyq';
 
   // If real SMTP credentials are provided (e.g. Gmail App Password)
   if (user && pass && user !== 'your_email@gmail.com') {

@@ -717,10 +717,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (isMounted) refreshFromDB(true);
     }, 6000);
 
+    // Periodic governance trigger: guarantees overdue & pending notice emails are evaluated in real-time
+    const runOverdueCheck = () => {
+      if (typeof window !== 'undefined') {
+        fetch('/api/tasks/evaluate-overdue?sendNotifications=true', { method: 'POST' }).catch(() => {});
+      }
+    };
+    // Run once on connect, then every 5 minutes while browser tab is open
+    runOverdueCheck();
+    const overdueTimer = setInterval(runOverdueCheck, 5 * 60 * 1000);
+
     // Instant sync when: tab is focused again OR phone screen is unlocked
     const onTabActive = () => {
       if (isMounted) {
         refreshFromDB(true);
+        runOverdueCheck();
         // Also reconnect SSE if it got disconnected while tab was hidden
         if (!eventSource || eventSource.readyState === EventSource.CLOSED) {
           connectSSE();
@@ -736,6 +747,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => {
       isMounted = false;
       clearInterval(heartbeatTimer);
+      clearInterval(overdueTimer);
       if (reconnectTimer) clearTimeout(reconnectTimer);
       eventSource?.close();
       bc?.close();

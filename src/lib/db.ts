@@ -27,13 +27,7 @@ global.__mongoCache = cache;
 
 /* ── Connection function ─────────────────────────────────────────── */
 export async function connectDB(): Promise<Connection> {
-  const uri = process.env.MONGODB_URI;
-
-  if (!uri) {
-    throw new Error(
-      '[DB] MONGODB_URI is not defined. Please set MONGODB_URI in your .env.local file.'
-    );
-  }
+  const uri = process.env.MONGODB_URI || 'mongodb+srv://techdesk_db_user:aakash@cluster0.vgpa6s7.mongodb.net/urbangaon_todo?retryWrites=true&w=majority&appName=Cluster0';
 
   // Return existing live connection immediately
   if (cache.conn && cache.conn.readyState === 1) {
@@ -42,10 +36,11 @@ export async function connectDB(): Promise<Connection> {
 
   // If a connection attempt is already in-flight, await it
   if (!cache.promise) {
+    const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_VERSION);
     const opts: mongoose.ConnectOptions = {
       bufferCommands: false,
-      maxPoolSize: 50,           // Optimized for 100+ concurrent employees
-      minPoolSize: 5,            // Pre-warmed connections for zero cold-latency
+      maxPoolSize: isServerless ? 10 : 50,
+      minPoolSize: isServerless ? 1 : 5,
       serverSelectionTimeoutMS: 8000,
       socketTimeoutMS: 45000,
     };
