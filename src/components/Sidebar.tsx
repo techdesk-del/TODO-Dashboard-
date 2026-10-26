@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { 
-  Crown, 
+  LayoutDashboard, 
   Calendar as CalendarIcon, 
   CheckSquare, 
   Users, 
@@ -360,8 +360,8 @@ export const Sidebar: React.FC = () => {
               className={`nav-link-item ${activeView === 'ceo_portal' ? 'active' : ''}`}
               onClick={handleCeoAccessClick}
             >
-              <Crown size={16} color="#d97706" />
-              <span style={{ color: '#d97706', fontWeight: 700 }}>Executive Command Center</span>
+              <LayoutDashboard size={16} />
+              <span>Executive Command Center</span>
             </button>
           )}
 

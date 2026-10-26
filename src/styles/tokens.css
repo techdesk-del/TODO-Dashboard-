@@ -77,4 +77,11 @@
   --font-size-h3: 1rem;           /* 16px - Section subheadings */
   --font-size-h2: 1.125rem;       /* 18px - Section titles, modal headers */
   --font-size-h1: 1.25rem;        /* 20px - Main page titles */
+
+  /* Motion & Easing Tokens (Modern Enterprise SaaS) */
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quad: cubic-bezier(0.25, 1, 0.5, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 220ms;
+  --duration-slow: 350ms;
 }

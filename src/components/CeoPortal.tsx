@@ -6,7 +6,7 @@ import { isCeoUser, isStrictCeo } from '@/lib/rosterData';
 import { getTodayStr, formatDateDisplay, formatDateShort } from '@/lib/dateUtils';
 import { Task, TeamMember } from '@/types';
 import { 
-  Crown, 
+  LayoutDashboard, 
   FileText, 
   Download, 
   ArrowLeft, 
@@ -219,18 +219,17 @@ export const CeoPortal: React.FC = () => {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{
-            width: '44px',
-            height: '44px',
-            borderRadius: '12px',
-            background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-            border: '1px solid #334155',
+            width: '40px',
+            height: '40px',
+            borderRadius: '8px',
+            background: '#f8fafc',
+            border: '1px solid #e2e8f0',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 4px 10px rgba(15, 23, 42, 0.15)',
             flexShrink: 0
           }}>
-            <Crown size={22} color="#fbbf24" strokeWidth={2.2} />
+            <LayoutDashboard size={20} color="#334155" strokeWidth={2} />
           </div>
 
           <div>

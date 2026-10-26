@@ -838,16 +838,15 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
   padding: clamp(0.75rem, 2vw, 1rem) clamp(0.85rem, 2.5vw, 1.25rem);
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
-  transition: all 0.2s ease;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
   box-shadow: var(--shadow-xs);
   width: 100%;
 }
 
 .task-card:hover {
-  border-color: #cbd5e1;
-  box-shadow: var(--shadow-sm);
-  transform: translateY(-1px);
+  border-color: #93c5fd;
+  box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
+  transform: translateY(-2px);
 }
 
 .task-card.just-added {
@@ -3438,3 +3437,180 @@ label,
   font-size: 0.75rem !important;
   line-height: 1.4 !important;
 }
+
+/* ------------------------------------------------------------------ */
+/* 26. MODERN MINIMAL ENTERPRISE MICRO-INTERACTIONS & MOTION SYSTEM  */
+/* ------------------------------------------------------------------ */
+
+/* 1. Hardware-accelerated subtle fade & enter for views */
+.workspace-content,
+.ceo-portal-view,
+.admin-hr-portal-view,
+.audit-trail-container {
+  animation: enterViewFade 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes enterViewFade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 2. Micro-interactions for Action Buttons: Tactile Spring & Elevation */
+button,
+.btn-primary,
+.btn-secondary,
+.btn-success,
+.btn-danger,
+.btn-outline,
+.voice-hold-btn,
+.composer-send-btn {
+  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.16s cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 0.16s ease,
+              border-color 0.16s ease !important;
+}
+
+button:hover:not(:disabled),
+.btn-primary:hover:not(:disabled),
+.btn-secondary:hover:not(:disabled),
+.btn-success:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+button:active:not(:disabled),
+.btn-primary:active:not(:disabled),
+.btn-secondary:active:not(:disabled),
+.btn-success:active:not(:disabled),
+.composer-send-btn:active:not(:disabled) {
+  transform: scale(0.975) translateY(0) !important;
+}
+
+/* 3. Modern Minimal Focus Glow for Inputs, Selects & Textareas */
+input:not([type="checkbox"]):not([type="radio"]):not([type="color"]),
+select,
+textarea,
+.form-input,
+.form-select,
+.search-input,
+.composer-input {
+  transition: border-color 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 0.18s ease !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+.form-input:focus,
+.form-select:focus,
+.search-input:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+  outline: none !important;
+}
+
+/* 4. Left Sidebar Navigation Item Fluid Micro-Slide */
+.nav-link-item {
+  transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.nav-link-item:hover {
+  transform: translateX(3px);
+  background-color: #f1f5f9;
+}
+
+.nav-link-item.active {
+  transform: translateX(3px);
+}
+
+/* 5. Minimal Elevation for KPI & Drilldown Cards */
+.kpi-stat-card,
+.entity-card {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.2s ease !important;
+}
+
+.kpi-stat-card:hover {
+  transform: translateY(-2px);
+  border-color: #bfdbfe !important;
+  box-shadow: 0 6px 18px -3px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04) !important;
+}
+
+/* 6. Modals & Dialogs Subtle Scale & Fade Reveal */
+.stream-modal,
+.modal-content,
+.export-modal-dialog,
+.dialog-surface {
+  animation: modalEnterSpring 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes modalEnterSpring {
+  from {
+    opacity: 0;
+    transform: scale(0.975) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* 7. Dropdown Menus Slide Down */
+.user-role-dropdown-menu,
+.notification-center-dropdown,
+.filter-dropdown-menu,
+.flyout-menu {
+  animation: flyoutSlideDown 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: top right;
+}
+
+@keyframes flyoutSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 8. Table Row Transition */
+.enterprise-table tr {
+  transition: background-color 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* 9. Live Sync Status Subtle Organic Breathing */
+.sync-speed-badge,
+.live-status-dot {
+  animation: liveStatusBreathe 3s ease-in-out infinite;
+}
+
+@keyframes liveStatusBreathe {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 10px rgba(37, 99, 235, 0.4);
+  }
+  50% {
+    opacity: 0.88;
+    box-shadow: 0 0 14px rgba(37, 99, 235, 0.6);
+  }
+}
+
+/* 10. WCAG Accessibility: Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
