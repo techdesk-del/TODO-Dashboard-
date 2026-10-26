@@ -1227,10 +1227,10 @@ export const AdminHrPortal: React.FC = () => {
                   SELECT EMPLOYEE (SEARCH-AS-YOU-TYPE):
                 </label>
                 <div style={{ position: 'relative' }}>
-                  <Search size={14} style={{ position: 'absolute', left: '10px', top: '10px', color: '#64748b' }} />
+                  <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', pointerEvents: 'none' }} />
                   <input
                     type="text"
-                    className="form-input"
+                    className="form-input admin-filter-input"
                     placeholder={selectedUserForOversight === 'ALL' ? 'Type to search staff by name, email, ID...' : `Current: ${selectedUserForOversight}`}
                     value={userSearchQuery}
                     onChange={e => {
@@ -1238,7 +1238,6 @@ export const AdminHrPortal: React.FC = () => {
                       setIsUserDropdownOpen(true);
                     }}
                     onFocus={() => setIsUserDropdownOpen(true)}
-                    style={{ paddingLeft: '30px', fontSize: '0.75rem', height: '34px', width: '100%' }}
                   />
                   {isUserDropdownOpen && (
                     <div style={{
@@ -1321,8 +1320,7 @@ export const AdminHrPortal: React.FC = () => {
                   DEPARTMENT FILTER:
                 </label>
                 <select
-                  className="form-select"
-                  style={{ fontSize: '0.75rem', height: '34px', width: '100%', fontWeight: 600 }}
+                  className="form-select admin-filter-select"
                   value={departmentFilterForOversight}
                   onChange={e => setDepartmentFilterForOversight(e.target.value)}
                 >
@@ -1347,8 +1345,7 @@ export const AdminHrPortal: React.FC = () => {
                   REPORTING MANAGER FILTER:
                 </label>
                 <select
-                  className="form-select"
-                  style={{ fontSize: '0.75rem', height: '34px', width: '100%', fontWeight: 600 }}
+                  className="form-select admin-filter-select"
                   value={managerFilterForOversight}
                   onChange={e => setManagerFilterForOversight(e.target.value)}
                 >
@@ -1385,7 +1382,7 @@ export const AdminHrPortal: React.FC = () => {
                   placeholder="Filter deliverables by title, project, assignee..."
                   value={searchFilter}
                   onChange={e => setSearchFilter(e.target.value)}
-                  style={{ fontSize: '0.75rem', height: '30px', width: '100%' }}
+                  style={{ fontSize: '0.78rem', height: '34px', width: '100%', boxSizing: 'border-box' }}
                 />
               </div>
 

@@ -63,7 +63,18 @@
   --radius-lg: 14px;
   --radius-full: 9999px;
 
-  /* Fonts */
+  /* Fonts & Typography Scale (SDE-3 Production Standard) */
   --font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-heading: 'Outfit', 'Inter', system-ui, sans-serif;
+
+  --font-size-badge: 0.72rem;     /* 11.5px - Micro badges, counter pills, tags */
+  --font-size-caption: 0.75rem;   /* 12px - Secondary meta, timestamps, small tags */
+  --font-size-label: 0.75rem;     /* 12px - Form field labels, input labels */
+  --font-size-button: 0.8125rem;  /* 13px - Standard action buttons, filter chips */
+  --font-size-input: 0.8125rem;   /* 13px - Inputs, selects, form fields */
+  --font-size-body: 0.875rem;     /* 14px - Primary body text, descriptions */
+  --font-size-title: 0.9375rem;   /* 15px - Task titles, card headers */
+  --font-size-h3: 1rem;           /* 16px - Section subheadings */
+  --font-size-h2: 1.125rem;       /* 18px - Section titles, modal headers */
+  --font-size-h1: 1.25rem;        /* 20px - Main page titles */
 }

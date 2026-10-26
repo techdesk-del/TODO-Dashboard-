@@ -230,24 +230,24 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
 }
 
 .platform-title-main {
-  font-size: clamp(0.78rem, 1vw, 0.94rem);
+  font-size: 0.875rem;
   font-weight: 700;
   color: #0f172a;
   letter-spacing: -0.015em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  line-height: 1.2;
+  line-height: 1.25;
 }
 
 .platform-subtitle {
-  font-size: clamp(0.62rem, 0.85vw, 0.7rem);
+  font-size: 0.75rem;
   color: #64748b;
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  line-height: 1.2;
+  line-height: 1.25;
 }
 
 .status-dot-online {
@@ -276,7 +276,7 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
   align-items: center;
   gap: 6px;
   height: 32px;
-  font-size: clamp(0.68rem, 1.2vw, 0.76rem);
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--text-secondary);
   background: #f8fafc;
@@ -362,7 +362,7 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(0.6rem, 1.5vw, 0.72rem);
+  font-size: 0.75rem;
   font-weight: 700;
   flex-shrink: 0;
   overflow: hidden;
@@ -384,23 +384,23 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
 }
 
 .user-name {
-  font-size: clamp(0.65rem, 1.8vw, 0.78rem);
+  font-size: 0.8125rem;
   font-weight: 700;
   color: var(--text-primary);
-  line-height: 1.1;
+  line-height: 1.25;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: clamp(60px, 15vw, 160px);
+  max-width: clamp(80px, 18vw, 180px);
 }
 
 .user-role-label {
-  font-size: clamp(0.55rem, 1.5vw, 0.65rem);
+  font-size: 0.72rem;
   color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: clamp(60px, 15vw, 160px);
+  max-width: clamp(80px, 18vw, 180px);
 }
 
 .user-profile-dropdown-menu {
@@ -503,7 +503,7 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
 .ceo-view-badge {
   background: #d97706;
   color: white;
-  font-size: clamp(0.58rem, 1.5vw, 0.68rem);
+  font-size: 0.72rem;
   font-weight: 700;
   padding: 0.15rem 0.45rem;
   border-radius: var(--radius-full);
@@ -529,7 +529,7 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
 }
 
 .calendar-label {
-  font-size: clamp(0.55rem, 1.5vw, 0.65rem);
+  font-size: 0.72rem;
   font-weight: 700;
   color: var(--text-muted);
   letter-spacing: 0.05em;
@@ -537,7 +537,7 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
 }
 
 .calendar-month-selector {
-  font-size: clamp(0.72rem, 2vw, 0.82rem);
+  font-size: 0.8125rem;
   font-weight: 700;
   color: #1e293b;
   display: flex;
@@ -567,7 +567,7 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   text-align: center;
-  font-size: clamp(0.55rem, 1.5vw, 0.65rem);
+  font-size: 0.72rem;
   font-weight: 600;
   color: var(--text-muted);
   margin-bottom: 0.25rem;
@@ -586,7 +586,7 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: clamp(0.6rem, 1.8vw, 0.72rem);
+  font-size: 0.75rem;
   font-weight: 500;
   color: var(--text-secondary);
   border-radius: var(--radius-sm);
@@ -623,7 +623,7 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
 .filter-shortcuts-group { display: flex; flex-direction: column; gap: 0.45rem; }
 
 .filter-group-heading {
-  font-size: clamp(0.58rem, 1.5vw, 0.65rem);
+  font-size: 0.72rem;
   font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -638,7 +638,7 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
   border-radius: var(--radius-sm);
   background: #ffffff;
   border: 1px solid var(--border-subtle);
-  font-size: clamp(0.68rem, 2vw, 0.78rem);
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--text-secondary);
   cursor: pointer;
@@ -661,7 +661,7 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
 .filter-badge-count {
   background: #e2e8f0;
   color: #334155;
-  font-size: clamp(0.6rem, 1.5vw, 0.68rem);
+  font-size: 0.72rem;
   font-weight: 700;
   padding: 0.1rem 0.4rem;
   border-radius: var(--radius-full);
@@ -686,7 +686,7 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
   gap: clamp(0.4rem, 1.5vw, 0.6rem);
   padding: clamp(0.4rem, 1.5vw, 0.5rem) clamp(0.55rem, 2vw, 0.75rem);
   border-radius: var(--radius-sm);
-  font-size: clamp(0.7rem, 2vw, 0.8rem);
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--text-secondary);
   cursor: pointer;
@@ -703,7 +703,7 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
 .nav-link-item.active { background: #eff6ff; color: #2563eb; font-weight: 700; }
 
 .sidebar-footer-note {
-  font-size: clamp(0.62rem, 1.5vw, 0.7rem);
+  font-size: 0.72rem;
   color: var(--text-muted);
   line-height: 1.45;
   margin-top: auto;
@@ -750,14 +750,14 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
 }
 
 .sync-banner-title {
-  font-size: clamp(0.72rem, 2.5vw, 0.85rem);
+  font-size: 0.8125rem;
   font-weight: 700;
   color: #1e40af;
   overflow-wrap: break-word;
 }
 
 .sync-banner-subtitle {
-  font-size: clamp(0.65rem, 2vw, 0.75rem);
+  font-size: 0.75rem;
   color: #3b82f6;
   overflow-wrap: break-word;
 }
@@ -765,7 +765,7 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
 .sync-speed-badge {
   background: #2563eb;
   color: white;
-  font-size: clamp(0.62rem, 1.8vw, 0.7rem);
+  font-size: 0.72rem;
   font-weight: 700;
   padding: 0.2rem clamp(0.4rem, 2vw, 0.6rem);
   border-radius: var(--radius-full);
@@ -792,7 +792,7 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
 }
 
 .workspace-date-title {
-  font-size: clamp(0.82rem, 3vw, 1.1rem);
+  font-size: 1.125rem;
   font-weight: 800;
   color: #0f172a;
   display: flex;
@@ -803,7 +803,7 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
 }
 
 .workspace-date-sub {
-  font-size: clamp(0.65rem, 2vw, 0.75rem);
+  font-size: 0.78rem;
   color: var(--text-muted);
   font-weight: 500;
   margin-top: 0.1rem;
@@ -813,7 +813,7 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
   background: #eff6ff;
   color: #2563eb;
   border: 1px solid #bfdbfe;
-  font-size: clamp(0.62rem, 1.8vw, 0.72rem);
+  font-size: 0.75rem;
   font-weight: 700;
   padding: 0.22rem clamp(0.4rem, 2vw, 0.75rem);
   border-radius: var(--radius-full);
@@ -907,7 +907,7 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
 }
 
 .task-title-text {
-  font-size: clamp(0.85rem, 2vw, 0.96rem);
+  font-size: 0.9375rem;
   font-weight: 700;
   color: #0f172a;
   word-break: break-word;
@@ -919,7 +919,7 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
 .just-added-badge {
   background: #2563eb;
   color: white;
-  font-size: 0.62rem;
+  font-size: 0.72rem;
   font-weight: 800;
   padding: 0.15rem 0.45rem;
   border-radius: 4px;
@@ -934,7 +934,7 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   font-weight: 800;
   color: #1d4ed8;
   background: #eff6ff;
@@ -959,7 +959,7 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
 }
 
 .task-pill-badge {
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 700;
   padding: 2px 7px;
   border-radius: 5px;
@@ -1247,17 +1247,17 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
   background: #ffffff;
   border: 1px solid var(--border-subtle);
   color: var(--text-secondary);
-  font-size: clamp(0.65rem, 2vw, 0.75rem);
-  font-weight: 600;
-  padding: clamp(0.3rem, 1.5vw, 0.4rem) clamp(0.5rem, 2vw, 0.8rem);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  padding: 0.4rem 0.85rem;
   border-radius: var(--radius-sm);
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.35rem;
   transition: all 0.15s ease;
   white-space: nowrap;
-  min-height: 34px;
+  min-height: 36px;
   touch-action: manipulation;
 }
 
@@ -1279,9 +1279,9 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
   background: #2563eb;
   color: white;
   border: none;
-  font-size: clamp(0.65rem, 2vw, 0.75rem);
-  font-weight: 600;
-  padding: clamp(0.3rem, 1.5vw, 0.4rem) clamp(0.5rem, 2vw, 0.85rem);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  padding: 0.4rem 0.95rem;
   border-radius: var(--radius-sm);
   cursor: pointer;
   display: flex;
@@ -1289,7 +1289,7 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
   gap: 0.35rem;
   transition: all 0.15s ease;
   white-space: nowrap;
-  min-height: 34px;
+  min-height: 36px;
   touch-action: manipulation;
 }
 
@@ -1299,9 +1299,9 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
   background: #10b981;
   color: white;
   border: none;
-  font-size: clamp(0.65rem, 2vw, 0.75rem);
-  font-weight: 600;
-  padding: clamp(0.3rem, 1.5vw, 0.4rem) clamp(0.5rem, 2vw, 0.9rem);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  padding: 0.4rem 0.95rem;
   border-radius: var(--radius-sm);
   cursor: pointer;
   display: flex;
@@ -1309,7 +1309,7 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
   gap: 0.35rem;
   transition: all 0.15s ease;
   white-space: nowrap;
-  min-height: 34px;
+  min-height: 36px;
   touch-action: manipulation;
 }
 
@@ -1342,7 +1342,7 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
 .inline-badge {
   background: #dbeafe;
   color: #1e40af;
-  font-size: clamp(0.6rem, 1.8vw, 0.68rem);
+  font-size: 0.72rem;
   font-weight: 800;
   padding: 0.18rem 0.48rem;
   border-radius: 4px;
@@ -1360,7 +1360,7 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
 .form-field-group { display: flex; flex-direction: column; gap: 0.28rem; min-width: 0; }
 
 .form-field-label {
-  font-size: clamp(0.6rem, 1.8vw, 0.68rem);
+  font-size: 0.75rem;
   font-weight: 700;
   color: var(--text-secondary);
   text-transform: uppercase;
@@ -1373,15 +1373,18 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
 
 .form-input,
 .form-select {
-  padding: clamp(0.38rem, 1.5vw, 0.5rem) clamp(0.5rem, 2vw, 0.75rem);
+  padding: 0.45rem 0.75rem;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
-  font-size: clamp(0.72rem, 2vw, 0.82rem);
+  font-size: 0.8125rem;
   background: #ffffff;
   color: var(--text-primary);
   outline: none;
   width: 100%;
   min-width: 0;
+  min-height: 36px;
+  line-height: 1.4;
+  box-sizing: border-box;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -1401,7 +1404,7 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
 }
 
 .click-to-save-hint {
-  font-size: clamp(0.65rem, 2vw, 0.75rem);
+  font-size: 0.75rem;
   font-weight: 700;
   color: #059669;
   display: flex;
@@ -1436,8 +1439,8 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
   color: white;
   border: none;
   border-radius: var(--radius-sm);
-  padding: clamp(0.5rem, 2vw, 0.65rem) clamp(0.75rem, 3vw, 1.25rem);
-  font-size: clamp(0.72rem, 2.5vw, 0.85rem);
+  padding: 0.5rem 1.15rem;
+  font-size: 0.8125rem;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -1447,7 +1450,7 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
   transition: all 0.2s ease;
   box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
   white-space: nowrap;
-  min-height: 44px;
+  min-height: 42px;
   touch-action: manipulation;
 }
 
@@ -1464,16 +1467,16 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
 
 .composer-input {
   flex: 1;
-  padding: clamp(0.5rem, 2vw, 0.65rem) clamp(0.6rem, 2vw, 1rem);
+  padding: 0.5rem 0.85rem;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
-  font-size: clamp(0.72rem, 2.5vw, 0.85rem);
+  font-size: 0.8125rem;
   background: #f8fafc;
   color: var(--text-primary);
   outline: none;
   transition: all 0.2s ease;
   min-width: 0;
-  min-height: 44px;
+  min-height: 42px;
 }
 
 .composer-input:focus {
@@ -1483,7 +1486,7 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
 }
 
 .composer-input::placeholder {
-  font-size: clamp(0.65rem, 2vw, 0.82rem);
+  font-size: 0.8125rem;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -1649,8 +1652,8 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
   overflow: hidden;
 }
 
-.entity-card-num { font-size: clamp(0.55rem, 1.5vw, 0.62rem); font-weight: 800; color: #2563eb; text-transform: uppercase; letter-spacing: 0.04em; }
-.entity-card-val { font-size: clamp(0.72rem, 2vw, 0.85rem); font-weight: 700; color: #0f172a; overflow-wrap: break-word; }
+.entity-card-num { font-size: 0.72rem; font-weight: 800; color: #2563eb; text-transform: uppercase; letter-spacing: 0.04em; }
+.entity-card-val { font-size: 0.8125rem; font-weight: 700; color: #0f172a; overflow-wrap: break-word; }
 
 /* Stream Modal Footer */
 .stream-modal-footer {
@@ -1665,7 +1668,7 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
 }
 
 .stream-modal-footer-meta {
-  font-size: clamp(0.68rem, 2vw, 0.75rem);
+  font-size: 0.75rem;
   color: #64748b;
   line-height: 1.4;
 }
@@ -1693,7 +1696,7 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  padding: clamp(0.75rem, 3vw, 1.1rem) clamp(0.85rem, 3vw, 1.25rem);
+  padding: 0.85rem 1.15rem;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
@@ -1705,7 +1708,7 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
 .kpi-stat-card:hover { box-shadow: var(--shadow-md); }
 
 .kpi-title {
-  font-size: clamp(0.6rem, 1.8vw, 0.68rem);
+  font-size: 0.72rem;
   font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -1713,13 +1716,13 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
 }
 
 .kpi-value {
-  font-size: clamp(1.2rem, 5vw, 1.65rem);
+  font-size: 1.35rem;
   font-weight: 800;
   color: #0f172a;
   line-height: 1.1;
 }
 
-.kpi-subtext { font-size: clamp(0.62rem, 2vw, 0.72rem); color: #059669; font-weight: 600; }
+.kpi-subtext { font-size: 0.75rem; color: #059669; font-weight: 600; }
 .kpi-subtext.warning { color: #c2410c; }
 
 .ceo-actions-bar {
@@ -1757,8 +1760,8 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
 
 .drilldown-stat-item { display: flex; flex-direction: column; }
 
-.drilldown-stat-label { font-size: clamp(0.58rem, 1.5vw, 0.62rem); font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
-.drilldown-stat-val { font-size: clamp(0.8rem, 2.5vw, 0.95rem); font-weight: 800; color: #1e40af; }
+.drilldown-stat-label { font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.drilldown-stat-val { font-size: 0.9375rem; font-weight: 800; color: #1e40af; }
 
 /* ------------------------------------------------------------------ */
 /* 15. ENTERPRISE TABLES — always scroll horizontally                  */
@@ -1799,28 +1802,29 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: clamp(0.72rem, 1.8vw, 0.82rem);
+  font-size: 0.8125rem;
   min-width: 760px; /* Ensures all executive data columns maintain readable spacing without squishing */
 }
 
 .enterprise-table th {
   background: #f8fafc;
   color: var(--text-muted);
-  font-size: clamp(0.62rem, 1.8vw, 0.7rem);
+  font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  padding: clamp(0.55rem, 2vw, 0.75rem) clamp(0.65rem, 2vw, 1rem);
+  padding: 0.65rem 0.85rem;
   border-bottom: 1px solid var(--border-subtle);
   white-space: nowrap;
 }
 
 .enterprise-table td {
-  padding: clamp(0.6rem, 2vw, 0.85rem) clamp(0.65rem, 2vw, 1rem);
+  padding: 0.7rem 0.85rem;
   border-bottom: 1px solid var(--border-subtle);
   color: var(--text-primary);
   vertical-align: top;
   overflow-wrap: break-word;
+  font-size: 0.8125rem;
 }
 
 .enterprise-table tr:last-child td { border-bottom: none; }
@@ -2602,7 +2606,7 @@ textarea:focus-visible {
 /* 4-column responsive grid on desktop, 2-col on tablet, 1-col on phone */
 .admin-filter-controls-grid {
   display: grid;
-  grid-template-columns: minmax(240px, 1.4fr) minmax(180px, 1fr) minmax(180px, 1fr) auto;
+  grid-template-columns: minmax(210px, 1.4fr) minmax(160px, 1fr) minmax(160px, 1fr) auto;
   align-items: flex-end;
   gap: 0.75rem;
   width: 100%;
@@ -2612,7 +2616,7 @@ textarea:focus-visible {
 .admin-filter-control-item {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
@@ -2625,16 +2629,49 @@ textarea:focus-visible {
   color: #475569;
   letter-spacing: 0.02em;
   white-space: nowrap;
+  line-height: 1.3;
+}
+
+.admin-filter-select {
+  height: 38px !important;
+  min-height: 38px !important;
+  font-size: 0.78rem !important;
+  font-weight: 600 !important;
+  padding: 0 28px 0 10px !important;
+  line-height: 36px !important;
+  box-sizing: border-box !important;
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  display: block !important;
+  width: 100% !important;
+  overflow: visible !important;
+}
+
+.admin-filter-input {
+  height: 38px !important;
+  min-height: 38px !important;
+  font-size: 0.78rem !important;
+  padding-left: 32px !important;
+  padding-right: 10px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 6px !important;
+  background-color: #ffffff !important;
+  color: #0f172a !important;
 }
 
 .admin-export-tasks-btn {
   background: #059669 !important;
-  border-color: #047857 !important;
+  border: 1px solid #047857 !important;
   color: #ffffff !important;
-  padding: 0 0.9rem !important;
-  height: 34px !important;
-  min-height: 34px !important;
-  font-size: 0.75rem !important;
+  padding: 0 1rem !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  font-size: 0.78rem !important;
   font-weight: 700 !important;
   display: flex !important;
   align-items: center !important;
@@ -2644,22 +2681,33 @@ textarea:focus-visible {
   border-radius: 6px !important;
   cursor: pointer;
   box-shadow: 0 1px 2px rgba(5, 150, 105, 0.2);
+  box-sizing: border-box !important;
 }
 
 .admin-export-tasks-btn:hover {
   background: #047857 !important;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 900px) {
   .admin-filter-controls-grid {
     grid-template-columns: 1fr 1fr;
   }
+  .admin-filter-control-item:first-child {
+    grid-column: 1 / -1;
+  }
+  .admin-filter-control-item:last-child {
+    grid-column: 1 / -1;
+  }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 600px) {
   .admin-filter-controls-grid {
     grid-template-columns: 1fr;
     gap: 0.65rem;
+  }
+  .admin-filter-control-item:first-child,
+  .admin-filter-control-item:last-child {
+    grid-column: 1;
   }
   .admin-export-tasks-btn {
     width: 100% !important;
@@ -3284,5 +3332,109 @@ input[type="time"]:focus {
   }
 }
 
+/* ------------------------------------------------------------------ */
+/* 25. ENTERPRISE TYPOGRAPHY UNIFICATION & EQUALIZATION SYSTEM        */
+/* ------------------------------------------------------------------ */
 
+/* Global legibility safety floor: never allow text below 11.5px (0.72rem) */
+[style*="font-size: 0.5"],
+[style*="font-size:0.5"],
+[style*="fontSize: '0.5"],
+[style*="fontSize:'0.5"],
+[style*="font-size: 0.6"],
+[style*="font-size:0.6"],
+[style*="fontSize: '0.6"],
+[style*="fontSize:'0.6"] {
+  font-size: 0.72rem !important;
+}
 
+[style*="font-size: 0.65"],
+[style*="font-size:0.65"],
+[style*="fontSize: '0.65"],
+[style*="fontSize:'0.65"],
+[style*="font-size: 0.68"],
+[style*="font-size:0.68"],
+[style*="fontSize: '0.68"],
+[style*="fontSize:'0.68"],
+[style*="font-size: 0.70"],
+[style*="font-size:0.70"],
+[style*="font-size: 0.7rem"],
+[style*="font-size:0.7rem"],
+[style*="fontSize: '0.7rem"] {
+  font-size: 0.75rem !important;
+}
+
+/* Equalize all action buttons across cards, modals, bars, and headers */
+button:not(.composer-send-btn):not(.dropdown-close-btn):not(.modal-close-btn):not(.icon-action-btn):not(.mobile-header-icon-btn):not(.btn-icon-only),
+.btn-primary,
+.btn-secondary,
+.btn-success,
+.btn-danger,
+.btn-outline {
+  font-size: 0.8125rem !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em;
+  min-height: 36px;
+  box-sizing: border-box;
+}
+
+/* Equalize all input fields, selects, and textareas */
+input:not([type="checkbox"]):not([type="radio"]):not([type="color"]),
+select,
+textarea,
+.form-input,
+.form-select,
+.search-input {
+  font-size: 0.8125rem !important;
+  line-height: 1.4 !important;
+  min-height: 36px;
+  box-sizing: border-box;
+}
+
+/* Equalize all form labels and field headers */
+label,
+.form-label,
+.form-field-label,
+.input-label {
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em;
+}
+
+/* Equalize badges, tag pills, count badges */
+.badge,
+.tag-badge,
+.status-pill,
+.filter-badge-count,
+.task-count-pill,
+.active-date-pill,
+.task-sequence-badge,
+.task-pill-badge,
+.just-added-badge,
+.sync-speed-badge,
+.ceo-view-badge,
+.inline-badge {
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+  padding: 0.2rem 0.5rem;
+  letter-spacing: 0.02em;
+}
+
+/* Harmonize task titles and card headers */
+.task-title-text,
+.card-header-title {
+  font-size: 0.9375rem !important;
+  font-weight: 700 !important;
+  line-height: 1.35 !important;
+}
+
+/* Equalize secondary meta text, timestamps, captions */
+.task-meta-text,
+.caption-text,
+.timestamp-text,
+.sync-banner-subtitle,
+.sidebar-footer-note {
+  font-size: 0.75rem !important;
+  line-height: 1.4 !important;
+}

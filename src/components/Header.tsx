@@ -750,7 +750,7 @@ export const Header: React.FC = () => {
                     >
                       <span>Overdue Tasks</span>
                       {pendingCount > 0 && (
-                        <span style={{ background: '#dc2626', color: 'white', borderRadius: '10px', fontSize: '0.6rem', padding: '1px 5px', fontWeight: 800 }}>
+                        <span style={{ background: '#dc2626', color: 'white', borderRadius: '10px', fontSize: '0.72rem', padding: '1px 6px', fontWeight: 800 }}>
                           {pendingCount}
                         </span>
                       )}
@@ -794,11 +794,11 @@ export const Header: React.FC = () => {
                             >
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', marginBottom: '3px' }}>
                                 <span style={{
-                                  fontSize: '0.62rem',
+                                  fontSize: '0.72rem',
                                   fontWeight: 800,
                                   background: typeBadge.bg,
                                   color: typeBadge.color,
-                                  padding: '1px 5px',
+                                  padding: '2px 6px',
                                   borderRadius: '4px'
                                 }}>
                                   {typeBadge.label}
@@ -807,17 +807,17 @@ export const Header: React.FC = () => {
                                   <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#2563eb' }} />
                                 )}
                               </div>
-                              <div style={{ fontSize: '0.74rem', fontWeight: notif.read ? 600 : 700, color: '#0f172a' }}>
+                              <div style={{ fontSize: '0.8125rem', fontWeight: notif.read ? 600 : 700, color: '#0f172a' }}>
                                 {notif.title}
                               </div>
-                              <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '2px', lineHeight: 1.4 }}>
+                              <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px', lineHeight: 1.4 }}>
                                 {notif.message}
                               </div>
                             </div>
                           );
                         })
                       ) : (
-                        <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#64748b', fontSize: '0.75rem' }}>
+                        <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#64748b', fontSize: '0.78rem' }}>
                           Zero pending in-app alerts. You are completely up to date!
                         </div>
                       )}
@@ -839,7 +839,7 @@ export const Header: React.FC = () => {
                           justifyContent: 'space-between',
                           gap: '6px'
                         }}>
-                          <div style={{ fontSize: '0.7rem', color: '#9f1239', fontWeight: 600 }}>
+                          <div style={{ fontSize: '0.75rem', color: '#9f1239', fontWeight: 600 }}>
                             {pendingCount} overdue task(s)
                           </div>
                           <button

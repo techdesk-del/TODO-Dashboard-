@@ -26,7 +26,7 @@ export default function Home() {
     activeView,
     setActiveView,
     selectedDate,
-    setSelectedDate,
+    setSelectedDate, h
     tasks,
     updateTask,
     bannerNotification,
@@ -109,11 +109,11 @@ export default function Home() {
   // Flowchart 6 view partition:
   // - Task appears in "Assigned to" for each assignee
   // - Task appears in "Assigned by" for the creator
-  const assignedToMeCount = visibleTasks.filter(t => 
+  const assignedToMeCount = visibleTasks.filter(t =>
     t.assignees?.some(a => a.id === currentUser.id || (a.email && a.email.toLowerCase().trim() === currentCleanEmail))
   ).length;
 
-  const assignedByMeCount = visibleTasks.filter(t => 
+  const assignedByMeCount = visibleTasks.filter(t =>
     t.creator?.id === currentUser.id || (t.creator?.email && t.creator.email.toLowerCase().trim() === currentCleanEmail)
   ).length;
 
@@ -300,11 +300,11 @@ export default function Home() {
                   <div className="workspace-date-sub">
                     {isCeo
                       ? (viewScope === 'all'
-                          ? `Worldwide Real-Time Ledger • ${visibleTasks.length} Total Deliverables Across All Employees`
-                          : `Filtered from Calendar • ${dateTasks.length} Tasks Scheduled for this Date`)
+                        ? `Worldwide Real-Time Ledger • ${visibleTasks.length} Total Deliverables Across All Employees`
+                        : `Filtered from Calendar • ${dateTasks.length} Tasks Scheduled for this Date`)
                       : (viewScope === 'all'
-                          ? `Private Employee Workspace • Only displaying tasks created by or assigned to ${currentUser.name}`
-                          : `Private Schedule • ${dateTasks.length} of your tasks scheduled for this date`)}
+                        ? `Private Employee Workspace • Only displaying tasks created by or assigned to ${currentUser.name}`
+                        : `Private Schedule • ${dateTasks.length} of your tasks scheduled for this date`)}
                   </div>
                 </div>
 
@@ -554,13 +554,13 @@ export default function Home() {
       {viewingAuditForTaskId && <AuditTrailModal />}
       <MorningDigestPreviewModal />
       {isCreateTaskModalOpen && <CreateTaskModal />}
-      <EnterpriseExportModal 
-        isOpen={isExportModalOpen} 
-        onClose={() => setIsExportModalOpen(false)} 
+      <EnterpriseExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
       />
-      <AuthModal 
-        isOpen={isAuthModalOpen} 
-        onClose={() => setIsAuthModalOpen(false)} 
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
         initialMode={authModalInitialMode}
       />
     </div>
