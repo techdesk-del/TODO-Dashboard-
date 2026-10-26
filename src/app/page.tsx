@@ -26,7 +26,7 @@ export default function Home() {
     activeView,
     setActiveView,
     selectedDate,
-    setSelectedDate, h
+    setSelectedDate,
     tasks,
     updateTask,
     bannerNotification,
