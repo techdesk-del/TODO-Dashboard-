@@ -382,7 +382,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
             </select>
           </div>
 
-          <div className="form-field-group" style={{ gridColumn: 'span 2' }}>
+          <div className="form-field-group" style={{ gridColumn: '1 / -1' }}>
             <label className="form-field-label">Notes, Comments & Remarks</label>
             <input
               type="text"
@@ -949,7 +949,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
 
                 return (
                   <div key={a.id} className="assignee-item-card">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0, flex: 1 }}>
+                    <div className="assignee-info-col" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0, flex: 1 }}>
                       <span style={{
                         width: '26px',
                         height: '26px',
@@ -980,7 +980,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0, marginLeft: 'auto' }}>
+                    <div className="assignee-actions-col" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0, marginLeft: 'auto' }}>
                       {/* Assignee individual status updater (Flowchart 8 Step 5) */}
                       {canManageThisAssignee ? (
                         <select
@@ -1002,7 +1002,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                         >
                           <option value="Not Started">Not Started</option>
                           <option value="In Progress">In Progress</option>
-                          <option value="Done">✓ Done</option>
+                          <option value="Done">Done</option>
                           <option value="On Hold">On Hold</option>
                           <option value="Escalated">Escalated</option>
                           <option value="Cancelled">Cancelled</option>

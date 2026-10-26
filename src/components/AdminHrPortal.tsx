@@ -2647,7 +2647,7 @@ export const AdminHrPortal: React.FC = () => {
                 </div>
 
                 {/* Official Corporate Avatar Badge */}
-                <div className="form-field-group" style={{ gridColumn: 'span 2' }}>
+                <div className="form-field-group" style={{ gridColumn: '1 / -1' }}>
                   <label className="form-field-label">Official Corporate Avatar Badge</label>
                   <div style={{
                     display: 'flex',
