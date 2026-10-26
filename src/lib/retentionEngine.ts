@@ -253,10 +253,10 @@ export async function executeDataRetention(options?: DataRetentionOptions): Prom
   // STEP 5: Audit log entry created
   // ─────────────────────────────────────────────────────────────────────────────
   const auditSummaryNote = `Data Retention & Archive Execution Summary:
-• Completed Tasks: ${archivedTasksCount} moved to archive summary table (threshold: ${taskRetentionDays}d).
-• Audit Logs: ${coldStorageAuditLogsCount} moved to cold storage (7-year preservation policy, threshold: ${auditRetentionDays}d).
-• Email Logs: ${deletedEmailLogsCount} deleted after persisting summary counts (1-year policy).
-• Inactive Users: ${anonymizedUsersCount} personal profiles anonymized with full operational task history preserved.`;
+- Completed Tasks: ${archivedTasksCount} moved to archive summary table (threshold: ${taskRetentionDays}d).
+- Audit Logs: ${coldStorageAuditLogsCount} moved to cold storage (7-year preservation policy, threshold: ${auditRetentionDays}d).
+- Email Logs: ${deletedEmailLogsCount} deleted after persisting summary counts (1-year policy).
+- Inactive Users: ${anonymizedUsersCount} personal profiles anonymized with full operational task history preserved.`;
 
   await AuditLogModel.create({
     id: `audit-retention-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
@@ -303,7 +303,7 @@ export async function executeDataRetention(options?: DataRetentionOptions): Prom
       recipientEmail: recipient.email,
       recipientName: recipient.name,
       title: 'Data Retention & Archive Run Executed',
-      message: `UrbanGaon automated archive cycle completed successfully:\n• ${archivedTasksCount} completed tasks moved to archive summary table\n• ${coldStorageAuditLogsCount} audit logs transitioned to 7-year cold storage\n• ${deletedEmailLogsCount} email logs purged with aggregate summary counts saved\n• ${anonymizedUsersCount} inactive profiles anonymized while preserving task history.`,
+      message: `UrbanGaon automated archive cycle completed successfully:\n- ${archivedTasksCount} completed tasks moved to archive summary table\n- ${coldStorageAuditLogsCount} audit logs transitioned to 7-year cold storage\n- ${deletedEmailLogsCount} email logs purged with aggregate summary counts saved\n- ${anonymizedUsersCount} inactive profiles anonymized while preserving task history.`,
       type: 'DATA_RETENTION',
       read: false,
       createdAt: nowIso
@@ -315,7 +315,7 @@ export async function executeDataRetention(options?: DataRetentionOptions): Prom
       recipientEmail: recipient.email,
       recipientName: recipient.name,
       eventType: 'DATA_RETENTION',
-      subject: 'Data Retention & Archive Run Completed – Executive Report',
+      subject: 'Data Retention & Archive Run Completed - Executive Report',
       status: 'DELIVERED',
       attempts: 1,
       deliveredAt: nowIso,

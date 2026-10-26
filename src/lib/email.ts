@@ -1,5 +1,5 @@
 /**
- * lib/email.ts — Free SMTP Email Transport & Digest Generator
+ * lib/email.ts - Free SMTP Email Transport & Digest Generator
  *
  * Supports free Gmail SMTP (port 465/587 with App Password) or
  * zero-config Ethereal test account when SMTP credentials are not yet set.
@@ -92,7 +92,7 @@ export function generateDigestHtml(opts: SendDigestOptions): string {
   <div class="container">
     <div class="header">
       <div class="brand">UrbanGaon AI Todo Platform</div>
-      <div class="subhead">Daily Executive Operational Digest • ${dateString}</div>
+      <div class="subhead">Daily Executive Operational Digest | ${dateString}</div>
     </div>
     <div class="content">
       <div class="greeting">
@@ -104,16 +104,16 @@ export function generateDigestHtml(opts: SendDigestOptions): string {
       <div class="section-title title-red">Overdue Deliverables (Requires Immediate Resolution)</div>
       ${
         overdueTasks.length === 0
-          ? '<div class="empty-badge">✓ Zero overdue deliverables. Excellent punctuality!</div>'
+          ? '<div class="empty-badge">Zero overdue deliverables. Excellent punctuality!</div>'
           : overdueTasks.map(t => {
             const hasReason = Boolean(t.delayReason || t.pastDueReason || t.holdReason || t.escalationReason);
             const activeReason = t.delayReason || t.pastDueReason || t.holdReason || t.escalationReason;
             return `
             <div class="task-card card-red">
               <div class="task-name">${t.title}</div>
-              <div class="task-meta">Scheduled: ${t.scheduledDate} at ${t.time} • Priority: ${t.priority} • Department: ${t.department}</div>
+              <div class="task-meta">Scheduled: ${t.scheduledDate} at ${t.time} | Priority: ${t.priority} | Department: ${t.department}</div>
               <div style="margin-top: 4px;">
-                <a href="${appBase}/?taskId=${t.id}" class="task-link">View Deliverable #${t.id} →</a>
+                <a href="${appBase}/?taskId=${t.id}" class="task-link">View Deliverable #${t.id}</a>
               </div>
               ${!hasReason ? `
                 <div class="reason-missing-box">
@@ -137,9 +137,9 @@ export function generateDigestHtml(opts: SendDigestOptions): string {
           : todayTasks.map(t => `
             <div class="task-card card-amber">
               <div class="task-name">${t.title}</div>
-              <div class="task-meta">Execution Target: ${t.time} • Priority: ${t.priority} • Department: ${t.department}</div>
+              <div class="task-meta">Execution Target: ${t.time} | Priority: ${t.priority} | Department: ${t.department}</div>
               <div style="margin-top: 4px;">
-                <a href="${appBase}/?taskId=${t.id}" class="task-link">Open Deliverable #${t.id} →</a>
+                <a href="${appBase}/?taskId=${t.id}" class="task-link">Open Deliverable #${t.id}</a>
               </div>
             </div>
           `).join('')
@@ -153,16 +153,16 @@ export function generateDigestHtml(opts: SendDigestOptions): string {
           : upcomingTasks.map(t => `
             <div class="task-card card-blue">
               <div class="task-name">${t.title}</div>
-              <div class="task-meta">Due: ${t.scheduledDate} at ${t.time} • Priority: ${t.priority}</div>
+              <div class="task-meta">Due: ${t.scheduledDate} at ${t.time} | Priority: ${t.priority}</div>
               <div style="margin-top: 4px;">
-                <a href="${appBase}/?taskId=${t.id}" class="task-link">Open Deliverable #${t.id} →</a>
+                <a href="${appBase}/?taskId=${t.id}" class="task-link">Open Deliverable #${t.id}</a>
               </div>
             </div>
           `).join('')
       }
     </div>
     <div class="footer">
-      Automated by UrbanGaon Dispatcher Engine • Flowchart D Compliance • Direct Task Links Activated
+      Automated by UrbanGaon Dispatcher Engine | Flowchart D Compliance | Direct Task Links Activated
     </div>
   </div>
 </body>
@@ -180,7 +180,7 @@ export async function sendMorningDigestEmail(opts: SendDigestOptions) {
     info = await transporter.sendMail({
       from,
       to: opts.toEmail,
-      subject: `Daily Operational Focus: ${opts.dateString} — ${opts.toName}`,
+      subject: `Daily Operational Focus: ${opts.dateString} - ${opts.toName}`,
       html,
     });
   } catch (sendErr) {
@@ -197,7 +197,7 @@ export async function sendMorningDigestEmail(opts: SendDigestOptions) {
     info = await fallbackTransporter.sendMail({
       from,
       to: opts.toEmail,
-      subject: `Daily Operational Focus: ${opts.dateString} — ${opts.toName}`,
+      subject: `Daily Operational Focus: ${opts.dateString} - ${opts.toName}`,
       html,
     });
   }
@@ -272,7 +272,7 @@ export async function sendAdminDigestSummaryEmail(opts: SendAdminDigestSummaryOp
   <div class="container">
     <div class="header">
       <div style="font-size: 20px; font-weight: 800;">UrbanGaon Executive Digest Engine</div>
-      <div style="font-size: 13px; opacity: 0.9; margin-top: 4px;">Admin Operational Summary • ${dateString}</div>
+      <div style="font-size: 13px; opacity: 0.9; margin-top: 4px;">Admin Operational Summary | ${dateString}</div>
     </div>
     <div class="content">
       <p style="font-size: 14px; margin-top: 0;">
@@ -295,7 +295,7 @@ export async function sendAdminDigestSummaryEmail(opts: SendAdminDigestSummaryOp
       </div>
 
       <!-- Chronic Delays Table (Reporting Managers CC'd) -->
-      <div class="section-title" style="color: #b45309;">Chronic Delays (&gt;3 Days Overdue — Managers Copied)</div>
+      <div class="section-title" style="color: #b45309;">Chronic Delays (&gt;3 Days Overdue - Managers Copied)</div>
       ${chronicDelays.length === 0 ? '<p style="font-size: 12px; color: #16a34a;">Zero chronic delays across all teams.</p>' : `
         <table class="table">
           <thead>
@@ -343,7 +343,7 @@ export async function sendAdminDigestSummaryEmail(opts: SendAdminDigestSummaryOp
       ` : ''}
     </div>
     <div class="footer">
-      UrbanGaon Dispatcher Engine • Flowchart D Compliance • Governance by Mr. Sukh Sagar Singh
+      UrbanGaon Dispatcher Engine | Flowchart D Compliance | Governance by Mr. Sukh Sagar Singh
     </div>
   </div>
 </body>
@@ -427,7 +427,7 @@ export function generatePasswordResetHtml(opts: SendPasswordResetOptions): strin
       <!-- Flowchart 4: Send expiring one-time reset link -->
       <div class="cta-box">
         <a href="${resetLink}" class="btn-reset">
-          Click Here to Reset Password →
+          Click Here to Reset Password
         </a>
         <div style="font-size: 11px; color: #64748b; margin-top: 8px;">
           This one-time link will expire in ${expiresMinutes} minutes.
@@ -450,7 +450,7 @@ export function generatePasswordResetHtml(opts: SendPasswordResetOptions): strin
       </div>
     </div>
     <div class="footer">
-      UrbanGaon Corporate Platform • Automated Enterprise Dispatcher • Flowchart 4 Compliance
+      UrbanGaon Corporate Platform | Automated Enterprise Dispatcher | Flowchart 4 Compliance
     </div>
   </div>
 </body>
@@ -556,7 +556,7 @@ export function generateWelcomeEmailHtml(opts: SendWelcomeEmailOptions): string 
   <div class="container">
     <div class="header">
       <div class="brand">UrbanGaon Task Register</div>
-      <div class="subhead">Enterprise Identity & Access Management • Welcome Credentials</div>
+      <div class="subhead">Enterprise Identity & Access Management | Welcome Credentials</div>
     </div>
     <div class="content">
       <div class="greeting">
@@ -615,7 +615,7 @@ export function generateWelcomeEmailHtml(opts: SendWelcomeEmailOptions): string 
       </div>
     </div>
     <div class="footer">
-      UrbanGaon Corporate Platform • Flowchart 9 & 13 Compliance • Automated Enterprise Dispatcher
+      UrbanGaon Corporate Platform | Flowchart 9 & 13 Compliance | Automated Enterprise Dispatcher
     </div>
   </div>
 </body>
@@ -633,7 +633,7 @@ export async function sendWelcomeCredentialsEmail(opts: SendWelcomeEmailOptions)
     info = await transporter.sendMail({
       from,
       to: opts.toEmail,
-      subject: `Welcome to UrbanGaon — Official Credentials & Account Provisioned (${opts.toName})`,
+      subject: `Welcome to UrbanGaon - Official Credentials & Account Provisioned (${opts.toName})`,
       html,
     });
   } catch (sendErr) {
@@ -650,7 +650,7 @@ export async function sendWelcomeCredentialsEmail(opts: SendWelcomeEmailOptions)
     info = await fallbackTransporter.sendMail({
       from,
       to: opts.toEmail,
-      subject: `Welcome to UrbanGaon — Official Credentials & Account Provisioned (${opts.toName})`,
+      subject: `Welcome to UrbanGaon - Official Credentials & Account Provisioned (${opts.toName})`,
       html,
     });
   }
@@ -703,7 +703,7 @@ export async function sendSecurityLockoutAlertEmail(opts: {
   <div class="container">
     <div class="header">
       <div class="title">Security Alert: Account Temporarily Locked</div>
-      <div class="subhead">UrbanGaon Identity & Access Management • Flowchart 5 Compliance</div>
+      <div class="subhead">UrbanGaon Identity & Access Management | Flowchart 5 Compliance</div>
     </div>
     <div class="content">
       <div class="alert-banner">
@@ -727,7 +727,7 @@ export async function sendSecurityLockoutAlertEmail(opts: {
       </p>
     </div>
     <div class="footer">
-      Automated Enterprise Security Dispatcher • UrbanGaon Corporate Governance
+      Automated Enterprise Security Dispatcher | UrbanGaon Corporate Governance
     </div>
   </div>
 </body>
@@ -739,7 +739,7 @@ export async function sendSecurityLockoutAlertEmail(opts: {
     await transporter.sendMail({
       from,
       to: opts.toEmail,
-      subject: `Security Alert: Account Locked for 15 Minutes — 5 Failed Login Attempts (${opts.toName})`,
+      subject: `Security Alert: Account Locked for 15 Minutes - 5 Failed Login Attempts (${opts.toName})`,
       html,
     });
     console.log(`[Security Alert] Lockout alert email sent to ${opts.toEmail}`);
@@ -799,7 +799,7 @@ export async function sendTwoFactorOtpEmail(opts: {
       </div>
     </div>
     <div class="footer">
-      UrbanGaon Identity & Access Management • Flowchart 5 Two-Step Verification Protocol
+      UrbanGaon Identity & Access Management | Flowchart 5 Two-Step Verification Protocol
     </div>
   </div>
 </body>
@@ -859,7 +859,7 @@ export async function sendSetPasswordEmail(opts: {
   <div class="container">
     <div class="header">
       <div class="title">Welcome to UrbanGaon!</div>
-      <div class="subhead">Official Employee Account Approved • Flowchart 3 Provisioning</div>
+      <div class="subhead">Official Employee Account Approved | Flowchart 3 Provisioning</div>
     </div>
     <div class="content">
       <p style="font-size: 15px; margin: 0 0 16px 0; line-height: 1.6;">
@@ -881,7 +881,7 @@ export async function sendSetPasswordEmail(opts: {
       </p>
 
       <div style="text-align: center;">
-        <a href="${opts.setPasswordLink}" class="btn">Set Corporate Password & Login →</a>
+        <a href="${opts.setPasswordLink}" class="btn">Set Corporate Password & Login</a>
       </div>
 
       <p style="font-size: 11px; color: #94a3b8; text-align: center; margin-top: 14px;">
@@ -890,7 +890,7 @@ export async function sendSetPasswordEmail(opts: {
       </p>
     </div>
     <div class="footer">
-      UrbanGaon Identity & Access Management • Flowchart 3 Employee Provisioning Protocol
+      UrbanGaon Identity & Access Management | Flowchart 3 Employee Provisioning Protocol
     </div>
   </div>
 </body>
@@ -948,7 +948,7 @@ export async function sendManagerNewHireNotificationEmail(opts: {
   <div class="container">
     <div class="header">
       <div class="title">New Team Member Assigned</div>
-      <div style="font-size: 12px; opacity: 0.9; margin-top: 4px;">Talent HR Notification • Flowchart 3</div>
+      <div style="font-size: 12px; opacity: 0.9; margin-top: 4px;">Talent HR Notification | Flowchart 3</div>
     </div>
     <div class="content">
       <p style="margin: 0 0 12px 0;">
@@ -969,7 +969,7 @@ export async function sendManagerNewHireNotificationEmail(opts: {
       </p>
     </div>
     <div class="footer">
-      UrbanGaon HR & Talent Management System • Flowchart 3 Manager Briefing
+      UrbanGaon HR & Talent Management System | Flowchart 3 Manager Briefing
     </div>
   </div>
 </body>
@@ -1022,7 +1022,7 @@ export async function sendRequestRejectionEmail(opts: {
   <div class="container">
     <div class="header">
       <div class="title">Regarding Your UrbanGaon Access Request</div>
-      <div style="font-size: 12px; opacity: 0.9; margin-top: 4px;">Talent HR Review Decision • Flowchart 3</div>
+      <div style="font-size: 12px; opacity: 0.9; margin-top: 4px;">Talent HR Review Decision | Flowchart 3</div>
     </div>
     <div class="content">
       <p style="margin: 0 0 12px 0;">
@@ -1040,7 +1040,7 @@ export async function sendRequestRejectionEmail(opts: {
       </p>
     </div>
     <div class="footer">
-      UrbanGaon Identity & Access Management • Flowchart 3 Decision Dispatch
+      UrbanGaon Identity & Access Management | Flowchart 3 Decision Dispatch
     </div>
   </div>
 </body>
@@ -1145,8 +1145,8 @@ export async function sendTaskAssignmentEmail(opts: SendTaskAssignmentOptions) {
         : `[UrbanGaon] New Deliverable Assigned: "${opts.taskTitle}" [${opts.priority}]`;
 
       const headerSubtitle = isSelfAssigned
-        ? `Operational Deliverable Scheduled • Personal Workspace`
-        : `Corporate Deliverable Assignment • Operations Management`;
+        ? `Operational Deliverable Scheduled | Personal Workspace`
+        : `Corporate Deliverable Assignment | Operations Management`;
 
       const formattedRole = opts.creatorRole
         ? opts.creatorRole.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())
@@ -1241,11 +1241,11 @@ export async function sendTaskAssignmentEmail(opts: SendTaskAssignmentOptions) {
       </div>
 
       <div class="cta-container">
-        <a href="${taskDirectLink}" class="cta-button">Open Deliverable in Workspace →</a>
+        <a href="${taskDirectLink}" class="cta-button">Open Deliverable in Workspace</a>
       </div>
     </div>
     <div class="email-footer">
-      UrbanGaon Technologies Private Limited • Operations Management System<br>
+      UrbanGaon Technologies Private Limited | Operations Management System<br>
       Automated dispatch sent to ${recipient.email}. Please log in to your workspace to update progress.
     </div>
   </div>
@@ -1261,7 +1261,7 @@ export async function sendTaskAssignmentEmail(opts: SendTaskAssignmentOptions) {
           html,
         });
         sentCount++;
-        console.log(`[Task Assignment Email] ✓ Dispatched successfully to ${recipient.email} (${recipient.name}) for deliverable: "${opts.taskTitle}"`);
+        console.log(`[Task Assignment Email] [OK] Dispatched successfully to ${recipient.email} (${recipient.name}) for deliverable: "${opts.taskTitle}"`);
 
         // Record successful dispatch in EmailLogModel
         try {
@@ -1280,7 +1280,7 @@ export async function sendTaskAssignmentEmail(opts: SendTaskAssignmentOptions) {
           });
         } catch {}
       } catch (sendErr: any) {
-        console.warn(`[Task Assignment Email] ✗ Failed sending to ${recipient.email}:`, sendErr.message || sendErr);
+        console.warn(`[Task Assignment Email] [FAIL] Failed sending to ${recipient.email}:`, sendErr.message || sendErr);
         // Record failure in EmailLogModel
         try {
           const { EmailLogModel } = await import('@/models/EmailLog');
@@ -1351,7 +1351,7 @@ export async function sendOffboardingSummaryEmail(opts: {
       </p>
     </div>
     <div style="background: #f8fafc; padding: 14px 24px; font-size: 11px; color: #94a3b8; text-align: center; border-top: 1px solid #e2e8f0;">
-      UrbanGaon HR Operations • Confidential Automated Notice
+      UrbanGaon HR Operations | Confidential Automated Notice
     </div>
   </div>
 </body>
@@ -1414,7 +1414,7 @@ export async function sendHandoverNotificationToManagerEmail(opts: {
       </p>
     </div>
     <div style="background: #f8fafc; padding: 14px 24px; font-size: 11px; color: #94a3b8; text-align: center; border-top: 1px solid #e2e8f0;">
-      UrbanGaon Operations Center • Automated Manager Alert
+      UrbanGaon Operations Center | Automated Manager Alert
     </div>
   </div>
 </body>
@@ -1423,7 +1423,7 @@ export async function sendHandoverNotificationToManagerEmail(opts: {
     await transporter.sendMail({
       from,
       to: opts.managerEmail,
-      subject: `Team Handover Notice: ${opts.departingName} → ${opts.successorName} (${opts.reassignedCount} Tasks)`,
+      subject: `Team Handover Notice: ${opts.departingName} to ${opts.successorName} (${opts.reassignedCount} Tasks)`,
       html,
     });
     console.log(`[Manager Handover Email] Dispatched to ${opts.managerEmail}`);
@@ -1473,7 +1473,7 @@ export async function sendTaskEscalatedEmail(opts: {
     await transporter.sendMail({
       from,
       to: opts.seniorEmail,
-      subject: `Action Required: Deliverable Escalated by ${opts.escalatedBy} — "${opts.taskTitle}"`,
+      subject: `Action Required: Deliverable Escalated by ${opts.escalatedBy} - "${opts.taskTitle}"`,
       html,
     });
     return { success: true };
@@ -1568,7 +1568,7 @@ export async function sendReasonDecisionEmail(opts: {
     await transporter.sendMail({
       from,
       to: opts.employeeEmail,
-      subject: `${isApproved ? '✓' : ''} Delay Reason ${opts.decision}: "${opts.taskTitle}"`,
+      subject: `Delay Reason ${opts.decision}: "${opts.taskTitle}"`,
       html,
     });
     return { success: true };
@@ -1695,7 +1695,7 @@ export async function sendOverdueAutoFlagEmail(opts: SendOverdueAutoFlagOptions)
 <body>
   <div class="card">
     <div class="header">
-      <div style="font-size: 18px; font-weight: 800;">UrbanGaon Automated Monitor • Flowchart 21</div>
+      <div style="font-size: 18px; font-weight: 800;">UrbanGaon Automated Monitor | Flowchart 21</div>
       <div style="font-size: 12px; opacity: 0.9; margin-top: 2px;">Overdue Deliverable Auto-Flag Notification</div>
     </div>
     <div class="content">
@@ -1712,7 +1712,7 @@ export async function sendOverdueAutoFlagEmail(opts: SendOverdueAutoFlagOptions)
           ${opts.taskTitle}
         </div>
         <div style="font-size: 12px; color: #64748b; margin-bottom: 4px;">
-          <strong>Deliverable ID:</strong> #${opts.taskId} • <strong>Scheduled Due Date:</strong> ${opts.scheduledDate}
+          <strong>Deliverable ID:</strong> #${opts.taskId} | <strong>Scheduled Due Date:</strong> ${opts.scheduledDate}
         </div>
         <div style="font-size: 12px; color: #b91c1c; font-weight: 700;">
           <strong>Days Overdue:</strong> ${opts.daysOverdue} day${opts.daysOverdue !== 1 ? 's' : ''}
@@ -1736,10 +1736,10 @@ export async function sendOverdueAutoFlagEmail(opts: SendOverdueAutoFlagOptions)
       <p style="margin-bottom: 0;">
         Please open your workspace to update the status, reschedule, or document your justification:
       </p>
-      <a href="${appBase}" class="btn">View Deliverable in Workspace →</a>
+      <a href="${appBase}" class="btn">View Deliverable in Workspace</a>
     </div>
     <div class="footer">
-      UrbanGaon Task Register • Flowchart 21 Automated Governance Engine • Mr. Sukh Sagar Singh (CEO)
+      UrbanGaon Task Register | Flowchart 21 Automated Governance Engine | Mr. Sukh Sagar Singh (CEO)
     </div>
   </div>
 </body>
@@ -1775,7 +1775,7 @@ export async function sendOverdueAutoFlagEmail(opts: SendOverdueAutoFlagOptions)
   }
 }
 
-/* ── Flowchart 20 Event 1: Task Assigned ────────────────────────── */
+/* -- Flowchart 20 Event 1: Task Assigned -------------------------- */
 export interface SendTaskAssignedOptions {
   toEmail: string;
   toName: string;
@@ -1857,7 +1857,7 @@ export async function sendTaskCancelledEmail(opts: SendTaskCancelledOptions) {
   <div class="email-container">
     <div class="email-header">
       <div class="brand-title">UrbanGaon Intelligent Todo Platform</div>
-      <div class="brand-subtitle">Operational Deliverable Governance • Task Cancelled</div>
+      <div class="brand-subtitle">Operational Deliverable Governance | Task Cancelled</div>
     </div>
     <div class="email-body">
       <div class="greeting">Dear ${opts.recipientName},</div>
@@ -1868,7 +1868,7 @@ export async function sendTaskCancelledEmail(opts: SendTaskCancelledOptions) {
       <div class="task-card">
         <div class="task-title">${opts.taskTitle}</div>
         <div style="font-size: 12px; color: #64748b; margin-bottom: 8px;">
-          <strong>Deliverable ID:</strong> #${opts.taskId} ${opts.department ? `• <strong>Dept:</strong> ${opts.department}` : ''}
+          <strong>Deliverable ID:</strong> #${opts.taskId} ${opts.department ? `| <strong>Dept:</strong> ${opts.department}` : ''}
         </div>
         <div class="reason-box">
           <strong>Mandatory Cancellation Rationale:</strong><br>
@@ -1880,11 +1880,11 @@ export async function sendTaskCancelledEmail(opts: SendTaskCancelledOptions) {
       </div>
 
       <div class="cta-container">
-        <a href="${taskDirectLink}" class="cta-button">View Workspace →</a>
+        <a href="${taskDirectLink}" class="cta-button">View Workspace</a>
       </div>
     </div>
     <div class="email-footer">
-      UrbanGaon Technologies Private Limited • Corporate Governance Engine<br>
+      UrbanGaon Technologies Private Limited | Corporate Governance Engine<br>
       Cancellation dispatch sent to ${opts.recipientEmail}.
     </div>
   </div>
@@ -1954,7 +1954,7 @@ export async function sendConfigRollbackEmail(opts: SendConfigRollbackEmailOptio
 <body>
   <div class="card">
     <div class="header">
-      <div style="font-size: 18px; font-weight: 800;">Configuration Rollback Alert • Flowchart 24</div>
+      <div style="font-size: 18px; font-weight: 800;">Configuration Rollback Alert | Flowchart 24</div>
       <div style="font-size: 12px; opacity: 0.9; margin-top: 2px;">UrbanGaon System Governance Notification</div>
     </div>
     <div class="content">
@@ -1963,16 +1963,16 @@ export async function sendConfigRollbackEmail(opts: SendConfigRollbackEmailOptio
       <div class="alert-box">
         <div style="font-size: 15px; font-weight: 800; color: #9a3412; margin-bottom: 8px;">Rollback Summary</div>
         <div style="font-size: 13px; color: #431407;">
-          • <strong>Restored Version:</strong> ${opts.restoredVersion}<br>
-          • <strong>Rolled Back From:</strong> ${opts.previousVersion}<br>
-          • <strong>Problem Detected:</strong> ${opts.problemReason}<br>
-          • <strong>Timestamp:</strong> ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
+          - <strong>Restored Version:</strong> ${opts.restoredVersion}<br>
+          - <strong>Rolled Back From:</strong> ${opts.previousVersion}<br>
+          - <strong>Problem Detected:</strong> ${opts.problemReason}<br>
+          - <strong>Timestamp:</strong> ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
         </div>
       </div>
       <p>All core settings (email schedules, security lockout policies, permissions, and metadata baselines) have been safely restored.</p>
-      <a href="${appBase}/" class="btn">Review System Configuration in Portal →</a>
+      <a href="${appBase}/" class="btn">Review System Configuration in Portal</a>
     </div>
-    <div class="footer">UrbanGaon Enterprise Engine • Flowchart 24 Compliance</div>
+    <div class="footer">UrbanGaon Enterprise Engine | Flowchart 24 Compliance</div>
   </div>
 </body>
 </html>`;
