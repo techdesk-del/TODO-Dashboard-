@@ -85,7 +85,7 @@ export async function runMorningDigest(options: DigestOptions = {}): Promise<Dig
       oldValue: 'Scheduled Email Dispatch',
       newValue: `Auto-Suppressed: ${nonWorking.reason}`,
       ipAddress: '127.0.0.1',
-      deviceInfo: 'Holiday Policy Engine (Flowchart D)',
+      deviceInfo: 'Holiday Policy Engine',
       notes: `Zero emails dispatched to staff. Today is ${nonWorking.reason}.`,
     }).catch(() => {});
 

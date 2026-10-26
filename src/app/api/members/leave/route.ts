@@ -135,7 +135,7 @@ export async function POST(req: NextRequest) {
           affectedTasksCount: affectedTasks.length,
           notes: notes || 'Authorized leave',
         },
-      }).catch(err => console.warn('[Flowchart 23 Leave Notification Dispatch Error]', err));
+      }).catch(err => console.warn('[Leave Notification Dispatch Error]', err));
     }
 
     // Audit Log Entry
@@ -143,7 +143,7 @@ export async function POST(req: NextRequest) {
       id: `audit-leave-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       timestamp: new Date().toISOString(),
       action: 'CONFIG_CHANGED',
-      fieldChanged: 'Staff Leave Protocol (Flowchart 23)',
+      fieldChanged: 'Staff Leave Protocol',
       oldValue: `${member.name} [${previousStatus}]`,
       newValue: `${member.name} [ON_LEAVE: ${leaveStartDate} to ${leaveEndDate}]`,
       actor: actorName,
@@ -199,7 +199,7 @@ export async function PATCH(req: NextRequest) {
       id: `audit-return-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       timestamp: new Date().toISOString(),
       action: 'CONFIG_CHANGED',
-      fieldChanged: 'Staff Return from Leave (Flowchart 23)',
+      fieldChanged: 'Staff Return from Leave',
       oldValue: `${member.name} [${previousStatus} (${leaveStart} to ${leaveEnd})]`,
       newValue: `${member.name} [ACTIVE]`,
       actor: actorName,

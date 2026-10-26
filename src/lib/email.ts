@@ -117,7 +117,7 @@ export function generateDigestHtml(opts: SendDigestOptions): string {
               </div>
               ${!hasReason ? `
                 <div class="reason-missing-box">
-                  <strong>Delay Reason Missing (Flowchart 21):</strong> As per corporate governance, please <a href="${appBase}/?taskId=${t.id}" style="color: #b91c1c; font-weight: 700; text-decoration: underline;">click here to enter delay justification</a>.
+                  <strong>Delay Reason Required:</strong> As per corporate governance, please <a href="${appBase}/?taskId=${t.id}" style="color: #b91c1c; font-weight: 700; text-decoration: underline;">click here to enter delay justification</a>.
                 </div>
               ` : `
                 <div style="font-size: 11px; color: #b45309; margin-top: 4px;">
@@ -162,7 +162,7 @@ export function generateDigestHtml(opts: SendDigestOptions): string {
       }
     </div>
     <div class="footer">
-      Automated by UrbanGaon Dispatcher Engine | Flowchart D Compliance | Direct Task Links Activated
+      Automated by UrbanGaon Dispatcher Engine | Corporate Delivery Compliance | Direct Task Links Activated
     </div>
   </div>
 </body>
@@ -276,7 +276,7 @@ export async function sendAdminDigestSummaryEmail(opts: SendAdminDigestSummaryOp
     </div>
     <div class="content">
       <p style="font-size: 14px; margin-top: 0;">
-        Executive summary of the morning digest delivery cycle. Flowchart D automated supervision.
+        Executive summary of the morning digest delivery cycle. Automated operational supervision.
       </p>
 
       <div class="metric-grid">
@@ -343,7 +343,7 @@ export async function sendAdminDigestSummaryEmail(opts: SendAdminDigestSummaryOp
       ` : ''}
     </div>
     <div class="footer">
-      UrbanGaon Dispatcher Engine | Flowchart D Compliance | Governance by Mr. Sukh Sagar Singh
+      UrbanGaon Dispatcher Engine | Corporate Governance by Mr. Sukh Sagar Singh
     </div>
   </div>
 </body>
@@ -442,7 +442,7 @@ export function generatePasswordResetHtml(opts: SendPasswordResetOptions): strin
       </div>
 
       <div class="instructions">
-        <strong>Next Steps (Flowchart 4):</strong> Click the link above or return to the UrbanGaon sign-in portal, enter this 6-digit code, and set your new password meeting policy. Once saved as hash, your account will be activated immediately.
+        <strong>Next Steps:</strong> Click the link above or return to the UrbanGaon sign-in portal, enter this 6-digit code, and set your new password meeting policy. Once saved as hash, your account will be activated immediately.
       </div>
 
       <div class="warning">
@@ -450,7 +450,7 @@ export function generatePasswordResetHtml(opts: SendPasswordResetOptions): strin
       </div>
     </div>
     <div class="footer">
-      UrbanGaon Corporate Platform | Automated Enterprise Dispatcher | Flowchart 4 Compliance
+      UrbanGaon Corporate Platform | Automated Enterprise Dispatcher | Account Security Protocol
     </div>
   </div>
 </body>
@@ -615,7 +615,7 @@ export function generateWelcomeEmailHtml(opts: SendWelcomeEmailOptions): string 
       </div>
     </div>
     <div class="footer">
-      UrbanGaon Corporate Platform | Flowchart 9 & 13 Compliance | Automated Enterprise Dispatcher
+      UrbanGaon Corporate Platform | Automated Enterprise Dispatcher
     </div>
   </div>
 </body>
@@ -703,7 +703,7 @@ export async function sendSecurityLockoutAlertEmail(opts: {
   <div class="container">
     <div class="header">
       <div class="title">Security Alert: Account Temporarily Locked</div>
-      <div class="subhead">UrbanGaon Identity & Access Management | Flowchart 5 Compliance</div>
+      <div class="subhead">UrbanGaon Identity & Access Management | Security Policy Compliance</div>
     </div>
     <div class="content">
       <div class="alert-banner">
@@ -792,14 +792,14 @@ export async function sendTwoFactorOtpEmail(opts: {
       </p>
       <div class="otp-display">${opts.otpCode}</div>
       <p style="font-size: 12px; color: #b45309; background: #fef3c7; border: 1px solid #fcd34d; padding: 8px 12px; border-radius: 6px; font-weight: 600; margin: 16px 0;">
-        This verification code expires in 10 minutes. Under Flowchart 5 protocol, 1 retry is permitted upon error.
+        This verification code expires in 10 minutes. Under corporate security protocol, 1 retry is permitted upon error.
       </p>
       <div class="notice">
         If you did not initiate this login request, change your corporate password immediately.
       </div>
     </div>
     <div class="footer">
-      UrbanGaon Identity & Access Management | Flowchart 5 Two-Step Verification Protocol
+      UrbanGaon Identity & Access Management | Two-Step Verification Protocol
     </div>
   </div>
 </body>
@@ -859,7 +859,7 @@ export async function sendSetPasswordEmail(opts: {
   <div class="container">
     <div class="header">
       <div class="title">Welcome to UrbanGaon!</div>
-      <div class="subhead">Official Employee Account Approved | Flowchart 3 Provisioning</div>
+      <div class="subhead">Official Employee Account Approved | Account Provisioning</div>
     </div>
     <div class="content">
       <p style="font-size: 15px; margin: 0 0 16px 0; line-height: 1.6;">
@@ -890,7 +890,7 @@ export async function sendSetPasswordEmail(opts: {
       </p>
     </div>
     <div class="footer">
-      UrbanGaon Identity & Access Management | Flowchart 3 Employee Provisioning Protocol
+      UrbanGaon Identity & Access Management | Employee Provisioning Protocol
     </div>
   </div>
 </body>
@@ -948,7 +948,7 @@ export async function sendManagerNewHireNotificationEmail(opts: {
   <div class="container">
     <div class="header">
       <div class="title">New Team Member Assigned</div>
-      <div style="font-size: 12px; opacity: 0.9; margin-top: 4px;">Talent HR Notification | Flowchart 3</div>
+      <div style="font-size: 12px; opacity: 0.9; margin-top: 4px;">Talent HR Notification | Employee Onboarding</div>
     </div>
     <div class="content">
       <p style="margin: 0 0 12px 0;">
@@ -969,7 +969,7 @@ export async function sendManagerNewHireNotificationEmail(opts: {
       </p>
     </div>
     <div class="footer">
-      UrbanGaon HR & Talent Management System | Flowchart 3 Manager Briefing
+      UrbanGaon HR & Talent Management System | Manager Briefing
     </div>
   </div>
 </body>
@@ -1022,7 +1022,7 @@ export async function sendRequestRejectionEmail(opts: {
   <div class="container">
     <div class="header">
       <div class="title">Regarding Your UrbanGaon Access Request</div>
-      <div style="font-size: 12px; opacity: 0.9; margin-top: 4px;">Talent HR Review Decision | Flowchart 3</div>
+      <div style="font-size: 12px; opacity: 0.9; margin-top: 4px;">Talent HR Review Decision | Account Verification</div>
     </div>
     <div class="content">
       <p style="margin: 0 0 12px 0;">
@@ -1040,7 +1040,7 @@ export async function sendRequestRejectionEmail(opts: {
       </p>
     </div>
     <div class="footer">
-      UrbanGaon Identity & Access Management | Flowchart 3 Decision Dispatch
+      UrbanGaon Identity & Access Management | Decision Dispatch
     </div>
   </div>
 </body>
@@ -1332,7 +1332,7 @@ export async function sendOffboardingSummaryEmail(opts: {
   <div style="max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
     <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 24px; color: #ffffff;">
       <h2 style="margin: 0; font-size: 18px; font-weight: 700;">UrbanGaon Account Handover & Status Notice</h2>
-      <p style="margin: 6px 0 0 0; font-size: 13px; color: #94a3b8;">Official Transition Summary (Flowchart 4 Compliance)</p>
+      <p style="margin: 6px 0 0 0; font-size: 13px; color: #94a3b8;">Official Transition Summary</p>
     </div>
     <div style="padding: 24px;">
       <p style="font-size: 14px; margin-top: 0;">Dear <strong>${opts.employeeName}</strong>,</p>
@@ -1395,7 +1395,7 @@ export async function sendHandoverNotificationToManagerEmail(opts: {
   <div style="max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
     <div style="background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%); padding: 24px; color: #ffffff;">
       <h2 style="margin: 0; font-size: 18px; font-weight: 700;">Team Member Handover Notice</h2>
-      <p style="margin: 6px 0 0 0; font-size: 13px; color: #93c5fd;">Executive Team Operations Alert (Flowchart 4 Compliance)</p>
+      <p style="margin: 6px 0 0 0; font-size: 13px; color: #93c5fd;">Executive Team Operations Alert</p>
     </div>
     <div style="padding: 24px;">
       <p style="font-size: 14px; margin-top: 0;">Dear <strong>${opts.managerName}</strong>,</p>
@@ -1454,7 +1454,7 @@ export async function sendTaskEscalatedEmail(opts: {
   <div style="max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1.5px solid #fecdd3; overflow: hidden;">
     <div style="background: #e11d48; color: white; padding: 20px 24px;">
       <h2 style="margin: 0; font-size: 18px;">Deliverable Escalated to Leadership</h2>
-      <p style="margin: 4px 0 0 0; font-size: 13px; color: #ffe4e6;">Flowchart 17 / 20 Governance Alert</p>
+      <p style="margin: 4px 0 0 0; font-size: 13px; color: #ffe4e6;">Corporate Governance Alert</p>
     </div>
     <div style="padding: 24px;">
       <p>Dear <strong>${opts.seniorName}</strong>,</p>
@@ -1501,7 +1501,7 @@ export async function sendTaskReopenedEmail(opts: {
   <div style="max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1.5px solid #bfdbfe; overflow: hidden;">
     <div style="background: #2563eb; color: white; padding: 20px 24px;">
       <h2 style="margin: 0; font-size: 18px;">Deliverable Reopened Notice</h2>
-      <p style="margin: 4px 0 0 0; font-size: 13px; color: #bfdbfe;">Flowchart 10 / 20 Operational Alert</p>
+      <p style="margin: 4px 0 0 0; font-size: 13px; color: #bfdbfe;">Deliverable Status Alert</p>
     </div>
     <div style="padding: 24px;">
       <p style="color: #475569;">A completed task has been reopened for additional deliverables or review.</p>
@@ -1551,7 +1551,7 @@ export async function sendReasonDecisionEmail(opts: {
   <div style="max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1.5px solid ${isApproved ? '#bbf7d0' : '#fecdd3'}; overflow: hidden;">
     <div style="background: ${isApproved ? '#16a34a' : '#dc2626'}; color: white; padding: 20px 24px;">
       <h2 style="margin: 0; font-size: 18px;">Delay Justification: ${opts.decision}</h2>
-      <p style="margin: 4px 0 0 0; font-size: 13px;">Flowchart 19 / 20 Manager Decision</p>
+      <p style="margin: 4px 0 0 0; font-size: 13px;">Leadership Decision Alert</p>
     </div>
     <div style="padding: 24px;">
       <p>Dear <strong>${opts.employeeName}</strong>,</p>
@@ -1599,7 +1599,7 @@ export async function sendWeeklyDigestEmail(opts: {
   <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #cbd5e1; overflow: hidden;">
     <div style="background: linear-gradient(135deg, #1e1b4b, #312e81); color: white; padding: 24px;">
       <h2 style="margin: 0; font-size: 20px;">Executive Weekly Operations Digest</h2>
-      <p style="margin: 6px 0 0 0; font-size: 13px; color: #cbd5e1;">Flowchart 20 Compliance: Organization-Wide Velocity</p>
+      <p style="margin: 6px 0 0 0; font-size: 13px; color: #cbd5e1;">Executive Summary: Organization-Wide Velocity</p>
     </div>
     <div style="padding: 24px;">
       <p>Dear <strong>${opts.directorName}</strong>,</p>
@@ -1695,7 +1695,7 @@ export async function sendOverdueAutoFlagEmail(opts: SendOverdueAutoFlagOptions)
 <body>
   <div class="card">
     <div class="header">
-      <div style="font-size: 18px; font-weight: 800;">UrbanGaon Automated Monitor | Flowchart 21</div>
+      <div style="font-size: 18px; font-weight: 800;">UrbanGaon Automated Overdue Monitor</div>
       <div style="font-size: 12px; opacity: 0.9; margin-top: 2px;">Overdue Deliverable Auto-Flag Notification</div>
     </div>
     <div class="content">
@@ -1739,7 +1739,7 @@ export async function sendOverdueAutoFlagEmail(opts: SendOverdueAutoFlagOptions)
       <a href="${appBase}" class="btn">View Deliverable in Workspace</a>
     </div>
     <div class="footer">
-      UrbanGaon Task Register | Flowchart 21 Automated Governance Engine | Mr. Sukh Sagar Singh (CEO)
+      UrbanGaon Task Register | Automated Governance Engine | Mr. Sukh Sagar Singh (CEO)
     </div>
   </div>
 </body>
@@ -1954,12 +1954,12 @@ export async function sendConfigRollbackEmail(opts: SendConfigRollbackEmailOptio
 <body>
   <div class="card">
     <div class="header">
-      <div style="font-size: 18px; font-weight: 800;">Configuration Rollback Alert | Flowchart 24</div>
+      <div style="font-size: 18px; font-weight: 800;">Configuration Rollback Alert</div>
       <div style="font-size: 12px; opacity: 0.9; margin-top: 2px;">UrbanGaon System Governance Notification</div>
     </div>
     <div class="content">
       <p style="margin-top: 0;">Hello <strong>${opts.adminName}</strong>,</p>
-      <p>This is an automated governance notice. A configuration rollback has been executed by <strong>${opts.triggeredBy}</strong> per <strong>Flowchart 24: Config Versioning and Rollback Flow</strong>.</p>
+      <p>This is an automated governance notice. A configuration rollback has been executed by <strong>${opts.triggeredBy}</strong> under <strong>Configuration Versioning and Rollback Policy</strong>.</p>
       <div class="alert-box">
         <div style="font-size: 15px; font-weight: 800; color: #9a3412; margin-bottom: 8px;">Rollback Summary</div>
         <div style="font-size: 13px; color: #431407;">
@@ -1972,7 +1972,7 @@ export async function sendConfigRollbackEmail(opts: SendConfigRollbackEmailOptio
       <p>All core settings (email schedules, security lockout policies, permissions, and metadata baselines) have been safely restored.</p>
       <a href="${appBase}/" class="btn">Review System Configuration in Portal</a>
     </div>
-    <div class="footer">UrbanGaon Enterprise Engine | Flowchart 24 Compliance</div>
+    <div class="footer">UrbanGaon Enterprise Engine | Configuration Governance</div>
   </div>
 </body>
 </html>`;

@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(
           {
             success: false,
-            error: `Access Suspended: Employee is on authorized leave${leaveEnd ? ` until ${leaveEnd}` : ''} (Flowchart 4). Login access is blocked until return date.`,
+            error: `Access Suspended: Employee is on authorized leave${leaveEnd ? ` until ${leaveEnd}` : ''}. Login access is blocked until return date.`,
           },
           { status: 200 }
         );
@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Access Denied: This corporate account has been deactivated and deliverables handed over (Flowchart 4). Please contact HR / Talent Management.',
+          error: 'Access Denied: This corporate account has been deactivated and deliverables handed over. Please contact HR / Talent Management.',
         },
         { status: 200 }
       );
@@ -143,7 +143,7 @@ export async function POST(req: NextRequest) {
           success: false,
           requiresPasswordSetup: true,
           email: user.email,
-          error: 'First Login Detected (Flowchart 4): Corporate security policy requires setting your personal password via the set-password link before signing in.',
+          error: 'First Login Detected: Corporate security policy requires setting your personal password via the set-password link before signing in.',
         },
         { status: 200 }
       );
@@ -159,7 +159,7 @@ export async function POST(req: NextRequest) {
           isLocked: true,
           lockUntil: user.lockUntil,
           remainingMinutes,
-          error: `Account is temporarily locked for 15 minutes due to 5 consecutive failed login attempts (Flowchart 5). Please try again in ${remainingMinutes} minute(s) or reset your password.`,
+          error: `Account is temporarily locked for 15 minutes due to 5 consecutive failed login attempts. Please try again in ${remainingMinutes} minute(s) or reset your password.`,
         },
         { status: 423 }
       );
@@ -198,7 +198,7 @@ export async function POST(req: NextRequest) {
             isLocked: true,
             failedAttempts: 5,
             lockUntil: lockUntilDate,
-            error: 'Account locked for 15 minutes: 5 consecutive failed login attempts detected (Flowchart 5). An alert email has been dispatched to your corporate inbox.',
+            error: 'Account locked for 15 minutes: 5 consecutive failed login attempts detected. An alert email has been dispatched to your corporate inbox.',
           },
           { status: 423 }
         );
@@ -215,7 +215,7 @@ export async function POST(req: NextRequest) {
           success: false,
           failedAttempts: attempts,
           remainingAttempts: remaining,
-          error: `Invalid email or password. Attempt ${attempts} of 5 before 15-minute account lockout (Flowchart 5).`,
+          error: `Invalid email or password. Attempt ${attempts} of 5 before 15-minute account lockout.`,
         },
         { status: 200 }
       );
@@ -268,7 +268,7 @@ export async function POST(req: NextRequest) {
           success: false,
           requires2FA: true,
           role: user.role,
-          message: `Two-step verification required for ${user.role === 'SUPER_ADMIN' ? 'Super Admin / Director' : 'Admin / Talent HR'} access (Flowchart 5). A 6-digit verification code has been dispatched to ${user.email}.`,
+          message: `Two-step verification required for ${user.role === 'SUPER_ADMIN' ? 'Super Admin / Director' : 'Admin / Talent HR'} access. A 6-digit verification code has been dispatched to ${user.email}.`,
         }, { status: 200 });
       }
 
@@ -294,7 +294,7 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({
             success: false,
             twoFactorExceeded: true,
-            error: 'Two-step verification failed: Maximum retry limit exceeded (Flowchart 5). Please sign in again.',
+            error: 'Two-step verification failed: Maximum retry limit exceeded. Please sign in again.',
           }, { status: 200 });
         }
 
@@ -307,7 +307,7 @@ export async function POST(req: NextRequest) {
           success: false,
           requires2FA: true,
           remainingRetries: 1,
-          error: 'Invalid or expired 2FA code. Flowchart 5 allows 1 retry remaining.',
+          error: 'Invalid or expired 2FA code. 1 retry remaining.',
         }, { status: 200 });
       }
 
@@ -351,7 +351,7 @@ export async function POST(req: NextRequest) {
         actorRole: activeRole,
         ipAddress: req.headers.get('x-forwarded-for') || '127.0.0.1',
         deviceInfo: req.headers.get('user-agent') || 'UrbanGaon Web Client',
-        notes: `Successful login verified under Flowchart 5 protocol. Role: ${activeRole}. 2FA Status: ${requiresRole2FA ? 'Verified OTP' : 'Direct Access'}.`
+        notes: `Successful login verified under corporate authentication protocol. Role: ${activeRole}. 2FA Status: ${requiresRole2FA ? 'Verified OTP' : 'Direct Access'}.`
       });
     } catch (auditErr) {
       console.warn('[Auth/Login] AuditLog note:', auditErr);

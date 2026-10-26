@@ -135,7 +135,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
       actorRole: actorRole,
       ipAddress: req.headers.get('x-forwarded-for') || '127.0.0.1',
       deviceInfo: req.headers.get('user-agent') || 'Task Operations Engine',
-      notes: auditNotesInput || `Updated deliverable under Flowchart 8 Multi-Assignee lifecycle. Status: ${updated.status}`,
+      notes: auditNotesInput || `Updated deliverable under Multi-Assignee lifecycle. Status: ${updated.status}`,
     }).catch(err => console.debug('[API/tasks/[id] AuditLog]', err));
 
     // Broadcast instant real-time update to all connected devices worldwide

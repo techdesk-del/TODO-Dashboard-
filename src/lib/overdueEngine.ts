@@ -45,7 +45,7 @@ export async function runOverdueAndNoReasonEvaluation(options?: {
   baseUrl?: string;
 }): Promise<OverdueEvaluationResult> {
   if (isEvaluationRunning) {
-    console.log('[Flowchart 21 Engine] Evaluation already in progress in this process, skipping duplicate concurrent trigger.');
+    console.log('[Overdue Engine] Evaluation already in progress in this process, skipping duplicate concurrent trigger.');
     return {
       totalPendingEvaluated: 0,
       overdueCount: 0,
@@ -175,24 +175,24 @@ export async function runOverdueAndNoReasonEvaluation(options?: {
         task.escalatedTo = reportingManagerName;
         task.escalatedToId = reportingManagerId || undefined;
         task.escalatedAt = nowIso;
-        task.escalationReason = `Auto-escalated: Overdue by ${diffDays} days beyond threshold (${thresholdDays}d) per Flowchart 21`;
+        task.escalationReason = `Auto-escalated: Overdue by ${diffDays} days beyond threshold (${thresholdDays}d)`;
         task.autoEscalatedToManager = true;
-        task.notes = `${task.notes ? task.notes + ' | ' : ''}[Flowchart 21]: Auto-escalated to ${reportingManagerName} due to ${diffDays}d overdue threshold breach.`;
+        task.notes = `${task.notes ? task.notes + ' | ' : ''}Auto-escalated to ${reportingManagerName} due to ${diffDays}d overdue threshold breach.`;
 
         didEscalateNow = true;
         autoEscalatedCount++;
 
         // Log immutable audit entry for compliance
         await AuditLogModel.create({
-          id: `audit-fc21-esc-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+          id: `audit-overdue-esc-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
           timestamp: nowIso,
           taskId: task.id,
           taskTitle: task.title,
           action: 'ESCALATED',
-          fieldChanged: 'Flowchart 21 Auto-Escalation Engine',
+          fieldChanged: 'Auto-Escalation Engine',
           oldValue: 'Overdue Pending',
           newValue: `Escalated to ${reportingManagerName}`,
-          actor: 'Hourly Governance Cron (Flowchart 21)',
+          actor: 'Hourly Governance Cron',
           actorRole: 'SUPER_ADMIN',
           ipAddress: '127.0.0.1',
           deviceInfo: 'UrbanGaon Automated Monitor Daemon',
@@ -238,7 +238,7 @@ export async function runOverdueAndNoReasonEvaluation(options?: {
             task.overdueNotifiedAt = nowIso;
             notificationsDispatched++;
           } catch (emailErr) {
-            console.warn(`[Flowchart 21] Notification failed for #${task.id}:`, emailErr);
+            console.warn(`[Overdue Engine] Notification failed for #${task.id}:`, emailErr);
             // Revert claim on network failure so subsequent routines can retry
             await TaskModel.updateOne(
               { _id: task._id, overdueNotifiedAt: nowIso },
@@ -246,7 +246,7 @@ export async function runOverdueAndNoReasonEvaluation(options?: {
             ).catch(() => {});
           }
         } else {
-          console.log(`[Flowchart 21] Task #${task.id} was already notified within 24h by another process, skipped duplicate.`);
+          console.log(`[Overdue Engine] Task #${task.id} was already notified within 24h by another process, skipped duplicate.`);
         }
       }
 
@@ -256,21 +256,21 @@ export async function runOverdueAndNoReasonEvaluation(options?: {
   // Audit evaluation summary if any tasks were newly flagged or escalated
   if (newlyFlaggedCount > 0 || autoEscalatedCount > 0) {
     await AuditLogModel.create({
-      id: `audit-fc21-run-${Date.now()}`,
+      id: `audit-overdue-run-${Date.now()}`,
       timestamp: nowIso,
       action: 'STATUS_CHANGE',
-      fieldChanged: 'Hourly Flowchart 21 Overdue Engine',
+      fieldChanged: 'Hourly Overdue Engine',
       oldValue: 'Routine Check',
       newValue: `Overdue: ${overdueCount} (No Reason: ${pendingNoReasonCount}, Escalated: ${autoEscalatedCount})`,
       actor: 'System Hourly Governance Daemon',
       actorRole: 'SUPER_ADMIN',
       ipAddress: '127.0.0.1',
-      deviceInfo: 'node-cron Flowchart 21 Routine',
+      deviceInfo: 'node-cron Overdue Routine',
       notes: `Automated hourly evaluation scanned ${pendingTasks.length} pending deliverables. ${newlyFlaggedCount} new overdue flags, ${autoEscalatedCount} auto-escalated to reporting managers.`,
     }).catch(err => console.warn('[Audit Log Error]', err));
   }
 
-  console.log(`[Flowchart 21 Engine] Scanned ${pendingTasks.length} tasks. Overdue: ${overdueCount} (${pendingNoReasonCount} pending reason, ${overdueWithReasonCount} with reason). Escalated: ${autoEscalatedCount}. Notifications: ${notificationsDispatched}.`);
+  console.log(`[Overdue Engine] Scanned ${pendingTasks.length} tasks. Overdue: ${overdueCount} (${pendingNoReasonCount} pending reason, ${overdueWithReasonCount} with reason). Escalated: ${autoEscalatedCount}. Notifications: ${notificationsDispatched}.`);
 
     return {
       totalPendingEvaluated: pendingTasks.length,

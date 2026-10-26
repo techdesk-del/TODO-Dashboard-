@@ -82,7 +82,7 @@ export async function GET(req: NextRequest) {
       const result = await executeDataRetention({
         taskRetentionDays: 365,
         auditRetentionDays: 730,
-        actor: 'Vercel Cron 02:00 AM IST (Flowchart 25)',
+        actor: 'Vercel Cron 02:00 AM IST',
         actorRole: 'SUPER_ADMIN',
       });
       return NextResponse.json({
@@ -151,7 +151,7 @@ export async function POST(req: NextRequest) {
       const data = await executeDataRetention({
         taskRetentionDays: body.taskRetentionDays || 365,
         auditRetentionDays: body.auditRetentionDays || 730,
-        actor: 'Cron POST Trigger (Flowchart 25)',
+        actor: 'Cron POST Trigger',
         actorRole: 'SUPER_ADMIN'
       });
       return NextResponse.json({

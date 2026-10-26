@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       data: result,
-      message: `Flowchart 21 evaluation completed: ${result.overdueCount} overdue (${result.pendingNoReasonCount} missing reason), ${result.autoEscalatedCount} escalated.`,
+      message: `Overdue evaluation completed: ${result.overdueCount} overdue (${result.pendingNoReasonCount} missing reason), ${result.autoEscalatedCount} escalated.`,
     });
   } catch (error: any) {
     console.error('[API /api/tasks/evaluate-overdue GET Error]', error);
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       data: result,
-      message: `Flowchart 21 evaluation completed: ${result.overdueCount} overdue (${result.pendingNoReasonCount} missing reason), ${result.autoEscalatedCount} escalated.`,
+      message: `Overdue evaluation completed: ${result.overdueCount} overdue (${result.pendingNoReasonCount} missing reason), ${result.autoEscalatedCount} escalated.`,
     });
   } catch (error: any) {
     console.error('[API /api/tasks/evaluate-overdue POST Error]', error);

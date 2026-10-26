@@ -16,7 +16,6 @@ import {
   LogOut,
   Trash2,
   CalendarDays,
-  FileSpreadsheet,
   Globe
 } from 'lucide-react';
 import { getTodayStr, getTomorrowStr, formatDateDisplay, formatDateDayMonth } from '@/lib/dateUtils';
@@ -38,7 +37,6 @@ export const Sidebar: React.FC = () => {
     currentUser,
     logoutUser,
     setBannerNotification,
-    setIsExportModalOpen,
     setIsAuthModalOpen,
     setAuthModalInitialMode
   } = useApp();
@@ -406,15 +404,6 @@ export const Sidebar: React.FC = () => {
               <span>System Config</span>
             </button>
           )}
-
-          <button
-            className="nav-link-item"
-            onClick={() => { setIsExportModalOpen(true); closeSidebar(); }}
-            title="Enterprise Multi-Sheet Excel Export"
-          >
-            <FileSpreadsheet size={16} color="#16a34a" />
-            <span>Excel Export Center</span>
-          </button>
 
           {canViewFlows && (
             <button

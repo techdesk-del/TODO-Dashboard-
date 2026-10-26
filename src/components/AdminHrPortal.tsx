@@ -721,7 +721,7 @@ export const AdminHrPortal: React.FC = () => {
       action: 'EXPORTED',
       fieldChanged: 'Executive Report & Performance Ratios Export',
       newValue: `${filtered.length} deliverables exported (Timely Ratio: ${timelyCompletionRatio})`,
-      notes: `Flowchart B Report Export (${reportType}) with written formula metrics`
+      notes: `Executive Report Export (${reportType}) with written formula metrics`
     });
   };
 
@@ -1126,7 +1126,7 @@ export const AdminHrPortal: React.FC = () => {
           </div>
           <div>
             <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>
-              Admin & Talent HR Operations Center (Flowcharts 1 to 10)
+              Admin & Talent HR Operations Center
             </div>
             <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px' }}>
               Direct employee provisioning, 7 master department governance, real-time oversight & task intervention
@@ -1775,10 +1775,10 @@ export const AdminHrPortal: React.FC = () => {
               </button>
             </div>
 
-            {/* Flowchart 11 Decision Diamond: "Which report?" */}
+            {/* Decision Diamond: "Which report?" */}
             <div style={{ marginBottom: '1rem' }}>
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#334155', marginBottom: '6px' }}>
-                WHICH REPORT? (FLOWCHART 11 SELECTION):
+                SELECT EXECUTIVE REPORT TYPE:
               </label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.45rem' }}>
                 {[
@@ -2353,7 +2353,7 @@ export const AdminHrPortal: React.FC = () => {
                 </div>
               </div>
               <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '3px 8px', borderRadius: '12px', background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0' }}>
-                Flowchart Compliant
+                Policy Compliant
               </span>
             </div>
 
@@ -2696,7 +2696,7 @@ export const AdminHrPortal: React.FC = () => {
               }}>
                 <Clock size={13} color="#f59e0b" />
                 <span>
-                  <strong>Flowchart Lifecycle:</strong> Employee record will be created in status <code>Pending First Login</code>. An expiring one-time set-password activation link will be automatically generated and emailed to the employee.
+                  <strong>Provisioning Lifecycle:</strong> Employee record will be created in status <code>Pending First Login</code>. An expiring one-time set-password activation link will be automatically generated and emailed to the employee.
                 </span>
               </div>
 
@@ -3957,7 +3957,7 @@ export const AdminHrPortal: React.FC = () => {
                 </h3>
               </div>
               <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '3px' }}>
-                Official Enterprise Holiday Register • Enforcing Flowcharts 13 & 23 (Automated Reminder & Action Suppression)
+                Official Enterprise Holiday Register • Automated Reminder & Action Suppression
               </div>
             </div>
 
@@ -4067,7 +4067,7 @@ export const AdminHrPortal: React.FC = () => {
                 FY 2026-27 Official Policy
               </div>
               <div style={{ fontSize: '0.75rem', color: '#2563eb', fontWeight: 600 }}>
-                Flowchart 23 &amp; Flowchart 13 Compliance
+                Corporate Governance Compliance
               </div>
             </div>
 
@@ -4387,7 +4387,7 @@ export const AdminHrPortal: React.FC = () => {
               <div>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Mail size={20} color="#4338ca" />
-                  Email Delivery Logs &amp; Notification Dispatch Daemon (Flowcharts 20 &amp; 26)
+                  Email Delivery Logs &amp; Notification Dispatch Daemon
                 </h3>
                 <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '4px 0 0 0' }}>
                   Centralized dispatch audit tracking delivery status, SMTP handshake verification, and immediate retry orchestration.
@@ -5078,7 +5078,7 @@ export const AdminHrPortal: React.FC = () => {
             </div>
 
             <p style={{ fontSize: '0.76rem', color: '#64748b', marginBottom: '0.75rem', lineHeight: 1.45 }}>
-              Under Flowchart 3 governance, rejections require a mandatory written rationale which will be formally dispatched to the applicant via email and logged in the immutable audit trail.
+              Under corporate governance, rejections require a mandatory written rationale which will be formally dispatched to the applicant via email and logged in the immutable audit trail.
             </p>
 
             <form onSubmit={e => {
@@ -5161,7 +5161,7 @@ export const AdminHrPortal: React.FC = () => {
               </div>
 
               <div style={{ fontSize: '0.74rem', color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '6px', padding: '0.55rem 0.75rem', marginBottom: '0.85rem', lineHeight: 1.45 }}>
-                <strong>Flowchart 23 Automated Protocol:</strong> When marked on leave, the system pauses automated morning reminders for this employee, attaches the on-leave badge to their active deliverables, and dispatches notices to task creators and reporting managers.
+                <strong>Leave Handling Protocol:</strong> When marked on leave, the system pauses automated morning reminders for this employee, attaches the on-leave badge to their active deliverables, and dispatches notices to task creators and reporting managers.
               </div>
 
               <form onSubmit={async (e) => {

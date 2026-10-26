@@ -27,7 +27,6 @@ import { isCeoUser, isStrictCeo } from '@/lib/rosterData';
 export const Header: React.FC = () => {
   const {
     currentUser,
-    switchRole,
     selectedDate,
     setSelectedDate,
     setViewScope,
@@ -133,13 +132,6 @@ export const Header: React.FC = () => {
     }
     return parts[0];
   };
-
-  const roleOptions: { role: Role; label: string; desc: string }[] = [
-    { role: 'SUPER_ADMIN', label: 'Super Admin / Director', desc: 'Full Executive Command & Audit' },
-    { role: 'ADMIN',       label: 'Admin / Talent HR',      desc: 'People Ops & Oversight' },
-    { role: 'MANAGER',     label: 'Reporting Manager',      desc: 'Team Balancing & Escalations' },
-    { role: 'EMPLOYEE',    label: 'Employee / Staff',       desc: 'Daily Register & Voice AI' }
-  ];
 
   const handleClearData = async () => {
     if (!isCeo) {
@@ -1061,10 +1053,10 @@ export const Header: React.FC = () => {
                     {currentUser.email}
                   </div>
                   <div style={{ display: 'flex', gap: '4px', marginTop: '3px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '1px 6px', borderRadius: '4px', background: '#eff6ff', color: '#2563eb' }}>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#eff6ff', color: '#2563eb' }}>
                       {currentUser.role.replace('_', ' ')}
                     </span>
-                    <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '1px 6px', borderRadius: '4px', background: '#f1f5f9', color: '#475569' }}>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#f1f5f9', color: '#475569' }}>
                       {currentUser.department || 'UrbanGaon'}
                     </span>
                   </div>
@@ -1089,10 +1081,10 @@ export const Header: React.FC = () => {
               >
                 <Lock size={15} color="#2563eb" style={{ flexShrink: 0 }} />
                 <div>
-                  <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#1e40af' }}>
+                  <div style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#1e40af' }}>
                     {isGuest ? 'Sign In / Employee Login' : 'Switch Account (Login)'}
                   </div>
-                  <div style={{ fontSize: '0.66rem', color: '#64748b' }}>
+                  <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
                     Secure corporate sign-in
                   </div>
                 </div>
@@ -1110,62 +1102,16 @@ export const Header: React.FC = () => {
                     border: '1px solid #fecaca',
                     borderRadius: '8px',
                     cursor: 'pointer',
-                    marginBottom: '0.5rem',
                     color: '#dc2626',
                     transition: 'background 0.15s ease'
                   }}
                 >
                   <LogOut size={14} color="#dc2626" style={{ flexShrink: 0 }} />
-                  <span style={{ fontSize: '0.76rem', fontWeight: 700 }}>
+                  <span style={{ fontSize: '0.8125rem', fontWeight: 700 }}>
                     Log Out ({currentUser.name})
                   </span>
                 </div>
               )}
-
-              <div style={{ fontSize: '0.66rem', fontWeight: 700, color: '#94a3b8', padding: '0.3rem 0.5rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Quick Role Switching (Demo)
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                {roleOptions.map(opt => (
-                  <div
-                    key={opt.role}
-                    onClick={() => {
-                      if (!isCeo) {
-                        alert("Access Restricted: Organizational role modifications are strictly restricted to CEO Mr. Sukh Sagar Singh Bhati.");
-                        setIsRoleMenuOpen(false);
-                        return;
-                      }
-                      if (opt.role === 'SUPER_ADMIN' && !isCeoUser(currentUser)) {
-                        alert("Access Restricted: Super Admin / Executive privileges require executive credentials.");
-                        setIsAuthModalOpen(true);
-                        setIsRoleMenuOpen(false);
-                        return;
-                      }
-                      switchRole(opt.role);
-                      setIsRoleMenuOpen(false);
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '0.45rem 0.65rem',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      background: currentUser.role === opt.role ? '#eff6ff' : 'transparent',
-                      gap: '0.5rem',
-                      transition: 'background 0.12s ease'
-                    }}
-                  >
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: '0.78rem', fontWeight: 700, color: currentUser.role === opt.role ? '#2563eb' : '#1e293b', whiteSpace: 'nowrap' }}>
-                        {opt.label}
-                      </div>
-                      <div style={{ fontSize: '0.66rem', color: '#64748b' }}>{opt.desc}</div>
-                    </div>
-                    {currentUser.role === opt.role && <Check size={14} color="#2563eb" style={{ flexShrink: 0 }} />}
-                  </div>
-                ))}
-              </div>
             </div>
           )}
         </div>

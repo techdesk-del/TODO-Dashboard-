@@ -218,15 +218,15 @@ export async function PATCH(req: NextRequest) {
         id: `aud-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         timestamp: new Date().toISOString(),
         action: 'APPROVAL',
-        fieldChanged: 'Employee Sign-Up Request Approval (Flowchart 3)',
+        fieldChanged: 'Employee Sign-Up Request Approval',
         oldValue: `Status: PENDING (${accessReq.email})`,
         newValue: `Status: APPROVED -> ID: ${assignedEmployeeId} (Pending First Login)`,
         actor: reviewedBy || 'Admin / Talent HR',
         actorRole: 'ADMIN',
         ipAddress: req.headers.get('x-forwarded-for') || '127.0.0.1',
         deviceInfo: req.headers.get('user-agent') || 'Admin Dashboard',
-        notes: `Flowchart 3: Approved ${accessReq.name}. Assigned ${assignedEmployeeId}, role: Employee, Dept: ${assignedDept}. Set-password email dispatched.`
-      }).catch(err => console.warn('[FC3 Audit Log Approval]', err));
+        notes: `Approved ${accessReq.name}. Assigned ${assignedEmployeeId}, role: Employee, Dept: ${assignedDept}. Set-password email dispatched.`
+      }).catch(err => console.warn('[Audit Log Approval]', err));
 
       accessReq.status = 'APPROVED';
       accessReq.reviewedBy = reviewedBy || 'Admin / Talent HR';
@@ -250,7 +250,7 @@ export async function PATCH(req: NextRequest) {
     } else if (action === 'REJECT') {
       if (!reason || !String(reason).trim()) {
         return NextResponse.json(
-          { success: false, error: 'Mandatory justification reason is required for rejection (Flowchart 3).' },
+          { success: false, error: 'Mandatory justification reason is required for rejection.' },
           { status: 400 }
         );
       }
@@ -268,15 +268,15 @@ export async function PATCH(req: NextRequest) {
         id: `aud-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         timestamp: new Date().toISOString(),
         action: 'REJECTED',
-        fieldChanged: 'Employee Sign-Up Request Rejection (Flowchart 3)',
+        fieldChanged: 'Employee Sign-Up Request Rejection',
         oldValue: `Status: PENDING (${accessReq.email})`,
         newValue: `Status: REJECTED ("${cleanReason}")`,
         actor: reviewedBy || 'Admin / Talent HR',
         actorRole: 'ADMIN',
         ipAddress: req.headers.get('x-forwarded-for') || '127.0.0.1',
         deviceInfo: req.headers.get('user-agent') || 'Admin Dashboard',
-        notes: `Flowchart 3: Access request for ${accessReq.name} rejected by ${reviewedBy || 'Admin'}. Reason: "${cleanReason}". Rejection email sent.`
-      }).catch(err => console.warn('[FC3 Audit Log Rejection]', err));
+        notes: `Access request for ${accessReq.name} rejected by ${reviewedBy || 'Admin'}. Reason: "${cleanReason}". Rejection email sent.`
+      }).catch(err => console.warn('[Audit Log Rejection]', err));
 
       accessReq.status = 'REJECTED';
       accessReq.rejectionReason = cleanReason;
@@ -291,7 +291,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     return NextResponse.json(
-      { success: false, error: 'Invalid action specified. Must be APPROVE or REJECT (Flowchart 3).' },
+      { success: false, error: 'Invalid action specified. Must be APPROVE or REJECT.' },
       { status: 400 }
     );
   } catch (error: unknown) {

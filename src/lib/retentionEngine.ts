@@ -189,7 +189,7 @@ export async function executeDataRetention(options?: DataRetentionOptions): Prom
       pendingCount,
       eventTypeBreakdown,
       purgedAt: nowIso,
-      notes: `Flowchart Retention Compliance: Deleted ${oldEmailLogs.length} granular dispatch records older than 1 year while preserving aggregate counts and failure metrics.`
+      notes: `Retention Policy: Deleted ${oldEmailLogs.length} granular dispatch records older than 1 year while preserving aggregate counts and failure metrics.`
     }).catch(err => console.warn('[EmailLogSummary Create Error]', err?.message));
 
     // Delete granular email logs
@@ -264,7 +264,7 @@ export async function executeDataRetention(options?: DataRetentionOptions): Prom
     actor,
     actorRole,
     action: 'CONFIG_CHANGED',
-    fieldChanged: 'Data Retention & Archive Engine (Flowchart 22/25)',
+    fieldChanged: 'Data Retention & Archive Engine',
     oldValue: `Active records prior to cutoff dates`,
     newValue: `Archived: ${archivedTasksCount} tasks, ${coldStorageAuditLogsCount} cold audit logs, ${deletedEmailLogsCount} purged emails, ${anonymizedUsersCount} anonymized users`,
     ipAddress: '127.0.0.1',

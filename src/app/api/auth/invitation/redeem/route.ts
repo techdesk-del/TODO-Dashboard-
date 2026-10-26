@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
         actorRole: userDoc.role,
         ipAddress: req.headers.get('x-forwarded-for') || '127.0.0.1',
         deviceInfo: req.headers.get('user-agent') || 'UrbanGaon Web Client',
-        notes: `First login password initialized, saved as hash, and corporate access activated for ${userDoc.email} (Flowchart 4).`
+        notes: `First login password initialized, saved as hash, and corporate access activated for ${userDoc.email}.`
       });
     } catch (auditErr) {
       console.warn('[API] /api/auth/invitation/redeem AuditLog warning:', auditErr);

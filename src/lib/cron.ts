@@ -52,7 +52,7 @@ export interface RolloverResult {
 }
 
 /**
- * Executes 100% automated Carry-Forward Rollover (Flowchart 11).
+ * Executes 100% automated Carry-Forward Rollover Protocol.
  * 
  * Standard midnight mode: Any uncompleted deliverable scheduled prior to today (< today)
  * is automatically rolled over to TODAY, preserving carryForwardCount.
@@ -104,7 +104,7 @@ export async function executeNightlyRollover(options: RolloverOptions = {}): Pro
     oldValue: `Uncompleted commitments prior to ${targetDate}`,
     newValue: message,
     ipAddress: '127.0.0.1',
-    deviceInfo: 'MongoDB Nightly Rollover Worker (Flowchart 11)',
+    deviceInfo: 'MongoDB Nightly Rollover Worker',
     notes: 'Preserved 100% commitment integrity with zero data loss',
   }).catch(() => {});
 
@@ -169,30 +169,30 @@ export function initServerCron() {
       }
       cache.lastOverdueHour = currentHourKey;
 
-      console.log(`[Cron Hourly IST] Running Flowchart 21 overdue & no-reason evaluation (${currentHourKey})...`);
+      console.log(`[Cron Hourly IST] Running automated overdue & no-reason evaluation (${currentHourKey})...`);
       await runOverdueAndNoReasonEvaluation({
         thresholdDays: 3,
         sendNotifications: true,
       });
     } catch (err) {
-      console.error('[Cron Hourly Error - Flowchart 21]', err);
+      console.error('[Cron Hourly Error - Overdue Engine]', err);
     }
   }, {
     timezone: 'Asia/Kolkata'
   });
 
-  // 4. Daily Data Retention and Archive Engine at 02:00 AM IST (Flowchart 25 & 27)
+  // 4. Daily Data Retention and Archive Engine at 02:00 AM IST
   cron.schedule('0 2 * * *', async () => {
     try {
-      console.log('[Cron 02:00 AM IST] Executing Flowchart 25 Data Retention & Archive Engine...');
+      console.log('[Cron 02:00 AM IST] Executing Automated Data Retention & Archive Engine...');
       await executeDataRetention({
         taskRetentionDays: 365,
         auditRetentionDays: 730,
-        actor: 'Daily Retention Cron (Flowchart 25)',
+        actor: 'Daily Retention Automated Cron',
         actorRole: 'SUPER_ADMIN'
       });
     } catch (err) {
-      console.error('[Cron 02:00 AM Error - Flowchart 25]', err);
+      console.error('[Cron 02:00 AM Error - Retention Engine]', err);
     }
   }, {
     timezone: 'Asia/Kolkata'

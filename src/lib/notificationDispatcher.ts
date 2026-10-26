@@ -272,13 +272,13 @@ export async function dispatchNotificationFlow(
         id: `audit-notif-fail-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
         timestamp: new Date().toISOString(),
         action: 'CONFIG_CHANGED',
-        fieldChanged: 'Email Delivery Failure (Flowchart 20)',
+        fieldChanged: 'Email Delivery Failure',
         oldValue: `Pending Dispatch to ${recipient.email}`,
         newValue: `FAILED after 3 retries: ${lastError}`,
         actor: 'Notification Dispatch Engine',
         actorRole: 'SUPER_ADMIN',
         ipAddress: '127.0.0.1',
-        deviceInfo: 'Flowchart 20 Reliability Daemon',
+        deviceInfo: 'Notification Reliability Daemon',
         notes: `Event: ${event.eventType}. Deliverable: #${event.taskId || 'N/A'}. Added to Admin failure summary.`,
       }).catch(err => console.warn('[Audit Log Error]', err));
 

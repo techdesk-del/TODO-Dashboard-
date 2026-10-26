@@ -249,7 +249,7 @@ export async function POST(req: NextRequest) {
         id: `audit-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         timestamp: new Date().toISOString(),
         action: 'CREATED',
-        fieldChanged: 'Employee Provisioning (Flowchart: Create Employee)',
+        fieldChanged: 'Employee Provisioning',
         oldValue: 'Unregistered',
         newValue: `Status: ${status} | Role: ${role} | Employee ID: ${assignedEmpId} | Dept: ${department.trim()} | Mgr: ${manager || 'None'}`,
         actor: creatorName,

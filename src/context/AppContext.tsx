@@ -268,7 +268,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             fetch('/api/members/leave', {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ memberId: rm.id, actorName: 'Flowchart 23 Daily Daemon' })
+              body: JSON.stringify({ memberId: rm.id, actorName: 'Automated Leave Return Daemon' })
             }).catch(console.warn);
           }
         }
@@ -1060,7 +1060,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       fieldChanged: Object.keys(effectiveUpdates).join(', '),
       oldValue: oldTask ? JSON.stringify(effectiveUpdates).slice(0, 50) : '',
       newValue: JSON.stringify(effectiveUpdates).slice(0, 50),
-      notes: note || (isAdmin ? 'Admin updated task (Flowchart A)' : 'Task properties updated')
+      notes: note || (isAdmin ? 'Admin updated task' : 'Task properties updated')
     });
   };
 
@@ -1140,7 +1140,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       fieldChanged: 'Senior Advisory Comment Provided',
       oldValue: 'Escalated',
       newValue: 'In Progress',
-      notes: `Senior leader provided advisory guidance: "${advisoryComment}". Returned to original assignee (Flowchart 3).`
+      notes: `Senior leader provided advisory guidance: "${advisoryComment}". Returned to original assignee.`
     });
 
     setBannerNotification({
@@ -1174,7 +1174,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       fieldChanged: 'Senior Reassignment',
       oldValue: 'Escalated',
       newValue: `Reassigned to ${targetMember.name}`,
-      notes: `Senior leader reassigned deliverable to ${targetMember.name}. Original assignee notified (Flowchart 3).`
+      notes: `Senior leader reassigned deliverable to ${targetMember.name}. Original assignee notified.`
     });
 
     setBannerNotification({
@@ -1198,7 +1198,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       fieldChanged: 'Senior Resolution',
       oldValue: 'Escalated',
       newValue: 'Done (100%)',
-      notes: `Senior leader resolved escalated deliverable: "${resolutionNote}". Original assignee notified (Flowchart 3).`
+      notes: `Senior leader resolved escalated deliverable: "${resolutionNote}". Original assignee notified.`
     });
 
     setBannerNotification({
@@ -1245,7 +1245,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       fieldChanged: 'Senior Returned Task with Reason',
       oldValue: 'Escalated',
       newValue: 'In Progress',
-      notes: `Senior returned task to assignee with reason: "${returnReason}". Original assignee notified (Flowchart 3).`
+      notes: `Senior returned task to assignee with reason: "${returnReason}". Original assignee notified.`
     });
 
     setBannerNotification({
@@ -1300,7 +1300,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             fieldChanged: 'SLA Auto-Escalation to Reporting Manager',
             oldValue: `Escalated to Senior (${t.escalatedTo})`,
             newValue: 'Auto-Escalated to Reporting Manager & Admin',
-            notes: `Senior SLA limit of ${slaHours}h exceeded without action. Automatically escalated to Reporting Manager and Admin (Flowchart 3).`
+            notes: `Senior SLA limit of ${slaHours}h exceeded without action. Automatically escalated to Reporting Manager and Admin.`
           });
         }
       }
@@ -1499,7 +1499,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     logAudit({
       action: 'CREATED',
-      fieldChanged: 'Employee Provisioning (Flowchart: Create Employee)',
+      fieldChanged: 'Employee Provisioning',
       oldValue: 'Unregistered',
       newValue: `${finalMember.name} (${finalMember.designation} - ${finalMember.department}) [${finalMember.status}]`,
       notes: `Employee record created in status "${finalMember.status}" & one-time set-password link dispatched by ${currentUser.name} (${currentUser.role})`
@@ -1687,7 +1687,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             designation: successor.designation,
             avatar: successor.avatar,
             status: a.status || 'In Progress',
-            remarks: `Handover from ${departingName} (Flowchart 4: ${reason})`,
+            remarks: `Handover from ${departingName}: ${reason}`,
             completedAt: a.completedAt
           };
         }
@@ -1725,10 +1725,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     logAudit({
       action: 'CONFIG_CHANGED',
-      fieldChanged: 'Account Status & Deliverable Reallocation (Flowchart 4)',
+      fieldChanged: 'Account Status & Deliverable Reallocation',
       oldValue: `${departingName} [ACTIVE]`,
       newValue: `${departingName} [${newStatus}] → All ${reassignedCount} active deliverables transferred to ${successorName}`,
-      notes: `Flowchart 4 Enforced: Type=${deactivationType}. Handover to ${successorName}. ${reassignedCount} tasks reassigned. Audit history preserved.`
+      notes: `Deactivation Protocol Enforced: Type=${deactivationType}. Handover to ${successorName}. ${reassignedCount} tasks reassigned. Audit history preserved.`
     });
 
     if (selectedMemberFilter === departingName) {
@@ -1973,7 +1973,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     if (!reason || !reason.trim()) {
-      alert('Cancellation reason is required per Flowchart 22 corporate governance.');
+      alert('Cancellation reason is required per corporate governance.');
       return;
     }
 
@@ -2037,7 +2037,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       taskId,
       taskTitle: targetTask.title,
       action: 'CANCELLED',
-      fieldChanged: 'Task Cancelled (Flowchart 22)',
+      fieldChanged: 'Task Cancelled',
       oldValue: targetTask.status,
       newValue: 'Cancelled',
       notes: `Cancelled by ${currentUser.name}. Justification: "${reason.trim()}". Excluded from performance metrics. All assignees & creator notified.`
@@ -2177,10 +2177,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       taskId,
       taskTitle: targetTask.title,
       action: 'REASSIGNED',
-      fieldChanged: `Task Assignees Reassigned (Flowchart 22: ${mode})`,
+      fieldChanged: `Task Assignees Reassigned (${mode})`,
       oldValue: oldAssignees.map(a => a.name).join(', ') || 'None',
       newValue: updatedAssignees.map(a => a.name).join(', '),
-      notes: `Reassignment mode: ${mode}. Added: ${addedMembers.map(m => m.name).join(', ') || 'None'}. Removed: ${removedAssignees.map(a => a.name).join(', ') || 'None'}. Notes: "${reason || 'Workload adjustment'}". (Flowchart 22 compliance).`
+      notes: `Reassignment mode: ${mode}. Added: ${addedMembers.map(m => m.name).join(', ') || 'None'}. Removed: ${removedAssignees.map(a => a.name).join(', ') || 'None'}. Notes: "${reason || 'Workload adjustment'}".`
     });
 
     setBannerNotification({
@@ -2279,7 +2279,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       fieldChanged: effectiveAssigneeId ? `Assignee Completed: ${effectiveAssigneeId}` : 'Task Completed',
       oldValue: task.status,
       newValue: `${comp.status} (${comp.progressText})`,
-      notes: `Updated status under Flowchart 8 Multi-Assignee Task Flow.`
+      notes: `Updated status under Multi-Assignee Task Flow.`
     });
   };
 
@@ -2318,7 +2318,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       fieldChanged: `Assignee Status: ${targetAssignee?.name || assigneeId}`,
       oldValue: targetAssignee?.status || 'Unknown',
       newValue: `${status} (Overall Task Status: ${comp.status} - ${comp.progressText})`,
-      notes: remarks || `Status updated under Flowchart 8 Multi-Assignee lifecycle.`
+      notes: remarks || `Status updated under Multi-Assignee lifecycle.`
     });
   };
 

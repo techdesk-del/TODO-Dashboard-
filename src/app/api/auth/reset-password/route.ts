@@ -184,7 +184,7 @@ export async function POST(req: NextRequest) {
         actorRole: activeRole,
         ipAddress: req.headers.get('x-forwarded-for') || '127.0.0.1',
         deviceInfo: req.headers.get('user-agent') || 'UrbanGaon Web Client',
-        notes: `Password reset and saved as hash under Flowchart 4 lifecycle for ${user.email}.`
+        notes: `Password reset and saved as hash for ${user.email}.`
       });
     } catch (auditErr) {
       console.warn('[Auth/ResetPassword] Audit log recording note:', auditErr);

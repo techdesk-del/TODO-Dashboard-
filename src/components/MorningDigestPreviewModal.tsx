@@ -399,7 +399,7 @@ export const MorningDigestPreviewModal: React.FC = () => {
           flexWrap: 'wrap'
         }}>
           <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
-            Flowchart 13 • 08:30 AM Automated Cron Protocol Active
+            08:30 AM Automated Digest Protocol Active
           </span>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>

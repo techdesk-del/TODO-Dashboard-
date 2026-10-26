@@ -154,7 +154,7 @@ export const AuditTrailModal: React.FC = () => {
     // Enterprise Compliance Certification Header Block
     const headerBlock = [
       escapeCsvField('=== URBANGAON ENTERPRISE OPERATING SYSTEM - IMMUTABLE COMPLIANCE AUDIT REGISTER ==='),
-      `${escapeCsvField('Governance Standard')},${escapeCsvField('Flowchart 12 & Flowchart 14 (Immutable Audit Ledger Baseline)')}`,
+      `${escapeCsvField('Governance Standard')},${escapeCsvField('Enterprise Corporate Governance (Immutable Audit Ledger Baseline)')}`,
       `${escapeCsvField('Security Classification')},${escapeCsvField('STRICTLY CONFIDENTIAL - EXECUTIVE AUDIT & COMPLIANCE ACCESS')}`,
       `${escapeCsvField('Ledger Architecture')},${escapeCsvField('Append-Only Tamper-Proof Cryptographic Ledger (Zero In-Place Overwrites)')}`,
       `${escapeCsvField('Export Date (UTC)')},${escapeCsvField(exportDateIso)}`,
@@ -225,18 +225,18 @@ export const AuditTrailModal: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `UrbanGaon_Immutable_Audit_Trail_${new Date().toISOString().split('T')[0]}_Flowchart12.csv`;
+    link.download = `UrbanGaon_Immutable_Audit_Trail_${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    // Flowchart C: Download as Excel or CSV and log the export itself!
+    // Download as Excel or CSV and log the export itself
     logAudit({
       action: 'EXPORTED',
       fieldChanged: 'Audit Logs Forensic CSV Export',
       newValue: `${filteredLogs.length} audit records exported to CSV`,
-      notes: `Super Admin exported immutable compliance audit trail to CSV (${filteredLogs.length} records, Flowchart C).`
+      notes: `Super Admin exported immutable compliance audit trail to CSV (${filteredLogs.length} records).`
     });
 
     if (setBannerNotification) {
@@ -277,7 +277,7 @@ export const AuditTrailModal: React.FC = () => {
     // Sheet 2: Executive Compliance Attestation
     const summaryRows = [
       { 'Executive Compliance Property': 'Organization', 'Value': 'UrbanGaon AI Enterprise Operating System' },
-      { 'Executive Compliance Property': 'Compliance Standard', 'Value': 'Flowchart 12 & Flowchart 14 (Immutable Compliance Audit Trail)' },
+      { 'Executive Compliance Property': 'Compliance Standard', 'Value': 'Enterprise Standards (Immutable Compliance Audit Trail)' },
       { 'Executive Compliance Property': 'Security Classification', 'Value': 'STRICTLY CONFIDENTIAL - EXECUTIVE AUDIT & COMPLIANCE ACCESS' },
       { 'Executive Compliance Property': 'Ledger Architecture', 'Value': '100% Append-Only Immutable Cryptographic Ledger' },
       { 'Executive Compliance Property': 'Certified By Operator', 'Value': `${currentUser.name} (${currentUser.role} - ${currentUser.department})` },
@@ -309,14 +309,14 @@ export const AuditTrailModal: React.FC = () => {
     XLSX.utils.book_append_sheet(wb, ws1, 'Audit Trail Ledger');
     XLSX.utils.book_append_sheet(wb, ws2, 'Compliance Attestation');
 
-    XLSX.writeFile(wb, `UrbanGaon_Compliance_Audit_Workbook_${new Date().toISOString().split('T')[0]}_Flowchart12.xlsx`);
+    XLSX.writeFile(wb, `UrbanGaon_Compliance_Audit_Workbook_${new Date().toISOString().split('T')[0]}.xlsx`);
 
-    // Flowchart C: Download as Excel or CSV and log the export itself!
+    // Download as Excel or CSV and log the export itself
     logAudit({
       action: 'EXPORTED',
       fieldChanged: 'Audit Logs Forensic Excel Workbook Export',
       newValue: `${filteredLogs.length} audit records exported to XLSX`,
-      notes: `Super Admin exported multi-sheet compliance workbook (${filteredLogs.length} entries, Flowchart C).`
+      notes: `Super Admin exported multi-sheet compliance workbook (${filteredLogs.length} entries).`
     });
 
     if (setBannerNotification) {
@@ -415,7 +415,7 @@ export const AuditTrailModal: React.FC = () => {
             className="btn-secondary"
             onClick={exportAuditExcel}
             style={{ color: '#1e40af', borderColor: '#bfdbfe', background: '#eff6ff', display: 'flex', alignItems: 'center', gap: '5px' }}
-            title="Download Flowchart 14 Multi-Sheet Compliance Workbook"
+            title="Download Multi-Sheet Compliance Workbook"
           >
             <FileSpreadsheet size={14} color="#1e40af" />
             Export Executive Excel (.xlsx)

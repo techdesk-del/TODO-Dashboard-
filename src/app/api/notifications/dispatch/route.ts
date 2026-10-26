@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       data: result,
-      message: `Flowchart 20 dispatch executed: ${result.inAppCreatedCount} in-app created, ${result.emailResults.length} email records processed.`,
+      message: `Notification dispatch executed: ${result.inAppCreatedCount} in-app created, ${result.emailResults.length} email records processed.`,
     });
   } catch (error: any) {
     console.error('[API /api/notifications/dispatch Error]', error);

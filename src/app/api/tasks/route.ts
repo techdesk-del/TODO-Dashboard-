@@ -248,14 +248,14 @@ export async function POST(req: NextRequest) {
       taskId: savedTask.id,
       taskTitle: savedTask.title,
       action: 'CREATED',
-      fieldChanged: 'Task Created (Flowchart 6)',
+      fieldChanged: 'Task Created',
       oldValue: 'None',
       newValue: `Status: ${savedTask.status} | Priority: ${savedTask.priority} | Assignees: ${normalizedAssignees.map((a: any) => a.name).join(', ')}`,
       actor: creatorName,
       actorRole: creatorRole,
       ipAddress: req.headers.get('x-forwarded-for') || '127.0.0.1',
       deviceInfo: req.headers.get('user-agent') || 'Employee Dashboard',
-      notes: `Task created via Flowchart 6 lifecycle. Initial Status: ${savedTask.status}. Project: ${savedTask.project}, Dept: ${savedTask.department}, Location: ${savedTask.location}${savedTask.pastDueReason ? `. Past due justification: ${savedTask.pastDueReason}` : ''}`,
+      notes: `Task created. Initial Status: ${savedTask.status}. Project: ${savedTask.project}, Dept: ${savedTask.department}, Location: ${savedTask.location}${savedTask.pastDueReason ? `. Past due justification: ${savedTask.pastDueReason}` : ''}`,
     }).catch(err => console.error('[API/tasks POST AuditLog]', err));
 
     // Deduplicate assignees by email

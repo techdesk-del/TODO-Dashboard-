@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
             designation: successorMember.designation,
             avatar: successorMember.avatar,
             status: a.status || 'In Progress',
-            remarks: `Handover from ${departingMember.name} (Flowchart 4: ${reason})`,
+            remarks: `Handover from ${departingMember.name}: ${reason}`,
             completedAt: a.completedAt
           };
         }
@@ -224,14 +224,14 @@ export async function POST(req: NextRequest) {
       id: `audit-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       timestamp: nowIso,
       action: 'CONFIG_CHANGED',
-      fieldChanged: 'Account Status & Deliverable Handover (Flowchart 4)',
+      fieldChanged: 'Account Status & Deliverable Handover',
       oldValue: `${departingMember.name} [ACTIVE] (${reassignedCount} tasks)`,
       newValue: `${departingMember.name} [${newStatus}] → All ${reassignedCount} tasks reassigned to ${successorMember.name}`,
       actor,
       actorRole: actorRole as any,
       ipAddress: '127.0.0.1 (Internal Governance)',
       deviceInfo: 'UrbanGaon Executive Command Center',
-      notes: `Flowchart 4 Offboarding Protocol: Type=${deactivationType}. Dates: ${dateSummary}. Notes: ${reason}`
+      notes: `Offboarding Protocol: Type=${deactivationType}. Dates: ${dateSummary}. Notes: ${reason}`
     });
 
     // Broadcast real-time events to all clients worldwide (<50ms)
