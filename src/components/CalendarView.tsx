@@ -98,14 +98,13 @@ export const CalendarView: React.FC = () => {
         return isCreator || isAssignee;
       }
 
-      // Default: logged in user
-      if (isCeo) return true;
+      // Default: logged in user (shows tasks assigned to or created by current user)
       const currentCleanEmail = (currentUser.email || '').toLowerCase().trim();
       const isCreator = t.creator?.id === currentUser.id || (t.creator?.email && t.creator.email.toLowerCase().trim() === currentCleanEmail);
       const isAssignee = t.assignees?.some(a => a.id === currentUser.id || (a.email && a.email.toLowerCase().trim() === currentCleanEmail));
       return isCreator || isAssignee;
     });
-  }, [tasks, selectedEmployeeId, members, currentUser, isCeo]);
+  }, [tasks, selectedEmployeeId, members, currentUser]);
 
   const selectedYear = calDate.getFullYear();
   const selectedMonth = calDate.getMonth() + 1;

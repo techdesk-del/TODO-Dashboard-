@@ -20,7 +20,7 @@ import {
   Globe
 } from 'lucide-react';
 import { getTodayStr, getTomorrowStr, formatDateDisplay, formatDateDayMonth } from '@/lib/dateUtils';
-import { isCeoUser, canAccessWorkflows, canAccessAdminHr } from '@/lib/rosterData';
+import { isCeoUser, isStrictCeo, canAccessWorkflows, canAccessAdminHr } from '@/lib/rosterData';
 
 export const Sidebar: React.FC = () => {
   const {
@@ -73,7 +73,9 @@ export const Sidebar: React.FC = () => {
   const isTalentOrAdmin = isMounted && canAccessAdminHr(currentUser);
   const canViewFlows = isMounted && canAccessWorkflows(currentUser);
 
-  const userVisibleTasks = isCeo
+  const isStrictCeoUser = isMounted && isStrictCeo(currentUser);
+
+  const userVisibleTasks = isStrictCeoUser
     ? tasks.filter(t => t.status !== 'Cancelled')
     : tasks.filter(t => {
         if (t.status === 'Cancelled') return false;

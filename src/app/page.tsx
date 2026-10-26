@@ -45,7 +45,7 @@ export default function Home() {
     setViewScope,
   } = useApp();
 
-  const [assigneeFilter, setAssigneeFilter] = useState<'all' | 'assigned_to_me' | 'assigned_by_me'>('all');
+  const [assigneeFilter, setAssigneeFilter] = useState<'all' | 'assigned_to_me' | 'assigned_by_me'>('assigned_to_me');
   const [ceoEmployeeFilter, setCeoEmployeeFilter] = useState<string>('ALL');
   const [isMounted, setIsMounted] = useState(false);
 
@@ -54,7 +54,8 @@ export default function Home() {
   }, []);
 
   const isCeo = isMounted && isCeoUser(currentUser);
-  const isCeoMonitoring = isMounted && isStrictCeo(currentUser);
+  const isStrictCeoUser = isMounted && isStrictCeo(currentUser);
+  const isCeoMonitoring = isStrictCeoUser;
   const canAccessAdmin = isMounted && canAccessAdminHr(currentUser);
   const canViewWorkflows = isMounted && canAccessWorkflows(currentUser);
   const canAccessManager = isMounted && (isCeo || currentUser.role === 'MANAGER' || currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN');
@@ -79,11 +80,11 @@ export default function Home() {
   }, [isRestrictedUnauthorized, setActiveView]);
 
   // Role-based visibility isolation:
-  // - CEO oversees all company deliverables across all staff members
-  // - Regular employees ONLY see tasks that they created OR are assigned to
+  // - Strict CEO (Mr. Sukh Sagar Singh Bhati) oversees all company deliverables across all staff members
+  // - All employees and administrators (including Super Admin Aakash Das) ONLY see tasks that they created OR are assigned to in their personal workspace
   const currentCleanEmail = (currentUser.email || '').toLowerCase().trim();
   const visibleTasks = useMemo(() => {
-    if (!isCeo) {
+    if (!isStrictCeoUser) {
       return tasks.filter(t => {
         if (t.status === 'Cancelled') return false;
         const isCreator = t.creator?.id === currentUser.id || (t.creator?.email && t.creator.email.toLowerCase().trim() === currentCleanEmail);
@@ -103,7 +104,7 @@ export default function Home() {
       });
     }
     return uncancelled;
-  }, [tasks, isCeo, isCeoMonitoring, ceoEmployeeFilter, members, currentUser, currentCleanEmail]);
+  }, [tasks, isStrictCeoUser, isCeoMonitoring, ceoEmployeeFilter, members, currentUser, currentCleanEmail]);
 
   // Flowchart 6 view partition:
   // - Task appears in "Assigned to" for each assignee
