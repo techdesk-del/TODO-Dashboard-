@@ -36,9 +36,22 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // 2. Morning Email Digest (08:30 AM IST Vercel Cron)
+    // 2. Morning Email Digest + Overdue Evaluation (08:30 AM IST Vercel Cron)
     if (action === 'digest') {
       const origin = req.headers.get('origin') || process.env.NEXTAUTH_URL || 'https://todo.urbangaon.com';
+
+      // Auto-evaluate overdue deadlines and delay reasons before dispatching morning digests
+      try {
+        const { runOverdueAndNoReasonEvaluation } = await import('@/lib/overdueEngine');
+        await runOverdueAndNoReasonEvaluation({
+          thresholdDays: 3,
+          sendNotifications: true,
+          baseUrl: origin,
+        });
+      } catch (e) {
+        console.warn('[Vercel Cron 08:30 AM IST] Pre-digest overdue evaluation note:', e);
+      }
+
       const result = await runMorningDigest({
         force: searchParams.get('force') === 'true',
         origin,
