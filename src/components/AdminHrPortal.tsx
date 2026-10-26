@@ -893,7 +893,7 @@ export const AdminHrPortal: React.FC = () => {
     const empIdToAssign = overrides?.employeeId || verifyEmployeeId || `EMP-${Math.floor(1000 + Math.random() * 9000)}`;
 
     // 3. Instant feedback banner
-    setApprovalBanner(`⏳ Approving ${req.name} (Assigned ID: ${empIdToAssign}). Provisioning status: Pending First Login...`);
+    setApprovalBanner(`Approving ${req.name} (Assigned ID: ${empIdToAssign}). Provisioning status: Pending First Login...`);
 
     try {
       const patchRes = await fetch(`/api/auth/request-access/${encodeURIComponent(req.id)}`, {
@@ -1144,7 +1144,7 @@ export const AdminHrPortal: React.FC = () => {
           </span>
           {pendingRequests.length > 0 && (
             <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '0.3rem 0.65rem', borderRadius: '6px', background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a' }}>
-              ⏳ {pendingRequests.length} Pending
+              {pendingRequests.length} Pending
             </span>
           )}
         </div>
@@ -2966,9 +2966,9 @@ export const AdminHrPortal: React.FC = () => {
 
           {approvalBanner && (
             <div style={{
-              background: approvalBanner.includes('') ? '#fef2f2' : approvalBanner.includes('⏳') ? '#eff6ff' : '#f0fdf4',
-              border: `1px solid ${approvalBanner.includes('') ? '#fca5a5' : approvalBanner.includes('⏳') ? '#bfdbfe' : '#86efac'}`,
-              color: approvalBanner.includes('') ? '#991b1b' : approvalBanner.includes('⏳') ? '#1e40af' : '#166534',
+              background: approvalBanner.includes('Failed') ? '#fef2f2' : approvalBanner.startsWith('Approving') ? '#eff6ff' : '#f0fdf4',
+              border: `1px solid ${approvalBanner.includes('Failed') ? '#fca5a5' : approvalBanner.startsWith('Approving') ? '#bfdbfe' : '#86efac'}`,
+              color: approvalBanner.includes('Failed') ? '#991b1b' : approvalBanner.startsWith('Approving') ? '#1e40af' : '#166534',
               padding: '0.85rem 1rem',
               borderRadius: '8px',
               fontSize: '0.82rem',
@@ -2980,9 +2980,9 @@ export const AdminHrPortal: React.FC = () => {
               boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {approvalBanner.includes('⏳') ? (
+                {approvalBanner.startsWith('Approving') ? (
                   <RefreshCw size={16} className="spin" style={{ flexShrink: 0 }} />
-                ) : approvalBanner.includes('') ? (
+                ) : approvalBanner.includes('Failed') ? (
                   <AlertCircle size={16} color="#dc2626" style={{ flexShrink: 0 }} />
                 ) : (
                   <CheckCircle2 size={16} color="#16a34a" style={{ flexShrink: 0 }} />

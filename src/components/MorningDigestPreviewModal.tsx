@@ -381,7 +381,7 @@ export const MorningDigestPreviewModal: React.FC = () => {
                 rel="noreferrer"
                 style={{ color: '#2563eb', fontWeight: 700, textDecoration: 'underline', marginTop: '2px' }}
               >
-                View Delivered Message in Test Inbox ↗
+                View Delivered Message in Test Inbox
               </a>
             )}
           </div>

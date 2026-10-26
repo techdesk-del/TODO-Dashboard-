@@ -961,7 +961,7 @@ export async function sendManagerNewHireNotificationEmail(opts: {
         <div><strong>Employee ID:</strong> <code>${opts.employeeId}</code></div>
         <div><strong>Department:</strong> ${opts.department}</div>
         <div><strong>Designation:</strong> ${opts.designation}</div>
-        <div>⏳ <strong>Status:</strong> Pending First Login (Invitation Dispatched)</div>
+        <div><strong>Status:</strong> Pending First Login (Invitation Dispatched)</div>
       </div>
 
       <p style="color: #64748b; font-size: 12px;">

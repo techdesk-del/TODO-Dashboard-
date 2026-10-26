@@ -187,7 +187,7 @@ export const Sidebar: React.FC = () => {
               </span>
             </div>
             <span className="ceo-view-badge">
-              CEO View ↗
+              CEO View
             </span>
           </div>
         )}

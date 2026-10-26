@@ -209,7 +209,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
           if (Array.isArray(parsed.ids)) setExtraPurgedIds(parsed.ids);
           if (Array.isArray(parsed.emails)) setExtraPurgedEmails(parsed.emails.map((e: string) => e.toLowerCase().trim()));
         }
-      } catch {}
+      } catch { }
     }
     return () => {
       clearCloseTimer();
@@ -656,8 +656,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
           actor: userObj.name,
           actorRole: userObj.role,
           notes: `Successful login verified under corporate security protocol. Role routed to ${isCeoUser(userObj) || userObj.role === 'SUPER_ADMIN' ? 'Super Admin Dashboard (CEO Portal)' :
-              userObj.role === 'ADMIN' ? 'Admin / Talent HR Dashboard' :
-                userObj.role === 'MANAGER' ? 'Manager Dashboard (My Team View)' : 'Employee Workspace'
+            userObj.role === 'ADMIN' ? 'Admin / Talent HR Dashboard' :
+              userObj.role === 'MANAGER' ? 'Manager Dashboard (My Team View)' : 'Employee Workspace'
             }.`
         });
       } catch (auditErr) {
@@ -1306,6 +1306,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                   </div>
                 </div>
               )}
+
 
               <form onSubmit={e => { e.preventDefault(); verifyInvitationCode(); }} style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                 <div>

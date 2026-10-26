@@ -522,7 +522,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
 
                 {comp.status === 'Partially Completed' && (
                   <span className="task-pill-badge badge-partial">
-                    ⏳ PARTIALLY COMPLETED
+                    PARTIALLY COMPLETED
                   </span>
                 )}
 

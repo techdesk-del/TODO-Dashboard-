@@ -813,7 +813,7 @@ export const AuditTrailModal: React.FC = () => {
                           }}
                           title="Open Task History tab for this task"
                         >
-                          View Task History #{log.taskId} ↗
+                          View Task History #{log.taskId}
                         </button>
                       )}
                       {log.notes && (
