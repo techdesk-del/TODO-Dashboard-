@@ -18,7 +18,10 @@ import {
   AlertTriangle,
   Clock,
   FileSpreadsheet,
-  Plus
+  Plus,
+  Edit3,
+  Loader2,
+  User
 } from 'lucide-react';
 import { useTaskDeadlines } from '@/hooks/useTaskDeadlines';
 import { formatDateDisplay, formatDateShort, getTodayStr } from '@/lib/dateUtils';
@@ -49,7 +52,8 @@ export const Header: React.FC = () => {
     inAppNotifications,
     unreadNotificationsCount,
     markNotificationRead,
-    markAllNotificationsRead
+    markAllNotificationsRead,
+    updateProfileName
   } = useApp();
 
   const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
@@ -57,11 +61,55 @@ export const Header: React.FC = () => {
   const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
   const [notifActiveTab, setNotifActiveTab] = useState<'alerts' | 'overdue'>('alerts');
   const [isMounted, setIsMounted] = useState(false);
+  const [isEditNameModalOpen, setIsEditNameModalOpen] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+  const [nameError, setNameError] = useState('');
+  const [isSavingName, setIsSavingName] = useState(false);
   const roleMenuRef = useRef<HTMLDivElement>(null);
   const opsMenuRef = useRef<HTMLDivElement>(null);
   const notificationMenuRef = useRef<HTMLDivElement>(null);
   const { notificationPermission, requestPermission, overdueTasks, dueSoonTasks, pendingCount } = useTaskDeadlines();
   const isCeoMonitoring = isMounted && isStrictCeo(currentUser);
+
+  const handleOpenEditName = () => {
+    setNameInput(currentUser.name || '');
+    setNameError('');
+    setIsEditNameModalOpen(true);
+    setIsRoleMenuOpen(false);
+  };
+
+  const handleSaveProfileName = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const trimmed = nameInput.trim();
+    if (!trimmed) {
+      setNameError('Name cannot be empty.');
+      return;
+    }
+    if (trimmed.length < 2) {
+      setNameError('Name must be at least 2 characters long.');
+      return;
+    }
+    if (trimmed === currentUser.name) {
+      setIsEditNameModalOpen(false);
+      return;
+    }
+
+    setIsSavingName(true);
+    setNameError('');
+    try {
+      const res = await updateProfileName(trimmed);
+      if (res.success) {
+        setIsEditNameModalOpen(false);
+      } else {
+        setNameError(res.error || 'Failed to update profile name.');
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to update profile name.';
+      setNameError(msg);
+    } finally {
+      setIsSavingName(false);
+    }
+  };
 
   useEffect(() => {
     setIsMounted(true);
@@ -1046,8 +1094,34 @@ export const Header: React.FC = () => {
                   )}
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {currentUser.name}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {currentUser.name}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenEditName();
+                      }}
+                      title="Edit Profile Name"
+                      style={{
+                        background: '#eff6ff',
+                        border: '1px solid #bfdbfe',
+                        borderRadius: '4px',
+                        padding: '2px 6px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                        fontSize: '0.68rem',
+                        fontWeight: 700,
+                        color: '#2563eb'
+                      }}
+                    >
+                      <Edit3 size={11} />
+                      <span>Edit</span>
+                    </button>
                   </div>
                   <div style={{ fontSize: '0.7rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {currentUser.email}
@@ -1059,6 +1133,51 @@ export const Header: React.FC = () => {
                     <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#f1f5f9', color: '#475569' }}>
                       {currentUser.department || 'UrbanGaon'}
                     </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Edit Profile Name Action Tile */}
+              <div
+                onClick={handleOpenEditName}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.6rem',
+                  padding: '0.55rem 0.75rem',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  marginBottom: '0.45rem',
+                  transition: 'background 0.15s ease'
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = '#f1f5f9';
+                  e.currentTarget.style.borderColor = '#cbd5e1';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = '#f8fafc';
+                  e.currentTarget.style.borderColor = '#e2e8f0';
+                }}
+              >
+                <div style={{
+                  padding: '4px',
+                  borderRadius: '6px',
+                  background: '#e0e7ff',
+                  color: '#4338ca',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <Edit3 size={14} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#1e293b' }}>
+                    Change Profile Name
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                    Update your public display name across tasks
                   </div>
                 </div>
               </div>
@@ -1117,6 +1236,230 @@ export const Header: React.FC = () => {
         </div>
       </div>
     </div>
+
+    {/* Edit Profile Name Modal */}
+    {isEditNameModalOpen && (
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="edit-profile-name-title"
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 9999,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem'
+        }}
+        onClick={(e) => {
+          if (e.target === e.currentTarget && !isSavingName) {
+            setIsEditNameModalOpen(false);
+          }
+        }}
+      >
+        <div
+          style={{
+            background: '#ffffff',
+            borderRadius: '16px',
+            width: '100%',
+            maxWidth: '440px',
+            boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.25)',
+            border: '1px solid #e2e8f0',
+            overflow: 'hidden'
+          }}
+        >
+          {/* Modal Header */}
+          <div
+            style={{
+              padding: '1.25rem 1.5rem',
+              borderBottom: '1px solid #f1f5f9',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'linear-gradient(to bottom, #ffffff, #f8fafc)'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
+                  background: '#eff6ff',
+                  color: '#2563eb',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <User size={18} />
+              </div>
+              <div>
+                <h3
+                  id="edit-profile-name-title"
+                  style={{
+                    margin: 0,
+                    fontSize: '1rem',
+                    fontWeight: 800,
+                    color: '#0f172a',
+                    letterSpacing: '-0.01em'
+                  }}
+                >
+                  Change Profile Name
+                </h3>
+                <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>
+                  Synchronizes across tasks, team rosters & digests
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => !isSavingName && setIsEditNameModalOpen(false)}
+              disabled={isSavingName}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#94a3b8',
+                cursor: isSavingName ? 'not-allowed' : 'pointer',
+                padding: '4px',
+                borderRadius: '6px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+              aria-label="Close dialog"
+            >
+              <XIcon size={18} />
+            </button>
+          </div>
+
+          {/* Modal Body / Form */}
+          <form onSubmit={handleSaveProfileName} style={{ padding: '1.25rem 1.5rem' }}>
+            <div style={{ marginBottom: '1.25rem' }}>
+              <label
+                htmlFor="profile-name-input"
+                style={{
+                  display: 'block',
+                  fontSize: '0.8125rem',
+                  fontWeight: 700,
+                  color: '#334155',
+                  marginBottom: '0.4rem'
+                }}
+              >
+                Full Display Name
+              </label>
+              <input
+                id="profile-name-input"
+                type="text"
+                value={nameInput}
+                onChange={(e) => {
+                  setNameInput(e.target.value);
+                  if (nameError) setNameError('');
+                }}
+                disabled={isSavingName}
+                placeholder="e.g. Aakash Das or Sukh Sagar Singh Bhati"
+                autoFocus
+                style={{
+                  width: '100%',
+                  padding: '0.65rem 0.85rem',
+                  borderRadius: '8px',
+                  border: nameError ? '1.5px solid #ef4444' : '1.5px solid #cbd5e1',
+                  fontSize: '0.875rem',
+                  color: '#0f172a',
+                  outline: 'none',
+                  transition: 'border-color 0.15s ease',
+                  boxSizing: 'border-box'
+                }}
+              />
+              {nameError && (
+                <div
+                  style={{
+                    fontSize: '0.75rem',
+                    color: '#dc2626',
+                    marginTop: '0.35rem'
+                  }}
+                >
+                  {nameError}
+                </div>
+              )}
+              <div
+                style={{
+                  marginTop: '0.5rem',
+                  fontSize: '0.72rem',
+                  color: '#64748b'
+                }}
+              >
+                Signed in as: <strong>{currentUser.email}</strong> ({currentUser.role})
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                gap: '0.75rem',
+                paddingTop: '0.5rem',
+                borderTop: '1px solid #f1f5f9'
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setIsEditNameModalOpen(false)}
+                disabled={isSavingName}
+                style={{
+                  padding: '0.55rem 1rem',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  background: '#ffffff',
+                  color: '#475569',
+                  fontSize: '0.8125rem',
+                  fontWeight: 600,
+                  cursor: isSavingName ? 'not-allowed' : 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSavingName || !nameInput.trim()}
+                style={{
+                  padding: '0.55rem 1.25rem',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                  color: '#ffffff',
+                  fontSize: '0.8125rem',
+                  fontWeight: 700,
+                  cursor: (isSavingName || !nameInput.trim()) ? 'not-allowed' : 'pointer',
+                  opacity: (isSavingName || !nameInput.trim()) ? 0.6 : 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 4px rgba(37, 99, 235, 0.2)'
+                }}
+              >
+                {isSavingName ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check size={14} />
+                    <span>Save Changes</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )}
     </header>
   );
 };

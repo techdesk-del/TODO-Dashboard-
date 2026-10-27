@@ -71,6 +71,7 @@ interface AppContextType {
   reassignOrCloseAssignee: (taskId: string, oldAssigneeId: string, action: 'reassign' | 'close', newAssigneeId?: string, notes?: string) => void;
   addMember: (memberData: Partial<TeamMember>) => Promise<TeamMember>;
   updateMember: (memberId: string, updates: Partial<TeamMember>, reason?: string) => Promise<{ success: boolean; member?: TeamMember; error?: string }>;
+  updateProfileName: (newName: string) => Promise<{ success: boolean; error?: string }>;
   deactivateMember: (
     departingId: string,
     successorId: string,
@@ -1586,6 +1587,95 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const updateProfileName = async (
+    newName: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const trimmed = newName.trim();
+      if (!trimmed || trimmed.length < 2) {
+        return { success: false, error: 'Name must be at least 2 characters long.' };
+      }
+
+      const res = await fetch('/api/members', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: currentUser.id,
+          email: currentUser.email,
+          name: trimmed,
+          actor: currentUser.name || trimmed,
+          actorRole: currentUser.role || 'EMPLOYEE',
+          reason: `Employee ${currentUser.name} updated display name to "${trimmed}"`,
+        }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Failed to update profile name.');
+      }
+
+      const updated = json.data as TeamMember;
+      const finalName = updated?.name || trimmed;
+      const finalAvatar = updated?.avatar || currentUser.avatar;
+
+      // Sync currentUser state and persistent storage
+      const syncedUser: TeamMember = {
+        ...currentUser,
+        name: finalName,
+        avatar: finalAvatar,
+      };
+      setCurrentUser(syncedUser);
+      try {
+        localStorage.setItem('urbangaon_auth_user_v2', JSON.stringify(syncedUser));
+        sessionStorage.setItem('urbangaon_auth_user_v2', JSON.stringify(syncedUser));
+      } catch {}
+
+      // Sync members list in state
+      setMembers(prev => prev.map(m => {
+        if (m.id === currentUser.id || (currentUser.email && m.email?.toLowerCase() === currentUser.email.toLowerCase())) {
+          return { ...m, name: finalName, avatar: finalAvatar };
+        }
+        return m;
+      }));
+
+      // Sync tasks state immediately for both assignees and creator
+      setTasks(prev => prev.map(t => {
+        let changed = false;
+        const newAssignees = t.assignees.map(a => {
+          if (a.id === currentUser.id || (currentUser.email && a.email?.toLowerCase() === currentUser.email.toLowerCase())) {
+            changed = true;
+            return { ...a, name: finalName, avatar: finalAvatar };
+          }
+          return a;
+        });
+        const isCreator = t.creator.id === currentUser.id || (currentUser.email && t.creator.email?.toLowerCase() === currentUser.email.toLowerCase());
+        const newCreator = isCreator ? { ...t.creator, name: finalName } : t.creator;
+        if (newCreator !== t.creator) changed = true;
+
+        return changed ? { ...t, assignees: newAssignees, creator: newCreator } : t;
+      }));
+
+      logAudit({
+        action: 'UPDATED',
+        fieldChanged: 'Employee Profile Name',
+        oldValue: currentUser.name,
+        newValue: finalName,
+        notes: `User ${currentUser.name} changed profile name to "${finalName}"`
+      });
+
+      setBannerNotification({
+        message: `Profile name successfully updated to "${finalName}".`,
+        badge: '✓ Name Updated'
+      });
+
+      return { success: true };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Update failed.';
+      console.error('[AppContext] updateProfileName error:', msg);
+      return { success: false, error: msg };
+    }
+  };
+
   const deactivateMember = async (
     departingId: string,
     successorId: string,
@@ -2574,6 +2664,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         reassignOrCloseAssignee,
         addMember,
         updateMember,
+        updateProfileName,
         deactivateMember,
         deleteMember,
         markMemberOnLeave,

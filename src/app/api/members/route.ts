@@ -297,16 +297,25 @@ export async function PATCH(req: NextRequest) {
       updateTaskAssignees = true,
     } = body;
 
-    if (!id) {
-      return NextResponse.json({ success: false, error: 'Member ID is required for updates.' }, { status: 400 });
+    if (!id && !email) {
+      return NextResponse.json({ success: false, error: 'Member ID or Email is required for updates.' }, { status: 400 });
     }
 
-    const member = await MemberModel.findOne({ id }).exec();
+    const cleanInputEmail = email && typeof email === 'string' ? email.trim().toLowerCase() : '';
+    const member = await MemberModel.findOne({
+      $or: [
+        ...(id && id !== 'guest' ? [{ id }] : []),
+        ...(cleanInputEmail ? [{ email: cleanInputEmail }] : [])
+      ]
+    }).exec();
+
     if (!member) {
-      return NextResponse.json({ success: false, error: `Employee with ID "${id}" was not found.` }, { status: 404 });
+      return NextResponse.json({ success: false, error: `Employee record was not found.` }, { status: 404 });
     }
 
+    const memberId = member.id;
     const oldEmail = member.email;
+    const oldName = member.name;
     const updates: Record<string, unknown> = {};
 
     if (email && typeof email === 'string' && email.trim()) {
@@ -319,7 +328,7 @@ export async function PATCH(req: NextRequest) {
 
       // Check if another member already has this email
       if (cleanEmail !== oldEmail.toLowerCase()) {
-        const existing = await MemberModel.findOne({ email: cleanEmail, id: { $ne: id } }).exec();
+        const existing = await MemberModel.findOne({ email: cleanEmail, id: { $ne: memberId } }).exec();
         if (existing) {
           return NextResponse.json({
             success: false,
@@ -330,7 +339,18 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
-    if (name && typeof name === 'string' && name.trim()) updates.name = name.trim();
+    if (name && typeof name === 'string' && name.trim()) {
+      const trimmedName = name.trim();
+      updates.name = trimmedName;
+
+      // If user had letter initials as avatar, update initials to match new name
+      if (!member.avatar || (!member.avatar.startsWith('/') && !member.avatar.startsWith('http'))) {
+        const parts = trimmedName.split(' ').filter(Boolean);
+        const initials = (parts.length > 1 ? `${parts[0][0]}${parts[parts.length - 1][0]}` : parts[0]?.slice(0, 2) || 'UG').toUpperCase();
+        updates.avatar = initials;
+      }
+    }
+
     if (department && typeof department === 'string' && department.trim()) updates.department = department.trim();
     if (designation && typeof designation === 'string' && designation.trim()) updates.designation = designation.trim();
     if (role) updates.role = role;
@@ -338,20 +358,21 @@ export async function PATCH(req: NextRequest) {
 
     // Apply updates to MemberModel
     const updatedMember = await MemberModel.findOneAndUpdate(
-      { id },
+      { id: memberId },
       { $set: updates },
       { new: true }
     ).exec();
 
-    // Also sync to UserModel so login works with new credentials
-    if (updates.email || updates.name || updates.role || updates.department || updates.designation) {
+    // Also sync to UserModel so session & login reflect the new name & email
+    if (updates.email || updates.name || updates.role || updates.department || updates.designation || updates.avatar) {
       await UserModel.updateOne(
-        { $or: [{ id }, { email: oldEmail.toLowerCase() }] },
+        { $or: [{ id: memberId }, { email: oldEmail.toLowerCase() }] },
         {
           $set: {
-            id,
+            id: memberId,
             ...(updates.email ? { email: updates.email } : {}),
             ...(updates.name ? { name: updates.name } : {}),
+            ...(updates.avatar ? { avatar: updates.avatar } : {}),
             ...(updates.role ? { role: updates.role } : {}),
             ...(updates.department ? { department: updates.department } : {}),
             ...(updates.designation ? { designation: updates.designation } : {}),
@@ -360,26 +381,44 @@ export async function PATCH(req: NextRequest) {
       ).exec().catch(() => {});
     }
 
-    // If email changed and updateTaskAssignees is true, update TaskModel assignees
-    if (updates.email && updates.email !== oldEmail && updateTaskAssignees) {
+    // Cascade name or email changes to TaskModel assignees & creator
+    if ((updates.email || updates.name) && updateTaskAssignees) {
       try {
         const { TaskModel } = await import('@/models/Task');
+        // Update assignees
         await TaskModel.updateMany(
-          { 'assignees.id': id },
+          { $or: [{ 'assignees.id': memberId }, { 'assignees.email': oldEmail.toLowerCase() }] },
           {
             $set: {
-              'assignees.$[elem].email': updates.email,
+              ...(updates.email ? { 'assignees.$[elem].email': updates.email } : {}),
               ...(updates.name ? { 'assignees.$[elem].name': updates.name } : {}),
+              ...(updates.avatar ? { 'assignees.$[elem].avatar': updates.avatar } : {}),
             }
           },
           {
-            arrayFilters: [{ 'elem.id': id }]
+            arrayFilters: [{ $or: [{ 'elem.id': memberId }, { 'elem.email': oldEmail.toLowerCase() }] }]
           }
         ).exec().catch(() => {});
+
+        // Update task creator name
+        if (updates.name) {
+          await TaskModel.updateMany(
+            { $or: [{ 'creator.id': memberId }, { 'creator.email': oldEmail.toLowerCase() }] },
+            { $set: { 'creator.name': updates.name } }
+          ).exec().catch(() => {});
+        }
       } catch (err) {
         console.warn('[API/members PATCH] Task assignees update note:', err);
       }
     }
+
+    broadcastMemberMutation({
+      action: 'UPDATED',
+      memberId,
+      memberName: updatedMember?.name || oldName,
+      memberEmail: updatedMember?.email || oldEmail,
+      member: updatedMember
+    });
 
     // Flowchart 12: Audit Log entry
     try {
