@@ -260,6 +260,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           );
           setMembers(filteredMembers);
 
+          // Live session sync: If this user's email/name/status was updated on another PC by an Admin, synchronize currentUser seamlessly
+          setCurrentUser(curr => {
+            if (!curr || curr.id === 'guest') return curr;
+            const fresh = filteredMembers.find((m: TeamMember) => 
+              m.id === curr.id || (curr.email && m.email?.toLowerCase() === curr.email.toLowerCase())
+            );
+            if (fresh && (fresh.email !== curr.email || fresh.name !== curr.name || fresh.role !== curr.role || fresh.status !== curr.status || fresh.avatar !== curr.avatar)) {
+              const updatedCurr = { ...curr, ...fresh };
+              try {
+                localStorage.setItem('urbangaon_auth_user_v2', JSON.stringify(updatedCurr));
+                sessionStorage.setItem('urbangaon_auth_user_v2', JSON.stringify(updatedCurr));
+              } catch {}
+              return updatedCurr;
+            }
+            return curr;
+          });
+
           // Flowchart 23 Node 7: "On return date restore reminders and status"
           const todayStr = getTodayStr();
           const returningMembers = filteredMembers.filter(
@@ -591,11 +608,87 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (isMounted) refreshFromDB(true);
         });
 
-        // Server detected a member update/deactivation in MongoDB → update immediately
+        // Server detected a member update/deactivation in MongoDB → update immediately across all devices
         eventSource.addEventListener('member_mutation', (e) => {
           try {
             const data = JSON.parse(e.data);
-            if (data.action === 'DEACTIVATED') {
+            if (data.action === 'UPDATED') {
+              const updatedMemberData = (data.member || {}) as Partial<TeamMember>;
+              const newEmail = (data.memberEmail || updatedMemberData.email || '').trim().toLowerCase();
+              const newName = (data.memberName || updatedMemberData.name || '').trim();
+              const oldEmail = (data.oldEmail || '').trim().toLowerCase();
+              const memberId = data.memberId || updatedMemberData.id;
+
+              // 1. Immediately update members list in memory across all connected PCs
+              setMembers(prev => prev.map(m => {
+                const isMatch = (memberId && m.id === memberId) ||
+                  (oldEmail && m.email?.toLowerCase() === oldEmail) ||
+                  (newEmail && m.email?.toLowerCase() === newEmail);
+                if (!isMatch) return m;
+                return {
+                  ...m,
+                  ...updatedMemberData,
+                  ...(newEmail ? { email: newEmail } : {}),
+                  ...(newName ? { name: newName } : {})
+                };
+              }));
+
+              // 2. Immediately cascade new email/name into task assignees & creator across all devices
+              if (newEmail || newName) {
+                setTasks(prev => prev.map(t => {
+                  let changed = false;
+                  const newAssignees = t.assignees.map(a => {
+                    const isMatch = (memberId && a.id === memberId) ||
+                      (oldEmail && a.email?.toLowerCase() === oldEmail) ||
+                      (newEmail && a.email?.toLowerCase() === newEmail);
+                    if (isMatch) {
+                      changed = true;
+                      return {
+                        ...a,
+                        ...(newEmail ? { email: newEmail } : {}),
+                        ...(newName ? { name: newName } : {}),
+                        ...(updatedMemberData.avatar ? { avatar: updatedMemberData.avatar } : {})
+                      };
+                    }
+                    return a;
+                  });
+
+                  const isCreatorMatch = (memberId && t.creator.id === memberId) ||
+                    (oldEmail && t.creator.email?.toLowerCase() === oldEmail) ||
+                    (newEmail && t.creator.email?.toLowerCase() === newEmail);
+                  const newCreator = isCreatorMatch ? {
+                    ...t.creator,
+                    ...(newEmail ? { email: newEmail } : {}),
+                    ...(newName ? { name: newName } : {})
+                  } : t.creator;
+                  if (newCreator !== t.creator) changed = true;
+
+                  return changed ? { ...t, assignees: newAssignees, creator: newCreator } : t;
+                }));
+              }
+
+              // 3. If currently logged in user on this device had their email or name changed, update session immediately
+              setCurrentUser(curr => {
+                if (!curr || curr.id === 'guest') return curr;
+                const isCurrentUserMatch = (memberId && curr.id === memberId) ||
+                  (oldEmail && curr.email?.toLowerCase() === oldEmail) ||
+                  (newEmail && curr.email?.toLowerCase() === newEmail);
+                if (isCurrentUserMatch) {
+                  const syncedUser: TeamMember = {
+                    ...curr,
+                    ...updatedMemberData,
+                    ...(newEmail ? { email: newEmail } : {}),
+                    ...(newName ? { name: newName } : {})
+                  };
+                  try {
+                    localStorage.setItem('urbangaon_auth_user_v2', JSON.stringify(syncedUser));
+                    sessionStorage.setItem('urbangaon_auth_user_v2', JSON.stringify(syncedUser));
+                  } catch {}
+                  return syncedUser;
+                }
+                return curr;
+              });
+            } else if (data.action === 'DEACTIVATED') {
               setMembers(prev => prev.map(m => {
                 const isMatch = m.id === data.memberId ||
                   (data.memberEmail && m.email.toLowerCase() === data.memberEmail.toLowerCase()) ||
@@ -1538,31 +1631,46 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       const updatedMember = json.data as TeamMember;
+      const oldMemberEmail = members.find(m => m.id === memberId)?.email.toLowerCase();
 
       // Update members in state
       setMembers(prev => prev.map(m => m.id === memberId ? { ...m, ...updatedMember } : m));
 
-      // If current user is being updated, sync current user
-      if (currentUser.id === memberId) {
+      // If current user is being updated, sync current user & storage
+      if (currentUser.id === memberId || (oldMemberEmail && currentUser.email?.toLowerCase() === oldMemberEmail)) {
         const synced = { ...currentUser, ...updatedMember };
         setCurrentUser(synced);
         try {
           localStorage.setItem('urbangaon_auth_user_v2', JSON.stringify(synced));
+          sessionStorage.setItem('urbangaon_auth_user_v2', JSON.stringify(synced));
         } catch {}
       }
 
-      // If email was updated, sync task assignees in local state
-      if (updates.email) {
+      // If email or name was updated, sync task assignees and creator in local state immediately
+      if (updates.email || updates.name) {
         setTasks(prev => prev.map(t => {
           let hasChange = false;
           const newAssignees = t.assignees.map(a => {
-            if (a.id === memberId) {
+            if (a.id === memberId || (oldMemberEmail && a.email?.toLowerCase() === oldMemberEmail)) {
               hasChange = true;
-              return { ...a, email: updates.email!, name: updates.name || a.name };
+              return {
+                ...a,
+                ...(updates.email ? { email: updates.email } : {}),
+                ...(updates.name ? { name: updates.name } : {}),
+                ...(updatedMember.avatar ? { avatar: updatedMember.avatar } : {})
+              };
             }
             return a;
           });
-          return hasChange ? { ...t, assignees: newAssignees } : t;
+          const isCreatorMatch = t.creator.id === memberId || (oldMemberEmail && t.creator.email?.toLowerCase() === oldMemberEmail);
+          const newCreator = isCreatorMatch ? {
+            ...t.creator,
+            ...(updates.email ? { email: updates.email } : {}),
+            ...(updates.name ? { name: updates.name } : {})
+          } : t.creator;
+          if (newCreator !== t.creator) hasChange = true;
+
+          return hasChange ? { ...t, assignees: newAssignees, creator: newCreator } : t;
         }));
       }
 

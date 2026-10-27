@@ -167,6 +167,7 @@ export async function GET(req: NextRequest) {
               memberName: memberObj.name,
               memberEmail: memberObj.email,
               status: memberObj.status,
+              member: memberObj,
               timestamp: Date.now(),
               source: 'mongodb-changedetect',
             });

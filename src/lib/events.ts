@@ -68,6 +68,7 @@ export function broadcastMemberMutation(payload: {
   memberId: string;
   memberName?: string;
   memberEmail?: string;
+  oldEmail?: string;
   status?: string;
   member?: unknown;
 }) {

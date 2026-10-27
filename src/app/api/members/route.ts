@@ -16,7 +16,7 @@ import { hashPassword } from '@/lib/auth';
 import { INITIAL_MEMBERS } from '@/lib/mockData';
 import { syncOfficialRosterToDB } from '@/lib/rosterSync';
 import { sendSetPasswordEmail } from '@/lib/email';
-import { broadcastMemberMutation } from '@/lib/events';
+import { broadcastMemberMutation, broadcastTaskMutation } from '@/lib/events';
 import { isCeoUser, OFFICIAL_ROSTER } from '@/lib/rosterData';
 
 async function seedMembersIfEmpty() {
@@ -355,6 +355,7 @@ export async function PATCH(req: NextRequest) {
     if (designation && typeof designation === 'string' && designation.trim()) updates.designation = designation.trim();
     if (role) updates.role = role;
     if (status) updates.status = status;
+    updates.updatedAt = new Date().toISOString();
 
     // Apply updates to MemberModel
     const updatedMember = await MemberModel.findOneAndUpdate(
@@ -376,6 +377,7 @@ export async function PATCH(req: NextRequest) {
             ...(updates.role ? { role: updates.role } : {}),
             ...(updates.department ? { department: updates.department } : {}),
             ...(updates.designation ? { designation: updates.designation } : {}),
+            updatedAt: new Date().toISOString(),
           }
         }
       ).exec().catch(() => {});
@@ -393,6 +395,7 @@ export async function PATCH(req: NextRequest) {
               ...(updates.email ? { 'assignees.$[elem].email': updates.email } : {}),
               ...(updates.name ? { 'assignees.$[elem].name': updates.name } : {}),
               ...(updates.avatar ? { 'assignees.$[elem].avatar': updates.avatar } : {}),
+              updatedAt: new Date().toISOString(),
             }
           },
           {
@@ -404,9 +407,17 @@ export async function PATCH(req: NextRequest) {
         if (updates.name) {
           await TaskModel.updateMany(
             { $or: [{ 'creator.id': memberId }, { 'creator.email': oldEmail.toLowerCase() }] },
-            { $set: { 'creator.name': updates.name } }
+            { $set: { 'creator.name': updates.name, updatedAt: new Date().toISOString() } }
           ).exec().catch(() => {});
         }
+
+        // Broadcast realtime task mutation so all worldwide clients refresh their tasks immediately
+        broadcastTaskMutation({
+          action: 'UPDATED',
+          taskId: 'all',
+          taskTitle: `Assignee profile synced (${updates.email || updates.name})`,
+          source: 'member-email-cascade'
+        });
       } catch (err) {
         console.warn('[API/members PATCH] Task assignees update note:', err);
       }
@@ -417,6 +428,7 @@ export async function PATCH(req: NextRequest) {
       memberId,
       memberName: updatedMember?.name || oldName,
       memberEmail: updatedMember?.email || oldEmail,
+      oldEmail: oldEmail,
       member: updatedMember
     });
 
