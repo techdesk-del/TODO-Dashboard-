@@ -14,6 +14,7 @@
 
 import * as XLSX from 'xlsx';
 import type { Task, AuditLogEntry, TeamMember, Role } from '@/types';
+import { canViewAuditTrail } from '@/lib/rosterData';
 
 export type ExportType = 'DAILY' | 'MONTHLY' | 'DATE_WISE' | 'WHOLE_TASKS' | 'USER_WISE';
 
@@ -233,8 +234,8 @@ export function generateMultiSheetExcelWorkbook(params: {
   XLSX.utils.book_append_sheet(wb, ws1, 'Sheet1 - Assignee Details');
   XLSX.utils.book_append_sheet(wb, ws2, 'Sheet2 - Task Register');
 
-  // ── Sheet 3: Super Admin Audit Log Forensics (if requested) ──
-  if (currentUser.role === 'SUPER_ADMIN' && includeAuditLogs && auditLogs.length > 0) {
+  // ── Sheet 3: Executive Audit Log Forensics (CEO & Aakash Das Only) ──
+  if (canViewAuditTrail(currentUser) && includeAuditLogs && auditLogs.length > 0) {
     const sheet3Rows = auditLogs.map((log, idx) => ({
       'Record #': idx + 1,
       'Log ID': sanitizeCellValue(log.id),

@@ -5,7 +5,7 @@ import { useApp } from '@/context/AppContext';
 import { Task, TeamMember } from '@/types';
 import { isCeoUser, isStrictCeo, canAccessAdminHr } from '@/lib/rosterData';
 import { getCompanyHoliday, isSundayDate, HOLIDAY_METADATA } from '@/lib/holidayData';
-import { getTodayStr, formatDateDisplay, formatDateShort } from '@/lib/dateUtils';
+import { getTodayStr, formatDateDisplay, formatDateShort, formatCreationDate } from '@/lib/dateUtils';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -1121,6 +1121,10 @@ export const CalendarView: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', margin: '0.75rem 0', fontSize: '0.8rem' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', background: '#f8fafc', padding: '0.75rem', borderRadius: '8px' }}>
                 <div>
+                  <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 700 }}>DATE OF CREATION:</span>
+                  <div style={{ fontWeight: 700, color: '#334155' }}>{formatCreationDate(activeTaskDetail.createdAt)}</div>
+                </div>
+                <div>
                   <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 700 }}>DUE DATE & TIME:</span>
                   <div style={{ fontWeight: 700, color: '#0f172a' }}>{formatDateDisplay(activeTaskDetail.scheduledDate)} at {activeTaskDetail.time}</div>
                 </div>
@@ -1134,7 +1138,7 @@ export const CalendarView: React.FC = () => {
                   <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 700 }}>PROJECT:</span>
                   <div style={{ fontWeight: 600 }}>{activeTaskDetail.project || 'General Portfolio'}</div>
                 </div>
-                <div>
+                <div style={{ gridColumn: 'span 2' }}>
                   <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 700 }}>ASSIGNEES:</span>
                   <div style={{ fontWeight: 600 }}>{activeTaskDetail.assignees.map(a => a.name).join(', ')}</div>
                 </div>

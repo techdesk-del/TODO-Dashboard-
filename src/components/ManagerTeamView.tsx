@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
 import { isCeoUser } from '@/lib/rosterData';
 import { Task, TeamMember, TaskStatus } from '@/types';
-import { getTodayStr, formatDateDisplay } from '@/lib/dateUtils';
+import { getTodayStr, formatDateDisplay, formatCreationDate, formatDueDate } from '@/lib/dateUtils';
 import { 
   Users, 
   Layers, 
@@ -549,7 +549,7 @@ export const ManagerTeamView: React.FC = () => {
                   <tr>
                     <th>Deliverable Title</th>
                     <th>Assignee(s)</th>
-                    <th>Due Date &amp; Time</th>
+                    <th>Timeline (Created &amp; Due)</th>
                     <th>Status &amp; Delay Justification</th>
                     <th>Manager Actions</th>
                   </tr>
@@ -584,8 +584,11 @@ export const ManagerTeamView: React.FC = () => {
                         </td>
 
                         <td>
-                          <div style={{ fontWeight: overdue ? 700 : 500, color: overdue ? '#dc2626' : undefined }}>
-                            {t.scheduledDate}
+                          <div style={{ fontSize: '0.67rem', color: '#64748b', marginBottom: '2px' }} title={`Created at: ${t.createdAt || 'Initial Task'}`}>
+                            <span style={{ fontWeight: 600 }}>Created:</span> {formatCreationDate(t.createdAt)}
+                          </div>
+                          <div style={{ fontWeight: overdue ? 700 : 600, color: overdue ? '#dc2626' : '#0f172a', fontSize: '0.76rem' }}>
+                            <span style={{ color: '#64748b', fontWeight: 500 }}>Due:</span> {t.scheduledDate}
                           </div>
                           <div style={{ fontSize: '0.68rem', color: '#64748b' }}>{t.time}</div>
                         </td>

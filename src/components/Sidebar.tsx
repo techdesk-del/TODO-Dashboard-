@@ -19,7 +19,7 @@ import {
   Globe
 } from 'lucide-react';
 import { getTodayStr, getTomorrowStr, formatDateDisplay, formatDateDayMonth } from '@/lib/dateUtils';
-import { isCeoUser, isStrictCeo, canAccessWorkflows, canAccessAdminHr } from '@/lib/rosterData';
+import { isCeoUser, isStrictCeo, canAccessWorkflows, canAccessAdminHr, canViewAuditTrail } from '@/lib/rosterData';
 
 export const Sidebar: React.FC = () => {
   const {
@@ -70,6 +70,7 @@ export const Sidebar: React.FC = () => {
   const isManager = isMounted && (isAdmin || currentUser.role === 'MANAGER');
   const isTalentOrAdmin = isMounted && canAccessAdminHr(currentUser);
   const canViewFlows = isMounted && canAccessWorkflows(currentUser);
+  const canAccessAudit = isMounted && canViewAuditTrail(currentUser);
 
   const isStrictCeoUser = isMounted && isStrictCeo(currentUser);
 
@@ -78,8 +79,15 @@ export const Sidebar: React.FC = () => {
     : tasks.filter(t => {
         if (t.status === 'Cancelled') return false;
         const currentCleanEmail = (currentUser.email || '').toLowerCase().trim();
-        const isCreator = t.creator?.id === currentUser.id || (t.creator?.email && t.creator.email.toLowerCase().trim() === currentCleanEmail);
-        const isAssignee = t.assignees?.some(a => a.id === currentUser.id || (a.email && a.email.toLowerCase().trim() === currentCleanEmail));
+        const currentCleanName = (currentUser.name || '').toLowerCase().trim();
+        const isCreator = t.creator?.id === currentUser.id ||
+          (t.creator?.email && t.creator.email.toLowerCase().trim() === currentCleanEmail) ||
+          (t.creator?.name && currentCleanName && t.creator.name.toLowerCase().trim() === currentCleanName);
+        const isAssignee = t.assignees?.some(a =>
+          a.id === currentUser.id ||
+          (a.email && a.email.toLowerCase().trim() === currentCleanEmail) ||
+          (a.name && currentCleanName && a.name.toLowerCase().trim() === currentCleanName)
+        );
         return isCreator || isAssignee;
       });
 
@@ -269,9 +277,9 @@ export const Sidebar: React.FC = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Globe size={13} color={isAllActive ? '#2563eb' : '#64748b'} />
-                    <span style={{ fontWeight: 700 }}>All Dates</span>
+                    <span style={{ fontWeight: 700 }}>All Tasks</span>
                   </div>
-                  <span style={{ fontSize: '0.68rem', opacity: 0.75 }}>{userVisibleTasks.length} Total Deliverables</span>
+                  <span style={{ fontSize: '0.68rem', opacity: 0.75 }}>{userVisibleTasks.length} Total Deliverables (All Dates)</span>
                 </div>
                 <span className="filter-badge-count">{userVisibleTasks.length}</span>
               </button>
@@ -385,7 +393,8 @@ export const Sidebar: React.FC = () => {
             </button>
           )}
 
-          {isAdmin && (
+          {/* Immutable Audit Log strictly restricted to CEO Sir & Aakash Das */}
+          {canAccessAudit && (
             <button
               className={`nav-link-item ${activeView === 'audit_trail' ? 'active' : ''}`}
               onClick={() => { setActiveView('audit_trail'); closeSidebar(); }}
@@ -434,7 +443,19 @@ export const Sidebar: React.FC = () => {
               <LogIn size={14} />
               <span>Employee Sign In</span>
             </button>
+          ) : !isCeo ? (
+            /* Non-CEO Users (Employees, Managers & Admins): Strictly no switch button, only direct Log Out */
+            <button
+              className="btn-secondary"
+              style={{ width: '100%', justifyContent: 'center', fontSize: '0.75rem', gap: '6px', color: '#dc2626', borderColor: '#fca5a5' }}
+              onClick={() => { logoutUser(); closeSidebar(); }}
+              title="Sign out of current account"
+            >
+              <LogOut size={13} />
+              <span>Log Out</span>
+            </button>
           ) : (
+            /* Strictly CEO / Director Leadership: Switch & Log Out options */
             <div style={{ display: 'flex', gap: '0.4rem' }}>
               <button
                 className="btn-secondary"

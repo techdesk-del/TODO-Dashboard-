@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
 import { isCeoUser, isStrictCeo } from '@/lib/rosterData';
-import { getTodayStr, formatDateDisplay, formatDateShort } from '@/lib/dateUtils';
+import { getTodayStr, formatDateDisplay, formatDateShort, formatCreationDate } from '@/lib/dateUtils';
 import { Task, TeamMember } from '@/types';
 import { 
   LayoutDashboard, 
@@ -1127,10 +1127,14 @@ export const CeoPortal: React.FC = () => {
 
                     {/* Timeline & Due */}
                     <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.67rem', color: '#64748b' }} title={`Created at: ${task.createdAt || 'Initial Task'}`}>
+                          <span style={{ fontWeight: 600 }}>Created:</span>
+                          <span style={{ color: '#475569' }}>{formatCreationDate(task.createdAt)}</span>
+                        </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.76rem', fontWeight: 700, color: isOverdue ? '#dc2626' : '#1e293b' }}>
-                          <Calendar size={12} color={isOverdue ? '#dc2626' : '#64748b'} />
-                          <span>{formatDateShort(task.scheduledDate) || task.scheduledDate}</span>
+                          <Calendar size={12} color={isOverdue ? '#dc2626' : '#2563eb'} />
+                          <span>Due: {formatDateShort(task.scheduledDate) || task.scheduledDate}</span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', color: '#64748b' }}>
                           <Clock size={11} />

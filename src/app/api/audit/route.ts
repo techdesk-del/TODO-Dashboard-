@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import { AuditLogModel } from '@/models/AuditLog';
 import { INITIAL_AUDIT_LOGS } from '@/lib/mockData';
+import { canViewAuditTrail } from '@/lib/rosterData';
 
 async function seedAuditIfEmpty() {
   const count = await AuditLogModel.countDocuments();
@@ -24,6 +25,16 @@ export async function GET(req: NextRequest) {
     await seedAuditIfEmpty();
 
     const { searchParams } = new URL(req.url);
+    const userEmail = req.headers.get('x-user-email') || searchParams.get('userEmail') || searchParams.get('email');
+    if (userEmail && !canViewAuditTrail({ email: userEmail })) {
+      return NextResponse.json({
+        success: false,
+        error: 'Access Denied: Audit trail is strictly restricted to Executive Leadership (CEO & System Administrator).',
+        data: [],
+        count: 0
+      }, { status: 403 });
+    }
+
     const taskId = searchParams.get('taskId');
     const actor = searchParams.get('actor');
     const limit = parseInt(searchParams.get('limit') || '1000', 10);

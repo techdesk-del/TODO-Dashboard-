@@ -18,6 +18,7 @@ import {
   ChevronsRight
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { canViewAuditTrail } from '@/lib/rosterData';
 
 export const AuditTrailModal: React.FC = () => {
   const { 
@@ -30,6 +31,10 @@ export const AuditTrailModal: React.FC = () => {
     logAudit,
     setBannerNotification
   } = useApp();
+
+  if (!canViewAuditTrail(currentUser)) {
+    return null;
+  }
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterAction, setFilterAction] = useState<string>('ALL');

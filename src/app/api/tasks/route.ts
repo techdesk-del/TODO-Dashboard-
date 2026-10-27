@@ -208,6 +208,7 @@ export async function POST(req: NextRequest) {
       title: body.title.trim(),
       description: body.description?.trim() || '',
       scheduledDate: body.scheduledDate,
+      dueDate: body.dueDate || body.scheduledDate,
       time: body.time || '09:00 AM',
       priority: body.priority,
       status: initialStatus,

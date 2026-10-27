@@ -3,14 +3,16 @@
 import React, { useState, useMemo } from 'react';
 import { Task, TaskPriority, TaskStatus, AssigneeInfo } from '@/types';
 import { useApp } from '@/context/AppContext';
-import { isCeoUser, isStrictCeo } from '@/lib/rosterData';
-import { getTodayStr } from '@/lib/dateUtils';
+import { isCeoUser, isStrictCeo, canViewAuditTrail } from '@/lib/rosterData';
+import { getTodayStr, formatCreationDate, formatDueDate } from '@/lib/dateUtils';
 import { computeMultiAssigneeStatus } from '@/lib/multiAssignee';
 import {
   Clock,
   User,
   Edit3,
   Calendar as CalendarIcon,
+  CalendarPlus,
+  CalendarClock,
   PauseCircle,
   AlertTriangle,
   ShieldCheck,
@@ -25,9 +27,6 @@ import {
   CheckCircle2,
   FileText,
   Ban
-
-
-
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -116,6 +115,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
   const [isInlineEditing, setIsInlineEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState(task.title);
   const [editedScheduledDate, setEditedScheduledDate] = useState(task.scheduledDate);
+  const [editedDueDate, setEditedDueDate] = useState(task.dueDate || task.scheduledDate);
   const [editedTime, setEditedTime] = useState(task.time);
   const [editedAssigneeId, setEditedAssigneeId] = useState(task.assignees[0]?.id || activeMembers[0]?.id || members[0]?.id || '');
   const [editedPriority, setEditedPriority] = useState<TaskPriority>(task.priority);
@@ -126,6 +126,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
   const handleStartEdit = () => {
     setEditedTitle(task.title);
     setEditedScheduledDate(task.scheduledDate);
+    setEditedDueDate(task.dueDate || task.scheduledDate);
     setEditedTime(task.time);
     setEditedAssigneeId(task.assignees[0]?.id || activeMembers[0]?.id || members[0]?.id || '');
     setEditedPriority(task.priority);
@@ -224,12 +225,13 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
     updateTask(task.id, {
       title: editedTitle,
       scheduledDate: editedScheduledDate,
+      dueDate: editedDueDate,
       time: editedTime,
       priority: editedPriority,
       department: editedDepartment,
       location: 'Jaipur',
       assignees: updatedAssignees,
-    }, `Inline task edit: title updated to "${editedTitle}", date: ${editedScheduledDate}, time: ${editedTime}`);
+    }, `Inline task edit: title updated to "${editedTitle}", scheduled: ${editedScheduledDate}, due: ${editedDueDate}, time: ${editedTime}`);
 
     setIsInlineEditing(false);
   };
@@ -307,7 +309,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
           </div>
 
           <div className="form-field-group">
-            <label className="form-field-label">Scheduled Date</label>
+            <label className="form-field-label">Scheduled Date (Planned)</label>
             <input
               type="date"
               className="form-input"
@@ -317,13 +319,23 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
           </div>
 
           <div className="form-field-group">
-            <label className="form-field-label">Time (Updated)</label>
+            <label className="form-field-label">Due Date (Deadline)</label>
+            <input
+              type="date"
+              className="form-input"
+              value={editedDueDate}
+              onChange={(e) => setEditedDueDate(e.target.value)}
+            />
+          </div>
+
+          <div className="form-field-group">
+            <label className="form-field-label">Due Time</label>
             <input
               type="text"
               className="form-input"
               value={editedTime}
               onChange={(e) => setEditedTime(e.target.value)}
-              placeholder="e.g. 06:00 PM"
+              placeholder="e.g. 05:00 PM"
             />
           </div>
 
@@ -442,11 +454,15 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
   );
 
   const todayStr = getTodayStr();
-  const isOverdue = Boolean(task.isOverdue || (task.scheduledDate < todayStr && task.status !== 'Done' && task.status !== 'Cancelled'));
+  const effectiveDeadline = task.dueDate || task.scheduledDate;
+  const isOverdue = Boolean(task.isOverdue || (effectiveDeadline < todayStr && task.status !== 'Done' && task.status !== 'Cancelled'));
   const hasDelayReason = Boolean(
     (task.delayReason && task.delayReason.trim().length > 0) ||
     (task.pastDueReason && task.pastDueReason.trim().length > 0)
   );
+
+  const dueDateInfo = formatDueDate(task.scheduledDate, task.time, task.dueDate);
+  const creationDateFormatted = formatCreationDate(task.createdAt);
 
   // Standard Task Card (Slide 4)
   return (
@@ -712,15 +728,18 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                 </button>
               )}
 
-              <button
-                type="button"
-                className="btn-secondary task-icon-action-btn"
-                onClick={() => setViewingAuditForTaskId(task.id)}
-                title="FC 12: View Immutable Audit Trail"
-              >
-                <ShieldCheck size={15} color="#059669" />
-                <span className="task-utility-label">Audit Trail</span>
-              </button>
+              {/* Audit Trail Button (Strictly CEO Sir & Aakash Das ONLY) */}
+              {canViewAuditTrail(currentUser) && (
+                <button
+                  type="button"
+                  className="btn-secondary task-icon-action-btn"
+                  onClick={() => setViewingAuditForTaskId(task.id)}
+                  title="FC 12: View Immutable Audit Trail"
+                >
+                  <ShieldCheck size={15} color="#059669" />
+                  <span className="task-utility-label">Audit Trail</span>
+                </button>
+              )}
 
               {/* Delete Deliverable (Strictly Admin & CEO Only) */}
               {canCancelOrDelete && (
@@ -737,11 +756,69 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
             </div>
           </div>
 
-        {/* Full-Width Meta Row (Time, Full Assignees List, Priority, Live Progress) */}
-        <div className="task-meta-line" style={{ paddingLeft: '28px', gap: '0.85rem' }}>
-          <div className="task-meta-item">
-            <Clock size={13} color="#64748b" />
-            <span>{task.time}</span>
+        {/* Full-Width Meta Row (Date of Creation, Scheduled Date, Due Date, Time, Assignees, Priority, Live Progress) */}
+        <div className="task-meta-line" style={{ paddingLeft: '28px', gap: '0.65rem' }}>
+          {/* 1. Date of Creation */}
+          <div
+            className="task-meta-item"
+            style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '6px',
+              padding: '2px 8px',
+              fontSize: '0.72rem',
+              color: '#475569',
+              fontWeight: 600,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px'
+            }}
+            title={`Created on: ${task.createdAt || 'Initial Task'}`}
+          >
+            <CalendarPlus size={12} color="#64748b" />
+            <span>Created: <strong style={{ color: '#1e293b' }}>{creationDateFormatted}</strong></span>
+          </div>
+
+          {/* 2. Scheduled Date */}
+          <div
+            className="task-meta-item"
+            style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '6px',
+              padding: '2px 8px',
+              fontSize: '0.72rem',
+              color: '#475569',
+              fontWeight: 600,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px'
+            }}
+            title={`Scheduled date: ${task.scheduledDate}`}
+          >
+            <CalendarIcon size={12} color="#64748b" />
+            <span>Scheduled: <strong style={{ color: '#1e293b' }}>{task.scheduledDate}</strong></span>
+          </div>
+
+          {/* 3. Due Date */}
+          <div
+            className="task-meta-item"
+            style={{
+              background: isOverdue ? '#fff1f2' : (dueDateInfo.isToday ? '#eff6ff' : (dueDateInfo.isTomorrow ? '#f0fdf4' : '#f8fafc')),
+              border: isOverdue ? '1px solid #fecdd3' : (dueDateInfo.isToday ? '1px solid #bfdbfe' : (dueDateInfo.isTomorrow ? '1px solid #bbf7d0' : '1px solid #e2e8f0')),
+              borderRadius: '6px',
+              padding: '2px 8px',
+              fontSize: '0.72rem',
+              color: isOverdue ? '#be123c' : (dueDateInfo.isToday ? '#1d4ed8' : (dueDateInfo.isTomorrow ? '#15803d' : '#1e293b')),
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px'
+            }}
+            title={`Due Date: ${task.dueDate || task.scheduledDate} ${task.time || ''}`}
+          >
+            <CalendarClock size={12} color={isOverdue ? '#e11d48' : (dueDateInfo.isToday ? '#2563eb' : (dueDateInfo.isTomorrow ? '#16a34a' : '#64748b'))} />
+            <span>Due: <strong>{dueDateInfo.formatted}</strong></span>
           </div>
 
           {task.project && (
@@ -1311,8 +1388,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                   {task.title}
                 </div>
                 <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.72rem', color: '#64748b', marginTop: '0.35rem', flexWrap: 'wrap' }}>
-                  <span>{task.scheduledDate}</span>
-                  <span>{task.time}</span>
+                  <span><strong>Created:</strong> {creationDateFormatted}</span>
+                  <span><strong>Due:</strong> {task.scheduledDate} {task.time}</span>
                   <span>{task.department}</span>
                   <span className={getPriorityBadgeClass(task.priority)} style={{ padding: '0.1rem 0.35rem', fontSize: '0.65rem' }}>
                     {task.priority}

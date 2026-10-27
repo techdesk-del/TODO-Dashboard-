@@ -55,6 +55,7 @@ const TaskSchema = new Schema<Task>(
     title:         { type: String, required: true, trim: true, maxlength: 500 },
     description:   { type: String, trim: true },
     scheduledDate: { type: String, required: true },   // YYYY-MM-DD
+    dueDate:       { type: String },                   // YYYY-MM-DD (Target Due Date / Deadline)
     time:          { type: String, required: true },   // '05:00 PM'
     priority:      { type: String, required: true, enum: ['URGENT', 'HIGH', 'NORMAL'] },
     status:        {

@@ -1201,32 +1201,34 @@ export const Header: React.FC = () => {
                 </div>
               </div>
 
-              {/* Credentials Sign In Trigger */}
-              <div
-                onClick={() => { setIsAuthModalOpen(true); setIsRoleMenuOpen(false); }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.6rem',
-                  padding: '0.55rem 0.75rem',
-                  background: '#eff6ff',
-                  border: '1px solid #bfdbfe',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  marginBottom: '0.45rem',
-                  transition: 'background 0.15s ease'
-                }}
-              >
-                <Lock size={15} color="#2563eb" style={{ flexShrink: 0 }} />
-                <div>
-                  <div style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#1e40af' }}>
-                    {isGuest ? 'Sign In / Employee Login' : 'Switch Account (Login)'}
-                  </div>
-                  <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                    Secure corporate sign-in
+              {/* Credentials Sign In Trigger - strictly for Guest (to log in) or CEO/Director ONLY, NEVER for anyone else */}
+              {(isGuest || isCeoUser(currentUser)) && (
+                <div
+                  onClick={() => { setIsAuthModalOpen(true); setIsRoleMenuOpen(false); }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.6rem',
+                    padding: '0.55rem 0.75rem',
+                    background: '#eff6ff',
+                    border: '1px solid #bfdbfe',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    marginBottom: '0.45rem',
+                    transition: 'background 0.15s ease'
+                  }}
+                >
+                  <Lock size={15} color="#2563eb" style={{ flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#1e40af' }}>
+                      {isGuest ? 'Sign In / Employee Login' : 'Switch Account (Login)'}
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                      Secure corporate sign-in
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {!isGuest && (
                 <div

@@ -224,7 +224,7 @@ export const INITIAL_TASKS: Task[] = [
         name: 'Kanchan Jain',
         email: 'kanchan.jain@urbangaon.com',
         department: 'Admin Desk',
-        designation: 'Admin Desk Lead',
+        designation: 'Admin Desk Specialist',
         avatar: 'KJ',
         status: 'Done',
         completedAt: '2026-09-16T10:55:00Z',

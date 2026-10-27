@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { Task, TeamMember, AuditLogEntry, SystemConfig, Role, TaskStatus, InAppNotification } from '@/types';
 import { INITIAL_TASKS, INITIAL_MEMBERS, INITIAL_AUDIT_LOGS, INITIAL_SYSTEM_CONFIG } from '@/lib/mockData';
 import { getTodayStr } from '@/lib/dateUtils';
-import { isCeoUser, isStrictCeo, canAccessAdminHr, canAccessWorkflows } from '@/lib/rosterData';
+import { isCeoUser, isStrictCeo, canAccessAdminHr, canAccessWorkflows, canViewAuditTrail } from '@/lib/rosterData';
 import { computeMultiAssigneeStatus } from '@/lib/multiAssignee';
 import * as XLSX from 'xlsx';
 
@@ -152,10 +152,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [activeView, setActiveView] = useState<'workspace' | 'calendar' | 'ceo_portal' | 'admin_hr' | 'team_view' | 'audit_trail' | 'system_config' | 'workflow_manual'>('workspace');
   const [selectedMemberFilter, setSelectedMemberFilter] = useState<string | null>(null);
   const [bannerNotification, setBannerNotification] = useState<{ message: string; badge: string } | null>(null);
-  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(INITIAL_AUDIT_LOGS);
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [systemConfig, setSystemConfig] = useState<SystemConfig>(INITIAL_SYSTEM_CONFIG);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
-  const [viewingAuditForTaskId, setViewingAuditForTaskId] = useState<string | null>(null);
+  const [rawViewingAuditForTaskId, setRawViewingAuditForTaskId] = useState<string | null>(null);
+
+  const setViewingAuditForTaskId = useCallback((taskId: string | null) => {
+    if (taskId && !canViewAuditTrail(currentUser)) {
+      setBannerNotification({
+        message: 'Security Restriction: Audit Trail is strictly reserved for Executive Leadership (CEO & System Administrator).',
+        badge: 'Access Restricted'
+      });
+      return;
+    }
+    setRawViewingAuditForTaskId(taskId);
+  }, [currentUser]);
+
+  const viewingAuditForTaskId = canViewAuditTrail(currentUser) ? rawViewingAuditForTaskId : null;
   const [showMorningDigestModal, setShowMorningDigestModal] = useState(false);
   const [isCreateTaskModalOpen, setRawIsCreateTaskModalOpen] = useState(false);
 
@@ -428,7 +441,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     try {
       const savedLogs = localStorage.getItem('urbangaon_audit_v2');
-      if (savedLogs) setAuditLogs(JSON.parse(savedLogs));
+      if (savedLogs && canViewAuditTrail(currentUser)) setAuditLogs(JSON.parse(savedLogs));
     } catch (e) {
       console.error('[AppContext] audit restore failed', e);
     }
@@ -482,15 +495,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       })
       .catch(() => { });
 
-    // And audit logs
-    fetch(`/api/audit?_t=${Date.now()}`, { cache: 'no-store' })
-      .then(res => res.json())
-      .then(json => {
-        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-          setAuditLogs(json.data);
-        }
-      })
-      .catch(() => { });
+
 
     // Restore SystemConfig from localStorage for instant offline hydration
     try {
@@ -859,14 +864,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [tasks]);
 
-  // ── Persist audit logs to localStorage
+  // ── Persist audit logs to localStorage (Strictly authorized users)
   useEffect(() => {
     try {
-      localStorage.setItem('urbangaon_audit_v2', JSON.stringify(auditLogs));
+      if (canViewAuditTrail(currentUser)) {
+        localStorage.setItem('urbangaon_audit_v2', JSON.stringify(auditLogs));
+      } else {
+        localStorage.removeItem('urbangaon_audit_v2');
+      }
     } catch (e) {
       console.warn('[AppContext] localStorage audit save error', e);
     }
-  }, [auditLogs]);
+  }, [auditLogs, currentUser]);
+
+  // ── Audit logs sync strictly for CEO Sir & Aakash Das
+  useEffect(() => {
+    if (canViewAuditTrail(currentUser)) {
+      const emailParam = encodeURIComponent(currentUser.email || '');
+      fetch(`/api/audit?_t=${Date.now()}&userEmail=${emailParam}`, {
+        cache: 'no-store',
+        headers: { 'x-user-email': currentUser.email || '' }
+      })
+        .then(res => res.json())
+        .then(json => {
+          if (json.success && Array.isArray(json.data)) {
+            setAuditLogs(json.data);
+          }
+        })
+        .catch(() => { });
+    } else {
+      setAuditLogs([]);
+    }
+  }, [currentUser]);
 
   // ── Persist authenticated user session to storage
   useEffect(() => {
@@ -896,7 +925,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (activeView === 'team_view' && !(isCeoUser(currentUser) || currentUser.role === 'MANAGER')) {
       setActiveView('workspace');
     }
-    if (activeView === 'audit_trail' && !(isCeoUser(currentUser) || currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN')) {
+    if (activeView === 'audit_trail' && !canViewAuditTrail(currentUser)) {
       setActiveView('workspace');
     }
     if (activeView === 'system_config' && !(isCeoUser(currentUser) || currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN')) {

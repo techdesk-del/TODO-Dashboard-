@@ -31,6 +31,7 @@ export interface Task {
   title: string;
   description?: string;
   scheduledDate: string; // YYYY-MM-DD
+  dueDate?: string; // YYYY-MM-DD (Target Due Date / Deadline)
   time: string; // '05:00 PM'
   priority: TaskPriority;
   status: TaskStatus;

@@ -150,10 +150,10 @@ export const OFFICIAL_ROSTER: OfficialEmployeeConfig[] = [
     id: 'mem-8',
     name: 'Kanchan Jain',
     email: 'kanchan.jain@urbangaon.com',
-    aliases: ['kanchan@urbangaon.com', 'admin@urbangaon.com'],
-    role: 'ADMIN',
+    aliases: ['kanchan@urbangaon.com'],
+    role: 'EMPLOYEE',
     department: 'Admin Desk',
-    designation: 'Admin Desk Lead',
+    designation: 'Admin Desk Specialist',
     avatar: 'KJ',
     totalTasks: 3,
     completedTasks: 2,
@@ -340,6 +340,16 @@ export function canAccessWorkflows(user?: { email?: string; department?: string;
 export function canAccessAdminHr(user?: { email?: string; department?: string; designation?: string; role?: string; name?: string } | null): boolean {
   if (!user) return false;
   return isCeoUser(user) || isTalentUser(user) || user.role === 'ADMIN' || user.role === 'SUPER_ADMIN';
+}
+
+/**
+ * Strictly validates whether the active user has access to view the Immutable Audit Trail.
+ * Per Executive Governance: Strictly restricted to CEO Sir (Mr. Sukh Sagar Singh Bhati) and Aakash Das ONLY.
+ * All regular employees, managers, and general administrators are strictly excluded.
+ */
+export function canViewAuditTrail(user?: { id?: string; email?: string; designation?: string; role?: string; name?: string } | null): boolean {
+  if (!user) return false;
+  return isStrictCeo(user) || isAakashUser(user);
 }
 
 

@@ -18,7 +18,7 @@ import { CreateTaskModal } from '@/components/CreateTaskModal';
 import { EnterpriseExportModal } from '@/components/EnterpriseExportModal';
 import { AuthModal } from '@/components/AuthModal';
 import { formatDateTitle, getTodayStr, getTomorrowStr, formatDateDayMonth } from '@/lib/dateUtils';
-import { isCeoUser, isStrictCeo, canAccessAdminHr, canAccessWorkflows } from '@/lib/rosterData';
+import { isCeoUser, isStrictCeo, canAccessAdminHr, canAccessWorkflows, canViewAuditTrail } from '@/lib/rosterData';
 import { Check, Calendar as CalendarIcon, Sparkles, Globe, CalendarDays, AlertTriangle, RotateCcw, Plus } from 'lucide-react';
 
 export default function Home() {
@@ -45,7 +45,7 @@ export default function Home() {
     setViewScope,
   } = useApp();
 
-  const [assigneeFilter, setAssigneeFilter] = useState<'all' | 'assigned_to_me' | 'assigned_by_me'>('assigned_to_me');
+  const [assigneeFilter, setAssigneeFilter] = useState<'all' | 'assigned_to_me' | 'assigned_by_me'>('all');
   const [ceoEmployeeFilter, setCeoEmployeeFilter] = useState<string>('ALL');
   const [isMounted, setIsMounted] = useState(false);
 
@@ -59,6 +59,7 @@ export default function Home() {
   const canAccessAdmin = isMounted && canAccessAdminHr(currentUser);
   const canViewWorkflows = isMounted && canAccessWorkflows(currentUser);
   const canAccessManager = isMounted && (isCeo || currentUser.role === 'MANAGER' || currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN');
+  const canAccessAudit = isMounted && canViewAuditTrail(currentUser);
 
   // SDE-3 Architectural Pattern: Determine Effective View
   // If activeView is restricted and user does not have authorization,
@@ -67,7 +68,7 @@ export default function Home() {
     (activeView === 'admin_hr' && !canAccessAdmin) ||
     (activeView === 'ceo_portal' && !isCeo) ||
     (activeView === 'team_view' && !canAccessManager) ||
-    (activeView === 'audit_trail' && !canAccessAdmin) ||
+    (activeView === 'audit_trail' && !canAccessAudit) ||
     (activeView === 'system_config' && !canAccessAdmin) ||
     (activeView === 'workflow_manual' && !canViewWorkflows);
 
@@ -83,12 +84,19 @@ export default function Home() {
   // - Strict CEO (Mr. Sukh Sagar Singh Bhati) oversees all company deliverables across all staff members
   // - All employees and administrators (including Super Admin Aakash Das) ONLY see tasks that they created OR are assigned to in their personal workspace
   const currentCleanEmail = (currentUser.email || '').toLowerCase().trim();
+  const currentCleanName = (currentUser.name || '').toLowerCase().trim();
   const visibleTasks = useMemo(() => {
     if (!isStrictCeoUser) {
       return tasks.filter(t => {
         if (t.status === 'Cancelled') return false;
-        const isCreator = t.creator?.id === currentUser.id || (t.creator?.email && t.creator.email.toLowerCase().trim() === currentCleanEmail);
-        const isAssignee = t.assignees?.some(a => a.id === currentUser.id || (a.email && a.email.toLowerCase().trim() === currentCleanEmail));
+        const isCreator = t.creator?.id === currentUser.id ||
+          (t.creator?.email && t.creator.email.toLowerCase().trim() === currentCleanEmail) ||
+          (t.creator?.name && currentCleanName && t.creator.name.toLowerCase().trim() === currentCleanName);
+        const isAssignee = t.assignees?.some(a =>
+          a.id === currentUser.id ||
+          (a.email && a.email.toLowerCase().trim() === currentCleanEmail) ||
+          (a.name && currentCleanName && a.name.toLowerCase().trim() === currentCleanName)
+        );
         return isCreator || isAssignee;
       });
     }
@@ -97,32 +105,51 @@ export default function Home() {
     if (isCeoMonitoring && ceoEmployeeFilter !== 'ALL') {
       const targetMember = members.find(m => m.id === ceoEmployeeFilter);
       const targetEmail = (targetMember?.email || '').toLowerCase().trim();
+      const targetName = (targetMember?.name || '').toLowerCase().trim();
       return uncancelled.filter(t => {
-        const isCreator = t.creator?.id === ceoEmployeeFilter || (t.creator?.email && t.creator.email.toLowerCase().trim() === targetEmail);
-        const isAssignee = t.assignees?.some(a => a.id === ceoEmployeeFilter || (a.email && a.email.toLowerCase().trim() === targetEmail));
+        const isCreator = t.creator?.id === ceoEmployeeFilter ||
+          (t.creator?.email && t.creator.email.toLowerCase().trim() === targetEmail) ||
+          (t.creator?.name && targetName && t.creator.name.toLowerCase().trim() === targetName);
+        const isAssignee = t.assignees?.some(a =>
+          a.id === ceoEmployeeFilter ||
+          (a.email && a.email.toLowerCase().trim() === targetEmail) ||
+          (a.name && targetName && a.name.toLowerCase().trim() === targetName)
+        );
         return isCreator || isAssignee;
       });
     }
     return uncancelled;
-  }, [tasks, isStrictCeoUser, isCeoMonitoring, ceoEmployeeFilter, members, currentUser, currentCleanEmail]);
+  }, [tasks, isStrictCeoUser, isCeoMonitoring, ceoEmployeeFilter, members, currentUser, currentCleanEmail, currentCleanName]);
 
   // Flowchart 6 view partition:
   // - Task appears in "Assigned to" for each assignee
   // - Task appears in "Assigned by" for the creator
   const assignedToMeCount = visibleTasks.filter(t =>
-    t.assignees?.some(a => a.id === currentUser.id || (a.email && a.email.toLowerCase().trim() === currentCleanEmail))
+    t.assignees?.some(a =>
+      a.id === currentUser.id ||
+      (a.email && a.email.toLowerCase().trim() === currentCleanEmail) ||
+      (a.name && currentCleanName && a.name.toLowerCase().trim() === currentCleanName)
+    )
   ).length;
 
   const assignedByMeCount = visibleTasks.filter(t =>
-    t.creator?.id === currentUser.id || (t.creator?.email && t.creator.email.toLowerCase().trim() === currentCleanEmail)
+    t.creator?.id === currentUser.id ||
+    (t.creator?.email && t.creator.email.toLowerCase().trim() === currentCleanEmail) ||
+    (t.creator?.name && currentCleanName && t.creator.name.toLowerCase().trim() === currentCleanName)
   ).length;
 
   const partitionedTasks = visibleTasks.filter(t => {
     if (assigneeFilter === 'assigned_to_me') {
-      return t.assignees?.some(a => a.id === currentUser.id || (a.email && a.email.toLowerCase().trim() === currentCleanEmail));
+      return t.assignees?.some(a =>
+        a.id === currentUser.id ||
+        (a.email && a.email.toLowerCase().trim() === currentCleanEmail) ||
+        (a.name && currentCleanName && a.name.toLowerCase().trim() === currentCleanName)
+      );
     }
     if (assigneeFilter === 'assigned_by_me') {
-      return t.creator?.id === currentUser.id || (t.creator?.email && t.creator.email.toLowerCase().trim() === currentCleanEmail);
+      return t.creator?.id === currentUser.id ||
+        (t.creator?.email && t.creator.email.toLowerCase().trim() === currentCleanEmail) ||
+        (t.creator?.name && currentCleanName && t.creator.name.toLowerCase().trim() === currentCleanName);
     }
     return true;
   });
@@ -362,7 +389,10 @@ export default function Home() {
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', background: '#f1f5f9', padding: '3px', borderRadius: '8px', flexShrink: 0 }}>
                       <button
                         type="button"
-                        onClick={() => setAssigneeFilter('all')}
+                        onClick={() => {
+                          setAssigneeFilter('all');
+                          setViewScope('all');
+                        }}
                         style={{
                           padding: '5px 11px',
                           fontSize: '0.74rem',
@@ -371,13 +401,14 @@ export default function Home() {
                           borderRadius: '6px',
                           cursor: 'pointer',
                           whiteSpace: 'nowrap',
-                          background: assigneeFilter === 'all' ? '#2563eb' : 'transparent',
-                          color: assigneeFilter === 'all' ? '#ffffff' : '#64748b',
-                          boxShadow: assigneeFilter === 'all' ? '0 1px 3px rgba(37,99,235,0.25)' : 'none',
+                          background: (assigneeFilter === 'all' && viewScope === 'all') ? '#2563eb' : (assigneeFilter === 'all' ? '#e0e7ff' : 'transparent'),
+                          color: (assigneeFilter === 'all' && viewScope === 'all') ? '#ffffff' : (assigneeFilter === 'all' ? '#1d4ed8' : '#64748b'),
+                          boxShadow: (assigneeFilter === 'all' && viewScope === 'all') ? '0 1px 3px rgba(37,99,235,0.25)' : 'none',
                           transition: 'all 0.15s ease'
                         }}
+                        title="Show all deliverables across all dates (27, 28, 29, etc.)"
                       >
-                        All ({visibleTasks.length})
+                        All Tasks ({visibleTasks.length})
                       </button>
 
                       <button
@@ -428,7 +459,10 @@ export default function Home() {
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', background: '#f1f5f9', padding: '3px', borderRadius: '8px', flexShrink: 0 }}>
                     <button
                       type="button"
-                      onClick={() => setViewScope('all')}
+                      onClick={() => {
+                        setViewScope('all');
+                        setAssigneeFilter('all');
+                      }}
                       style={{
                         padding: '5px 11px',
                         fontSize: '0.75rem',
@@ -445,6 +479,7 @@ export default function Home() {
                         boxShadow: viewScope === 'all' ? '0 1px 3px rgba(37,99,235,0.3)' : 'none',
                         transition: 'all 0.15s ease'
                       }}
+                      title="Show all deliverables across all dates (27, 28, 29, etc.)"
                     >
                       <Globe size={13} />
                       All Dates ({visibleTasks.length})
@@ -544,14 +579,14 @@ export default function Home() {
           {effectiveView === 'ceo_portal' && isCeo && <CeoPortal />}
           {effectiveView === 'admin_hr' && canAccessAdmin && <AdminHrPortal />}
           {effectiveView === 'team_view' && canAccessManager && <ManagerTeamView />}
-          {effectiveView === 'audit_trail' && canAccessAdmin && <AuditTrailModal />}
+          {effectiveView === 'audit_trail' && canAccessAudit && <AuditTrailModal />}
           {effectiveView === 'system_config' && canAccessAdmin && <SystemConfigModal />}
           {effectiveView === 'workflow_manual' && canViewWorkflows && <WorkflowManualModal />}
         </main>
       </div>
 
       {/* Global Modals */}
-      {viewingAuditForTaskId && <AuditTrailModal />}
+      {viewingAuditForTaskId && canAccessAudit && <AuditTrailModal />}
       <MorningDigestPreviewModal />
       {isCreateTaskModalOpen && <CreateTaskModal />}
       <EnterpriseExportModal

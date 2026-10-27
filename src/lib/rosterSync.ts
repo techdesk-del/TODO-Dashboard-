@@ -66,9 +66,14 @@ export async function syncOfficialRosterToDB(): Promise<void> {
           velocity: emp.velocity ?? 100,
         });
       } else {
-        // Member already exists in database; only backfill missing core fields, never clobber updated name/email
+        // Member already exists in database; backfill missing core fields or enforce official role changes
         const missingFields: Record<string, unknown> = {};
-        if (!existingMember.role) missingFields.role = emp.role;
+        if (emp.id === 'mem-8' || empEmailClean.includes('kanchan.jain')) {
+          missingFields.role = 'EMPLOYEE';
+          missingFields.designation = emp.designation;
+        } else if (!existingMember.role) {
+          missingFields.role = emp.role;
+        }
         if (!existingMember.designation) missingFields.designation = emp.designation;
         if (!existingMember.department) missingFields.department = emp.department;
         if (!existingMember.status) missingFields.status = 'ACTIVE';
@@ -93,7 +98,7 @@ export async function syncOfficialRosterToDB(): Promise<void> {
           name: existingMember?.name || emp.name,
           email: existingMember?.email?.toLowerCase().trim() || empEmailClean,
           passwordHash: defaultPasswordHash,
-          role: existingMember?.role || emp.role,
+          role: emp.id === 'mem-8' ? 'EMPLOYEE' : (existingMember?.role || emp.role),
           department: existingMember?.department || emp.department,
           designation: existingMember?.designation || emp.designation,
           avatar: existingMember?.avatar || emp.avatar,
@@ -101,9 +106,14 @@ export async function syncOfficialRosterToDB(): Promise<void> {
           createdAt: new Date().toISOString(),
         });
       } else {
-        // User exists; only backfill missing fields without touching name or email
+        // User exists; enforce official role correction if needed or backfill missing fields
         const missingUserFields: Record<string, unknown> = {};
-        if (!existingUser.role) missingUserFields.role = existingMember?.role || emp.role;
+        if (emp.id === 'mem-8' || empEmailClean.includes('kanchan.jain')) {
+          missingUserFields.role = 'EMPLOYEE';
+          missingUserFields.designation = emp.designation;
+        } else if (!existingUser.role) {
+          missingUserFields.role = existingMember?.role || emp.role;
+        }
         if (!existingUser.department) missingUserFields.department = existingMember?.department || emp.department;
         if (!existingUser.designation) missingUserFields.designation = existingMember?.designation || emp.designation;
         if (Object.keys(missingUserFields).length > 0) {

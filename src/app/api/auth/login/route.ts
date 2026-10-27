@@ -221,6 +221,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Sync role and designation from official roster if official employee (e.g. role changes)
+    if (officialEmp && (user.role !== officialEmp.role || user.designation !== officialEmp.designation)) {
+      user.role = officialEmp.role;
+      user.designation = officialEmp.designation;
+      await UserModel.updateOne({ _id: user._id }, { $set: { role: officialEmp.role, designation: officialEmp.designation } }).catch(() => {});
+    }
+
     // Credentials valid! Reset failure counters atomically
     if (user.failedLoginAttempts || user.lockUntil) {
       await UserModel.updateOne(

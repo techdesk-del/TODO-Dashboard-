@@ -25,6 +25,7 @@ import {
   downloadWorkbook 
 } from '@/lib/exportUtils';
 import { getTodayStr } from '@/lib/dateUtils';
+import { canViewAuditTrail } from '@/lib/rosterData';
 
 interface EnterpriseExportModalProps {
   isOpen: boolean;
@@ -67,9 +68,9 @@ export const EnterpriseExportModal: React.FC<EnterpriseExportModalProps> = ({
       endDate,
       selectedUserId,
       selectedUserName: selectedMember?.name,
-      includeAuditLogs: currentUser.role === 'SUPER_ADMIN' && includeAuditLogs,
+      includeAuditLogs: canViewAuditTrail(currentUser) && includeAuditLogs,
     };
-  }, [exportType, selectedDate, selectedMonth, startDate, endDate, selectedUserId, members, currentUser.role, includeAuditLogs]);
+  }, [exportType, selectedDate, selectedMonth, startDate, endDate, selectedUserId, members, currentUser, includeAuditLogs]);
 
   const filteredTasks = useMemo(() => {
     return filterTasksByType(scopedTasks, filterOpts, members);
@@ -112,10 +113,10 @@ export const EnterpriseExportModal: React.FC<EnterpriseExportModalProps> = ({
       // Immediate Generation (Flowchart E)
       const { workbook, filename, totalRowCount } = generateMultiSheetExcelWorkbook({
         tasks: filteredTasks,
-        auditLogs: currentUser.role === 'SUPER_ADMIN' && includeAuditLogs ? auditLogs : undefined,
+        auditLogs: canViewAuditTrail(currentUser) && includeAuditLogs ? auditLogs : undefined,
         currentUser,
         filterOpts,
-        includeAuditLogs: currentUser.role === 'SUPER_ADMIN' && includeAuditLogs,
+        includeAuditLogs: canViewAuditTrail(currentUser) && includeAuditLogs,
       });
 
       downloadWorkbook(workbook, filename);
@@ -317,8 +318,8 @@ export const EnterpriseExportModal: React.FC<EnterpriseExportModalProps> = ({
           )}
         </div>
 
-        {/* Super Admin Audit Logs Option */}
-        {currentUser.role === 'SUPER_ADMIN' && (
+        {/* Executive Audit Logs Option (CEO & Aakash Das Only) */}
+        {canViewAuditTrail(currentUser) && (
           <div style={{ marginBottom: '1rem', background: '#fdf4ff', border: '1px solid #f0abfc', borderRadius: '8px', padding: '0.65rem 0.85rem' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', margin: 0 }}>
               <input
@@ -350,7 +351,7 @@ export const EnterpriseExportModal: React.FC<EnterpriseExportModalProps> = ({
           <ul style={{ margin: 0, paddingLeft: '1.25rem', color: '#475569', lineHeight: 1.5 }}>
             <li><strong>Sheet 1:</strong> One row per assignee with individual status, progress, remarks &amp; department.</li>
             <li><strong>Sheet 2:</strong> One row per task with overall multi-assignee status, priority, and dates.</li>
-            {includeAuditLogs && currentUser.role === 'SUPER_ADMIN' && (
+            {includeAuditLogs && canViewAuditTrail(currentUser) && (
               <li><strong>Sheet 3:</strong> Master Immutable Compliance Audit Trail.</li>
             )}
             <li><strong>Security:</strong> All cells prefixed with &apos;=, +, -, @ sanitized against formula injection.</li>
