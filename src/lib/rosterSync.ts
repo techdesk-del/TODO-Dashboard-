@@ -40,62 +40,75 @@ export async function syncOfficialRosterToDB(): Promise<void> {
         continue;
       }
 
-      // 1. Sync MemberModel without overwriting existing deactivation or on-leave status
-      const existingMember = await MemberModel.findOne({ id: emp.id });
-      const currentStatus = (existingMember?.status === 'DEACTIVATED' || existingMember?.status === 'ON_LEAVE')
-        ? existingMember.status
-        : (existingMember?.status || 'ACTIVE');
+      // 1. Ensure MemberModel record exists — NEVER overwrite user-updated name, email, avatar or status!
+      const existingMember = await MemberModel.findOne({
+        $or: [
+          { id: emp.id },
+          { email: empEmailClean },
+          ...(empAliases.length > 0 ? empAliases.map(a => ({ email: a })) : [])
+        ]
+      });
 
-      await MemberModel.findOneAndUpdate(
-        { id: emp.id },
-        {
-          $set: {
-            name: emp.name,
-            email: emp.email.toLowerCase(),
-            role: emp.role,
-            designation: emp.designation,
-            department: emp.department,
-            avatar: emp.avatar,
-            status: currentStatus,
-            totalTasks: emp.totalTasks,
-            completedTasks: emp.completedTasks,
-            activeTasks: emp.activeTasks,
-            overdueTasks: emp.overdueTasks,
-            velocity: emp.velocity,
-          },
-        },
-        { upsert: true }
-      );
-
-      // 2. Sync UserModel with default password
-      const existingUser = await UserModel.findOne({ id: emp.id });
-      if (!existingUser) {
-        await UserModel.create({
+      if (!existingMember) {
+        await MemberModel.create({
           id: emp.id,
           name: emp.name,
-          email: emp.email.toLowerCase(),
-          passwordHash: defaultPasswordHash,
+          email: empEmailClean,
           role: emp.role,
-          department: emp.department,
           designation: emp.designation,
+          department: emp.department,
           avatar: emp.avatar,
+          status: 'ACTIVE',
+          totalTasks: emp.totalTasks ?? 0,
+          completedTasks: emp.completedTasks ?? 0,
+          activeTasks: emp.activeTasks ?? 0,
+          overdueTasks: emp.overdueTasks ?? 0,
+          velocity: emp.velocity ?? 100,
+        });
+      } else {
+        // Member already exists in database; only backfill missing core fields, never clobber updated name/email
+        const missingFields: Record<string, unknown> = {};
+        if (!existingMember.role) missingFields.role = emp.role;
+        if (!existingMember.designation) missingFields.designation = emp.designation;
+        if (!existingMember.department) missingFields.department = emp.department;
+        if (!existingMember.status) missingFields.status = 'ACTIVE';
+        if (Object.keys(missingFields).length > 0) {
+          await MemberModel.updateOne({ _id: existingMember._id }, { $set: missingFields });
+        }
+      }
+
+      // 2. Ensure UserModel record exists — NEVER overwrite user-updated name or email!
+      const existingUser = await UserModel.findOne({
+        $or: [
+          { id: emp.id },
+          ...(existingMember?.email ? [{ email: existingMember.email.toLowerCase().trim() }] : []),
+          { email: empEmailClean },
+          ...(empAliases.length > 0 ? empAliases.map(a => ({ email: a })) : [])
+        ]
+      });
+
+      if (!existingUser) {
+        await UserModel.create({
+          id: existingMember?.id || emp.id,
+          name: existingMember?.name || emp.name,
+          email: existingMember?.email?.toLowerCase().trim() || empEmailClean,
+          passwordHash: defaultPasswordHash,
+          role: existingMember?.role || emp.role,
+          department: existingMember?.department || emp.department,
+          designation: existingMember?.designation || emp.designation,
+          avatar: existingMember?.avatar || emp.avatar,
           isTwoFactorEnabled: false,
           createdAt: new Date().toISOString(),
         });
       } else {
-        await UserModel.updateOne(
-          { id: emp.id },
-          {
-            $set: {
-              name: emp.name,
-              email: emp.email.toLowerCase(),
-              role: emp.role,
-              department: emp.department,
-              designation: emp.designation,
-              avatar: emp.avatar,
-            },
-          }
-        );
+        // User exists; only backfill missing fields without touching name or email
+        const missingUserFields: Record<string, unknown> = {};
+        if (!existingUser.role) missingUserFields.role = existingMember?.role || emp.role;
+        if (!existingUser.department) missingUserFields.department = existingMember?.department || emp.department;
+        if (!existingUser.designation) missingUserFields.designation = existingMember?.designation || emp.designation;
+        if (Object.keys(missingUserFields).length > 0) {
+          await UserModel.updateOne({ _id: existingUser._id }, { $set: missingUserFields });
+        }
       }
     }
 

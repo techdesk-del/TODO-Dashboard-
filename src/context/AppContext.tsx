@@ -72,6 +72,7 @@ interface AppContextType {
   addMember: (memberData: Partial<TeamMember>) => Promise<TeamMember>;
   updateMember: (memberId: string, updates: Partial<TeamMember>, reason?: string) => Promise<{ success: boolean; member?: TeamMember; error?: string }>;
   updateProfileName: (newName: string) => Promise<{ success: boolean; error?: string }>;
+  updateProfile: (updates: { name?: string; email?: string }) => Promise<{ success: boolean; error?: string; member?: TeamMember }>;
   deactivateMember: (
     departingId: string,
     successorId: string,
@@ -200,7 +201,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notificationId: id })
       });
-    } catch {}
+    } catch { }
   }, []);
 
   const markAllNotificationsRead = useCallback(async () => {
@@ -212,7 +213,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: currentUser.email, markAllRead: true })
       });
-    } catch {}
+    } catch { }
   }, [currentUser]);
 
   useEffect(() => {
@@ -251,11 +252,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             if (typeof window !== 'undefined') {
               localStorage.setItem('urbangaon_purged_members_v1', JSON.stringify({ ids: pIds, emails: pEmails }));
             }
-          } catch {}
+          } catch { }
 
           const pIdSet = new Set(pIds);
           const pEmailSet = new Set(pEmails);
-          const filteredMembers = json.data.filter((m: TeamMember) => 
+          const filteredMembers = json.data.filter((m: TeamMember) =>
             m && !pIdSet.has(m.id) && !pEmailSet.has(m.email?.toLowerCase().trim())
           );
           setMembers(filteredMembers);
@@ -263,7 +264,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           // Live session sync: If this user's email/name/status was updated on another PC by an Admin, synchronize currentUser seamlessly
           setCurrentUser(curr => {
             if (!curr || curr.id === 'guest') return curr;
-            const fresh = filteredMembers.find((m: TeamMember) => 
+            const fresh = filteredMembers.find((m: TeamMember) =>
               m.id === curr.id || (curr.email && m.email?.toLowerCase() === curr.email.toLowerCase())
             );
             if (fresh && (fresh.email !== curr.email || fresh.name !== curr.name || fresh.role !== curr.role || fresh.status !== curr.status || fresh.avatar !== curr.avatar)) {
@@ -271,7 +272,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               try {
                 localStorage.setItem('urbangaon_auth_user_v2', JSON.stringify(updatedCurr));
                 sessionStorage.setItem('urbangaon_auth_user_v2', JSON.stringify(updatedCurr));
-              } catch {}
+              } catch { }
               return updatedCurr;
             }
             return curr;
@@ -295,7 +296,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('[AppContext] members refresh failed', e);
     }
   }, []);
-
+  //
   const refreshFromDB = useCallback(async (isSilent = true) => {
     refreshMembersFromDB();
     try {
@@ -389,7 +390,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setMembers(prev => prev.filter(m => !pIdSet.has(m.id) && !pEmailSet.has(m.email?.toLowerCase().trim())));
         }
       }
-    } catch {}
+    } catch { }
 
     try {
       const savedTasks = localStorage.getItem('urbangaon_tasks_v2');
@@ -399,8 +400,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (Array.isArray(parsed)) {
           for (const item of parsed) {
             if (
-              item && 
-              item.id && 
+              item &&
+              item.id &&
               item.id !== 'task-1790071325492' &&
               !item.title?.toLowerCase().includes('mobile simulator') &&
               item.status !== 'Cancelled'
@@ -424,7 +425,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (e) {
       console.error('[AppContext] tasks restore failed', e);
     }
-    
+
     try {
       const savedLogs = localStorage.getItem('urbangaon_audit_v2');
       if (savedLogs) setAuditLogs(JSON.parse(savedLogs));
@@ -439,7 +440,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         try {
           localStorage.removeItem('urbangaon_auth_user_v2');
           sessionStorage.removeItem('urbangaon_auth_user_v2');
-        } catch {}
+        } catch { }
         setCurrentUser(GUEST_USER);
         setAuthModalInitialMode('LOGIN');
         setIsAuthModalOpen(true);
@@ -479,7 +480,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setMembers(json.data);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
 
     // And audit logs
     fetch(`/api/audit?_t=${Date.now()}`, { cache: 'no-store' })
@@ -489,7 +490,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setAuditLogs(json.data);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
 
     // Restore SystemConfig from localStorage for instant offline hydration
     try {
@@ -512,7 +513,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setSystemConfig(json.data);
           try {
             localStorage.setItem('urbangaon_system_config_v2', JSON.stringify(json.data));
-          } catch {}
+          } catch { }
         }
       })
       .catch(err => console.debug('[AppContext] system-config fetch failed:', err));
@@ -561,7 +562,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 });
                 try {
                   localStorage.setItem('urbangaon_tasks_v2', JSON.stringify(updated));
-                } catch {}
+                } catch { }
                 return updated;
               });
               setBannerNotification({
@@ -579,7 +580,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 });
                 try {
                   localStorage.setItem('urbangaon_tasks_v2', JSON.stringify(updated));
-                } catch {}
+                } catch { }
                 return updated;
               });
               return;
@@ -589,7 +590,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 const updated = prev.filter(t => t.id !== data.taskId);
                 try {
                   localStorage.setItem('urbangaon_tasks_v2', JSON.stringify(updated));
-                } catch {}
+                } catch { }
                 return updated;
               });
               setBannerNotification({
@@ -601,10 +602,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               setTasks([]);
               try {
                 localStorage.removeItem('urbangaon_tasks_v2');
-              } catch {}
+              } catch { }
               return;
             }
-          } catch {}
+          } catch { }
           if (isMounted) refreshFromDB(true);
         });
 
@@ -683,7 +684,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                   try {
                     localStorage.setItem('urbangaon_auth_user_v2', JSON.stringify(syncedUser));
                     sessionStorage.setItem('urbangaon_auth_user_v2', JSON.stringify(syncedUser));
-                  } catch {}
+                  } catch { }
                   return syncedUser;
                 }
                 return curr;
@@ -705,7 +706,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 return !isMatch;
               }));
             }
-          } catch {}
+          } catch { }
           if (isMounted) {
             refreshMembersFromDB();
             refreshFromDB(true);
@@ -750,14 +751,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               const updated = prev.filter(t => t.id !== data.taskId);
               try {
                 localStorage.setItem('urbangaon_tasks_v2', JSON.stringify(updated));
-              } catch {}
+              } catch { }
               return updated;
             });
           } else if (data?.action === 'DELETED_ALL') {
             setTasks([]);
             try {
               localStorage.removeItem('urbangaon_tasks_v2');
-            } catch {}
+            } catch { }
           } else if (data?.action === 'CREATED' && data.task) {
             setTasks(prev => {
               if (prev.some(t => t.id === data.task.id)) return prev;
@@ -769,7 +770,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               });
               try {
                 localStorage.setItem('urbangaon_tasks_v2', JSON.stringify(updated));
-              } catch {}
+              } catch { }
               return updated;
             });
           } else if (data?.action === 'UPDATED' && data.taskId && data.updates) {
@@ -777,7 +778,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               const updated = prev.map(t => t.id === data.taskId ? { ...t, ...data.updates } : t);
               try {
                 localStorage.setItem('urbangaon_tasks_v2', JSON.stringify(updated));
-              } catch {}
+              } catch { }
               return updated;
             });
           } else if (data?.action === 'MEMBER_DEACTIVATED') {
@@ -803,7 +804,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
         };
       }
-    } catch {}
+    } catch { }
 
     // Heartbeat poll every 6 seconds as a guaranteed cross-device sync safety net.
     // SSE pushes instant mutations (<50ms), heartbeat handles edge network reconnects without overloading the server.
@@ -814,7 +815,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Periodic governance trigger: guarantees overdue & pending notice emails are evaluated in real-time
     const runOverdueCheck = () => {
       if (typeof window !== 'undefined') {
-        fetch('/api/tasks/evaluate-overdue?sendNotifications=true', { method: 'POST' }).catch(() => {});
+        fetch('/api/tasks/evaluate-overdue?sendNotifications=true', { method: 'POST' }).catch(() => { });
       }
     };
     // Run once on connect, then every 5 minutes while browser tab is open
@@ -975,20 +976,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       inputMethod: newTaskData.inputMethod || 'Type',
       assignees: (newTaskData.assignees && newTaskData.assignees.length > 0)
         ? newTaskData.assignees.map(a => ({
-            ...a,
-            status: a.status || 'Not Started',
-          }))
+          ...a,
+          status: a.status || 'Not Started',
+        }))
         : [
-            {
-              id: currentUser.id,
-              name: currentUser.name,
-              email: currentUser.email,
-              department: currentUser.department,
-              designation: currentUser.designation,
-              avatar: currentUser.avatar,
-              status: 'Not Started',
-            }
-          ],
+          {
+            id: currentUser.id,
+            name: currentUser.name,
+            email: currentUser.email,
+            department: currentUser.department,
+            designation: currentUser.designation,
+            avatar: currentUser.avatar,
+            status: 'Not Started',
+          }
+        ],
       creator: newTaskData.creator || {
         id: currentUser.id,
         name: currentUser.name,
@@ -1034,7 +1035,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         bc.postMessage({ action: 'CREATED', task });
         bc.close();
       }
-    } catch {}
+    } catch { }
 
     // Sync to MongoDB Atlas API only if not already persisted by caller (e.g., CreateTaskModal)
     if (!skipApiSync) {
@@ -1109,7 +1110,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         bc.postMessage({ action: 'UPDATED', taskId, updates: effectiveUpdates });
         bc.close();
       }
-    } catch {}
+    } catch { }
 
     // Sync to MongoDB Atlas API with resilient fallback
     const currentTask = tasks.find(t => t.id === taskId);
@@ -1485,7 +1486,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ thresholdDays: 3, sendNotifications: false })
       }).catch(err => console.debug('[FC21 Server Sync Failed]', err));
-    } catch {}
+    } catch { }
 
     return { overdueCount, pendingNoReasonCount, escalatedCount };
   }, [tasks]);
@@ -1643,7 +1644,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         try {
           localStorage.setItem('urbangaon_auth_user_v2', JSON.stringify(synced));
           sessionStorage.setItem('urbangaon_auth_user_v2', JSON.stringify(synced));
-        } catch {}
+        } catch { }
       }
 
       // If email or name was updated, sync task assignees and creator in local state immediately
@@ -1695,53 +1696,71 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const updateProfileName = async (
-    newName: string
-  ): Promise<{ success: boolean; error?: string }> => {
+  const updateProfile = async (
+    updates: { name?: string; email?: string }
+  ): Promise<{ success: boolean; error?: string; member?: TeamMember }> => {
     try {
-      const trimmed = newName.trim();
-      if (!trimmed || trimmed.length < 2) {
+      const trimmedName = updates.name !== undefined ? updates.name.trim() : undefined;
+      const trimmedEmail = updates.email !== undefined ? updates.email.trim().toLowerCase() : undefined;
+
+      if (trimmedName !== undefined && trimmedName.length < 2) {
         return { success: false, error: 'Name must be at least 2 characters long.' };
       }
+
+      if (trimmedEmail !== undefined && trimmedEmail.length > 0) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(trimmedEmail)) {
+          return { success: false, error: 'Please enter a valid email address.' };
+        }
+      }
+
+      if (!trimmedName && !trimmedEmail) {
+        return { success: true };
+      }
+
+      const bodyPayload: Record<string, unknown> = {
+        id: currentUser.id,
+        actor: currentUser.name || trimmedName || 'Self Profile',
+        actorRole: currentUser.role || 'EMPLOYEE',
+        reason: `Employee profile updated (${[trimmedName ? `Name: ${trimmedName}` : '', trimmedEmail ? `Email: ${trimmedEmail}` : ''].filter(Boolean).join(', ')})`,
+      };
+
+      if (trimmedName) bodyPayload.name = trimmedName;
+      if (trimmedEmail) bodyPayload.email = trimmedEmail;
 
       const res = await fetch('/api/members', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: currentUser.id,
-          email: currentUser.email,
-          name: trimmed,
-          actor: currentUser.name || trimmed,
-          actorRole: currentUser.role || 'EMPLOYEE',
-          reason: `Employee ${currentUser.name} updated display name to "${trimmed}"`,
-        }),
+        body: JSON.stringify(bodyPayload),
       });
 
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.success) {
-        throw new Error(json.error || 'Failed to update profile name.');
+        throw new Error(json.error || 'Failed to update profile.');
       }
 
       const updated = json.data as TeamMember;
-      const finalName = updated?.name || trimmed;
+      const finalName = updated?.name || trimmedName || currentUser.name;
+      const finalEmail = updated?.email || trimmedEmail || currentUser.email;
       const finalAvatar = updated?.avatar || currentUser.avatar;
 
       // Sync currentUser state and persistent storage
       const syncedUser: TeamMember = {
         ...currentUser,
         name: finalName,
+        email: finalEmail,
         avatar: finalAvatar,
       };
       setCurrentUser(syncedUser);
       try {
         localStorage.setItem('urbangaon_auth_user_v2', JSON.stringify(syncedUser));
         sessionStorage.setItem('urbangaon_auth_user_v2', JSON.stringify(syncedUser));
-      } catch {}
+      } catch { }
 
       // Sync members list in state
       setMembers(prev => prev.map(m => {
         if (m.id === currentUser.id || (currentUser.email && m.email?.toLowerCase() === currentUser.email.toLowerCase())) {
-          return { ...m, name: finalName, avatar: finalAvatar };
+          return { ...m, name: finalName, email: finalEmail, avatar: finalAvatar };
         }
         return m;
       }));
@@ -1752,12 +1771,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const newAssignees = t.assignees.map(a => {
           if (a.id === currentUser.id || (currentUser.email && a.email?.toLowerCase() === currentUser.email.toLowerCase())) {
             changed = true;
-            return { ...a, name: finalName, avatar: finalAvatar };
+            return { ...a, name: finalName, email: finalEmail, avatar: finalAvatar };
           }
           return a;
         });
         const isCreator = t.creator.id === currentUser.id || (currentUser.email && t.creator.email?.toLowerCase() === currentUser.email.toLowerCase());
-        const newCreator = isCreator ? { ...t.creator, name: finalName } : t.creator;
+        const newCreator = isCreator ? { ...t.creator, name: finalName, email: finalEmail } : t.creator;
         if (newCreator !== t.creator) changed = true;
 
         return changed ? { ...t, assignees: newAssignees, creator: newCreator } : t;
@@ -1765,23 +1784,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       logAudit({
         action: 'UPDATED',
-        fieldChanged: 'Employee Profile Name',
-        oldValue: currentUser.name,
-        newValue: finalName,
-        notes: `User ${currentUser.name} changed profile name to "${finalName}"`
+        fieldChanged: 'Employee Profile & Credentials',
+        oldValue: `${currentUser.name} (${currentUser.email})`,
+        newValue: `${finalName} (${finalEmail})`,
+        notes: `User changed profile to "${finalName}" <${finalEmail}>`
       });
 
       setBannerNotification({
-        message: `Profile name successfully updated to "${finalName}".`,
-        badge: '✓ Name Updated'
+        message: `Profile updated successfully to ${finalName} (${finalEmail}).`,
+        badge: '✓ Profile Updated'
       });
 
-      return { success: true };
+      return { success: true, member: updated };
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Update failed.';
-      console.error('[AppContext] updateProfileName error:', msg);
+      console.error('[AppContext] updateProfile error:', msg);
       return { success: false, error: msg };
     }
+  };
+
+  const updateProfileName = async (
+    newName: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    return updateProfile({ name: newName });
   };
 
   const deactivateMember = async (
@@ -1838,13 +1863,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Optimistically update local members for all matching duplicate records
     setMembers(prev => prev.map(m => {
-      const isDeparting = m.id === departing?.id || 
-        m.id === departingId || 
-        m.name.toLowerCase() === departingName.toLowerCase() || 
+      const isDeparting = m.id === departing?.id ||
+        m.id === departingId ||
+        m.name.toLowerCase() === departingName.toLowerCase() ||
         (departing?.email && m.email.toLowerCase() === departing.email.toLowerCase());
-      const isSuccessor = m.id === successor?.id || 
-        m.id === successorId || 
-        m.name.toLowerCase() === successorName.toLowerCase() || 
+      const isSuccessor = m.id === successor?.id ||
+        m.id === successorId ||
+        m.name.toLowerCase() === successorName.toLowerCase() ||
         (successor?.email && m.email.toLowerCase() === successor.email.toLowerCase());
 
       if (isDeparting) {
@@ -1874,7 +1899,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const isMatch = (departing?.id && a.id === departing.id) ||
           a.name.toLowerCase() === departingName.toLowerCase() ||
           (departing?.email && a.email.toLowerCase() === departing.email.toLowerCase());
-        
+
         if (isMatch && successor) {
           hasDeparting = true;
           return {
@@ -1906,16 +1931,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
         const bc = new BroadcastChannel('urbangaon_task_sync');
-        bc.postMessage({ 
-          action: 'MEMBER_DEACTIVATED', 
-          departingId, 
-          departingName, 
-          departingEmail: departing?.email, 
-          successorId 
+        bc.postMessage({
+          action: 'MEMBER_DEACTIVATED',
+          departingId,
+          departingName,
+          departingEmail: departing?.email,
+          successorId
         });
         bc.close();
       }
-    } catch {}
+    } catch { }
 
     // Trigger full background sync to guarantee consistency
     await refreshMembersFromDB();
@@ -1966,7 +1991,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
         localStorage.setItem('urbangaon_purged_members_v1', JSON.stringify(parsed));
       }
-    } catch {}
+    } catch { }
 
     const res = await fetch(`/api/members?id=${encodeURIComponent(targetEmpId)}`, {
       method: 'DELETE',
@@ -1997,7 +2022,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
         bc.close();
       }
-    } catch {}
+    } catch { }
 
     await refreshMembersFromDB();
     await refreshFromDB();
@@ -2101,7 +2126,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTasks([]);
     try {
       localStorage.removeItem('urbangaon_tasks_v2');
-    } catch {}
+    } catch { }
 
     try {
       if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
@@ -2109,11 +2134,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         bc.postMessage({ action: 'DELETED_ALL' });
         bc.close();
       }
-    } catch {}
+    } catch { }
 
     // Call server DELETE endpoint to wipe MongoDB collection with CEO credentials header
     try {
-      await fetch('/api/tasks', { 
+      await fetch('/api/tasks', {
         method: 'DELETE',
         headers: {
           'x-user-email': currentUser.email || '',
@@ -2144,7 +2169,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.removeItem('urbangaon_auth_user_v2');
       sessionStorage.removeItem('urbangaon_auth_user_v2');
       sessionStorage.removeItem('urbangaon_session_active');
-    } catch {}
+    } catch { }
     setCurrentUser(GUEST_USER);
     setActiveView('workspace');
     setAuthModalInitialMode('LOGIN');
@@ -2402,7 +2427,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const remaining = prev.filter(t => t.id !== taskId);
       try {
         localStorage.setItem('urbangaon_tasks_v2', JSON.stringify(remaining));
-      } catch {}
+      } catch { }
       return remaining;
     });
 
@@ -2413,11 +2438,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         bc.postMessage({ action: 'DELETED', taskId, taskTitle: targetTask?.title });
         bc.close();
       }
-    } catch {}
+    } catch { }
 
     // Sync deletion to MongoDB Atlas backend with CEO credentials header
     try {
-      await fetch(`/api/tasks/${taskId}`, { 
+      await fetch(`/api/tasks/${taskId}`, {
         method: 'DELETE',
         headers: {
           'x-user-email': currentUser.email || '',
@@ -2657,7 +2682,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const nextConfig = { ...prev, ...cfg };
       try {
         localStorage.setItem('urbangaon_system_config_v2', JSON.stringify(nextConfig));
-      } catch {}
+      } catch { }
       return nextConfig;
     });
 
@@ -2678,7 +2703,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setSystemConfig(data.data);
           try {
             localStorage.setItem('urbangaon_system_config_v2', JSON.stringify(data.data));
-          } catch {}
+          } catch { }
         }
       })
       .catch(err => console.error('[AppContext] Failed to sync system-config to MongoDB Atlas:', err));
@@ -2773,6 +2798,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addMember,
         updateMember,
         updateProfileName,
+        updateProfile,
         deactivateMember,
         deleteMember,
         markMemberOnLeave,

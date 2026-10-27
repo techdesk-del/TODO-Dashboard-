@@ -282,11 +282,11 @@ export function isStrictCeo(user?: { id?: string; email?: string; designation?: 
   const designation = (user.designation || '').toUpperCase().trim();
   const name = (user.name || '').toLowerCase().trim();
 
-  // Explicit check for CEO designation or CEO email or Mr. Sukh Sagar Singh Bhati (mem-1)
+  // Explicit check for CEO ID (mem-1), official CEO emails, or CEO designation
   if (id === 'mem-1' || OFFICIAL_CEO_EMAILS.has(email)) {
     return true;
   }
-  if ((designation === 'CEO' || designation === 'CHIEF EXECUTIVE OFFICER (CEO)' || designation === 'CHIEF EXECUTIVE OFFICER') && (name.includes('sukh') || name.includes('bhati'))) {
+  if (designation === 'CEO' || designation === 'CHIEF EXECUTIVE OFFICER (CEO)' || designation === 'CHIEF EXECUTIVE OFFICER') {
     return true;
   }
   return false;

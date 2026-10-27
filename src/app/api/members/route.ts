@@ -302,12 +302,13 @@ export async function PATCH(req: NextRequest) {
     }
 
     const cleanInputEmail = email && typeof email === 'string' ? email.trim().toLowerCase() : '';
-    const member = await MemberModel.findOne({
-      $or: [
-        ...(id && id !== 'guest' ? [{ id }] : []),
-        ...(cleanInputEmail ? [{ email: cleanInputEmail }] : [])
-      ]
-    }).exec();
+    let member = null;
+    if (id && id !== 'guest') {
+      member = await MemberModel.findOne({ id }).exec();
+    }
+    if (!member && cleanInputEmail) {
+      member = await MemberModel.findOne({ email: cleanInputEmail }).exec();
+    }
 
     if (!member) {
       return NextResponse.json({ success: false, error: `Employee record was not found.` }, { status: 404 });
@@ -358,16 +359,18 @@ export async function PATCH(req: NextRequest) {
     updates.updatedAt = new Date().toISOString();
 
     // Apply updates to MemberModel
-    const updatedMember = await MemberModel.findOneAndUpdate(
-      { id: memberId },
+    const updatedMember = await MemberModel.findByIdAndUpdate(
+      member._id,
       { $set: updates },
       { new: true }
     ).exec();
 
     // Also sync to UserModel so session & login reflect the new name & email
     if (updates.email || updates.name || updates.role || updates.department || updates.designation || updates.avatar) {
-      await UserModel.updateOne(
-        { $or: [{ id: memberId }, { email: oldEmail.toLowerCase() }] },
+      const finalEmail = (updates.email as string) || oldEmail;
+      const finalName = (updates.name as string) || oldName;
+      const userUpdateRes = await UserModel.updateOne(
+        { $or: [{ id: memberId }, { email: oldEmail.toLowerCase() }, { email: finalEmail.toLowerCase() }] },
         {
           $set: {
             id: memberId,
@@ -380,7 +383,25 @@ export async function PATCH(req: NextRequest) {
             updatedAt: new Date().toISOString(),
           }
         }
-      ).exec().catch(() => {});
+      ).exec().catch(() => null);
+
+      if (!userUpdateRes || userUpdateRes.matchedCount === 0) {
+        try {
+          const defaultHash = await hashPassword('123');
+          await UserModel.create({
+            id: memberId,
+            name: finalName,
+            email: finalEmail.toLowerCase(),
+            passwordHash: defaultHash,
+            role: (updates.role as any) || member.role || 'EMPLOYEE',
+            department: (updates.department as string) || member.department || 'General',
+            designation: (updates.designation as string) || member.designation || 'Specialist',
+            avatar: (updates.avatar as string) || member.avatar || 'UG',
+            isTwoFactorEnabled: false,
+            createdAt: new Date().toISOString(),
+          });
+        } catch { }
+      }
     }
 
     // Cascade name or email changes to TaskModel assignees & creator

@@ -53,7 +53,8 @@ export const Header: React.FC = () => {
     unreadNotificationsCount,
     markNotificationRead,
     markAllNotificationsRead,
-    updateProfileName
+    updateProfileName,
+    updateProfile
   } = useApp();
 
   const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
@@ -61,53 +62,71 @@ export const Header: React.FC = () => {
   const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
   const [notifActiveTab, setNotifActiveTab] = useState<'alerts' | 'overdue'>('alerts');
   const [isMounted, setIsMounted] = useState(false);
-  const [isEditNameModalOpen, setIsEditNameModalOpen] = useState(false);
+  const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
   const [nameInput, setNameInput] = useState('');
-  const [nameError, setNameError] = useState('');
-  const [isSavingName, setIsSavingName] = useState(false);
+  const [emailInput, setEmailInput] = useState('');
+  const [profileError, setProfileError] = useState('');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
   const roleMenuRef = useRef<HTMLDivElement>(null);
   const opsMenuRef = useRef<HTMLDivElement>(null);
   const notificationMenuRef = useRef<HTMLDivElement>(null);
   const { notificationPermission, requestPermission, overdueTasks, dueSoonTasks, pendingCount } = useTaskDeadlines();
   const isCeoMonitoring = isMounted && isStrictCeo(currentUser);
 
-  const handleOpenEditName = () => {
+  const handleOpenEditProfile = () => {
     setNameInput(currentUser.name || '');
-    setNameError('');
-    setIsEditNameModalOpen(true);
+    setEmailInput(currentUser.email || '');
+    setProfileError('');
+    setIsEditProfileModalOpen(true);
     setIsRoleMenuOpen(false);
   };
 
-  const handleSaveProfileName = async (e?: React.FormEvent) => {
+  const handleSaveProfile = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    const trimmed = nameInput.trim();
-    if (!trimmed) {
-      setNameError('Name cannot be empty.');
+    const trimmedName = nameInput.trim();
+    const trimmedEmail = emailInput.trim().toLowerCase();
+
+    if (!trimmedName) {
+      setProfileError('Display name cannot be empty.');
       return;
     }
-    if (trimmed.length < 2) {
-      setNameError('Name must be at least 2 characters long.');
-      return;
-    }
-    if (trimmed === currentUser.name) {
-      setIsEditNameModalOpen(false);
+    if (trimmedName.length < 2) {
+      setProfileError('Display name must be at least 2 characters long.');
       return;
     }
 
-    setIsSavingName(true);
-    setNameError('');
+    if (!trimmedEmail) {
+      setProfileError('Corporate email cannot be empty.');
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      setProfileError('Please enter a valid corporate email address.');
+      return;
+    }
+
+    if (trimmedName === currentUser.name && trimmedEmail === currentUser.email?.toLowerCase()) {
+      setIsEditProfileModalOpen(false);
+      return;
+    }
+
+    setIsSavingProfile(true);
+    setProfileError('');
     try {
-      const res = await updateProfileName(trimmed);
+      const res = await updateProfile({
+        name: trimmedName,
+        email: trimmedEmail
+      });
       if (res.success) {
-        setIsEditNameModalOpen(false);
+        setIsEditProfileModalOpen(false);
       } else {
-        setNameError(res.error || 'Failed to update profile name.');
+        setProfileError(res.error || 'Failed to update profile.');
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to update profile name.';
-      setNameError(msg);
+      const msg = err instanceof Error ? err.message : 'Failed to update profile.';
+      setProfileError(msg);
     } finally {
-      setIsSavingName(false);
+      setIsSavingProfile(false);
     }
   };
 
@@ -1102,9 +1121,9 @@ export const Header: React.FC = () => {
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleOpenEditName();
+                        handleOpenEditProfile();
                       }}
-                      title="Edit Profile Name"
+                      title="Edit Profile & Email"
                       style={{
                         background: '#eff6ff',
                         border: '1px solid #bfdbfe',
@@ -1137,9 +1156,9 @@ export const Header: React.FC = () => {
                 </div>
               </div>
 
-              {/* Edit Profile Name Action Tile */}
+              {/* Edit Profile Action Tile */}
               <div
-                onClick={handleOpenEditName}
+                onClick={handleOpenEditProfile}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -1174,10 +1193,10 @@ export const Header: React.FC = () => {
                 </div>
                 <div>
                   <div style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#1e293b' }}>
-                    Change Profile Name
+                    Edit Profile & Email
                   </div>
                   <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
-                    Update your public display name across tasks
+                    Update display name, username & corporate email
                   </div>
                 </div>
               </div>
@@ -1237,12 +1256,12 @@ export const Header: React.FC = () => {
       </div>
     </div>
 
-    {/* Edit Profile Name Modal */}
-    {isEditNameModalOpen && (
+    {/* Edit Profile & Corporate Email Modal */}
+    {isEditProfileModalOpen && (
       <div
         role="dialog"
         aria-modal="true"
-        aria-labelledby="edit-profile-name-title"
+        aria-labelledby="edit-profile-title"
         style={{
           position: 'fixed',
           inset: 0,
@@ -1255,8 +1274,8 @@ export const Header: React.FC = () => {
           padding: '1rem'
         }}
         onClick={(e) => {
-          if (e.target === e.currentTarget && !isSavingName) {
-            setIsEditNameModalOpen(false);
+          if (e.target === e.currentTarget && !isSavingProfile) {
+            setIsEditProfileModalOpen(false);
           }
         }}
       >
@@ -1265,7 +1284,7 @@ export const Header: React.FC = () => {
             background: '#ffffff',
             borderRadius: '16px',
             width: '100%',
-            maxWidth: '440px',
+            maxWidth: '460px',
             boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.25)',
             border: '1px solid #e2e8f0',
             overflow: 'hidden'
@@ -1299,7 +1318,7 @@ export const Header: React.FC = () => {
               </div>
               <div>
                 <h3
-                  id="edit-profile-name-title"
+                  id="edit-profile-title"
                   style={{
                     margin: 0,
                     fontSize: '1rem',
@@ -1308,22 +1327,22 @@ export const Header: React.FC = () => {
                     letterSpacing: '-0.01em'
                   }}
                 >
-                  Change Profile Name
+                  Update Profile & Email
                 </h3>
                 <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>
-                  Synchronizes across tasks, team rosters & digests
+                  Synchronizes permanently across sessions, tasks & rosters
                 </p>
               </div>
             </div>
             <button
               type="button"
-              onClick={() => !isSavingName && setIsEditNameModalOpen(false)}
-              disabled={isSavingName}
+              onClick={() => !isSavingProfile && setIsEditProfileModalOpen(false)}
+              disabled={isSavingProfile}
               style={{
                 background: 'transparent',
                 border: 'none',
                 color: '#94a3b8',
-                cursor: isSavingName ? 'not-allowed' : 'pointer',
+                cursor: isSavingProfile ? 'not-allowed' : 'pointer',
                 padding: '4px',
                 borderRadius: '6px',
                 display: 'flex',
@@ -1337,8 +1356,30 @@ export const Header: React.FC = () => {
           </div>
 
           {/* Modal Body / Form */}
-          <form onSubmit={handleSaveProfileName} style={{ padding: '1.25rem 1.5rem' }}>
-            <div style={{ marginBottom: '1.25rem' }}>
+          <form onSubmit={handleSaveProfile} style={{ padding: '1.25rem 1.5rem' }}>
+            {profileError && (
+              <div
+                style={{
+                  padding: '0.65rem 0.85rem',
+                  borderRadius: '8px',
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  color: '#dc2626',
+                  fontSize: '0.76rem',
+                  fontWeight: 600,
+                  marginBottom: '1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <span>⚠</span>
+                <span>{profileError}</span>
+              </div>
+            )}
+
+            {/* Field 1: Name / Username */}
+            <div style={{ marginBottom: '1rem' }}>
               <label
                 htmlFor="profile-name-input"
                 style={{
@@ -1349,7 +1390,7 @@ export const Header: React.FC = () => {
                   marginBottom: '0.4rem'
                 }}
               >
-                Full Display Name
+                Full Display Name / Username *
               </label>
               <input
                 id="profile-name-input"
@@ -1357,16 +1398,16 @@ export const Header: React.FC = () => {
                 value={nameInput}
                 onChange={(e) => {
                   setNameInput(e.target.value);
-                  if (nameError) setNameError('');
+                  if (profileError) setProfileError('');
                 }}
-                disabled={isSavingName}
-                placeholder="e.g. Aakash Das or Sukh Sagar Singh Bhati"
+                disabled={isSavingProfile}
+                placeholder="e.g. Sukh Sagar Singh Bhati"
                 autoFocus
                 style={{
                   width: '100%',
                   padding: '0.65rem 0.85rem',
                   borderRadius: '8px',
-                  border: nameError ? '1.5px solid #ef4444' : '1.5px solid #cbd5e1',
+                  border: '1.5px solid #cbd5e1',
                   fontSize: '0.875rem',
                   color: '#0f172a',
                   outline: 'none',
@@ -1374,25 +1415,52 @@ export const Header: React.FC = () => {
                   boxSizing: 'border-box'
                 }}
               />
-              {nameError && (
-                <div
-                  style={{
-                    fontSize: '0.75rem',
-                    color: '#dc2626',
-                    marginTop: '0.35rem'
-                  }}
-                >
-                  {nameError}
-                </div>
-              )}
+            </div>
+
+            {/* Field 2: Official Corporate Email */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <label
+                htmlFor="profile-email-input"
+                style={{
+                  display: 'block',
+                  fontSize: '0.8125rem',
+                  fontWeight: 700,
+                  color: '#334155',
+                  marginBottom: '0.4rem'
+                }}
+              >
+                Official Corporate Email *
+              </label>
+              <input
+                id="profile-email-input"
+                type="email"
+                value={emailInput}
+                onChange={(e) => {
+                  setEmailInput(e.target.value);
+                  if (profileError) setProfileError('');
+                }}
+                disabled={isSavingProfile}
+                placeholder="e.g. ceo@urbangaon.com"
+                style={{
+                  width: '100%',
+                  padding: '0.65rem 0.85rem',
+                  borderRadius: '8px',
+                  border: '1.5px solid #cbd5e1',
+                  fontSize: '0.875rem',
+                  color: '#0f172a',
+                  outline: 'none',
+                  transition: 'border-color 0.15s ease',
+                  boxSizing: 'border-box'
+                }}
+              />
               <div
                 style={{
-                  marginTop: '0.5rem',
-                  fontSize: '0.72rem',
+                  marginTop: '0.4rem',
+                  fontSize: '0.7rem',
                   color: '#64748b'
                 }}
               >
-                Signed in as: <strong>{currentUser.email}</strong> ({currentUser.role})
+                Role: <strong>{currentUser.role.replace('_', ' ')}</strong> • Employee ID: <strong>{currentUser.id}</strong>
               </div>
             </div>
 
@@ -1403,14 +1471,14 @@ export const Header: React.FC = () => {
                 alignItems: 'center',
                 justifyContent: 'flex-end',
                 gap: '0.75rem',
-                paddingTop: '0.5rem',
+                paddingTop: '0.75rem',
                 borderTop: '1px solid #f1f5f9'
               }}
             >
               <button
                 type="button"
-                onClick={() => setIsEditNameModalOpen(false)}
-                disabled={isSavingName}
+                onClick={() => setIsEditProfileModalOpen(false)}
+                disabled={isSavingProfile}
                 style={{
                   padding: '0.55rem 1rem',
                   borderRadius: '8px',
@@ -1419,14 +1487,14 @@ export const Header: React.FC = () => {
                   color: '#475569',
                   fontSize: '0.8125rem',
                   fontWeight: 600,
-                  cursor: isSavingName ? 'not-allowed' : 'pointer'
+                  cursor: isSavingProfile ? 'not-allowed' : 'pointer'
                 }}
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                disabled={isSavingName || !nameInput.trim()}
+                disabled={isSavingProfile || !nameInput.trim() || !emailInput.trim()}
                 style={{
                   padding: '0.55rem 1.25rem',
                   borderRadius: '8px',
@@ -1435,23 +1503,23 @@ export const Header: React.FC = () => {
                   color: '#ffffff',
                   fontSize: '0.8125rem',
                   fontWeight: 700,
-                  cursor: (isSavingName || !nameInput.trim()) ? 'not-allowed' : 'pointer',
-                  opacity: (isSavingName || !nameInput.trim()) ? 0.6 : 1,
+                  cursor: (isSavingProfile || !nameInput.trim() || !emailInput.trim()) ? 'not-allowed' : 'pointer',
+                  opacity: (isSavingProfile || !nameInput.trim() || !emailInput.trim()) ? 0.6 : 1,
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
                   boxShadow: '0 2px 4px rgba(37, 99, 235, 0.2)'
                 }}
               >
-                {isSavingName ? (
+                {isSavingProfile ? (
                   <>
                     <Loader2 size={14} className="animate-spin" />
-                    <span>Saving...</span>
+                    <span>Saving Changes...</span>
                   </>
                 ) : (
                   <>
                     <Check size={14} />
-                    <span>Save Changes</span>
+                    <span>Save & Update</span>
                   </>
                 )}
               </button>
