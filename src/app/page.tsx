@@ -371,9 +371,9 @@ export default function Home() {
                           borderRadius: '6px',
                           cursor: 'pointer',
                           whiteSpace: 'nowrap',
-                          background: assigneeFilter === 'all' ? '#ffffff' : 'transparent',
-                          color: assigneeFilter === 'all' ? '#0f172a' : '#64748b',
-                          boxShadow: assigneeFilter === 'all' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                          background: assigneeFilter === 'all' ? '#2563eb' : 'transparent',
+                          color: assigneeFilter === 'all' ? '#ffffff' : '#64748b',
+                          boxShadow: assigneeFilter === 'all' ? '0 1px 3px rgba(37,99,235,0.25)' : 'none',
                           transition: 'all 0.15s ease'
                         }}
                       >
