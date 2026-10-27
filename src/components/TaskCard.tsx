@@ -470,7 +470,17 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                     #{index}
                   </span>
                 )}
-                <span className="task-title-text" style={{ textDecoration: isCompleted ? 'line-through' : 'none', color: isCompleted ? '#94a3b8' : undefined }}>
+                <span
+                  className="task-title-text"
+                  style={{
+                    textDecoration: isCompleted ? 'line-through' : 'none',
+                    color: isCompleted ? '#94a3b8' : undefined,
+                    wordBreak: 'normal',
+                    overflowWrap: 'break-word',
+                    minWidth: '200px',
+                    flex: '1 1 auto'
+                  }}
+                >
                   {task.title}
                 </span>
 
@@ -564,8 +574,10 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
               </div>
             </div>
           </div>
+        </div>
 
-          <div className="task-actions-group">
+        {/* Dedicated Action Toolbar Row */}
+        <div className="task-actions-group" style={{ width: 'calc(100% - 28px)', marginLeft: '28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.45rem', borderTop: '1px dashed rgba(226, 232, 240, 0.85)', paddingTop: '0.45rem' }}>
             {/* Primary Workflow Actions (Text + Icons) */}
             <div className="task-actions-workflow">
               {/* Quick Reschedule Overdue Task to Today */}
@@ -724,7 +736,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
               )}
             </div>
           </div>
-        </div>
 
         {/* Full-Width Meta Row (Time, Full Assignees List, Priority, Live Progress) */}
         <div className="task-meta-line" style={{ paddingLeft: '28px', gap: '0.85rem' }}>
