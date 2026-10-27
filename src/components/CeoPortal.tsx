@@ -69,6 +69,11 @@ export const CeoPortal: React.FC = () => {
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Filter tasks based on member, search, status, and department
+  const uncancelledTasks = useMemo(() => {
+    return tasks.filter(t => t.status !== 'Cancelled');
+  }, [tasks]);
+
   // Deliverables awaiting CEO Final Approval
   const pendingCeoApprovalTasks = useMemo(() => {
     return uncancelledTasks.filter(t => t.status === 'Review' || t.pendingCeoApproval);
@@ -91,11 +96,6 @@ export const CeoPortal: React.FC = () => {
     });
     return Array.from(set).sort();
   }, [tasks, activeMembers]);
-
-  // Filter tasks based on member, search, status, and department
-  const uncancelledTasks = useMemo(() => {
-    return tasks.filter(t => t.status !== 'Cancelled');
-  }, [tasks]);
 
   const memberFilteredTasks = useMemo(() => {
     if (!activeMember) return uncancelledTasks;
