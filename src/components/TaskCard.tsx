@@ -26,7 +26,8 @@ import {
   UserX,
   CheckCircle2,
   FileText,
-  Ban
+  Ban,
+  ChevronDown
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -60,6 +61,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
   const isCeo = isCeoUser(currentUser);
   const canCancelOrDelete = isCeo || currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN';
 
+  const [isExpanded, setIsExpanded] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -468,134 +470,232 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
   return (
     <>
       <div className={`task-card ${isActuallyJustAdded ? 'just-added' : ''} ${isOverdue ? 'task-card-overdue' : ''}`}>
-        {/* Top Header Row: Checkbox, Title & Badges on left, Action buttons on right */}
-        <div className="task-card-header">
-          <div className="task-header-left">
+        {/* Top Header Row: Single-line view showing Task Title, Scheduled Date, Due Date, Status, and Dropdown toggle */}
+        {/* Top Header Row: Strictly single-line view showing Task Title on left, Dates + Status + Dropdown toggle on right */}
+        <div
+          className="task-card-header"
+          onClick={() => setIsExpanded(prev => !prev)}
+          style={{
+            cursor: 'pointer',
+            userSelect: 'none',
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.65rem',
+            width: '100%',
+            padding: '2px 0'
+          }}
+          title={isExpanded ? 'Click to collapse options' : 'Click to expand options & edit details'}
+        >
+          {/* Left: Checkbox, Sequence, Title, Just Added */}
+          <div
+            className="task-header-left"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.65rem',
+              flex: '1 1 auto',
+              minWidth: 0
+            }}
+          >
             <input
               type="checkbox"
               className="task-checkbox"
               checked={isCompleted}
+              onClick={(e) => e.stopPropagation()}
               onChange={handleCheckboxToggle}
               title={isCompleted ? 'Mark as In Progress' : 'Mark as Completed'}
+              style={{ flexShrink: 0, margin: 0 }}
             />
 
-            <div className="task-header-content">
-              <div className="task-title-line">
-                {typeof index === 'number' && (
-                  <span className="task-sequence-badge" title={`Deliverable #${index}`}>
-                    #{index}
-                  </span>
-                )}
-                <span
-                  className="task-title-text"
-                  style={{
-                    textDecoration: isCompleted ? 'line-through' : 'none',
-                    color: isCompleted ? '#94a3b8' : undefined,
-                    wordBreak: 'normal',
-                    overflowWrap: 'break-word',
-                    minWidth: '200px',
-                    flex: '1 1 auto'
-                  }}
-                >
-                  {task.title}
-                </span>
+            {typeof index === 'number' && (
+              <span className="task-sequence-badge" style={{ flexShrink: 0 }} title={`Deliverable #${index}`}>
+                #{index}
+              </span>
+            )}
 
-                {isActuallyJustAdded && (
-                  <span className="just-added-badge">JUST ADDED</span>
-                )}
-              </div>
+            {/* Task Name / Title */}
+            <span
+              className="task-title-text"
+              style={{
+                textDecoration: isCompleted ? 'line-through' : 'none',
+                color: isCompleted ? '#94a3b8' : '#0f172a',
+                fontWeight: 700,
+                fontSize: '0.88rem',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                minWidth: 0,
+                flex: '1 1 auto'
+              }}
+              title={task.title}
+            >
+              {task.title}
+            </span>
 
-              {/* Status and Compliance Badges Row */}
-              <div className="task-badges-row">
-                {isOverdue && (
-                  <span className="task-pill-badge badge-overdue" title={hasDelayReason ? `Delay Reason: "${task.delayReason || task.pastDueReason}"` : 'Overdue without recorded reason requires justification'}>
-                    {hasDelayReason ? 'OVERDUE (REASON RECORDED)' : 'PENDING NO REASON'}
-                  </span>
-                )}
+            {isActuallyJustAdded && (
+              <span className="just-added-badge" style={{ flexShrink: 0 }}>JUST ADDED</span>
+            )}
+          </div>
 
-                {task.assignees.some(a => {
-                  const m = members.find(mem => mem.id === a.id || mem.email?.toLowerCase() === a.email?.toLowerCase());
-                  return m?.status === 'ON_LEAVE';
-                }) && (
-                    <span className="task-pill-badge badge-on-leave" title="Assignee is on authorized leave. Reminders and auto-escalations paused.">
-                      ON LEAVE
-                    </span>
-                  )}
+          {/* Right: Dates, Status Pill, Dropdown Toggle */}
+          <div
+            className="task-header-right"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              flexShrink: 0
+            }}
+          >
+            {/* Scheduled Date */}
+            <span
+              style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '6px',
+                padding: '2px 8px',
+                fontSize: '0.72rem',
+                color: '#475569',
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                whiteSpace: 'nowrap'
+              }}
+              title={`Scheduled Date: ${task.scheduledDate}`}
+            >
+              <CalendarIcon size={12} color="#64748b" />
+              <span>Date: <strong style={{ color: '#1e293b' }}>{task.scheduledDate}</strong></span>
+            </span>
 
-                {typeof task.carryForwardCount === 'number' && task.carryForwardCount > 0 ? (
-                  <span className="task-pill-badge badge-carry-forward">
-                    CARRIED FORWARD ({task.carryForwardCount})
-                  </span>
-                ) : null}
+            {/* Target Deadline / Due Date */}
+            <span
+              style={{
+                background: isOverdue ? '#fff1f2' : (dueDateInfo.isToday ? '#eff6ff' : (dueDateInfo.isTomorrow ? '#f0fdf4' : '#f8fafc')),
+                border: isOverdue ? '1px solid #fecdd3' : (dueDateInfo.isToday ? '1px solid #bfdbfe' : (dueDateInfo.isTomorrow ? '1px solid #bbf7d0' : '1px solid #e2e8f0')),
+                borderRadius: '6px',
+                padding: '2px 8px',
+                fontSize: '0.72rem',
+                color: isOverdue ? '#be123c' : (dueDateInfo.isToday ? '#1d4ed8' : (dueDateInfo.isTomorrow ? '#15803d' : '#1e293b')),
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                whiteSpace: 'nowrap'
+              }}
+              title={`Target Deadline: ${task.dueDate || task.scheduledDate} ${task.time || ''}`}
+            >
+              <CalendarClock size={12} color={isOverdue ? '#e11d48' : (dueDateInfo.isToday ? '#2563eb' : (dueDateInfo.isTomorrow ? '#16a34a' : '#64748b'))} />
+              <span>Due: <strong>{dueDateInfo.formatted}</strong></span>
+            </span>
 
-                {(task.editedByAdmin || task.notes?.toLowerCase().includes('edited by admin')) && (
-                  <span className="task-pill-badge badge-edited-admin" title="Administrative Intervention: Edited by Admin">
-                    Edited by Admin
-                  </span>
-                )}
+            {/* Single Primary Status Pill */}
+            {isOverdue ? (
+              <span className="task-pill-badge badge-overdue" style={{ margin: 0, padding: '2px 7px', fontSize: '0.68rem', whiteSpace: 'nowrap' }} title={hasDelayReason ? `Delay Reason: "${task.delayReason || task.pastDueReason}"` : 'Overdue without recorded reason'}>
+                {hasDelayReason ? 'OVERDUE (REASON RECORDED)' : 'PENDING NO REASON'}
+              </span>
+            ) : comp.status === 'Done' ? (
+              <span className="task-pill-badge badge-done" style={{ margin: 0, padding: '2px 7px', fontSize: '0.68rem', whiteSpace: 'nowrap' }}>
+                ✓ COMPLETED
+              </span>
+            ) : comp.status === 'In Progress' ? (
+              <span className="task-pill-badge badge-in-progress" style={{ margin: 0, padding: '2px 7px', fontSize: '0.68rem', whiteSpace: 'nowrap' }}>
+                IN PROCESS
+              </span>
+            ) : comp.status === 'Pending Notice' ? (
+              <span className="task-pill-badge badge-pending-notice" style={{ margin: 0, padding: '2px 7px', fontSize: '0.68rem', whiteSpace: 'nowrap' }}>
+                PENDING NOTICE
+              </span>
+            ) : comp.status === 'On Hold' ? (
+              <span className="task-pill-badge badge-hold" style={{ margin: 0, padding: '2px 7px', fontSize: '0.68rem', whiteSpace: 'nowrap' }}>
+                ON HOLD
+              </span>
+            ) : comp.status === 'Escalated' ? (
+              <span className="task-pill-badge badge-escalated" style={{ margin: 0, padding: '2px 7px', fontSize: '0.68rem', whiteSpace: 'nowrap' }}>
+                ESCALATED
+              </span>
+            ) : comp.status === 'Cancelled' ? (
+              <span className="task-pill-badge badge-cancelled" style={{ margin: 0, padding: '2px 7px', fontSize: '0.68rem', whiteSpace: 'nowrap' }}>
+                CANCELLED
+              </span>
+            ) : (
+              <span className="task-pill-badge badge-not-started" style={{ margin: 0, padding: '2px 7px', fontSize: '0.68rem', whiteSpace: 'nowrap' }}>
+                NOT STARTED
+              </span>
+            )}
 
-                {(comp.status === 'Cancelled' || task.status === 'Cancelled') && (
-                  <span className="task-pill-badge badge-cancelled">
-                    CANCELLED
-                  </span>
-                )}
-
-                {comp.status === 'Done' && (
-                  <span className="task-pill-badge badge-done">
-                    ✓ COMPLETED
-                  </span>
-                )}
-
-                {comp.status === 'Partially Completed' && (
-                  <span className="task-pill-badge badge-partial">
-                    PARTIALLY COMPLETED
-                  </span>
-                )}
-
-                {comp.status === 'On Hold' && (
-                  <span className="task-pill-badge badge-hold">
-                    ON HOLD
-                  </span>
-                )}
-
-                {comp.status === 'Escalated' && (
-                  <span className="task-pill-badge badge-escalated">
-                    ESCALATED TO {task.escalatedTo || 'SENIOR'}
-                  </span>
-                )}
-
-                {comp.status === 'Pending Notice' && (
-                  <span className="task-pill-badge badge-pending-notice">
-                    PENDING NOTICE (OVERDUE)
-                  </span>
-                )}
-
-                {comp.status === 'Not Started' && (
-                  <span className="task-pill-badge badge-not-started">
-                    NOT STARTED
-                  </span>
-                )}
-
-                {comp.status === 'In Progress' && (
-                  <span className="task-pill-badge badge-in-progress">
-                    IN PROCESS
-                  </span>
-                )}
-
-                {task.assignees.length > 1 && (
-                  <span className="task-pill-badge badge-multi-progress">
-                    {comp.progressText}
-                  </span>
-                )}
-              </div>
-            </div>
+            {/* Expand / Collapse Button */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsExpanded(prev => !prev);
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '4px 10px',
+                background: isExpanded ? '#eff6ff' : '#f8fafc',
+                border: isExpanded ? '1px solid #bfdbfe' : '1px solid #cbd5e1',
+                borderRadius: '6px',
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                color: isExpanded ? '#1d4ed8' : '#475569',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                boxShadow: isExpanded ? '0 1px 3px rgba(37,99,235,0.15)' : 'none',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <span>{isExpanded ? 'Hide Options' : 'Options & Details'}</span>
+              <ChevronDown
+                size={14}
+                style={{
+                  transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
+                }}
+              />
+            </button>
           </div>
         </div>
 
-        {/* Dedicated Action Toolbar Row */}
-        <div className="task-actions-group" style={{ width: 'calc(100% - 28px)', marginLeft: '28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.45rem', borderTop: '1px dashed rgba(226, 232, 240, 0.85)', paddingTop: '0.45rem' }}>
-            {/* Primary Workflow Actions (Text + Icons) */}
-            <div className="task-actions-workflow">
+        {/* Dropdown Container: Detailed actions, edit tools, assignees & banners */}
+        {isExpanded && (
+          <div
+            className="task-dropdown-details"
+            style={{
+              marginTop: '0.65rem',
+              paddingTop: '0.65rem',
+              borderTop: '1px dashed #cbd5e1',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.65rem'
+            }}
+          >
+            {/* Dedicated Action Toolbar Row */}
+            <div
+              className="task-actions-group"
+              style={{
+                width: '100%',
+                maxWidth: '100%',
+                marginLeft: 0,
+                marginRight: 0,
+                paddingLeft: 0,
+                paddingRight: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '0.45rem',
+                paddingTop: '0.2rem',
+                boxSizing: 'border-box'
+              }}
+            >
+                {/* Primary Workflow Actions (Text + Icons) */}
+                <div className="task-actions-workflow">
               {/* Quick Reschedule Overdue Task to Today */}
               {isOverdue && (
                 <button
@@ -703,7 +803,17 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
             </div>
 
             {/* Quick Utility Icon Actions (Hold, Escalate, Audit, Delete) */}
-            <div className="task-actions-utility">
+            <div
+              className="task-actions-utility"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                flexShrink: 0,
+                marginLeft: 'auto',
+                boxSizing: 'border-box'
+              }}
+            >
               {!isCompleted && (
                 <button
                   type="button"
@@ -757,7 +867,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
           </div>
 
         {/* Full-Width Meta Row (Date of Creation, Scheduled Date, Due Date, Time, Assignees, Priority, Live Progress) */}
-        <div className="task-meta-line" style={{ paddingLeft: '28px', gap: '0.65rem' }}>
+        <div className="task-meta-line" style={{ paddingLeft: 0, width: '100%', maxWidth: '100%', boxSizing: 'border-box', gap: '0.65rem' }}>
           {/* 1. Date of Creation */}
           <div
             className="task-meta-item"
@@ -869,7 +979,10 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
             border: '1px solid #fecaca',
             padding: '0.35rem 0.65rem',
             borderRadius: '6px',
-            marginLeft: '28px',
+            marginLeft: 0,
+            width: '100%',
+            maxWidth: '100%',
+            boxSizing: 'border-box',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -891,7 +1004,10 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
             border: '1px solid #fef08a',
             padding: '0.35rem 0.65rem',
             borderRadius: '6px',
-            marginLeft: '28px'
+            marginLeft: 0,
+            width: '100%',
+            maxWidth: '100%',
+            boxSizing: 'border-box'
           }}>
             <strong>Hold Reason:</strong> {task.holdReason}
           </div>
@@ -906,7 +1022,10 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
             border: '1px solid #fed7aa',
             padding: '0.35rem 0.65rem',
             borderRadius: '6px',
-            marginLeft: '28px',
+            marginLeft: 0,
+            width: '100%',
+            maxWidth: '100%',
+            boxSizing: 'border-box',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -928,7 +1047,10 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
             border: '1.5px solid #fecdd3',
             borderRadius: '8px',
             padding: '0.65rem 0.85rem',
-            marginLeft: '28px',
+            marginLeft: 0,
+            width: '100%',
+            maxWidth: '100%',
+            boxSizing: 'border-box',
             display: 'flex',
             flexDirection: 'column',
             gap: '0.45rem'
@@ -995,19 +1117,19 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
 
         {/* Resolved or Advised Banners */}
         {task.seniorAdvisoryComment && (
-          <div style={{ fontSize: '0.72rem', color: '#1d4ed8', background: '#eff6ff', border: '1px solid #bfdbfe', padding: '0.35rem 0.65rem', borderRadius: '6px', marginLeft: '28px' }}>
+          <div style={{ fontSize: '0.72rem', color: '#1d4ed8', background: '#eff6ff', border: '1px solid #bfdbfe', padding: '0.35rem 0.65rem', borderRadius: '6px', marginLeft: 0, width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
             <strong>Senior Advisory Guidance:</strong> {task.seniorAdvisoryComment}
           </div>
         )}
 
         {task.seniorReturnReason && (
-          <div style={{ fontSize: '0.72rem', color: '#c2410c', background: '#fff7ed', border: '1px solid #fed7aa', padding: '0.35rem 0.65rem', borderRadius: '6px', marginLeft: '28px' }}>
+          <div style={{ fontSize: '0.72rem', color: '#c2410c', background: '#fff7ed', border: '1px solid #fed7aa', padding: '0.35rem 0.65rem', borderRadius: '6px', marginLeft: 0, width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
             <strong>Returned by Senior:</strong> {task.seniorReturnReason}
           </div>
         )}
 
         {task.seniorResolutionNote && (
-          <div style={{ fontSize: '0.72rem', color: '#047857', background: '#ecfdf5', border: '1px solid #a7f3d0', padding: '0.35rem 0.65rem', borderRadius: '6px', marginLeft: '28px' }}>
+          <div style={{ fontSize: '0.72rem', color: '#047857', background: '#ecfdf5', border: '1px solid #a7f3d0', padding: '0.35rem 0.65rem', borderRadius: '6px', marginLeft: 0, width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
             <strong>✓ Senior Resolution Note:</strong> {task.seniorResolutionNote}
           </div>
         )}
@@ -1146,6 +1268,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                 );
               })}
             </div>
+          </div>
+        )}
           </div>
         )}
       </div>

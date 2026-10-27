@@ -1108,11 +1108,12 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
   justify-content: space-between;
   gap: 0.5rem;
   flex-wrap: wrap;
-  margin-left: 28px;
-  width: calc(100% - 28px);
+  margin-left: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
   padding-top: 0.45rem;
   border-top: 1px dashed rgba(226, 232, 240, 0.85);
-  box-sizing: border-box;
+  box-sizing: border-box !important;
 }
 
 .task-actions-workflow {

@@ -267,11 +267,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             }
           } catch { }
 
+          const sanitizeInitials = (nameStr: string) => {
+            const parts = (nameStr || '').trim().split(/\s+/);
+            if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+            return (nameStr || 'EM').trim().slice(0, 2).toUpperCase() || 'EM';
+          };
+
           const pIdSet = new Set(pIds);
           const pEmailSet = new Set(pEmails);
-          const filteredMembers = json.data.filter((m: TeamMember) =>
-            m && !pIdSet.has(m.id) && !pEmailSet.has(m.email?.toLowerCase().trim())
-          );
+          const filteredMembers = json.data
+            .filter((m: TeamMember) => m && !pIdSet.has(m.id) && !pEmailSet.has(m.email?.toLowerCase().trim()))
+            .map((m: TeamMember) => {
+              if (!m.avatar || m.avatar.includes('.png') || m.avatar.includes('urbangaon-employee-emblem')) {
+                return { ...m, avatar: sanitizeInitials(m.name) };
+              }
+              return m;
+            });
           setMembers(filteredMembers);
 
           // Live session sync: If this user's email/name/status was updated on another PC by an Admin, synchronize currentUser seamlessly
@@ -1570,7 +1581,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const addMember = async (memberData: Partial<TeamMember>): Promise<TeamMember> => {
     const rawName = memberData.name?.trim() || 'New Staff';
-    const defaultAvatar = memberData.avatar || '/urbangaon-employee-emblem.png';
+    const nameParts = rawName.split(/\s+/);
+    const computedInitials = nameParts.length >= 2
+      ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
+      : rawName.slice(0, 2).toUpperCase() || 'EM';
+
+    const defaultAvatar = (memberData.avatar && !memberData.avatar.includes('.png') && !memberData.avatar.includes('urbangaon-employee-emblem'))
+      ? memberData.avatar.trim()
+      : computedInitials;
 
     const cleanEmail = memberData.email?.trim().toLowerCase() || `staff.${Date.now()}@urbangaon.com`;
     const assignedEmpId = memberData.employeeId || memberData.id || `EMP-${Math.floor(1000 + Math.random() * 9000)}`;

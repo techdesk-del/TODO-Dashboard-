@@ -483,7 +483,17 @@ export const ManagerTeamView: React.FC = () => {
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem' }}>
-                    <div className="avatar-circle" style={{ width: '32px', height: '32px' }}>{member.avatar}</div>
+                    <div className="avatar-circle" style={{ width: '32px', height: '32px', overflow: 'hidden' }}>
+                      {member.avatar && (member.avatar.startsWith('http') || (member.avatar.startsWith('/') && !member.avatar.includes('urbangaon-employee-emblem') && !member.avatar.includes('.png'))) ? (
+                        <img src={member.avatar} alt={member.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        (member.avatar && !member.avatar.includes('.') && member.avatar.length <= 4)
+                          ? member.avatar.toUpperCase()
+                          : (member.name?.trim().split(/\s+/).length >= 2
+                              ? (member.name.trim().split(/\s+/)[0][0] + member.name.trim().split(/\s+/).slice(-1)[0][0]).toUpperCase()
+                              : (member.name || 'EM').slice(0, 2).toUpperCase())
+                      )}
+                    </div>
                     <div>
                       <div style={{ fontWeight: 800, fontSize: '0.85rem' }}>{member.name}</div>
                       <div style={{ fontSize: '0.68rem', color: '#64748b' }}>{member.designation}</div>

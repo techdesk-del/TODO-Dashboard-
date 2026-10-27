@@ -45,8 +45,24 @@ export async function GET() {
     const purgedIds = new Set(purgedRecords.map(p => p.id));
     const purgedEmails = new Set(purgedRecords.map(p => p.email.toLowerCase().trim()));
 
+    const sanitizeInitials = (nameStr: string) => {
+      const parts = (nameStr || '').trim().split(/\s+/);
+      if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      return (nameStr || 'EM').trim().slice(0, 2).toUpperCase() || 'EM';
+    };
+
     const rawMembers = await MemberModel.find({}).lean().exec();
-    const members = rawMembers.filter(m => !purgedIds.has(m.id) && !purgedEmails.has(m.email?.toLowerCase().trim()));
+    const members = rawMembers
+      .filter(m => !purgedIds.has(m.id) && !purgedEmails.has(m.email?.toLowerCase().trim()))
+      .map(m => {
+        if (!m.avatar || m.avatar.includes('.png') || m.avatar.includes('urbangaon-employee-emblem')) {
+          const initials = sanitizeInitials(m.name);
+          MemberModel.updateOne({ _id: m._id }, { $set: { avatar: initials } }).catch(() => {});
+          UserModel.updateMany({ email: m.email?.toLowerCase().trim() }, { $set: { avatar: initials } }).catch(() => {});
+          return { ...m, avatar: initials };
+        }
+        return m;
+      });
 
     return NextResponse.json({
       success: true,
@@ -126,8 +142,16 @@ export async function POST(req: NextRequest) {
 
     const assignedEmpId = requestedEmpId || `EMP-${Math.floor(1000 + Math.random() * 9000)}`;
 
-    // Use official UrbanGaon employee emblem as default corporate avatar
-    const avatarBadge = avatar || '/urbangaon-employee-emblem.png';
+    const sanitizeInitials = (nameStr: string) => {
+      const parts = (nameStr || '').trim().split(/\s+/);
+      if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      return (nameStr || 'EM').trim().slice(0, 2).toUpperCase() || 'EM';
+    };
+
+    // Use clean 2-letter uppercase initials as employee avatar badge
+    const avatarBadge = (avatar && !avatar.includes('.png') && !avatar.includes('urbangaon-employee-emblem'))
+      ? avatar.trim()
+      : sanitizeInitials(name);
 
     let memberRecord;
     if (existing && allowReactivate) {

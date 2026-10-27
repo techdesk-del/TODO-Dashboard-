@@ -293,7 +293,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
         role: m.role || 'EMPLOYEE',
         department: m.department || 'General',
         designation: m.designation || 'Specialist',
-        avatar: m.avatar || (m.name ? m.name.slice(0, 2).toUpperCase() : 'EM'),
+        avatar: (m.avatar && !m.avatar.includes('.png') && !m.avatar.includes('urbangaon-employee-emblem'))
+          ? m.avatar
+          : (m.name?.trim().split(/\s+/).length >= 2
+              ? (m.name.trim().split(/\s+/)[0][0] + m.name.trim().split(/\s+/).slice(-1)[0][0]).toUpperCase()
+              : (m.name || 'EM').slice(0, 2).toUpperCase()),
         aliases: officialMatch?.aliases,
         totalTasks: m.totalTasks ?? 0,
         completedTasks: m.completedTasks ?? 0,
@@ -1909,7 +1913,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                               fontWeight: 800,
                               flexShrink: 0
                             }}>
-                              {emp.avatar}
+                              {emp.avatar && (emp.avatar.startsWith('http') || (emp.avatar.startsWith('/') && !emp.avatar.includes('urbangaon-employee-emblem') && !emp.avatar.includes('.png'))) ? (
+                                <img src={emp.avatar} alt={emp.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                              ) : (
+                                (emp.avatar && !emp.avatar.includes('.') && emp.avatar.length <= 4)
+                                  ? emp.avatar.toUpperCase()
+                                  : (emp.name?.trim().split(/\s+/).length >= 2
+                                      ? (emp.name.trim().split(/\s+/)[0][0] + emp.name.trim().split(/\s+/).slice(-1)[0][0]).toUpperCase()
+                                      : (emp.name || 'EM').slice(0, 2).toUpperCase())
+                              )}
                             </div>
                             <div style={{ minWidth: 0 }}>
                               <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>

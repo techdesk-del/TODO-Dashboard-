@@ -799,7 +799,9 @@ export const AdminHrPortal: React.FC = () => {
         department: newUserDept,
         designation: newUserDesignation.trim(),
         role: 'EMPLOYEE',
-        avatar: '/urbangaon-employee-emblem.png',
+        avatar: (cleanName.trim().split(/\s+/).length >= 2
+          ? (cleanName.trim().split(/\s+/)[0][0] + cleanName.trim().split(/\s+/).slice(-1)[0][0]).toUpperCase()
+          : cleanName.trim().slice(0, 2).toUpperCase() || 'EM'),
         managerId: selectedManager?.id,
         manager: selectedManager?.name,
         managerEmail: selectedManager?.email,
