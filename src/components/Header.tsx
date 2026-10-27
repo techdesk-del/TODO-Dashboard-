@@ -65,6 +65,8 @@ export const Header: React.FC = () => {
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
   const [nameInput, setNameInput] = useState('');
   const [emailInput, setEmailInput] = useState('');
+  const [designationInput, setDesignationInput] = useState('');
+  const [employeeIdInput, setEmployeeIdInput] = useState('');
   const [profileError, setProfileError] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const roleMenuRef = useRef<HTMLDivElement>(null);
@@ -76,6 +78,8 @@ export const Header: React.FC = () => {
   const handleOpenEditProfile = () => {
     setNameInput(currentUser.name || '');
     setEmailInput(currentUser.email || '');
+    setDesignationInput(currentUser.designation || '');
+    setEmployeeIdInput(currentUser.employeeId || currentUser.id || '');
     setProfileError('');
     setIsEditProfileModalOpen(true);
     setIsRoleMenuOpen(false);
@@ -85,6 +89,8 @@ export const Header: React.FC = () => {
     if (e) e.preventDefault();
     const trimmedName = nameInput.trim();
     const trimmedEmail = emailInput.trim().toLowerCase();
+    const trimmedEmpId = employeeIdInput.trim();
+    const trimmedDesignation = designationInput.trim();
 
     if (!trimmedName) {
       setProfileError('Display name cannot be empty.');
@@ -105,7 +111,17 @@ export const Header: React.FC = () => {
       return;
     }
 
-    if (trimmedName === currentUser.name && trimmedEmail === currentUser.email?.toLowerCase()) {
+    if (!trimmedEmpId) {
+      setProfileError('Employee ID cannot be empty.');
+      return;
+    }
+
+    if (
+      trimmedName === currentUser.name &&
+      trimmedEmail === currentUser.email?.toLowerCase() &&
+      trimmedDesignation === (currentUser.designation || '') &&
+      trimmedEmpId === (currentUser.employeeId || currentUser.id)
+    ) {
       setIsEditProfileModalOpen(false);
       return;
     }
@@ -115,7 +131,9 @@ export const Header: React.FC = () => {
     try {
       const res = await updateProfile({
         name: trimmedName,
-        email: trimmedEmail
+        email: trimmedEmail,
+        designation: trimmedDesignation,
+        employeeId: trimmedEmpId
       });
       if (res.success) {
         setIsEditProfileModalOpen(false);
@@ -1051,7 +1069,7 @@ export const Header: React.FC = () => {
           <div
             className="user-profile-badge"
             onClick={() => setIsRoleMenuOpen(prev => !prev)}
-            title={`Logged in as ${currentUser.name} (${currentUser.role}) — Click to view profile & roles`}
+            title={isMounted ? `Logged in as ${currentUser.name} (${currentUser.designation || (currentUser.role !== 'EMPLOYEE' ? currentUser.role.replace('_', ' ') : 'Team Member')}) — Click to view profile` : 'Logged in as Guest'}
             role="button"
             tabIndex={0}
             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setIsRoleMenuOpen(prev => !prev); }}
@@ -1065,7 +1083,9 @@ export const Header: React.FC = () => {
             </div>
             <div className="user-info-text">
               <span className="user-name">{isMounted ? getDisplayName(currentUser.name) : 'Guest'}</span>
-              <span className="user-role-label">{isMounted ? currentUser.role.replace('_', ' ') : 'EMPLOYEE'}</span>
+              <span className="user-role-label">
+                {isMounted ? (currentUser.designation || (currentUser.role !== 'EMPLOYEE' ? currentUser.role.replace('_', ' ') : 'Team Member')) : 'Guest'}
+              </span>
             </div>
             <ChevronDown
               className="user-badge-chevron"
@@ -1145,9 +1165,9 @@ export const Header: React.FC = () => {
                   <div style={{ fontSize: '0.7rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {currentUser.email}
                   </div>
-                  <div style={{ display: 'flex', gap: '4px', marginTop: '3px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#eff6ff', color: '#2563eb' }}>
-                      {currentUser.role.replace('_', ' ')}
+                  <div style={{ display: 'flex', gap: '4px', marginTop: '3px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' }}>
+                      {currentUser.designation || (currentUser.role !== 'EMPLOYEE' ? currentUser.role.replace('_', ' ') : 'Team Member')}
                     </span>
                     <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#f1f5f9', color: '#475569' }}>
                       {currentUser.department || 'UrbanGaon'}
@@ -1420,7 +1440,7 @@ export const Header: React.FC = () => {
             </div>
 
             {/* Field 2: Official Corporate Email */}
-            <div style={{ marginBottom: '1.25rem' }}>
+            <div style={{ marginBottom: '1rem' }}>
               <label
                 htmlFor="profile-email-input"
                 style={{
@@ -1455,15 +1475,119 @@ export const Header: React.FC = () => {
                   boxSizing: 'border-box'
                 }}
               />
-              <div
-                style={{
-                  marginTop: '0.4rem',
-                  fontSize: '0.7rem',
-                  color: '#64748b'
-                }}
-              >
-                Role: <strong>{currentUser.role.replace('_', ' ')}</strong> • Employee ID: <strong>{currentUser.id}</strong>
+            </div>
+
+            {/* Field 3: Employee ID & Role / Designation Configuration */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
+              <div>
+                <label
+                  htmlFor="profile-empid-input"
+                  style={{
+                    display: 'block',
+                    fontSize: '0.8125rem',
+                    fontWeight: 700,
+                    color: '#334155',
+                    marginBottom: '0.4rem'
+                  }}
+                >
+                  Employee ID *
+                </label>
+                <input
+                  id="profile-empid-input"
+                  type="text"
+                  value={employeeIdInput}
+                  onChange={(e) => {
+                    setEmployeeIdInput(e.target.value);
+                    if (profileError) setProfileError('');
+                  }}
+                  disabled={isSavingProfile}
+                  placeholder="e.g. mem-12 or EMP-1001"
+                  style={{
+                    width: '100%',
+                    padding: '0.65rem 0.85rem',
+                    borderRadius: '8px',
+                    border: '1.5px solid #cbd5e1',
+                    fontSize: '0.875rem',
+                    color: '#0f172a',
+                    outline: 'none',
+                    background: '#ffffff',
+                    boxSizing: 'border-box'
+                  }}
+                />
               </div>
+
+              <div>
+                <label
+                  htmlFor="profile-designation-input"
+                  style={{
+                    display: 'block',
+                    fontSize: '0.8125rem',
+                    fontWeight: 700,
+                    color: '#334155',
+                    marginBottom: '0.4rem'
+                  }}
+                >
+                  Role / Designation (Custom) *
+                </label>
+                <input
+                  id="profile-designation-input"
+                  type="text"
+                  list="common-designations-list"
+                  value={designationInput}
+                  onChange={(e) => {
+                    setDesignationInput(e.target.value);
+                    if (profileError) setProfileError('');
+                  }}
+                  disabled={isSavingProfile}
+                  placeholder="e.g. Team Lead, Senior SDE, HR Lead..."
+                  style={{
+                    width: '100%',
+                    padding: '0.65rem 0.85rem',
+                    borderRadius: '8px',
+                    border: '1.5px solid #cbd5e1',
+                    fontSize: '0.875rem',
+                    color: '#0f172a',
+                    outline: 'none',
+                    background: '#ffffff',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                <datalist id="common-designations-list">
+                  <option value="Team Lead" />
+                  <option value="Lead Developer" />
+                  <option value="Project Manager" />
+                  <option value="Senior Software Engineer" />
+                  <option value="Full Stack Developer" />
+                  <option value="Operations Lead" />
+                  <option value="Talent Acquisition & HR Lead" />
+                  <option value="Quality Assurance Specialist" />
+                  <option value="Business Analyst" />
+                  <option value="Executive Director" />
+                  <option value="Founder & CEO" />
+                </datalist>
+              </div>
+            </div>
+
+            {/* Current Profile Summary */}
+            <div
+              style={{
+                marginBottom: '1rem',
+                padding: '0.5rem 0.75rem',
+                borderRadius: '6px',
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                fontSize: '0.72rem',
+                color: '#64748b',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '4px'
+              }}
+            >
+              <span>Designation: <strong style={{ color: '#166534' }}>{currentUser.designation || (currentUser.role !== 'EMPLOYEE' ? currentUser.role.replace('_', ' ') : 'Team Member')}</strong></span>
+              <span>Employee ID: <strong style={{ color: '#0f172a' }}>{currentUser.employeeId || currentUser.id}</strong></span>
+              <span>Department: <strong style={{ color: '#475569' }}>{currentUser.department || 'UrbanGaon'}</strong></span>
             </div>
 
             {/* Action Buttons */}
@@ -1496,7 +1620,7 @@ export const Header: React.FC = () => {
               </button>
               <button
                 type="submit"
-                disabled={isSavingProfile || !nameInput.trim() || !emailInput.trim()}
+                disabled={isSavingProfile || !nameInput.trim() || !emailInput.trim() || !employeeIdInput.trim()}
                 style={{
                   padding: '0.55rem 1.25rem',
                   borderRadius: '8px',
@@ -1505,8 +1629,8 @@ export const Header: React.FC = () => {
                   color: '#ffffff',
                   fontSize: '0.8125rem',
                   fontWeight: 700,
-                  cursor: (isSavingProfile || !nameInput.trim() || !emailInput.trim()) ? 'not-allowed' : 'pointer',
-                  opacity: (isSavingProfile || !nameInput.trim() || !emailInput.trim()) ? 0.6 : 1,
+                  cursor: (isSavingProfile || !nameInput.trim() || !emailInput.trim() || !employeeIdInput.trim()) ? 'not-allowed' : 'pointer',
+                  opacity: (isSavingProfile || !nameInput.trim() || !emailInput.trim() || !employeeIdInput.trim()) ? 0.6 : 1,
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',

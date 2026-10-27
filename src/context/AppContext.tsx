@@ -72,7 +72,7 @@ interface AppContextType {
   addMember: (memberData: Partial<TeamMember>) => Promise<TeamMember>;
   updateMember: (memberId: string, updates: Partial<TeamMember>, reason?: string) => Promise<{ success: boolean; member?: TeamMember; error?: string }>;
   updateProfileName: (newName: string) => Promise<{ success: boolean; error?: string }>;
-  updateProfile: (updates: { name?: string; email?: string }) => Promise<{ success: boolean; error?: string; member?: TeamMember }>;
+  updateProfile: (updates: { name?: string; email?: string; role?: Role; employeeId?: string; designation?: string; department?: string }) => Promise<{ success: boolean; error?: string; member?: TeamMember }>;
   deactivateMember: (
     departingId: string,
     successorId: string,
@@ -1744,11 +1744,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateProfile = async (
-    updates: { name?: string; email?: string }
+    updates: { name?: string; email?: string; role?: Role; employeeId?: string; designation?: string; department?: string }
   ): Promise<{ success: boolean; error?: string; member?: TeamMember }> => {
     try {
       const trimmedName = updates.name !== undefined ? updates.name.trim() : undefined;
       const trimmedEmail = updates.email !== undefined ? updates.email.trim().toLowerCase() : undefined;
+      const trimmedRole = updates.role;
+      const trimmedEmployeeId = updates.employeeId !== undefined ? updates.employeeId.trim() : undefined;
+      const trimmedDesignation = updates.designation !== undefined ? updates.designation.trim() : undefined;
+      const trimmedDepartment = updates.department !== undefined ? updates.department.trim() : undefined;
 
       if (trimmedName !== undefined && trimmedName.length < 2) {
         return { success: false, error: 'Name must be at least 2 characters long.' };
@@ -1761,7 +1765,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
 
-      if (!trimmedName && !trimmedEmail) {
+      if (trimmedEmployeeId !== undefined && trimmedEmployeeId.length === 0) {
+        return { success: false, error: 'Employee ID cannot be empty.' };
+      }
+
+      if (!trimmedName && !trimmedEmail && !trimmedRole && !trimmedEmployeeId && trimmedDesignation === undefined && trimmedDepartment === undefined) {
         return { success: true };
       }
 
@@ -1769,11 +1777,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         id: currentUser.id,
         actor: currentUser.name || trimmedName || 'Self Profile',
         actorRole: currentUser.role || 'EMPLOYEE',
-        reason: `Employee profile updated (${[trimmedName ? `Name: ${trimmedName}` : '', trimmedEmail ? `Email: ${trimmedEmail}` : ''].filter(Boolean).join(', ')})`,
+        reason: `Employee profile updated (${[
+          trimmedName ? `Name: ${trimmedName}` : '',
+          trimmedEmail ? `Email: ${trimmedEmail}` : '',
+          trimmedRole ? `Role: ${trimmedRole}` : '',
+          trimmedDesignation !== undefined ? `Designation: ${trimmedDesignation}` : '',
+          trimmedDepartment !== undefined ? `Dept: ${trimmedDepartment}` : '',
+          trimmedEmployeeId ? `Employee ID: ${trimmedEmployeeId}` : ''
+        ].filter(Boolean).join(', ')})`,
       };
 
       if (trimmedName) bodyPayload.name = trimmedName;
       if (trimmedEmail) bodyPayload.email = trimmedEmail;
+      if (trimmedRole) bodyPayload.role = trimmedRole;
+      if (trimmedEmployeeId) bodyPayload.newEmployeeId = trimmedEmployeeId;
+      if (trimmedDesignation !== undefined) bodyPayload.designation = trimmedDesignation;
+      if (trimmedDepartment !== undefined) bodyPayload.department = trimmedDepartment;
 
       const res = await fetch('/api/members', {
         method: 'PATCH',
@@ -1787,15 +1806,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       const updated = json.data as TeamMember;
+      const finalId = updated?.id || trimmedEmployeeId || currentUser.id;
       const finalName = updated?.name || trimmedName || currentUser.name;
       const finalEmail = updated?.email || trimmedEmail || currentUser.email;
+      const finalRole = (updated?.role as Role) || trimmedRole || currentUser.role;
+      const finalDesignation = updated?.designation !== undefined ? updated.designation : (trimmedDesignation !== undefined ? trimmedDesignation : (currentUser.designation || ''));
+      const finalDepartment = updated?.department !== undefined ? updated.department : (trimmedDepartment !== undefined ? trimmedDepartment : (currentUser.department || ''));
       const finalAvatar = updated?.avatar || currentUser.avatar;
 
       // Sync currentUser state and persistent storage
       const syncedUser: TeamMember = {
         ...currentUser,
+        id: finalId,
+        employeeId: finalId,
         name: finalName,
         email: finalEmail,
+        role: finalRole,
+        designation: finalDesignation,
+        department: finalDepartment,
         avatar: finalAvatar,
       };
       setCurrentUser(syncedUser);
@@ -1806,8 +1834,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // Sync members list in state
       setMembers(prev => prev.map(m => {
-        if (m.id === currentUser.id || (currentUser.email && m.email?.toLowerCase() === currentUser.email.toLowerCase())) {
-          return { ...m, name: finalName, email: finalEmail, avatar: finalAvatar };
+        if (m.id === currentUser.id || m.id === finalId || (currentUser.email && m.email?.toLowerCase() === currentUser.email.toLowerCase())) {
+          return {
+            ...m,
+            id: finalId,
+            employeeId: finalId,
+            name: finalName,
+            email: finalEmail,
+            role: finalRole,
+            designation: finalDesignation,
+            department: finalDepartment,
+            avatar: finalAvatar
+          };
         }
         return m;
       }));
@@ -1816,14 +1854,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setTasks(prev => prev.map(t => {
         let changed = false;
         const newAssignees = t.assignees.map(a => {
-          if (a.id === currentUser.id || (currentUser.email && a.email?.toLowerCase() === currentUser.email.toLowerCase())) {
+          if (a.id === currentUser.id || a.id === finalId || (currentUser.email && a.email?.toLowerCase() === currentUser.email.toLowerCase())) {
             changed = true;
-            return { ...a, name: finalName, email: finalEmail, avatar: finalAvatar };
+            return { ...a, id: finalId, name: finalName, email: finalEmail, designation: finalDesignation, department: finalDepartment, avatar: finalAvatar };
           }
           return a;
         });
-        const isCreator = t.creator.id === currentUser.id || (currentUser.email && t.creator.email?.toLowerCase() === currentUser.email.toLowerCase());
-        const newCreator = isCreator ? { ...t.creator, name: finalName, email: finalEmail } : t.creator;
+        const isCreator = t.creator.id === currentUser.id || t.creator.id === finalId || (currentUser.email && t.creator.email?.toLowerCase() === currentUser.email.toLowerCase());
+        const newCreator = isCreator ? { ...t.creator, id: finalId, name: finalName, email: finalEmail, role: finalRole } : t.creator;
         if (newCreator !== t.creator) changed = true;
 
         return changed ? { ...t, assignees: newAssignees, creator: newCreator } : t;
@@ -1832,17 +1870,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       logAudit({
         action: 'UPDATED',
         fieldChanged: 'Employee Profile & Credentials',
-        oldValue: `${currentUser.name} (${currentUser.email})`,
-        newValue: `${finalName} (${finalEmail})`,
-        notes: `User changed profile to "${finalName}" <${finalEmail}>`
+        oldValue: `${currentUser.name} (${currentUser.id} • ${currentUser.designation || currentUser.role})`,
+        newValue: `${finalName} (${finalId} • ${finalDesignation || finalRole})`,
+        notes: `User changed profile to "${finalName}" (${finalId} • ${finalDesignation || finalRole}) <${finalEmail}>`
       });
 
       setBannerNotification({
-        message: `Profile updated successfully to ${finalName} (${finalEmail}).`,
+        message: `Profile updated successfully (${finalDesignation ? `${finalDesignation} • ` : ''}ID: ${finalId}).`,
         badge: '✓ Profile Updated'
       });
 
-      return { success: true, member: updated };
+      return { success: true, member: syncedUser };
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Update failed.';
       console.error('[AppContext] updateProfile error:', msg);

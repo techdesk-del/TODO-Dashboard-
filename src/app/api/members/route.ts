@@ -315,6 +315,8 @@ export async function PATCH(req: NextRequest) {
       designation,
       role,
       status,
+      employeeId: inputEmployeeId,
+      newEmployeeId,
       reason,
       actor = 'Admin / Talent HR',
       actorRole = 'ADMIN',
@@ -341,8 +343,29 @@ export async function PATCH(req: NextRequest) {
     const memberId = member.id;
     const oldEmail = member.email;
     const oldName = member.name;
+    const oldRole = member.role;
     const updates: Record<string, unknown> = {};
 
+    // 1. Update Employee ID if provided
+    const targetEmployeeId = (newEmployeeId || inputEmployeeId || '').trim();
+    if (targetEmployeeId && targetEmployeeId !== member.id) {
+      const existingWithId = await MemberModel.findOne({
+        $or: [{ id: targetEmployeeId }, { employeeId: targetEmployeeId }],
+        _id: { $ne: member._id }
+      }).exec();
+
+      if (existingWithId) {
+        return NextResponse.json({
+          success: false,
+          error: `Employee ID "${targetEmployeeId}" is already assigned to employee ${existingWithId.name} (${existingWithId.email}).`
+        }, { status: 409 });
+      }
+
+      updates.id = targetEmployeeId;
+      updates.employeeId = targetEmployeeId;
+    }
+
+    // 2. Update Email if provided
     if (email && typeof email === 'string' && email.trim()) {
       const cleanEmail = email.trim().toLowerCase();
       // Validate email format
@@ -364,6 +387,7 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
+    // 3. Update Name if provided
     if (name && typeof name === 'string' && name.trim()) {
       const trimmedName = name.trim();
       updates.name = trimmedName;
@@ -376,9 +400,17 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
+    // 4. Update Role if provided
+    if (role && typeof role === 'string' && role.trim()) {
+      const cleanRole = role.trim().toUpperCase();
+      const validRoles = ['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'EMPLOYEE'];
+      if (validRoles.includes(cleanRole)) {
+        updates.role = cleanRole;
+      }
+    }
+
     if (department && typeof department === 'string' && department.trim()) updates.department = department.trim();
     if (designation && typeof designation === 'string' && designation.trim()) updates.designation = designation.trim();
-    if (role) updates.role = role;
     if (status) updates.status = status;
     updates.updatedAt = new Date().toISOString();
 
@@ -389,15 +421,18 @@ export async function PATCH(req: NextRequest) {
       { new: true }
     ).exec();
 
-    // Also sync to UserModel so session & login reflect the new name & email
-    if (updates.email || updates.name || updates.role || updates.department || updates.designation || updates.avatar) {
-      const finalEmail = (updates.email as string) || oldEmail;
-      const finalName = (updates.name as string) || oldName;
+    // Also sync to UserModel so session & login reflect the new ID, role, name & email
+    const finalId = (updates.id as string) || memberId;
+    const finalEmail = (updates.email as string) || oldEmail;
+    const finalName = (updates.name as string) || oldName;
+
+    if (updates.id || updates.email || updates.name || updates.role || updates.department || updates.designation || updates.avatar) {
       const userUpdateRes = await UserModel.updateOne(
-        { $or: [{ id: memberId }, { email: oldEmail.toLowerCase() }, { email: finalEmail.toLowerCase() }] },
+        { $or: [{ id: memberId }, { id: finalId }, { email: oldEmail.toLowerCase() }, { email: finalEmail.toLowerCase() }] },
         {
           $set: {
-            id: memberId,
+            id: finalId,
+            ...(updates.employeeId ? { employeeId: updates.employeeId } : {}),
             ...(updates.email ? { email: updates.email } : {}),
             ...(updates.name ? { name: updates.name } : {}),
             ...(updates.avatar ? { avatar: updates.avatar } : {}),
@@ -413,7 +448,7 @@ export async function PATCH(req: NextRequest) {
         try {
           const defaultHash = await hashPassword('123');
           await UserModel.create({
-            id: memberId,
+            id: finalId,
             name: finalName,
             email: finalEmail.toLowerCase(),
             passwordHash: defaultHash,
@@ -428,31 +463,41 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
-    // Cascade name or email changes to TaskModel assignees & creator
-    if ((updates.email || updates.name) && updateTaskAssignees) {
+    // Cascade name, email, employeeId, or designation changes to TaskModel assignees & creator
+    if ((updates.email || updates.name || updates.id || updates.designation) && updateTaskAssignees) {
       try {
         const { TaskModel } = await import('@/models/Task');
         // Update assignees
         await TaskModel.updateMany(
-          { $or: [{ 'assignees.id': memberId }, { 'assignees.email': oldEmail.toLowerCase() }] },
+          { $or: [{ 'assignees.id': memberId }, { 'assignees.id': finalId }, { 'assignees.email': oldEmail.toLowerCase() }] },
           {
             $set: {
+              ...(updates.id ? { 'assignees.$[elem].id': updates.id } : {}),
               ...(updates.email ? { 'assignees.$[elem].email': updates.email } : {}),
               ...(updates.name ? { 'assignees.$[elem].name': updates.name } : {}),
               ...(updates.avatar ? { 'assignees.$[elem].avatar': updates.avatar } : {}),
+              ...(updates.designation ? { 'assignees.$[elem].designation': updates.designation } : {}),
               updatedAt: new Date().toISOString(),
             }
           },
           {
-            arrayFilters: [{ $or: [{ 'elem.id': memberId }, { 'elem.email': oldEmail.toLowerCase() }] }]
+            arrayFilters: [{ $or: [{ 'elem.id': memberId }, { 'elem.id': finalId }, { 'elem.email': oldEmail.toLowerCase() }] }]
           }
         ).exec().catch(() => {});
 
-        // Update task creator name
-        if (updates.name) {
+        // Update task creator
+        if (updates.name || updates.id || updates.email || updates.role) {
           await TaskModel.updateMany(
-            { $or: [{ 'creator.id': memberId }, { 'creator.email': oldEmail.toLowerCase() }] },
-            { $set: { 'creator.name': updates.name, updatedAt: new Date().toISOString() } }
+            { $or: [{ 'creator.id': memberId }, { 'creator.id': finalId }, { 'creator.email': oldEmail.toLowerCase() }] },
+            {
+              $set: {
+                ...(updates.id ? { 'creator.id': updates.id } : {}),
+                ...(updates.name ? { 'creator.name': updates.name } : {}),
+                ...(updates.email ? { 'creator.email': updates.email } : {}),
+                ...(updates.role ? { 'creator.role': updates.role } : {}),
+                updatedAt: new Date().toISOString()
+              }
+            }
           ).exec().catch(() => {});
         }
 
@@ -460,7 +505,7 @@ export async function PATCH(req: NextRequest) {
         broadcastTaskMutation({
           action: 'UPDATED',
           taskId: 'all',
-          taskTitle: `Assignee profile synced (${updates.email || updates.name})`,
+          taskTitle: `Assignee profile synced (${updates.id || updates.email || updates.name})`,
           source: 'member-email-cascade'
         });
       } catch (err) {
@@ -470,7 +515,7 @@ export async function PATCH(req: NextRequest) {
 
     broadcastMemberMutation({
       action: 'UPDATED',
-      memberId,
+      memberId: finalId,
       memberName: updatedMember?.name || oldName,
       memberEmail: updatedMember?.email || oldEmail,
       oldEmail: oldEmail,

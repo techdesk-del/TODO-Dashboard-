@@ -171,9 +171,14 @@ export const AdminHrPortal: React.FC = () => {
     }
   };
 
-  // Flowchart: Staff Directory & Corporate Email Configuration
-  const [memberToEditEmail, setMemberToEditEmail] = useState<TeamMember | null>(null);
+  // Flowchart: Staff Directory & Profile Configuration
+  const [memberToEditProfile, setMemberToEditProfile] = useState<TeamMember | null>(null);
+  const [editMemberNameInput, setEditMemberNameInput] = useState<string>('');
   const [newEmailInput, setNewEmailInput] = useState<string>('');
+  const [editMemberRoleInput, setEditMemberRoleInput] = useState<Role>('EMPLOYEE');
+  const [editMemberEmpIdInput, setEditMemberEmpIdInput] = useState<string>('');
+  const [editMemberDeptInput, setEditMemberDeptInput] = useState<string>('');
+  const [editMemberDesigInput, setEditMemberDesigInput] = useState<string>('');
   const [emailChangeReason, setEmailChangeReason] = useState<string>('');
   const [isUpdatingEmail, setIsUpdatingEmail] = useState<boolean>(false);
   const [emailUpdateError, setEmailUpdateError] = useState<string | null>(null);
@@ -4209,7 +4214,7 @@ export const AdminHrPortal: React.FC = () => {
                   <th style={{ padding: '10px 14px', fontWeight: 800, color: '#334155' }}>Department &amp; Role</th>
                   <th style={{ padding: '10px 14px', fontWeight: 800, color: '#334155' }}>Corporate Email</th>
                   <th style={{ padding: '10px 14px', fontWeight: 800, color: '#334155' }}>Status</th>
-                  <th style={{ padding: '10px 14px', fontWeight: 800, color: '#334155', textAlign: 'center' }}>Email Configuration</th>
+                  <th style={{ padding: '10px 14px', fontWeight: 800, color: '#334155', textAlign: 'center' }}>Profile Configuration</th>
                 </tr>
               </thead>
               <tbody>
@@ -4290,8 +4295,13 @@ export const AdminHrPortal: React.FC = () => {
                         type="button"
                         className="btn-secondary"
                         onClick={() => {
-                          setMemberToEditEmail(member);
-                          setNewEmailInput(member.email);
+                          setMemberToEditProfile(member);
+                          setEditMemberNameInput(member.name || '');
+                          setNewEmailInput(member.email || '');
+                          setEditMemberRoleInput(member.role || 'EMPLOYEE');
+                          setEditMemberEmpIdInput(member.employeeId || member.id || '');
+                          setEditMemberDeptInput(member.department || '');
+                          setEditMemberDesigInput(member.designation || '');
                           setEmailChangeReason('');
                           setEmailUpdateError(null);
                         }}
@@ -4306,10 +4316,10 @@ export const AdminHrPortal: React.FC = () => {
                           background: '#f0f9ff',
                           fontWeight: 700
                         }}
-                        title={`Change email address for ${member.name}`}
+                        title={`Edit profile & credentials for ${member.name}`}
                       >
                         <Edit3 size={13} />
-                        Change Email
+                        Edit Profile
                       </button>
 
                       {/* Flowchart 23: Mark Employee on Leave / Return from Leave */}
@@ -4648,17 +4658,17 @@ export const AdminHrPortal: React.FC = () => {
       {/* ═════════════════════════════════════════════════════════════════════ */}
       {/* MODAL: CHANGE EMPLOYEE CORPORATE EMAIL (ENTERPRISE GOVERNANCE)        */}
       {/* ═════════════════════════════════════════════════════════════════════ */}
-      {memberToEditEmail && (
-        <div className="stream-overlay" onClick={() => !isUpdatingEmail && setMemberToEditEmail(null)}>
-          <div className="stream-modal-card" style={{ maxWidth: '480px' }} onClick={e => e.stopPropagation()}>
+      {memberToEditProfile && (
+        <div className="stream-overlay" onClick={() => !isUpdatingEmail && setMemberToEditProfile(null)}>
+          <div className="stream-modal-card" style={{ maxWidth: '540px' }} onClick={e => e.stopPropagation()}>
             <div className="stream-modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <div style={{ background: '#e0f2fe', padding: '6px', borderRadius: '8px' }}>
-                  <Mail size={18} color="#0284c7" />
+                  <UserCheck size={18} color="#0284c7" />
                 </div>
                 <div>
                   <h3 style={{ fontSize: '1.02rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                    Change Employee Corporate Email
+                    Edit Employee Profile &amp; Governance
                   </h3>
                   <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
                     Enterprise Governance &amp; Identity Management
@@ -4667,7 +4677,7 @@ export const AdminHrPortal: React.FC = () => {
               </div>
               <button
                 className="calendar-nav-btn"
-                onClick={() => !isUpdatingEmail && setMemberToEditEmail(null)}
+                onClick={() => !isUpdatingEmail && setMemberToEditProfile(null)}
               >
                 <X size={16} />
               </button>
@@ -4676,13 +4686,13 @@ export const AdminHrPortal: React.FC = () => {
             {/* Current Employee Info */}
             <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.75rem', marginTop: '0.75rem' }}>
               <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#0f172a' }}>
-                {memberToEditEmail.name}
+                {memberToEditProfile.name}
               </div>
               <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px' }}>
-                {memberToEditEmail.designation} • {memberToEditEmail.department} (ID: {memberToEditEmail.employeeId || memberToEditEmail.id})
+                Role: <strong>{memberToEditProfile.role.replace('_', ' ')}</strong> • Employee ID: <strong>{memberToEditProfile.employeeId || memberToEditProfile.id}</strong>
               </div>
               <div style={{ fontSize: '0.74rem', color: '#475569', marginTop: '4px' }}>
-                Current Email: <strong style={{ color: '#0f172a' }}>{memberToEditEmail.email}</strong>
+                Current Email: <strong style={{ color: '#0f172a' }}>{memberToEditProfile.email}</strong>
               </div>
             </div>
 
@@ -4703,7 +4713,14 @@ export const AdminHrPortal: React.FC = () => {
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
+                const cleanName = editMemberNameInput.trim();
                 const cleanEmail = newEmailInput.trim().toLowerCase();
+                const cleanEmpId = editMemberEmpIdInput.trim();
+
+                if (!cleanName) {
+                  setEmailUpdateError('Full legal name is required.');
+                  return;
+                }
                 if (!cleanEmail) {
                   setEmailUpdateError('Please enter a valid corporate email address.');
                   return;
@@ -4713,12 +4730,8 @@ export const AdminHrPortal: React.FC = () => {
                   setEmailUpdateError(`"${cleanEmail}" is not a valid email address.`);
                   return;
                 }
-                if (cleanEmail === memberToEditEmail.email.toLowerCase()) {
-                  setEmailUpdateError('The new email is identical to the current email.');
-                  return;
-                }
-                if (!emailChangeReason.trim()) {
-                  setEmailUpdateError('A documented governance reason is mandatory for identity auditing.');
+                if (!cleanEmpId) {
+                  setEmailUpdateError('Employee ID cannot be empty.');
                   return;
                 }
 
@@ -4726,22 +4739,41 @@ export const AdminHrPortal: React.FC = () => {
                 setEmailUpdateError(null);
 
                 const res = await updateMember(
-                  memberToEditEmail.id,
-                  { email: cleanEmail },
-                  emailChangeReason.trim()
+                  memberToEditProfile.id,
+                  {
+                    name: cleanName,
+                    email: cleanEmail,
+                    role: editMemberRoleInput,
+                    employeeId: cleanEmpId,
+                    id: cleanEmpId,
+                    department: editMemberDeptInput.trim() || memberToEditProfile.department,
+                    designation: editMemberDesigInput.trim() || memberToEditProfile.designation
+                  },
+                  emailChangeReason.trim() || `Profile updated by Admin (${currentUser.name})`
                 );
 
                 setIsUpdatingEmail(false);
                 if (res.success) {
-                  setMemberToEditEmail(null);
+                  setMemberToEditProfile(null);
                 } else {
-                  setEmailUpdateError(res.error || 'Failed to update email.');
+                  setEmailUpdateError(res.error || 'Failed to update employee profile.');
                 }
               }}
               style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', marginTop: '0.85rem' }}
             >
               <div className="form-field-group">
-                <label className="form-field-label">New Official Corporate Email *</label>
+                <label className="form-field-label">Full Name *</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  required
+                  value={editMemberNameInput}
+                  onChange={e => setEditMemberNameInput(e.target.value)}
+                />
+              </div>
+
+              <div className="form-field-group">
+                <label className="form-field-label">Official Corporate Email *</label>
                 <input
                   type="email"
                   className="form-input"
@@ -4749,20 +4781,65 @@ export const AdminHrPortal: React.FC = () => {
                   placeholder="e.g. techdesk@urbangaon.com"
                   value={newEmailInput}
                   onChange={e => setNewEmailInput(e.target.value)}
-                  autoFocus
                 />
-                <span style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '2px' }}>
-                  Recommended corporate domain: <code>@urbangaon.com</code>
-                </span>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.65rem' }}>
+                <div className="form-field-group">
+                  <label className="form-field-label">Employee ID *</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    required
+                    placeholder="e.g. mem-12 or EMP-1001"
+                    value={editMemberEmpIdInput}
+                    onChange={e => setEditMemberEmpIdInput(e.target.value)}
+                  />
+                </div>
+
+                <div className="form-field-group">
+                  <label className="form-field-label">Role *</label>
+                  <select
+                    className="form-select"
+                    value={editMemberRoleInput}
+                    onChange={e => setEditMemberRoleInput(e.target.value as Role)}
+                  >
+                    <option value="SUPER_ADMIN">SUPER ADMIN</option>
+                    <option value="ADMIN">ADMIN</option>
+                    <option value="MANAGER">MANAGER</option>
+                    <option value="EMPLOYEE">EMPLOYEE</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.65rem' }}>
+                <div className="form-field-group">
+                  <label className="form-field-label">Department</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editMemberDeptInput}
+                    onChange={e => setEditMemberDeptInput(e.target.value)}
+                  />
+                </div>
+
+                <div className="form-field-group">
+                  <label className="form-field-label">Designation</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editMemberDesigInput}
+                    onChange={e => setEditMemberDesigInput(e.target.value)}
+                  />
+                </div>
               </div>
 
               <div className="form-field-group">
-                <label className="form-field-label">Documented Governance Reason *</label>
+                <label className="form-field-label">Documented Governance Reason</label>
                 <textarea
                   className="form-input"
-                  required
                   rows={2}
-                  placeholder="e.g. Domain migration to techdesk@urbangaon.com, role shift, official mailbox reorganization..."
+                  placeholder="e.g. Role shift, employee ID change, profile correction..."
                   value={emailChangeReason}
                   onChange={e => setEmailChangeReason(e.target.value)}
                 />
@@ -4773,7 +4850,7 @@ export const AdminHrPortal: React.FC = () => {
                   type="button"
                   className="btn-secondary"
                   disabled={isUpdatingEmail}
-                  onClick={() => setMemberToEditEmail(null)}
+                  onClick={() => setMemberToEditProfile(null)}
                 >
                   Cancel
                 </button>
@@ -4790,7 +4867,7 @@ export const AdminHrPortal: React.FC = () => {
                   }}
                 >
                   <Check size={14} />
-                  {isUpdatingEmail ? 'Updating...' : 'Save & Update Email'}
+                  {isUpdatingEmail ? 'Updating...' : 'Save & Update Profile'}
                 </button>
               </div>
             </form>
