@@ -226,6 +226,7 @@ export async function POST(req: NextRequest) {
       notes: body.notes?.trim() || '',
       pastDueReason: isPastDue ? body.pastDueReason.trim() : (body.pastDueReason?.trim() || ''),
       inputMethod: body.inputMethod || 'Type',
+      requiresCeoApproval: true,
       isJustAdded: false,
       updatedAt: new Date().toISOString(),
       createdAt: body.createdAt || new Date().toISOString(),
@@ -400,9 +401,19 @@ export async function PATCH(req: NextRequest) {
 
     // Authorization: Only Admin, Super Admin, and CEO can cancel tasks
     const callerName = (typeof actorInput === 'string' ? actorInput : actorInput?.name) || req.headers.get('x-user-name') || '';
-    const isCallerAdminOrCeo = actorRole === 'ADMIN' || actorRole === 'SUPER_ADMIN' || callerName.toLowerCase().includes('sukh sagar');
+    const callerEmail = req.headers.get('x-user-email') || '';
+    const isCallerAdminOrCeo = actorRole === 'ADMIN' || actorRole === 'SUPER_ADMIN' || callerName.toLowerCase().includes('sukh sagar') || callerEmail.toLowerCase().includes('ceo@urbangaon.com');
     if (body.status === 'Cancelled' && existingTask.status !== 'Cancelled' && !isCallerAdminOrCeo) {
       return NextResponse.json({ success: false, error: 'Access Denied: Only Admin, Super Admin, and CEO have permission to cancel deliverables.' }, { status: 403 });
+    }
+
+    // Executive Governance Rule: Final Approval to Sukh Sagar Sir before completing any deliverable
+    const isCeoSukhSagar = callerName.toLowerCase().includes('sukh sagar') || callerEmail.toLowerCase().includes('ceo@urbangaon.com') || (actorRole === 'SUPER_ADMIN' && callerName.toLowerCase().includes('sukh sagar'));
+    if (body.status === 'Done' && existingTask.status !== 'Done' && !isCeoSukhSagar) {
+      body.status = 'Review';
+      body.pendingCeoApproval = true;
+      body.ceoApprovalRequestedAt = new Date().toISOString();
+      body.ceoApprovalRequestedBy = callerName || 'Staff Member';
     }
 
     const updated = await TaskModel.findOneAndUpdate(

@@ -78,6 +78,13 @@ export interface Task {
     confidenceScore?: number;
   };
   editedByAdmin?: boolean;
+  requiresCeoApproval?: boolean;
+  pendingCeoApproval?: boolean;
+  ceoApprovalRequestedAt?: string;
+  ceoApprovalRequestedBy?: string;
+  ceoApprovedAt?: string;
+  ceoApprovedBy?: string;
+  ceoRejectionReason?: string;
   createdAt: string;
   updatedAt: string;
   isArchived?: boolean;

@@ -64,7 +64,7 @@ export async function runOverdueAndNoReasonEvaluation(options?: {
 
     const thresholdDays = options?.thresholdDays ?? 3;
     const sendNotifications = options?.sendNotifications ?? true;
-    const baseUrl = options?.baseUrl || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const baseUrl = options?.baseUrl || process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://todo-dashboard-rhvx.vercel.app';
 
     const todayStr = getTodayStr();
     const todayTime = new Date(todayStr).getTime();

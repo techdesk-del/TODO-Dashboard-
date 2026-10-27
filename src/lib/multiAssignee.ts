@@ -72,6 +72,17 @@ export function computeMultiAssigneeStatus(task: {
     };
   }
 
+  // Executive Governance: Pending CEO Final Approval check (Awaiting Sukh Sagar Sir)
+  if (task.status === 'Review' || (task as any).pendingCeoApproval) {
+    return {
+      status: 'Review',
+      progressPercent: completedCount > 0 ? progressPercent : 95,
+      completedCount,
+      totalCount,
+      progressText: `${completedCount} of ${totalCount} submitted (Awaiting CEO Final Approval)`,
+    };
+  }
+
   // Flowchart 8 Step 6: All completed or cancelled?
   const allCompletedOrCancelled = assignees.every(a => a.status === 'Done' || a.status === 'Cancelled');
   if (allCompletedOrCancelled && completedCount > 0) {

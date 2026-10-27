@@ -33,8 +33,10 @@ import {
   Printer,
   ChevronRight,
   ExternalLink,
-  Activity
+  Activity,
+  Check
 } from 'lucide-react';
+import confetti from 'canvas-confetti';
 
 export const CeoPortal: React.FC = () => {
   const { 
@@ -47,6 +49,8 @@ export const CeoPortal: React.FC = () => {
     setViewingAuditForTaskId,
     setActiveView,
     deleteTask,
+    approveTaskByCeo,
+    rejectTaskByCeo,
     currentUser,
     setBannerNotification,
     refreshFromDB
@@ -58,12 +62,17 @@ export const CeoPortal: React.FC = () => {
 
   // Local Filter & Search States
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'Not Started' | 'In Progress' | 'Done' | 'On Hold'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'Not Started' | 'In Progress' | 'Review' | 'Done' | 'On Hold'>('ALL');
   const [departmentFilter, setDepartmentFilter] = useState<string>('ALL');
   const [isMemberDropdownOpen, setIsMemberDropdownOpen] = useState(false);
   const [inspectingTask, setInspectingTask] = useState<Task | null>(null);
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Deliverables awaiting CEO Final Approval
+  const pendingCeoApprovalTasks = useMemo(() => {
+    return uncancelledTasks.filter(t => t.status === 'Review' || t.pendingCeoApproval);
+  }, [uncancelledTasks]);
 
   // Active member for drilldown
   const activeMember = useMemo(() => {
@@ -108,8 +117,12 @@ export const CeoPortal: React.FC = () => {
   const displayedTasks = useMemo(() => {
     return memberFilteredTasks.filter(task => {
       // Status filter
-      if (statusFilter !== 'ALL' && task.status !== statusFilter) {
-        return false;
+      if (statusFilter !== 'ALL') {
+        if (statusFilter === 'Review') {
+          if (task.status !== 'Review' && !task.pendingCeoApproval) return false;
+        } else if (task.status !== statusFilter) {
+          return false;
+        }
       }
 
       // Department filter
@@ -336,6 +349,136 @@ export const CeoPortal: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* ─────────────────────────────────────────────────────────────
+          1.5 PENDING CEO FINAL APPROVALS COMMAND QUEUE
+      ────────────────────────────────────────────────────────────── */}
+      {pendingCeoApprovalTasks.length > 0 && (
+        <div style={{
+          background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+          border: '1.5px solid #fde68a',
+          borderRadius: '14px',
+          padding: '1.1rem 1.4rem',
+          boxShadow: '0 4px 12px rgba(180, 83, 9, 0.08)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.6rem', marginBottom: '0.85rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '1.1rem' }}>⏳</span>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 800, color: '#92400e' }}>
+                  Deliverables Awaiting Your Final Approval ({pendingCeoApprovalTasks.length})
+                </h3>
+                <p style={{ margin: 0, fontSize: '0.74rem', color: '#b45309' }}>
+                  Staff have submitted these deliverables. Executive sign-off from Mr. Sukh Sagar Singh Bhati is required before completion.
+                </p>
+              </div>
+            </div>
+            <span style={{
+              background: '#fef08a',
+              border: '1px solid #fde047',
+              color: '#854d0e',
+              padding: '3px 10px',
+              borderRadius: '999px',
+              fontSize: '0.72rem',
+              fontWeight: 800
+            }}>
+              Final Approval Queue
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+            {pendingCeoApprovalTasks.map(t => (
+              <div
+                key={t.id}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #fde68a',
+                  borderRadius: '10px',
+                  padding: '0.75rem 1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '0.65rem',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+                }}
+              >
+                <div style={{ minWidth: '240px', flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                    <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#0f172a' }}>
+                      {t.title}
+                    </span>
+                    <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '1px 6px', borderRadius: '4px', background: '#eff6ff', color: '#1d4ed8' }}>
+                      {t.department}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '3px' }}>
+                    Assignee: <strong style={{ color: '#0f172a' }}>{t.assignees?.map(a => a.name).join(', ') || 'Staff'}</strong>
+                    {t.ceoApprovalRequestedBy && <span> • Submitted by: <strong style={{ color: '#92400e' }}>{t.ceoApprovalRequestedBy}</strong></span>}
+                    <span> • Scheduled: <strong>{t.scheduledDate}</strong></span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const note = prompt(`Enter optional CEO approval note for "${t.title}":`, 'Final approval granted. Deliverable verified and marked Completed.');
+                      if (note === null) return;
+                      confetti({ particleCount: 70, spread: 80, origin: { y: 0.6 } });
+                      approveTaskByCeo(t.id, note.trim());
+                    }}
+                    style={{
+                      background: 'linear-gradient(135deg, #16a34a, #15803d)',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '6px 14px',
+                      fontSize: '0.75rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      boxShadow: '0 2px 4px rgba(22, 163, 74, 0.25)'
+                    }}
+                    title="Grant Final Approval and Mark Done"
+                  >
+                    <Check size={14} />
+                    <span>Approve & Complete (Done)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const reason = prompt(`Enter revision instructions for "${t.title}":`);
+                      if (!reason || !reason.trim()) return;
+                      rejectTaskByCeo(t.id, reason.trim());
+                    }}
+                    style={{
+                      background: '#ffffff',
+                      color: '#b91c1c',
+                      border: '1px solid #fca5a5',
+                      borderRadius: '6px',
+                      padding: '6px 10px',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                    title="Return to staff with feedback for revision"
+                  >
+                    <X size={14} />
+                    <span>Request Changes</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ─────────────────────────────────────────────────────────────
           2. EXECUTIVE KPI CARDS (4-CARD GRID)
@@ -814,6 +957,7 @@ export const CeoPortal: React.FC = () => {
 
           {[
             { id: 'ALL', label: 'All Tasks', count: memberFilteredTasks.length },
+            { id: 'Review', label: '⏳ Awaiting Final Approval', count: memberFilteredTasks.filter(t => t.status === 'Review' || t.pendingCeoApproval).length },
             { id: 'In Progress', label: 'In Progress', count: inProgressCount },
             { id: 'Not Started', label: 'Queued', count: notStartedCount },
             { id: 'Done', label: 'Completed', count: completedCount },

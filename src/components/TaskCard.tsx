@@ -40,6 +40,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
   const {
     updateTask,
     completeTask,
+    approveTaskByCeo,
+    rejectTaskByCeo,
     updateAssigneeStatus,
     reassignOrCloseAssignee,
     holdTask,
@@ -596,6 +598,26 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
               <span className="task-pill-badge badge-overdue" style={{ margin: 0, padding: '2px 7px', fontSize: '0.68rem', whiteSpace: 'nowrap' }} title={hasDelayReason ? `Delay Reason: "${task.delayReason || task.pastDueReason}"` : 'Overdue without recorded reason'}>
                 {hasDelayReason ? 'OVERDUE (REASON RECORDED)' : 'PENDING NO REASON'}
               </span>
+            ) : (task.status === 'Review' || task.pendingCeoApproval) ? (
+              <span
+                className="task-pill-badge"
+                style={{
+                  margin: 0,
+                  padding: '2px 8px',
+                  fontSize: '0.68rem',
+                  fontWeight: 800,
+                  background: '#fef3c7',
+                  color: '#92400e',
+                  border: '1px solid #fde68a',
+                  whiteSpace: 'nowrap',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+                title={task.ceoApprovalRequestedBy ? `Submitted by ${task.ceoApprovalRequestedBy} for CEO Final Approval` : 'Awaiting CEO Final Approval before completion'}
+              >
+                <span>⏳ AWAITING CEO APPROVAL</span>
+              </span>
             ) : comp.status === 'Done' ? (
               <span className="task-pill-badge badge-done" style={{ margin: 0, padding: '2px 7px', fontSize: '0.68rem', whiteSpace: 'nowrap' }}>
                 ✓ COMPLETED
@@ -662,7 +684,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
           </div>
         </div>
 
-        {/* Dropdown Container: Detailed actions, edit tools, assignees & banners */}
+            {/* Dropdown Container: Detailed actions, edit tools, assignees & banners */}
         {isExpanded && (
           <div
             className="task-dropdown-details"
@@ -675,6 +697,113 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
               gap: '0.65rem'
             }}
           >
+            {/* CEO Final Approval Governance Banner */}
+            {(task.status === 'Review' || task.pendingCeoApproval) && (
+              <div
+                style={{
+                  background: 'linear-gradient(135deg, #fef3c7, #fef9c3)',
+                  border: '1.5px solid #fde68a',
+                  borderRadius: '8px',
+                  padding: '0.65rem 0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '0.5rem',
+                  boxShadow: '0 1px 3px rgba(180, 83, 9, 0.08)'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '220px' }}>
+                  <div style={{
+                    width: '30px',
+                    height: '30px',
+                    borderRadius: '50%',
+                    background: '#fef08a',
+                    color: '#854d0e',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 800,
+                    fontSize: '0.85rem',
+                    flexShrink: 0
+                  }}>
+                    ⏳
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: '0.8125rem', color: '#92400e' }}>
+                      Pending Final Approval from CEO Mr. Sukh Sagar Singh Bhati
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: '#b45309', marginTop: '1px' }}>
+                      {task.ceoApprovalRequestedBy ? `Submitted by ${task.ceoApprovalRequestedBy} • ` : ''}Executive approval required prior to marking deliverable completed.
+                    </div>
+                  </div>
+                </div>
+
+                {isCeo ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const note = prompt('Optional CEO endorsement / approval note:', 'Final approval granted. Deliverable completed per standards.');
+                        if (note === null) return;
+                        confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
+                        approveTaskByCeo(task.id, note.trim());
+                      }}
+                      style={{
+                        background: 'linear-gradient(135deg, #16a34a, #15803d)',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '6px 12px',
+                        fontSize: '0.75rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        boxShadow: '0 2px 4px rgba(21, 128, 61, 0.2)'
+                      }}
+                      title="Grant CEO Final Approval to mark this deliverable Completed (Done)"
+                    >
+                      <Check size={13} />
+                      <span>Approve & Complete (Done)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const reason = prompt('Enter CEO feedback / revision instructions for staff:');
+                        if (!reason || !reason.trim()) return;
+                        rejectTaskByCeo(task.id, reason.trim());
+                      }}
+                      style={{
+                        background: '#ffffff',
+                        color: '#b91c1c',
+                        border: '1px solid #fca5a5',
+                        borderRadius: '6px',
+                        padding: '6px 10px',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                      title="Return deliverable to staff with instructions for revision"
+                    >
+                      <X size={13} />
+                      <span>Request Revision</span>
+                    </button>
+                  </div>
+                ) : (
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#92400e', background: '#fef08a', padding: '3px 8px', borderRadius: '4px', border: '1px solid #fde047' }}>
+                    Routed to CEO Desk for Final Sign-Off
+                  </span>
+                )}
+              </div>
+            )}
+
             {/* Dedicated Action Toolbar Row */}
             <div
               className="task-actions-group"

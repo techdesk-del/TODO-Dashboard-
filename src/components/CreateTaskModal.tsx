@@ -278,6 +278,8 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
       time: dueTime,
       priority,
       status: 'Not Started', // Flowchart 6: Set initial status to Not Started
+      requiresCeoApproval: true,
+      pendingCeoApproval: false,
       project: finalProject,
       location,
       department,

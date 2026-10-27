@@ -5,8 +5,70 @@
  * zero-config Ethereal test account when SMTP credentials are not yet set.
  */
 
+import fs from 'fs';
+import path from 'path';
 import nodemailer, { type Transporter } from 'nodemailer';
 import type { Task } from '@/types';
+
+/**
+ * Official UrbanGaon Corporate Production Workspace URL
+ */
+export const PRODUCTION_WORKSPACE_URL = 'https://todo-dashboard-rhvx.vercel.app';
+
+/**
+ * Returns safe production-first URL for emails, never leaking localhost or dev IPs
+ */
+export function getAppBaseUrl(overrideUrl?: string): string {
+  if (overrideUrl && overrideUrl.trim() && !overrideUrl.includes('localhost') && !overrideUrl.includes('127.0.0.1')) {
+    return overrideUrl.trim().replace(/\/$/, '');
+  }
+  if (process.env.NEXT_PUBLIC_APP_URL && !process.env.NEXT_PUBLIC_APP_URL.includes('localhost') && !process.env.NEXT_PUBLIC_APP_URL.includes('127.0.0.1')) {
+    return process.env.NEXT_PUBLIC_APP_URL.trim().replace(/\/$/, '');
+  }
+  return PRODUCTION_WORKSPACE_URL;
+}
+
+/**
+ * Prepares inline CID logo attachment for email clients (Gmail, Outlook, Apple Mail)
+ */
+export function getEmailLogoAttachments() {
+  const logoPath = path.join(process.cwd(), 'public', 'urbangaon-logo.png');
+  if (fs.existsSync(logoPath)) {
+    return [
+      {
+        filename: 'urbangaon-logo.png',
+        path: logoPath,
+        cid: 'urbangaon-logo',
+      },
+    ];
+  }
+  return [];
+}
+
+/**
+ * Universal, email-safe brand header featuring the official UrbanGaon logo and "Open Workspace" action
+ */
+export function getEmailHeaderHtml(subtitle = 'Enterprise Task Workspace', actionUrl = PRODUCTION_WORKSPACE_URL): string {
+  return `
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #ffffff; border-bottom: 3px solid #2563eb; padding: 20px 24px;">
+    <tr>
+      <td align="left" vertical-align="middle" style="padding: 0;">
+        <a href="${PRODUCTION_WORKSPACE_URL}" target="_blank" style="text-decoration: none; display: inline-block;">
+          <img src="cid:urbangaon-logo" alt="UrbanGaon - a perfect balance" style="height: 48px; width: auto; max-width: 240px; display: block; border: 0;" />
+        </a>
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 11px; color: #64748b; margin-top: 5px; font-weight: 600; letter-spacing: 0.02em;">
+          ${subtitle}
+        </div>
+      </td>
+      <td align="right" vertical-align="middle" style="padding: 0;">
+        <a href="${actionUrl}" target="_blank" style="display: inline-block; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 12px; font-weight: 800; color: #1e40af; background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 8px; padding: 9px 16px; text-decoration: none; box-shadow: 0 1px 3px rgba(37,99,235,0.12);">
+          Open Workspace &rarr;
+        </a>
+      </td>
+    </tr>
+  </table>
+  `;
+}
 
 export interface SendDigestOptions {
   toEmail: string;
@@ -57,7 +119,7 @@ export async function createEmailTransporter(): Promise<{ transporter: Transport
 
 export function generateDigestHtml(opts: SendDigestOptions): string {
   const { toName, overdueTasks, todayTasks, upcomingTasks, dateString, baseUrl } = opts;
-  const appBase = baseUrl || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  const appBase = getAppBaseUrl(baseUrl);
 
   return `
 <!DOCTYPE html>
@@ -67,9 +129,6 @@ export function generateDigestHtml(opts: SendDigestOptions): string {
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 20px; }
     .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-    .header { background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); padding: 24px; color: #ffffff; }
-    .brand { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
-    .subhead { font-size: 13px; opacity: 0.9; margin-top: 4px; }
     .content { padding: 24px; }
     .greeting { font-size: 15px; margin-bottom: 20px; line-height: 1.5; }
     .section-title { font-size: 12px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 24px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
@@ -90,10 +149,7 @@ export function generateDigestHtml(opts: SendDigestOptions): string {
 </head>
 <body>
   <div class="container">
-    <div class="header">
-      <div class="brand">UrbanGaon AI Todo Platform</div>
-      <div class="subhead">Daily Executive Operational Digest | ${dateString}</div>
-    </div>
+    ${getEmailHeaderHtml(`Daily Executive Operational Digest | ${dateString}`, appBase)}
     <div class="content">
       <div class="greeting">
         Good morning <strong>${toName}</strong>,<br>
@@ -174,6 +230,7 @@ export async function sendMorningDigestEmail(opts: SendDigestOptions) {
   let { transporter, isTestAccount } = await createEmailTransporter();
   const html = generateDigestHtml(opts);
   const from = process.env.SMTP_FROM || '"UrbanGaon Dispatcher" <alerts@urbangaon.com>';
+  const logoAttachments = getEmailLogoAttachments();
 
   let info;
   try {
@@ -182,6 +239,7 @@ export async function sendMorningDigestEmail(opts: SendDigestOptions) {
       to: opts.toEmail,
       subject: `Daily Operational Focus: ${opts.dateString} - ${opts.toName}`,
       html,
+      attachments: logoAttachments,
     });
   } catch (sendErr) {
     console.warn('[Live SMTP failed, falling back to Ethereal Mailbox]:', sendErr);
@@ -199,6 +257,7 @@ export async function sendMorningDigestEmail(opts: SendDigestOptions) {
       to: opts.toEmail,
       subject: `Daily Operational Focus: ${opts.dateString} - ${opts.toName}`,
       html,
+      attachments: logoAttachments,
     });
   }
 
@@ -411,10 +470,7 @@ export function generatePasswordResetHtml(opts: SendPasswordResetOptions): strin
 </head>
 <body>
   <div class="container">
-    <div class="header">
-      <div class="brand">UrbanGaon Task Register</div>
-      <div class="subhead">Enterprise Identity & Access Management</div>
-    </div>
+    ${getEmailHeaderHtml('Enterprise Identity & Access Management | Account Verification', resetLink || PRODUCTION_WORKSPACE_URL)}
     <div class="content">
       <div class="greeting">
         Hello <strong>${toName}</strong>,
@@ -462,6 +518,7 @@ export async function sendPasswordResetEmail(opts: SendPasswordResetOptions) {
   let { transporter, isTestAccount } = await createEmailTransporter();
   const html = generatePasswordResetHtml(opts);
   const from = process.env.SMTP_FROM || '"UrbanGaon Dispatcher" <techdesk@urbangaon.com>';
+  const logoAttachments = getEmailLogoAttachments();
 
   let info;
   try {
@@ -470,6 +527,7 @@ export async function sendPasswordResetEmail(opts: SendPasswordResetOptions) {
       to: opts.toEmail,
       subject: `UrbanGaon Account Verification Code: ${opts.resetCode}`,
       html,
+      attachments: logoAttachments,
     });
   } catch (sendErr) {
     console.warn('[Live SMTP failed, falling back to Ethereal Mailbox]:', sendErr);
@@ -487,6 +545,7 @@ export async function sendPasswordResetEmail(opts: SendPasswordResetOptions) {
       to: opts.toEmail,
       subject: `UrbanGaon Account Verification Code: ${opts.resetCode}`,
       html,
+      attachments: logoAttachments,
     });
   }
 
@@ -518,7 +577,7 @@ export function generateWelcomeEmailHtml(opts: SendWelcomeEmailOptions): string 
     designation,
     role,
     initialPassword = '123',
-    loginUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000',
+    loginUrl = getAppBaseUrl(opts.loginUrl),
   } = opts;
 
   const roleLabel =
@@ -536,9 +595,6 @@ export function generateWelcomeEmailHtml(opts: SendWelcomeEmailOptions): string 
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0f172a; color: #1e293b; margin: 0; padding: 24px 12px; }
     .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15); }
-    .header { background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #2563eb 100%); padding: 32px 24px; color: #ffffff; text-align: center; }
-    .brand { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
-    .subhead { font-size: 13px; color: #93c5fd; margin-top: 6px; font-weight: 500; }
     .content { padding: 32px 28px; }
     .greeting { font-size: 16px; margin-bottom: 16px; line-height: 1.6; color: #1e293b; }
     .intro-text { font-size: 14px; color: #475569; line-height: 1.6; margin-bottom: 24px; }
@@ -546,7 +602,7 @@ export function generateWelcomeEmailHtml(opts: SendWelcomeEmailOptions): string 
     .card-title { font-size: 12px; font-weight: 800; color: #1e3a8a; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 14px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
     .password-badge { background: #e0e7ff; color: #3730a3; padding: 3px 10px; border-radius: 4px; font-family: monospace; font-size: 15px; font-weight: 800; }
     .cta-container { text-align: center; margin: 28px 0 20px 0; }
-    .cta-btn { display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff !important; text-decoration: none; font-weight: 700; font-size: 14px; padding: 12px 28px; border-radius: 8px; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.35); }
+    .cta-btn { display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff !important; text-decoration: none; font-weight: 800; font-size: 15px; padding: 14px 34px; border-radius: 8px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35); letter-spacing: 0.02em; }
     .instructions { background: #f0fdf4; border-left: 4px solid #16a34a; border-radius: 6px; padding: 14px 16px; margin: 20px 0; font-size: 13px; color: #14532d; line-height: 1.5; }
     .warning { font-size: 12px; color: #64748b; border-top: 1px solid #f1f5f9; padding-top: 18px; margin-top: 24px; line-height: 1.5; }
     .footer { background: #f8fafc; padding: 18px 24px; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0; text-align: center; }
@@ -554,10 +610,7 @@ export function generateWelcomeEmailHtml(opts: SendWelcomeEmailOptions): string 
 </head>
 <body>
   <div class="container">
-    <div class="header">
-      <div class="brand">UrbanGaon Task Register</div>
-      <div class="subhead">Enterprise Identity & Access Management | Welcome Credentials</div>
-    </div>
+    ${getEmailHeaderHtml('Enterprise Identity & Access Management | Welcome Credentials', loginUrl)}
     <div class="content">
       <div class="greeting">
         Welcome to UrbanGaon, <strong>${toName}</strong>! </div>
@@ -598,7 +651,10 @@ export function generateWelcomeEmailHtml(opts: SendWelcomeEmailOptions): string 
       </div>
 
       <div class="cta-container">
-        <a href="${loginUrl}" class="cta-btn" target="_blank">Access UrbanGaon Workspace</a>
+        <a href="${loginUrl}" class="cta-btn" target="_blank">🚀 Open Workspace</a>
+        <div style="margin-top: 10px; font-size: 12px; color: #64748b;">
+          Link: <a href="${loginUrl}" target="_blank" style="color: #2563eb; text-decoration: underline;">${loginUrl}</a>
+        </div>
       </div>
 
       <div class="instructions">
@@ -627,6 +683,7 @@ export async function sendWelcomeCredentialsEmail(opts: SendWelcomeEmailOptions)
   let { transporter, isTestAccount } = await createEmailTransporter();
   const html = generateWelcomeEmailHtml(opts);
   const from = process.env.SMTP_FROM || '"UrbanGaon Executive Dispatcher" <techdesk@urbangaon.com>';
+  const logoAttachments = getEmailLogoAttachments();
 
   let info;
   try {
@@ -635,6 +692,7 @@ export async function sendWelcomeCredentialsEmail(opts: SendWelcomeEmailOptions)
       to: opts.toEmail,
       subject: `Welcome to UrbanGaon - Official Credentials & Account Provisioned (${opts.toName})`,
       html,
+      attachments: logoAttachments,
     });
   } catch (sendErr) {
     console.warn('[Live SMTP failed, falling back to Ethereal Mailbox]:', sendErr);
@@ -652,6 +710,7 @@ export async function sendWelcomeCredentialsEmail(opts: SendWelcomeEmailOptions)
       to: opts.toEmail,
       subject: `Welcome to UrbanGaon - Official Credentials & Account Provisioned (${opts.toName})`,
       html,
+      attachments: logoAttachments,
     });
   }
 
@@ -677,9 +736,7 @@ export async function sendSecurityLockoutAlertEmail(opts: {
 }) {
   const duration = opts.lockDurationMinutes || 15;
   const from = process.env.SMTP_FROM || '"UrbanGaon Security Center" <techdesk@urbangaon.com>';
-  const resetUrl = process.env.NEXTAUTH_URL
-    ? `${process.env.NEXTAUTH_URL}/?action=forgot_password`
-    : 'http://localhost:3000/?action=forgot_password';
+  const resetUrl = `${getAppBaseUrl()}/?action=forgot_password`;
 
   const html = `
 <!DOCTYPE html>
@@ -781,10 +838,7 @@ export async function sendTwoFactorOtpEmail(opts: {
 </head>
 <body>
   <div class="container">
-    <div class="header">
-      <div class="title">Two-Step Verification Code</div>
-      <div class="subhead">${opts.role === 'SUPER_ADMIN' ? 'Super Admin / Director' : 'Admin / Talent HR'} Secure Access Authorization</div>
-    </div>
+    ${getEmailHeaderHtml('Two-Step Verification Protocol | Secure Authorization', PRODUCTION_WORKSPACE_URL)}
     <div class="content">
       <p style="font-size: 14px; line-height: 1.6; margin: 0 0 16px 0; text-align: left;">
         Hello <strong>${opts.toName}</strong>,<br>
@@ -794,6 +848,11 @@ export async function sendTwoFactorOtpEmail(opts: {
       <p style="font-size: 12px; color: #b45309; background: #fef3c7; border: 1px solid #fcd34d; padding: 8px 12px; border-radius: 6px; font-weight: 600; margin: 16px 0;">
         This verification code expires in 10 minutes. Under corporate security protocol, 1 retry is permitted upon error.
       </p>
+      <div style="text-align: center; margin: 20px 0;">
+        <a href="${PRODUCTION_WORKSPACE_URL}" target="_blank" style="display: inline-block; background: #2563eb; color: #ffffff !important; padding: 11px 26px; border-radius: 6px; font-weight: 700; font-size: 13px; text-decoration: none;">
+          🚀 Open Workspace
+        </a>
+      </div>
       <div class="notice">
         If you did not initiate this login request, change your corporate password immediately.
       </div>
@@ -813,6 +872,7 @@ export async function sendTwoFactorOtpEmail(opts: {
       to: opts.toEmail,
       subject: `Your UrbanGaon 2-Step Verification Code: ${opts.otpCode} (${opts.role})`,
       html,
+      attachments: getEmailLogoAttachments(),
     });
     console.log(`[2FA OTP] Code sent to ${opts.toEmail}`);
     return { success: true };
@@ -1118,7 +1178,7 @@ export async function sendTaskAssignmentEmail(opts: SendTaskAssignmentOptions) {
   }
 
   const from = process.env.SMTP_FROM || '"UrbanGaon Task Operations" <techdesk@urbangaon.com>';
-  const appBase = opts.loginUrl || process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : '') || 'https://todo-dashboard-rhvx.vercel.app';
+  const appBase = getAppBaseUrl(opts.loginUrl);
   const taskDirectLink = opts.taskId ? `${appBase}/?taskId=${encodeURIComponent(opts.taskId)}` : appBase;
   const executionTime = opts.time || '09:00 AM';
 
@@ -1131,6 +1191,7 @@ export async function sendTaskAssignmentEmail(opts: SendTaskAssignmentOptions) {
 
   try {
     const { transporter } = await createEmailTransporter();
+    const logoAttachments = getEmailLogoAttachments();
 
     for (const recipient of recipients) {
       if (!recipient.email) continue;
@@ -1166,9 +1227,6 @@ export async function sendTaskAssignmentEmail(opts: SendTaskAssignmentOptions) {
   <style>
     body { margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; color: #1e293b; -webkit-font-smoothing: antialiased; }
     .email-container { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #cbd5e1; overflow: hidden; box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08); }
-    .email-header { background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); padding: 26px 28px; color: #ffffff; border-bottom: 3px solid #d97706; }
-    .brand-title { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; color: #ffffff; margin: 0; }
-    .brand-subtitle { font-size: 12px; color: #93c5fd; margin-top: 4px; font-weight: 500; letter-spacing: 0.02em; }
     .email-body { padding: 28px; font-size: 14px; line-height: 1.6; color: #334155; }
     .greeting { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
     .task-card { background: #f8fafc; border: 1px solid #e2e8f0; border-top: 4px solid ${priorityBarColor}; border-radius: 8px; padding: 20px; margin: 20px 0; }
@@ -1182,16 +1240,13 @@ export async function sendTaskAssignmentEmail(opts: SendTaskAssignmentOptions) {
     .callout-box { background: #eff6ff; border-left: 3px solid #2563eb; border-radius: 4px; padding: 10px 14px; margin-top: 14px; font-size: 12px; color: #1e40af; }
     .warning-box { background: #fff7ed; border-left: 3px solid #ea580c; border-radius: 4px; padding: 10px 14px; margin-top: 14px; font-size: 12px; color: #9a3412; }
     .cta-container { text-align: center; margin-top: 24px; }
-    .cta-button { display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff !important; padding: 12px 28px; border-radius: 6px; font-weight: 700; font-size: 14px; text-decoration: none; box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3); }
+    .cta-button { display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff !important; padding: 14px 34px; border-radius: 8px; font-weight: 800; font-size: 15px; text-decoration: none; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35); letter-spacing: 0.02em; }
     .email-footer { background: #f8fafc; padding: 18px 24px; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0; text-align: center; line-height: 1.5; }
   </style>
 </head>
 <body>
   <div class="email-container">
-    <div class="email-header">
-      <div class="brand-title">UrbanGaon Intelligent Todo Platform</div>
-      <div class="brand-subtitle">${headerSubtitle}</div>
-    </div>
+    ${getEmailHeaderHtml(headerSubtitle, taskDirectLink)}
     <div class="email-body">
       <div class="greeting">Dear ${recipient.name},</div>
       ${introHtml}
@@ -1240,8 +1295,13 @@ export async function sendTaskAssignmentEmail(opts: SendTaskAssignmentOptions) {
         </div>` : ''}
       </div>
 
-      <div class="cta-container">
-        <a href="${taskDirectLink}" class="cta-button">Open Deliverable in Workspace</a>
+      <div class="cta-container" style="text-align: center; margin: 30px 0 20px 0;">
+        <a href="${taskDirectLink}" target="_blank" class="cta-button">
+          🚀 Open Workspace
+        </a>
+        <div style="margin-top: 10px; font-size: 12px; color: #64748b;">
+          Direct Access: <a href="${taskDirectLink}" target="_blank" style="color: #2563eb; text-decoration: underline;">https://todo-dashboard-rhvx.vercel.app/</a>
+        </div>
       </div>
     </div>
     <div class="email-footer">
@@ -1259,6 +1319,7 @@ export async function sendTaskAssignmentEmail(opts: SendTaskAssignmentOptions) {
           to: recipient.email,
           subject,
           html,
+          attachments: logoAttachments,
         });
         sentCount++;
         console.log(`[Task Assignment Email] [OK] Dispatched successfully to ${recipient.email} (${recipient.name}) for deliverable: "${opts.taskTitle}"`);
@@ -1448,24 +1509,31 @@ export async function sendTaskEscalatedEmail(opts: {
   try {
     const { transporter } = await createEmailTransporter();
     const from = process.env.EMAIL_FROM || '"UrbanGaon Escalations" <alerts@urbangaon.com>';
+    const taskDirectLink = opts.taskId && opts.taskId !== 'N/A' ? `${PRODUCTION_WORKSPACE_URL}/?taskId=${encodeURIComponent(opts.taskId)}` : PRODUCTION_WORKSPACE_URL;
     const html = `<!DOCTYPE html>
 <html>
-<body style="font-family: Arial, sans-serif; background: #f8fafc; padding: 20px;">
-  <div style="max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1.5px solid #fecdd3; overflow: hidden;">
-    <div style="background: #e11d48; color: white; padding: 20px 24px;">
-      <h2 style="margin: 0; font-size: 18px;">Deliverable Escalated to Leadership</h2>
-      <p style="margin: 4px 0 0 0; font-size: 13px; color: #ffe4e6;">Corporate Governance Alert</p>
-    </div>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8fafc; padding: 20px;">
+  <div style="max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1.5px solid #fecdd3; overflow: hidden; box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);">
+    ${getEmailHeaderHtml('Corporate Governance Alert | Escalated to Leadership', taskDirectLink)}
     <div style="padding: 24px;">
-      <p>Dear <strong>${opts.seniorName}</strong>,</p>
+      <p style="margin-top: 0;">Dear <strong>${opts.seniorName}</strong>,</p>
       <p style="color: #475569;">A deliverable requires your executive intervention and advisory guidance.</p>
       <div style="background: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px; padding: 14px; margin: 16px 0;">
         <div><strong>Task:</strong> ${opts.taskTitle}</div>
+        <div style="margin-top: 6px;"><strong>Deliverable ID:</strong> #${opts.taskId}</div>
         <div style="margin-top: 6px;"><strong>Escalated By:</strong> ${opts.escalatedBy}</div>
         <div style="margin-top: 6px;"><strong>Blocker / Justification:</strong> "${opts.reason}"</div>
         <div style="margin-top: 6px;"><strong>SLA Window:</strong> 24 Hours Resolution Required</div>
       </div>
-      <p style="font-size: 12px; color: #64748b;">Please log in to your UrbanGaon command dashboard to advise, reassign, resolve, or return.</p>
+      <div style="text-align: center; margin: 24px 0 16px 0;">
+        <a href="${taskDirectLink}" target="_blank" style="display: inline-block; background: #e11d48; color: #ffffff !important; padding: 12px 28px; border-radius: 6px; font-weight: 800; font-size: 14px; text-decoration: none;">
+          🚀 Open Workspace
+        </a>
+        <div style="margin-top: 8px; font-size: 11px; color: #64748b;">
+          Link: <a href="${taskDirectLink}" target="_blank" style="color: #2563eb;">${taskDirectLink}</a>
+        </div>
+      </div>
+      <p style="font-size: 12px; color: #64748b; margin-bottom: 0;">Please log in to your UrbanGaon command dashboard to advise, reassign, resolve, or return.</p>
     </div>
   </div>
 </body>
@@ -1475,6 +1543,7 @@ export async function sendTaskEscalatedEmail(opts: {
       to: opts.seniorEmail,
       subject: `Action Required: Deliverable Escalated by ${opts.escalatedBy} - "${opts.taskTitle}"`,
       html,
+      attachments: getEmailLogoAttachments(),
     });
     return { success: true };
   } catch (err) {
@@ -1495,22 +1564,25 @@ export async function sendTaskReopenedEmail(opts: {
   try {
     const { transporter } = await createEmailTransporter();
     const from = process.env.EMAIL_FROM || '"UrbanGaon Tasks" <notifications@urbangaon.com>';
+    const taskDirectLink = PRODUCTION_WORKSPACE_URL;
     const html = `<!DOCTYPE html>
 <html>
-<body style="font-family: Arial, sans-serif; background: #f8fafc; padding: 20px;">
-  <div style="max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1.5px solid #bfdbfe; overflow: hidden;">
-    <div style="background: #2563eb; color: white; padding: 20px 24px;">
-      <h2 style="margin: 0; font-size: 18px;">Deliverable Reopened Notice</h2>
-      <p style="margin: 4px 0 0 0; font-size: 13px; color: #bfdbfe;">Deliverable Status Alert</p>
-    </div>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8fafc; padding: 20px;">
+  <div style="max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1.5px solid #bfdbfe; overflow: hidden; box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);">
+    ${getEmailHeaderHtml('Deliverable Status Alert | Task Reopened', taskDirectLink)}
     <div style="padding: 24px;">
-      <p style="color: #475569;">A completed task has been reopened for additional deliverables or review.</p>
+      <p style="color: #475569; margin-top: 0;">A completed task has been reopened for additional deliverables or review.</p>
       <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 14px; margin: 16px 0;">
         <div><strong>Task:</strong> ${opts.taskTitle}</div>
         <div style="margin-top: 6px;"><strong>Reopened By:</strong> ${opts.reopenedBy}</div>
         <div style="margin-top: 6px;"><strong>Reopening Justification:</strong> "${opts.reason}"</div>
       </div>
-      <p style="font-size: 12px; color: #64748b;">Please review your task queue in the dashboard.</p>
+      <div style="text-align: center; margin: 24px 0 16px 0;">
+        <a href="${taskDirectLink}" target="_blank" style="display: inline-block; background: #2563eb; color: #ffffff !important; padding: 12px 28px; border-radius: 6px; font-weight: 800; font-size: 14px; text-decoration: none;">
+          🚀 Open Workspace
+        </a>
+      </div>
+      <p style="font-size: 12px; color: #64748b; margin-bottom: 0;">Please review your task queue in the dashboard.</p>
     </div>
   </div>
 </body>
@@ -1521,6 +1593,7 @@ export async function sendTaskReopenedEmail(opts: {
         to: opts.assigneeEmails.join(', '),
         subject: `Reopened: "${opts.taskTitle}" (by ${opts.reopenedBy})`,
         html,
+        attachments: getEmailLogoAttachments(),
       });
     }
     return { success: true };
@@ -1663,19 +1736,14 @@ export async function sendOverdueAutoFlagEmail(opts: SendOverdueAutoFlagOptions)
   try {
     const { transporter, isTestAccount } = await createEmailTransporter();
     const from = process.env.SMTP_FROM || '"UrbanGaon Automated Monitor" <alerts@urbangaon.com>';
-    const appBase = opts.baseUrl || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const appBase = getAppBaseUrl(opts.baseUrl);
+    const taskDirectLink = opts.taskId ? `${appBase}/?taskId=${encodeURIComponent(opts.taskId)}` : appBase;
 
     const statusBadge = opts.isEscalated
       ? '<span style="background: #fee2e2; color: #b91c1c; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 12px; border: 1px solid #fca5a5;">AUTO-ESCALATED TO MANAGER</span>'
       : opts.hasReason
       ? '<span style="background: #fff7ed; color: #c2410c; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 12px; border: 1px solid #fed7aa;">OVERDUE (REASON RECORDED)</span>'
       : '<span style="background: #fef2f2; color: #dc2626; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 12px; border: 1px solid #fecaca;">PENDING NO REASON (ACTION REQUIRED)</span>';
-
-    const headerBg = opts.isEscalated
-      ? 'linear-gradient(135deg, #991b1b 0%, #dc2626 100%)'
-      : opts.hasReason
-      ? 'linear-gradient(135deg, #9a3412 0%, #ea580c 100%)'
-      : 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)';
 
     const html = `
 <!DOCTYPE html>
@@ -1685,19 +1753,15 @@ export async function sendOverdueAutoFlagEmail(opts: SendOverdueAutoFlagOptions)
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 20px; }
     .card { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-    .header { background: ${headerBg}; padding: 22px; color: #ffffff; }
     .content { padding: 24px; font-size: 14px; line-height: 1.6; }
     .task-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 16px 0; }
-    .btn { display: inline-block; background: #2563eb; color: #ffffff !important; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 700; font-size: 13px; margin-top: 12px; }
+    .btn { display: inline-block; background: #2563eb; color: #ffffff !important; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-weight: 700; font-size: 14px; }
     .footer { background: #f1f5f9; padding: 14px 24px; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0; text-align: center; }
   </style>
 </head>
 <body>
   <div class="card">
-    <div class="header">
-      <div style="font-size: 18px; font-weight: 800;">UrbanGaon Automated Overdue Monitor</div>
-      <div style="font-size: 12px; opacity: 0.9; margin-top: 2px;">Overdue Deliverable Auto-Flag Notification</div>
-    </div>
+    ${getEmailHeaderHtml('Overdue Deliverable Auto-Flag Notification', taskDirectLink)}
     <div class="content">
       <p style="margin-top: 0;">
         Hello <strong>${opts.toName}</strong>,
@@ -1736,7 +1800,12 @@ export async function sendOverdueAutoFlagEmail(opts: SendOverdueAutoFlagOptions)
       <p style="margin-bottom: 0;">
         Please open your workspace to update the status, reschedule, or document your justification:
       </p>
-      <a href="${appBase}" class="btn">View Deliverable in Workspace</a>
+      <div style="text-align: center; margin: 24px 0 16px 0;">
+        <a href="${taskDirectLink}" target="_blank" class="btn">🚀 Open Workspace</a>
+        <div style="margin-top: 8px; font-size: 11px; color: #64748b;">
+          Direct Link: <a href="${taskDirectLink}" target="_blank" style="color: #2563eb; text-decoration: underline;">https://todo-dashboard-rhvx.vercel.app/</a>
+        </div>
+      </div>
     </div>
     <div class="footer">
       UrbanGaon Task Register | Automated Governance Engine | Mr. Sukh Sagar Singh (CEO)
@@ -1761,6 +1830,7 @@ export async function sendOverdueAutoFlagEmail(opts: SendOverdueAutoFlagOptions)
       cc: ccList,
       subject,
       html,
+      attachments: getEmailLogoAttachments(),
     });
 
     return {
@@ -1825,7 +1895,7 @@ export async function sendTaskCancelledEmail(opts: SendTaskCancelledOptions) {
   try {
     const { transporter } = await createEmailTransporter();
     const from = process.env.SMTP_FROM || '"UrbanGaon Task Operations" <techdesk@urbangaon.com>';
-    const appBase = opts.baseUrl || process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : '') || 'https://todo-dashboard-rhvx.vercel.app';
+    const appBase = getAppBaseUrl(opts.baseUrl);
     const taskDirectLink = opts.taskId ? `${appBase}/?taskId=${encodeURIComponent(opts.taskId)}` : appBase;
 
     const subject = `[UrbanGaon] Deliverable Cancelled: "${opts.taskTitle}"`;
@@ -1839,9 +1909,6 @@ export async function sendTaskCancelledEmail(opts: SendTaskCancelledOptions) {
   <style>
     body { margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; color: #1e293b; }
     .email-container { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #cbd5e1; overflow: hidden; box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08); }
-    .email-header { background: linear-gradient(135deg, #7f1d1d 0%, #b91c1c 100%); padding: 24px 28px; color: #ffffff; border-bottom: 3px solid #dc2626; }
-    .brand-title { font-size: 20px; font-weight: 800; color: #ffffff; margin: 0; }
-    .brand-subtitle { font-size: 12px; color: #fecaca; margin-top: 4px; font-weight: 500; }
     .email-body { padding: 28px; font-size: 14px; line-height: 1.6; color: #334155; }
     .greeting { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
     .task-card { background: #fef2f2; border: 1px solid #fecaca; border-top: 4px solid #dc2626; border-radius: 8px; padding: 18px; margin: 18px 0; }
@@ -1849,16 +1916,13 @@ export async function sendTaskCancelledEmail(opts: SendTaskCancelledOptions) {
     .reason-box { background: #ffffff; border-left: 3px solid #dc2626; border-radius: 4px; padding: 10px 14px; margin-top: 12px; font-size: 13px; color: #7f1d1d; }
     .info-note { font-size: 12px; color: #64748b; margin-top: 12px; line-height: 1.4; }
     .cta-container { text-align: center; margin-top: 22px; }
-    .cta-button { display: inline-block; background: #dc2626; color: #ffffff !important; padding: 11px 26px; border-radius: 6px; font-weight: 700; font-size: 13px; text-decoration: none; }
+    .cta-button { display: inline-block; background: #2563eb; color: #ffffff !important; padding: 12px 28px; border-radius: 6px; font-weight: 800; font-size: 14px; text-decoration: none; }
     .email-footer { background: #f8fafc; padding: 16px 24px; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0; text-align: center; }
   </style>
 </head>
 <body>
   <div class="email-container">
-    <div class="email-header">
-      <div class="brand-title">UrbanGaon Intelligent Todo Platform</div>
-      <div class="brand-subtitle">Operational Deliverable Governance | Task Cancelled</div>
-    </div>
+    ${getEmailHeaderHtml('Operational Deliverable Governance | Task Cancelled', taskDirectLink)}
     <div class="email-body">
       <div class="greeting">Dear ${opts.recipientName},</div>
       <p style="margin: 0 0 16px 0;">
@@ -1880,7 +1944,10 @@ export async function sendTaskCancelledEmail(opts: SendTaskCancelledOptions) {
       </div>
 
       <div class="cta-container">
-        <a href="${taskDirectLink}" class="cta-button">View Workspace</a>
+        <a href="${taskDirectLink}" target="_blank" class="cta-button">🚀 Open Workspace</a>
+        <div style="margin-top: 8px; font-size: 11px; color: #64748b;">
+          Link: <a href="${taskDirectLink}" target="_blank" style="color: #2563eb;">https://todo-dashboard-rhvx.vercel.app/</a>
+        </div>
       </div>
     </div>
     <div class="email-footer">
@@ -1896,6 +1963,7 @@ export async function sendTaskCancelledEmail(opts: SendTaskCancelledOptions) {
       to: opts.recipientEmail,
       subject,
       html,
+      attachments: getEmailLogoAttachments(),
     });
 
     try {
@@ -1934,7 +2002,7 @@ export interface SendConfigRollbackEmailOptions {
 export async function sendConfigRollbackEmail(opts: SendConfigRollbackEmailOptions): Promise<{ success: boolean; messageId?: string; isTestAccount?: boolean; error?: string }> {
   try {
     const { transporter, isTestAccount } = await createEmailTransporter();
-    const appBase = opts.baseUrl || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const appBase = getAppBaseUrl(opts.baseUrl);
     const from = process.env.SMTP_FROM || '"UrbanGaon System Governance" <noreply@urbangaon.com>';
 
     const html = `<!DOCTYPE html>

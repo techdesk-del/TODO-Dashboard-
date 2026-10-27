@@ -67,6 +67,8 @@ interface AppContextType {
   }) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
   completeTask: (taskId: string, assigneeId?: string) => void;
+  approveTaskByCeo: (taskId: string, approvalNote?: string) => Promise<void>;
+  rejectTaskByCeo: (taskId: string, rejectionReason: string) => Promise<void>;
   updateAssigneeStatus: (taskId: string, assigneeId: string, status: TaskStatus, remarks?: string) => void;
   reassignOrCloseAssignee: (taskId: string, oldAssigneeId: string, action: 'reassign' | 'close', newAssigneeId?: string, notes?: string) => void;
   addMember: (memberData: Partial<TeamMember>) => Promise<TeamMember>;
@@ -2559,9 +2561,69 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
 
-    // Multi-assignee fairness check & status resolution (Flowchart 8)
+    const isCeo = isCeoUser(currentUser);
     const effectiveAssigneeId = assigneeId || (task.assignees.some(a => a.id === currentUser.id) ? currentUser.id : undefined);
 
+    // Executive Governance Rule: If completed by an employee/non-CEO, deliverable routes to CEO Mr. Sukh Sagar Singh Bhati for Final Approval before completion
+    if (!isCeo) {
+      const updatedAssignees = task.assignees.map(a => {
+        if (!effectiveAssigneeId || a.id === effectiveAssigneeId) {
+          return {
+            ...a,
+            status: 'Review' as TaskStatus,
+            remarks: a.remarks ? `${a.remarks} • Submitted for CEO Final Approval by ${currentUser.name}` : `Submitted for CEO Final Approval by ${currentUser.name}`,
+          };
+        }
+        return a;
+      });
+
+      updateTask(taskId, {
+        assignees: updatedAssignees,
+        status: 'Review',
+        progressPercent: 95,
+        pendingCeoApproval: true,
+        ceoApprovalRequestedAt: new Date().toISOString(),
+        ceoApprovalRequestedBy: currentUser.name,
+      }, `Deliverable submitted by ${currentUser.name}. Dispatched to CEO Mr. Sukh Sagar Singh Bhati for Final Approval before completion.`);
+
+      logAudit({
+        taskId,
+        taskTitle: task.title,
+        action: 'APPROVAL',
+        fieldChanged: 'Task Submitted for CEO Final Approval',
+        oldValue: task.status,
+        newValue: 'Review (Pending CEO Final Approval)',
+        notes: `Deliverable submitted by ${currentUser.name}. Awaiting Final Approval from CEO Mr. Sukh Sagar Singh Bhati before marking Done.`
+      });
+
+      setBannerNotification({
+        message: `Deliverable submitted! Dispatched to CEO Mr. Sukh Sagar Singh Bhati for Final Approval before completion.`,
+        badge: '⏳ Sent for CEO Approval'
+      });
+
+      // Send instant real-time notification to Sukh Sagar Sir
+      fetch('/api/notifications/dispatch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventType: 'TASK_ASSIGNED',
+          recipients: [{ email: 'ceo@urbangaon.com', name: 'Mr. Sukh Sagar Singh Bhati' }],
+          title: `Deliverable Pending Final Approval: "${task.title}"`,
+          message: `${currentUser.name} has submitted deliverable "${task.title}" for your Final Approval before completion.`,
+          taskId: task.id,
+          taskTitle: task.title,
+          metadata: {
+            submittedBy: currentUser.name,
+            submittedByEmail: currentUser.email,
+            status: 'Review'
+          }
+        })
+      }).catch(() => {});
+
+      return;
+    }
+
+    // Direct completion by CEO Mr. Sukh Sagar Singh Bhati
     const updatedAssignees = task.assignees.map(a => {
       if (!effectiveAssigneeId || a.id === effectiveAssigneeId) {
         return { ...a, status: 'Done' as TaskStatus, completedAt: new Date().toISOString() };
@@ -2571,37 +2633,163 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const comp = computeMultiAssigneeStatus({
       ...task,
+      status: 'Done',
       assignees: updatedAssignees,
     });
 
     updateTask(taskId, {
       assignees: updatedAssignees,
-      status: comp.status,
-      progressPercent: comp.progressPercent
-    }, comp.status === 'Done' ? 'Deliverable fully completed by all assignees' : `Assignee finished individual component (${comp.progressText})`);
+      status: 'Done',
+      progressPercent: 100,
+      pendingCeoApproval: false,
+      ceoApprovedAt: new Date().toISOString(),
+      ceoApprovedBy: currentUser.name,
+    }, 'Deliverable granted Final Approval and marked Completed by CEO Mr. Sukh Sagar Singh Bhati');
 
     logAudit({
       taskId,
       taskTitle: task.title,
       action: 'STATUS_CHANGE',
-      fieldChanged: effectiveAssigneeId ? `Assignee Completed: ${effectiveAssigneeId}` : 'Task Completed',
+      fieldChanged: 'CEO Final Approval & Completion',
       oldValue: task.status,
-      newValue: `${comp.status} (${comp.progressText})`,
-      notes: `Updated status under Multi-Assignee Task Flow.`
+      newValue: 'Done (100% Completed)',
+      notes: `Granted Final Approval by CEO Mr. Sukh Sagar Singh Bhati.`
     });
+
+    setBannerNotification({
+      message: `✓ Deliverable '${task.title}' granted Final Approval and marked Done!`,
+      badge: '✓ CEO Approved'
+    });
+  };
+
+  const approveTaskByCeo = async (taskId: string, approvalNote?: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const updatedAssignees = task.assignees.map(a => ({
+      ...a,
+      status: 'Done' as TaskStatus,
+      completedAt: a.completedAt || new Date().toISOString(),
+      remarks: approvalNote ? `${a.remarks ? `${a.remarks} • ` : ''}CEO Approved: ${approvalNote}` : a.remarks
+    }));
+
+    updateTask(taskId, {
+      status: 'Done',
+      progressPercent: 100,
+      pendingCeoApproval: false,
+      ceoApprovedAt: new Date().toISOString(),
+      ceoApprovedBy: currentUser.name || 'Mr. Sukh Sagar Singh Bhati',
+      notes: approvalNote ? `${task.notes ? `${task.notes}\n` : ''}[CEO Final Approval]: ${approvalNote}` : task.notes,
+      assignees: updatedAssignees,
+    }, approvalNote ? `CEO Final Approval Granted: "${approvalNote}"` : 'CEO Final Approval Granted. Deliverable marked Completed.');
+
+    logAudit({
+      taskId,
+      taskTitle: task.title,
+      action: 'APPROVAL',
+      fieldChanged: 'CEO Final Approval Granted',
+      oldValue: task.status,
+      newValue: 'Done (100% Completed)',
+      notes: `CEO Mr. Sukh Sagar Singh Bhati granted Final Approval for deliverable completion.${approvalNote ? ` Notes: "${approvalNote}"` : ''}`
+    });
+
+    setBannerNotification({
+      message: `✓ Final Approval granted for "${task.title}". Deliverable marked Completed!`,
+      badge: '✓ CEO Approved'
+    });
+
+    // Notify all assignees that CEO has granted Final Approval
+    if (task.assignees && task.assignees.length > 0) {
+      fetch('/api/notifications/dispatch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventType: 'REASON_STATUS_CHANGED',
+          recipients: task.assignees.map(a => ({ email: a.email, name: a.name })),
+          title: `Deliverable Approved by CEO: "${task.title}"`,
+          message: `Mr. Sukh Sagar Singh Bhati has granted Final Approval. Your deliverable is officially Completed (Done)! ${approvalNote ? `Remarks: "${approvalNote}"` : ''}`,
+          taskId,
+          taskTitle: task.title,
+          metadata: {
+            decision: 'APPROVED',
+            reviewerName: 'Mr. Sukh Sagar Singh Bhati (CEO)',
+            notes: approvalNote || 'Final Approval Granted',
+          }
+        })
+      }).catch(() => {});
+    }
+  };
+
+  const rejectTaskByCeo = async (taskId: string, rejectionReason: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const updatedAssignees = task.assignees.map(a => ({
+      ...a,
+      status: 'In Progress' as TaskStatus,
+      remarks: `CEO Feedback: ${rejectionReason}`
+    }));
+
+    updateTask(taskId, {
+      status: 'In Progress',
+      progressPercent: 50,
+      pendingCeoApproval: false,
+      ceoRejectionReason: rejectionReason,
+      seniorReturnReason: rejectionReason,
+      assignees: updatedAssignees,
+    }, `Returned by CEO for Revision: "${rejectionReason}"`);
+
+    logAudit({
+      taskId,
+      taskTitle: task.title,
+      action: 'REJECTED',
+      fieldChanged: 'CEO Requested Revision on Deliverable',
+      oldValue: task.status,
+      newValue: 'In Progress (Returned for Revision)',
+      notes: `CEO Mr. Sukh Sagar Singh Bhati requested revisions before completion: "${rejectionReason}".`
+    });
+
+    setBannerNotification({
+      message: `Deliverable returned to assignees for revision: "${rejectionReason}"`,
+      badge: 'Returned for Revision'
+    });
+
+    // Notify all assignees of CEO feedback
+    if (task.assignees && task.assignees.length > 0) {
+      fetch('/api/notifications/dispatch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventType: 'REASON_STATUS_CHANGED',
+          recipients: task.assignees.map(a => ({ email: a.email, name: a.name })),
+          title: `Revision Requested by CEO: "${task.title}"`,
+          message: `CEO Mr. Sukh Sagar Singh Bhati returned your deliverable with feedback: "${rejectionReason}". Please update and resubmit.`,
+          taskId,
+          taskTitle: task.title,
+          metadata: {
+            decision: 'REJECTED',
+            reviewerName: 'Mr. Sukh Sagar Singh Bhati (CEO)',
+            notes: rejectionReason,
+          }
+        })
+      }).catch(() => {});
+    }
   };
 
   const updateAssigneeStatus = (taskId: string, assigneeId: string, status: TaskStatus, remarks?: string) => {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
 
+    const isCeo = isCeoUser(currentUser);
+    const effectiveStatus: TaskStatus = (status === 'Done' && !isCeo) ? 'Review' : status;
+
     const updatedAssignees = task.assignees.map(a => {
       if (a.id === assigneeId) {
         return {
           ...a,
-          status,
+          status: effectiveStatus,
           remarks: remarks !== undefined ? remarks : a.remarks,
-          completedAt: status === 'Done' ? new Date().toISOString() : a.completedAt,
+          completedAt: effectiveStatus === 'Done' ? new Date().toISOString() : a.completedAt,
         };
       }
       return a;
@@ -2610,14 +2798,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const targetAssignee = task.assignees.find(a => a.id === assigneeId);
     const comp = computeMultiAssigneeStatus({
       ...task,
+      status: (status === 'Done' && !isCeo) ? 'Review' : undefined,
+      pendingCeoApproval: (status === 'Done' && !isCeo) ? true : task.pendingCeoApproval,
       assignees: updatedAssignees,
     });
 
-    updateTask(taskId, {
+    const taskUpdates: Partial<Task> = {
       assignees: updatedAssignees,
       status: comp.status,
       progressPercent: comp.progressPercent,
-    }, `Assignee ${targetAssignee?.name || assigneeId} updated status to "${status}" (Overall: ${comp.status}, ${comp.progressText})`);
+    };
+
+    if (status === 'Done' && !isCeo) {
+      taskUpdates.pendingCeoApproval = true;
+      taskUpdates.ceoApprovalRequestedAt = new Date().toISOString();
+      taskUpdates.ceoApprovalRequestedBy = currentUser.name;
+    }
+
+    updateTask(taskId, taskUpdates, `Assignee ${targetAssignee?.name || assigneeId} updated status to "${effectiveStatus}" (Overall: ${comp.status}, ${comp.progressText})`);
 
     logAudit({
       taskId,
@@ -2625,8 +2823,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       action: 'STATUS_CHANGE',
       fieldChanged: `Assignee Status: ${targetAssignee?.name || assigneeId}`,
       oldValue: targetAssignee?.status || 'Unknown',
-      newValue: `${status} (Overall Task Status: ${comp.status} - ${comp.progressText})`,
-      notes: remarks || `Status updated under Multi-Assignee lifecycle.`
+      newValue: `${effectiveStatus} (Overall Task Status: ${comp.status} - ${comp.progressText})`,
+      notes: remarks || `Status updated under Multi-Assignee lifecycle.${(status === 'Done' && !isCeo) ? ' Rerouted to CEO Final Approval queue.' : ''}`
     });
   };
 
@@ -2878,6 +3076,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         reassignTask,
         deleteTask,
         completeTask,
+        approveTaskByCeo,
+        rejectTaskByCeo,
         updateAssigneeStatus,
         reassignOrCloseAssignee,
         addMember,
