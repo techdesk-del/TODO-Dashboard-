@@ -22,13 +22,20 @@ build
 
 # Development files
 *.md
+docs
 .DS_Store
 .vscode
 *.log
+*.zip
+*.tar.gz
+*.tgz
+dist
 
 # Test files
 coverage
 __tests__
+tests
+scratch
 
 # Editor configs
 .editorconfig

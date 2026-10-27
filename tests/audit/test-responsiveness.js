@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const rootDir = path.resolve(__dirname, '..');
+const rootDir = path.resolve(__dirname, '..', '..');
 
 console.log('====================================================');
 console.log('🔍 Enterprise Responsiveness & Mobile Device Audit');

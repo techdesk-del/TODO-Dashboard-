@@ -3,8 +3,8 @@ const path = require('path');
 const fs = require('fs');
 
 const edgePath = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
-const htmlPath = path.resolve(__dirname, '..', 'UrbanGaon_Todos_Implementation_Audit_Report.html');
-const pdfPath = path.resolve(__dirname, '..', 'UrbanGaon_Todos_Implementation_Audit_Report.pdf');
+const htmlPath = path.resolve(__dirname, '..', 'docs', 'audit', 'UrbanGaon_Todos_Implementation_Audit_Report.html');
+const pdfPath = path.resolve(__dirname, '..', 'docs', 'audit', 'UrbanGaon_Todos_Implementation_Audit_Report.pdf');
 
 console.log('HTML Input:', htmlPath);
 console.log('PDF Output:', pdfPath);

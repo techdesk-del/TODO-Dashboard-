@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const manualPath = path.join(__dirname, '../src/components/WorkflowManualModal.tsx');
+const manualPath = path.join(__dirname, '../../src/components/WorkflowManualModal.tsx');
 const content = fs.readFileSync(manualPath, 'utf8');
 
 console.log('--- Verifying Flowchart 28: The Index Chart Compliance ---');

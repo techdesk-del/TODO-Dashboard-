@@ -32,3 +32,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# production bundles & archives
+/dist
+*.zip
+*.tar.gz
+*.tgz
+
+# temporary scratchpad & local dumps
+scratch/
+temp/
+*.tmp

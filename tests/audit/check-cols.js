@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 const fs = require('fs');
-const env = fs.readFileSync('.env.local', 'utf8');
+const path = require('path');
+const envPath = path.join(__dirname, '../../.env.local');
+const env = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf8') : '';
 const uri = env.match(/MONGODB_URI=(.*)/)[1].trim().replace(/^['"]|['"]$/g, '');
 
 mongoose.connect(uri).then(async () => {

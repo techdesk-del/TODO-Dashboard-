@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:audit": "node tests/audit/test-flowcharts-audit-export.js && node tests/audit/test-responsiveness.js",
+    "package:cpanel": "node scripts/package-cpanel.js"
   },
   "dependencies": {
     "@types/bcryptjs": "^2.4.6",
