@@ -254,7 +254,6 @@ export const Header: React.FC = () => {
         <div
           className="logo-container"
           onClick={() => setActiveView('workspace')}
-          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', width: '100%' }}
           style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', minWidth: 0 }}
           title="UrbanGaon — a perfect balance"
         >
@@ -326,7 +325,6 @@ export const Header: React.FC = () => {
             </button>
           ) : (
             <div
-              className="header-action-btn"
               className="header-action-btn header-exec-monitor-badge"
               style={{
                 display: 'flex',
@@ -345,8 +343,6 @@ export const Header: React.FC = () => {
               }}
               title="Executive Oversight Active — Real-time Deliverable Monitoring across all employees"
             >
-
-              <span>Executive Monitor</span>
               <span className="header-action-label">Executive Monitor</span>
             </div>
           )}
@@ -1103,572 +1099,568 @@ export const Header: React.FC = () => {
             </div>
 
             {isRoleMenuOpen && (
-              <div className="user-profile-dropdown-menu">
-                <>
-                  <div
-                    className="mobile-dropdown-backdrop"
-                    onClick={() => setIsRoleMenuOpen(false)}
-                    aria-hidden="true"
-                  />
-                  <div className="user-profile-dropdown-menu">
-                    {/* User Identity Header Card */}
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.65rem',
-                      padding: '0.6rem 0.75rem',
-                      background: '#f8fafc',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '8px',
-                      marginBottom: '0.65rem'
-                    }}>
-                      <div style={{
-                        width: '36px',
-                        height: '36px',
-                        borderRadius: '50%',
-                        background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
-                        color: '#ffffff',
-                        fontWeight: 800,
-                        fontSize: '0.85rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                        overflow: 'hidden'
-                      }}>
-                        {currentUser.avatar?.startsWith('/') || currentUser.avatar?.startsWith('http') ? (
-                          <img src={currentUser.avatar} alt={currentUser.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        ) : (
-                          currentUser.avatar || 'AD'
-                        )}
-                      </div>
-                      <div style={{ minWidth: 0, flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
-                          <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {currentUser.name}
+                    <>
+                      <div
+                        className="mobile-dropdown-backdrop"
+                        onClick={() => setIsRoleMenuOpen(false)}
+                        aria-hidden="true"
+                      />
+                      <div className="user-profile-dropdown-menu">
+                        {/* User Identity Header Card */}
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.65rem',
+                          padding: '0.6rem 0.75rem',
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '8px',
+                          marginBottom: '0.65rem'
+                        }}>
+                          <div style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '50%',
+                            background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                            color: '#ffffff',
+                            fontWeight: 800,
+                            fontSize: '0.85rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                            overflow: 'hidden'
+                          }}>
+                            {currentUser.avatar?.startsWith('/') || currentUser.avatar?.startsWith('http') ? (
+                              <img src={currentUser.avatar} alt={currentUser.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                              currentUser.avatar || 'AD'
+                            )}
                           </div>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenEditProfile();
-                            }}
-                            title="Edit Profile & Email"
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
+                              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {currentUser.name}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenEditProfile();
+                                }}
+                                title="Edit Profile & Email"
+                                style={{
+                                  background: '#eff6ff',
+                                  border: '1px solid #bfdbfe',
+                                  borderRadius: '4px',
+                                  padding: '2px 6px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '3px',
+                                  fontSize: '0.68rem',
+                                  fontWeight: 700,
+                                  color: '#2563eb'
+                                }}
+                              >
+                                <Edit3 size={11} />
+                                <span>Edit</span>
+                              </button>
+                            </div>
+                            <div style={{ fontSize: '0.7rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {currentUser.email}
+                            </div>
+                            <div style={{ display: 'flex', gap: '4px', marginTop: '3px', flexWrap: 'wrap', alignItems: 'center' }}>
+                              <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' }}>
+                                {currentUser.designation || (currentUser.role !== 'EMPLOYEE' ? currentUser.role.replace('_', ' ') : 'Team Member')}
+                              </span>
+                              <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#f1f5f9', color: '#475569' }}>
+                                {currentUser.department || 'UrbanGaon'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Edit Profile Action Tile */}
+                        <div
+                          onClick={handleOpenEditProfile}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.6rem',
+                            padding: '0.55rem 0.75rem',
+                            background: '#f8fafc',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            marginBottom: '0.45rem',
+                            transition: 'background 0.15s ease'
+                          }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.background = '#f1f5f9';
+                            e.currentTarget.style.borderColor = '#cbd5e1';
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.background = '#f8fafc';
+                            e.currentTarget.style.borderColor = '#e2e8f0';
+                          }}
+                        >
+                          <div style={{
+                            padding: '4px',
+                            borderRadius: '6px',
+                            background: '#e0e7ff',
+                            color: '#4338ca',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}>
+                            <Edit3 size={14} />
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#1e293b' }}>
+                              Edit Profile & Email
+                            </div>
+                            <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                              Update display name, username & corporate email
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Credentials Sign In Trigger - strictly for Guest (to log in) or CEO/Director ONLY, NEVER for anyone else */}
+                        {(isGuest || isCeoUser(currentUser)) && (
+                          <div
+                            onClick={() => { setIsAuthModalOpen(true); setIsRoleMenuOpen(false); }}
                             style={{
-                              background: '#eff6ff',
-                              border: '1px solid #bfdbfe',
-                              borderRadius: '4px',
-                              padding: '2px 6px',
-                              cursor: 'pointer',
                               display: 'flex',
                               alignItems: 'center',
-                              gap: '3px',
-                              fontSize: '0.68rem',
-                              fontWeight: 700,
-                              color: '#2563eb'
+                              gap: '0.6rem',
+                              padding: '0.55rem 0.75rem',
+                              background: '#eff6ff',
+                              border: '1px solid #bfdbfe',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              marginBottom: '0.45rem',
+                              transition: 'background 0.15s ease'
                             }}
                           >
-                            <Edit3 size={11} />
-                            <span>Edit</span>
-                          </button>
-                        </div>
-                        <div style={{ fontSize: '0.7rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {currentUser.email}
-                        </div>
-                        <div style={{ display: 'flex', gap: '4px', marginTop: '3px', flexWrap: 'wrap', alignItems: 'center' }}>
-                          <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' }}>
-                            {currentUser.designation || (currentUser.role !== 'EMPLOYEE' ? currentUser.role.replace('_', ' ') : 'Team Member')}
-                          </span>
-                          <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#f1f5f9', color: '#475569' }}>
-                            {currentUser.department || 'UrbanGaon'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+                            <Lock size={15} color="#2563eb" style={{ flexShrink: 0 }} />
+                            <div>
+                              <div style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#1e40af' }}>
+                                {isGuest ? 'Sign In / Employee Login' : 'Switch Account (Login)'}
+                              </div>
+                              <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                                Secure corporate sign-in
+                              </div>
+                            </div>
+                          </div>
+                        )}
 
-                    {/* Edit Profile Action Tile */}
+                        {!isGuest && (
+                          <div
+                            onClick={() => { logoutUser(); setIsRoleMenuOpen(false); }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.6rem',
+                              padding: '0.5rem 0.75rem',
+                              background: '#fef2f2',
+                              border: '1px solid #fecaca',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              color: '#dc2626',
+                              transition: 'background 0.15s ease'
+                            }}
+                          >
+                            <LogOut size={14} color="#dc2626" style={{ flexShrink: 0 }} />
+                            <span style={{ fontSize: '0.8125rem', fontWeight: 700 }}>
+                              Log Out ({currentUser.name})
+                            </span>
+                          </div>
+                        )}
+                    </div>
+                  </>
+            )}
+                </div>
+              </div>
+      </div>
+
+          {/* Edit Profile & Corporate Email Modal */}
+          {isEditProfileModalOpen && (
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="edit-profile-title"
+              style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 9999,
+                backgroundColor: 'rgba(15, 23, 42, 0.65)',
+                backdropFilter: 'blur(4px)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '1rem'
+              }}
+              onClick={(e) => {
+                if (e.target === e.currentTarget && !isSavingProfile) {
+                  setIsEditProfileModalOpen(false);
+                }
+              }}
+            >
+              <div
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '16px',
+                  width: '100%',
+                  maxWidth: '460px',
+                  maxHeight: '90dvh',
+                  overflowY: 'auto',
+                  boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.25)',
+              border: '1px solid #e2e8f0'
+                }}
+              >
+                {/* Modal Header */}
+                <div
+                  style={{
+                    padding: '1.25rem 1.5rem',
+                    borderBottom: '1px solid #f1f5f9',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    background: 'linear-gradient(to bottom, #ffffff, #f8fafc)'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <div
-                      onClick={handleOpenEditProfile}
                       style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.6rem',
-                        padding: '0.55rem 0.75rem',
-                        background: '#f8fafc',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        marginBottom: '0.45rem',
-                        transition: 'background 0.15s ease'
-                      }}
-                      onMouseEnter={e => {
-                        e.currentTarget.style.background = '#f1f5f9';
-                        e.currentTarget.style.borderColor = '#cbd5e1';
-                      }}
-                      onMouseLeave={e => {
-                        e.currentTarget.style.background = '#f8fafc';
-                        e.currentTarget.style.borderColor = '#e2e8f0';
-                      }}
-                    >
-                      <div style={{
-                        padding: '4px',
-                        borderRadius: '6px',
-                        background: '#e0e7ff',
-                        color: '#4338ca',
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '10px',
+                        background: '#eff6ff',
+                        color: '#2563eb',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center'
-                      }}>
-                        <Edit3 size={14} />
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#1e293b' }}>
-                          Edit Profile & Email
-                        </div>
-                        <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
-                          Update display name, username & corporate email
-                        </div>
-                      </div>
+                      }}
+                    >
+                      <User size={18} />
+                    </div>
+                    <div>
+                      <h3
+                        id="edit-profile-title"
+                        style={{
+                          margin: 0,
+                          fontSize: '1rem',
+                          fontWeight: 800,
+                          color: '#0f172a',
+                          letterSpacing: '-0.01em'
+                        }}
+                      >
+                        Update Profile & Email
+                      </h3>
+                      <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>
+                        Synchronizes permanently across sessions, tasks & rosters
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => !isSavingProfile && setIsEditProfileModalOpen(false)}
+                    disabled={isSavingProfile}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#94a3b8',
+                      cursor: isSavingProfile ? 'not-allowed' : 'pointer',
+                      padding: '4px',
+                      borderRadius: '6px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    aria-label="Close dialog"
+                  >
+                    <XIcon size={18} />
+                  </button>
+                </div>
+
+                {/* Modal Body / Form */}
+                <form onSubmit={handleSaveProfile} style={{ padding: '1.25rem 1.5rem' }}>
+                  {profileError && (
+                    <div
+                      style={{
+                        padding: '0.65rem 0.85rem',
+                        borderRadius: '8px',
+                        background: '#fef2f2',
+                        border: '1px solid #fecaca',
+                        color: '#dc2626',
+                        fontSize: '0.76rem',
+                        fontWeight: 600,
+                        marginBottom: '1rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <span>⚠</span>
+                      <span>{profileError}</span>
+                    </div>
+                  )}
+
+                  {/* Field 1: Name / Username */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label
+                      htmlFor="profile-name-input"
+                      style={{
+                        display: 'block',
+                        fontSize: '0.8125rem',
+                        fontWeight: 700,
+                        color: '#334155',
+                        marginBottom: '0.4rem'
+                      }}
+                    >
+                      Full Display Name / Username *
+                    </label>
+                    <input
+                      id="profile-name-input"
+                      type="text"
+                      value={nameInput}
+                      onChange={(e) => {
+                        setNameInput(e.target.value);
+                        if (profileError) setProfileError('');
+                      }}
+                      disabled={isSavingProfile}
+                      placeholder="e.g. Sukh Sagar Singh Bhati"
+                      autoFocus
+                      style={{
+                        width: '100%',
+                        padding: '0.65rem 0.85rem',
+                        borderRadius: '8px',
+                        border: '1.5px solid #cbd5e1',
+                        fontSize: '0.875rem',
+                        color: '#0f172a',
+                        outline: 'none',
+                        transition: 'border-color 0.15s ease',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+
+                  {/* Field 2: Official Corporate Email */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label
+                      htmlFor="profile-email-input"
+                      style={{
+                        display: 'block',
+                        fontSize: '0.8125rem',
+                        fontWeight: 700,
+                        color: '#334155',
+                        marginBottom: '0.4rem'
+                      }}
+                    >
+                      Official Corporate Email *
+                    </label>
+                    <input
+                      id="profile-email-input"
+                      type="email"
+                      value={emailInput}
+                      onChange={(e) => {
+                        setEmailInput(e.target.value);
+                        if (profileError) setProfileError('');
+                      }}
+                      disabled={isSavingProfile}
+                      placeholder="e.g. ceo@urbangaon.com"
+                      style={{
+                        width: '100%',
+                        padding: '0.65rem 0.85rem',
+                        borderRadius: '8px',
+                        border: '1.5px solid #cbd5e1',
+                        fontSize: '0.875rem',
+                        color: '#0f172a',
+                        outline: 'none',
+                        transition: 'border-color 0.15s ease',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+
+                  {/* Field 3: Employee ID & Role / Designation Configuration */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
+                    <div>
+                      <label
+                        htmlFor="profile-empid-input"
+                        style={{
+                          display: 'block',
+                          fontSize: '0.8125rem',
+                          fontWeight: 700,
+                          color: '#334155',
+                          marginBottom: '0.4rem'
+                        }}
+                      >
+                        Employee ID *
+                      </label>
+                      <input
+                        id="profile-empid-input"
+                        type="text"
+                        value={employeeIdInput}
+                        onChange={(e) => {
+                          setEmployeeIdInput(e.target.value);
+                          if (profileError) setProfileError('');
+                        }}
+                        disabled={isSavingProfile}
+                        placeholder="e.g. mem-12 or EMP-1001"
+                        style={{
+                          width: '100%',
+                          padding: '0.65rem 0.85rem',
+                          borderRadius: '8px',
+                          border: '1.5px solid #cbd5e1',
+                          fontSize: '0.875rem',
+                          color: '#0f172a',
+                          outline: 'none',
+                          background: '#ffffff',
+                          boxSizing: 'border-box'
+                        }}
+                      />
                     </div>
 
-                    {/* Credentials Sign In Trigger - strictly for Guest (to log in) or CEO/Director ONLY, NEVER for anyone else */}
-                    {(isGuest || isCeoUser(currentUser)) && (
-                      <div
-                        onClick={() => { setIsAuthModalOpen(true); setIsRoleMenuOpen(false); }}
+                    <div>
+                      <label
+                        htmlFor="profile-designation-input"
                         style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.6rem',
-                          padding: '0.55rem 0.75rem',
-                          background: '#eff6ff',
-                          border: '1px solid #bfdbfe',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          marginBottom: '0.45rem',
-                          transition: 'background 0.15s ease'
+                          display: 'block',
+                          fontSize: '0.8125rem',
+                          fontWeight: 700,
+                          color: '#334155',
+                          marginBottom: '0.4rem'
                         }}
                       >
-                        <Lock size={15} color="#2563eb" style={{ flexShrink: 0 }} />
-                        <div>
-                          <div style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#1e40af' }}>
-                            {isGuest ? 'Sign In / Employee Login' : 'Switch Account (Login)'}
-                          </div>
-                          <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                            Secure corporate sign-in
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {!isGuest && (
-                      <div
-                        onClick={() => { logoutUser(); setIsRoleMenuOpen(false); }}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.6rem',
-                          padding: '0.5rem 0.75rem',
-                          background: '#fef2f2',
-                          border: '1px solid #fecaca',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          color: '#dc2626',
-                          transition: 'background 0.15s ease'
+                        Role / Designation (Custom) *
+                      </label>
+                      <input
+                        id="profile-designation-input"
+                        type="text"
+                        list="common-designations-list"
+                        value={designationInput}
+                        onChange={(e) => {
+                          setDesignationInput(e.target.value);
+                          if (profileError) setProfileError('');
                         }}
-                      >
-                        <LogOut size={14} color="#dc2626" style={{ flexShrink: 0 }} />
-                        <span style={{ fontSize: '0.8125rem', fontWeight: 700 }}>
-                          Log Out ({currentUser.name})
-                        </span>
-                      </div>
-                    )}
+                        disabled={isSavingProfile}
+                        placeholder="e.g. Team Lead, Senior SDE, HR Lead..."
+                        style={{
+                          width: '100%',
+                          padding: '0.65rem 0.85rem',
+                          borderRadius: '8px',
+                          border: '1.5px solid #cbd5e1',
+                          fontSize: '0.875rem',
+                          color: '#0f172a',
+                          outline: 'none',
+                          background: '#ffffff',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                      <datalist id="common-designations-list">
+                        <option value="Team Lead" />
+                        <option value="Lead Developer" />
+                        <option value="Project Manager" />
+                        <option value="Senior Software Engineer" />
+                        <option value="Full Stack Developer" />
+                        <option value="Operations Lead" />
+                        <option value="Talent Acquisition & HR Lead" />
+                        <option value="Quality Assurance Specialist" />
+                        <option value="Business Analyst" />
+                        <option value="Executive Director" />
+                        <option value="Founder & CEO" />
+                      </datalist>
+                    </div>
                   </div>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
 
-      {/* Edit Profile & Corporate Email Modal */}
-      {isEditProfileModalOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="edit-profile-title"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 9999,
-            backgroundColor: 'rgba(15, 23, 42, 0.65)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '1rem'
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget && !isSavingProfile) {
-              setIsEditProfileModalOpen(false);
-            }
-          }}
-        >
-          <div
-            style={{
-              background: '#ffffff',
-              borderRadius: '16px',
-              width: '100%',
-              maxWidth: '460px',
-              maxHeight: '90dvh',
-              overflowY: 'auto',
-              boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.25)',
-              border: '1px solid #e2e8f0',
-              overflow: 'hidden'
-            border: '1px solid #e2e8f0'
-            }}
-          >
-            {/* Modal Header */}
-            <div
-              style={{
-                padding: '1.25rem 1.5rem',
-                borderBottom: '1px solid #f1f5f9',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                background: 'linear-gradient(to bottom, #ffffff, #f8fafc)'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '10px',
-                    background: '#eff6ff',
-                    color: '#2563eb',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                >
-                  <User size={18} />
-                </div>
-                <div>
-                  <h3
-                    id="edit-profile-title"
+                  {/* Current Profile Summary */}
+                  <div
                     style={{
-                      margin: 0,
-                      fontSize: '1rem',
-                      fontWeight: 800,
-                      color: '#0f172a',
-                      letterSpacing: '-0.01em'
+                      marginBottom: '1rem',
+                      padding: '0.5rem 0.75rem',
+                      borderRadius: '6px',
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      fontSize: '0.72rem',
+                      color: '#64748b',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      flexWrap: 'wrap',
+                      gap: '4px'
                     }}
                   >
-                    Update Profile & Email
-                  </h3>
-                  <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>
-                    Synchronizes permanently across sessions, tasks & rosters
-                  </p>
-                </div>
+                    <span>Designation: <strong style={{ color: '#166534' }}>{currentUser.designation || (currentUser.role !== 'EMPLOYEE' ? currentUser.role.replace('_', ' ') : 'Team Member')}</strong></span>
+                    <span>Employee ID: <strong style={{ color: '#0f172a' }}>{currentUser.employeeId || currentUser.id}</strong></span>
+                    <span>Department: <strong style={{ color: '#475569' }}>{currentUser.department || 'UrbanGaon'}</strong></span>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'flex-end',
+                      gap: '0.75rem',
+                      paddingTop: '0.75rem',
+                      borderTop: '1px solid #f1f5f9'
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setIsEditProfileModalOpen(false)}
+                      disabled={isSavingProfile}
+                      style={{
+                        padding: '0.55rem 1rem',
+                        borderRadius: '8px',
+                        border: '1px solid #cbd5e1',
+                        background: '#ffffff',
+                        color: '#475569',
+                        fontSize: '0.8125rem',
+                        fontWeight: 600,
+                        cursor: isSavingProfile ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSavingProfile || !nameInput.trim() || !emailInput.trim() || !employeeIdInput.trim()}
+                      style={{
+                        padding: '0.55rem 1.25rem',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                        color: '#ffffff',
+                        fontSize: '0.8125rem',
+                        fontWeight: 700,
+                        cursor: (isSavingProfile || !nameInput.trim() || !emailInput.trim() || !employeeIdInput.trim()) ? 'not-allowed' : 'pointer',
+                        opacity: (isSavingProfile || !nameInput.trim() || !emailInput.trim() || !employeeIdInput.trim()) ? 0.6 : 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 2px 4px rgba(37, 99, 235, 0.2)'
+                      }}
+                    >
+                      {isSavingProfile ? (
+                        <>
+                          <Loader2 size={14} className="animate-spin" />
+                          <span>Saving Changes...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Check size={14} />
+                          <span>Save & Update</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
               </div>
-              <button
-                type="button"
-                onClick={() => !isSavingProfile && setIsEditProfileModalOpen(false)}
-                disabled={isSavingProfile}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#94a3b8',
-                  cursor: isSavingProfile ? 'not-allowed' : 'pointer',
-                  padding: '4px',
-                  borderRadius: '6px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-                aria-label="Close dialog"
-              >
-                <XIcon size={18} />
-              </button>
             </div>
-
-            {/* Modal Body / Form */}
-            <form onSubmit={handleSaveProfile} style={{ padding: '1.25rem 1.5rem' }}>
-              {profileError && (
-                <div
-                  style={{
-                    padding: '0.65rem 0.85rem',
-                    borderRadius: '8px',
-                    background: '#fef2f2',
-                    border: '1px solid #fecaca',
-                    color: '#dc2626',
-                    fontSize: '0.76rem',
-                    fontWeight: 600,
-                    marginBottom: '1rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}
-                >
-                  <span>⚠</span>
-                  <span>{profileError}</span>
-                </div>
-              )}
-
-              {/* Field 1: Name / Username */}
-              <div style={{ marginBottom: '1rem' }}>
-                <label
-                  htmlFor="profile-name-input"
-                  style={{
-                    display: 'block',
-                    fontSize: '0.8125rem',
-                    fontWeight: 700,
-                    color: '#334155',
-                    marginBottom: '0.4rem'
-                  }}
-                >
-                  Full Display Name / Username *
-                </label>
-                <input
-                  id="profile-name-input"
-                  type="text"
-                  value={nameInput}
-                  onChange={(e) => {
-                    setNameInput(e.target.value);
-                    if (profileError) setProfileError('');
-                  }}
-                  disabled={isSavingProfile}
-                  placeholder="e.g. Sukh Sagar Singh Bhati"
-                  autoFocus
-                  style={{
-                    width: '100%',
-                    padding: '0.65rem 0.85rem',
-                    borderRadius: '8px',
-                    border: '1.5px solid #cbd5e1',
-                    fontSize: '0.875rem',
-                    color: '#0f172a',
-                    outline: 'none',
-                    transition: 'border-color 0.15s ease',
-                    boxSizing: 'border-box'
-                  }}
-                />
-              </div>
-
-              {/* Field 2: Official Corporate Email */}
-              <div style={{ marginBottom: '1rem' }}>
-                <label
-                  htmlFor="profile-email-input"
-                  style={{
-                    display: 'block',
-                    fontSize: '0.8125rem',
-                    fontWeight: 700,
-                    color: '#334155',
-                    marginBottom: '0.4rem'
-                  }}
-                >
-                  Official Corporate Email *
-                </label>
-                <input
-                  id="profile-email-input"
-                  type="email"
-                  value={emailInput}
-                  onChange={(e) => {
-                    setEmailInput(e.target.value);
-                    if (profileError) setProfileError('');
-                  }}
-                  disabled={isSavingProfile}
-                  placeholder="e.g. ceo@urbangaon.com"
-                  style={{
-                    width: '100%',
-                    padding: '0.65rem 0.85rem',
-                    borderRadius: '8px',
-                    border: '1.5px solid #cbd5e1',
-                    fontSize: '0.875rem',
-                    color: '#0f172a',
-                    outline: 'none',
-                    transition: 'border-color 0.15s ease',
-                    boxSizing: 'border-box'
-                  }}
-                />
-              </div>
-
-              {/* Field 3: Employee ID & Role / Designation Configuration */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
-                <div>
-                  <label
-                    htmlFor="profile-empid-input"
-                    style={{
-                      display: 'block',
-                      fontSize: '0.8125rem',
-                      fontWeight: 700,
-                      color: '#334155',
-                      marginBottom: '0.4rem'
-                    }}
-                  >
-                    Employee ID *
-                  </label>
-                  <input
-                    id="profile-empid-input"
-                    type="text"
-                    value={employeeIdInput}
-                    onChange={(e) => {
-                      setEmployeeIdInput(e.target.value);
-                      if (profileError) setProfileError('');
-                    }}
-                    disabled={isSavingProfile}
-                    placeholder="e.g. mem-12 or EMP-1001"
-                    style={{
-                      width: '100%',
-                      padding: '0.65rem 0.85rem',
-                      borderRadius: '8px',
-                      border: '1.5px solid #cbd5e1',
-                      fontSize: '0.875rem',
-                      color: '#0f172a',
-                      outline: 'none',
-                      background: '#ffffff',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="profile-designation-input"
-                    style={{
-                      display: 'block',
-                      fontSize: '0.8125rem',
-                      fontWeight: 700,
-                      color: '#334155',
-                      marginBottom: '0.4rem'
-                    }}
-                  >
-                    Role / Designation (Custom) *
-                  </label>
-                  <input
-                    id="profile-designation-input"
-                    type="text"
-                    list="common-designations-list"
-                    value={designationInput}
-                    onChange={(e) => {
-                      setDesignationInput(e.target.value);
-                      if (profileError) setProfileError('');
-                    }}
-                    disabled={isSavingProfile}
-                    placeholder="e.g. Team Lead, Senior SDE, HR Lead..."
-                    style={{
-                      width: '100%',
-                      padding: '0.65rem 0.85rem',
-                      borderRadius: '8px',
-                      border: '1.5px solid #cbd5e1',
-                      fontSize: '0.875rem',
-                      color: '#0f172a',
-                      outline: 'none',
-                      background: '#ffffff',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                  <datalist id="common-designations-list">
-                    <option value="Team Lead" />
-                    <option value="Lead Developer" />
-                    <option value="Project Manager" />
-                    <option value="Senior Software Engineer" />
-                    <option value="Full Stack Developer" />
-                    <option value="Operations Lead" />
-                    <option value="Talent Acquisition & HR Lead" />
-                    <option value="Quality Assurance Specialist" />
-                    <option value="Business Analyst" />
-                    <option value="Executive Director" />
-                    <option value="Founder & CEO" />
-                  </datalist>
-                </div>
-              </div>
-
-              {/* Current Profile Summary */}
-              <div
-                style={{
-                  marginBottom: '1rem',
-                  padding: '0.5rem 0.75rem',
-                  borderRadius: '6px',
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  fontSize: '0.72rem',
-                  color: '#64748b',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: '4px'
-                }}
-              >
-                <span>Designation: <strong style={{ color: '#166534' }}>{currentUser.designation || (currentUser.role !== 'EMPLOYEE' ? currentUser.role.replace('_', ' ') : 'Team Member')}</strong></span>
-                <span>Employee ID: <strong style={{ color: '#0f172a' }}>{currentUser.employeeId || currentUser.id}</strong></span>
-                <span>Department: <strong style={{ color: '#475569' }}>{currentUser.department || 'UrbanGaon'}</strong></span>
-              </div>
-
-              {/* Action Buttons */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'flex-end',
-                  gap: '0.75rem',
-                  paddingTop: '0.75rem',
-                  borderTop: '1px solid #f1f5f9'
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => setIsEditProfileModalOpen(false)}
-                  disabled={isSavingProfile}
-                  style={{
-                    padding: '0.55rem 1rem',
-                    borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
-                    background: '#ffffff',
-                    color: '#475569',
-                    fontSize: '0.8125rem',
-                    fontWeight: 600,
-                    cursor: isSavingProfile ? 'not-allowed' : 'pointer'
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSavingProfile || !nameInput.trim() || !emailInput.trim() || !employeeIdInput.trim()}
-                  style={{
-                    padding: '0.55rem 1.25rem',
-                    borderRadius: '8px',
-                    border: 'none',
-                    background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
-                    color: '#ffffff',
-                    fontSize: '0.8125rem',
-                    fontWeight: 700,
-                    cursor: (isSavingProfile || !nameInput.trim() || !emailInput.trim() || !employeeIdInput.trim()) ? 'not-allowed' : 'pointer',
-                    opacity: (isSavingProfile || !nameInput.trim() || !emailInput.trim() || !employeeIdInput.trim()) ? 0.6 : 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    boxShadow: '0 2px 4px rgba(37, 99, 235, 0.2)'
-                  }}
-                >
-                  {isSavingProfile ? (
-                    <>
-                      <Loader2 size={14} className="animate-spin" />
-                      <span>Saving Changes...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Check size={14} />
-                      <span>Save & Update</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </header>
-  );
+          )}
+        </header>
+        );
 };

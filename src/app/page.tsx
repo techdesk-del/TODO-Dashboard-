@@ -323,35 +323,35 @@ export default function Home() {
                       minWidth: 0,
                       border: '1px solid #e2e8f0'
                     }}>
-                        <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#1e293b', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                          Staff Filter:
-                        </span>
-                        <select
-                          value={ceoEmployeeFilter}
-                          onChange={(e) => setCeoEmployeeFilter(e.target.value)}
-                          style={{
-                            padding: '3px 8px',
-                            fontSize: '0.74rem',
-                            fontWeight: 700,
-                            borderRadius: '6px',
-                            border: '1px solid #cbd5e1',
-                            background: '#ffffff',
-                            color: '#0f172a',
-                            cursor: 'pointer',
+                      <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#1e293b', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                        Staff Filter:
+                      </span>
+                      <select
+                        value={ceoEmployeeFilter}
+                        onChange={(e) => setCeoEmployeeFilter(e.target.value)}
+                        style={{
+                          padding: '3px 8px',
+                          fontSize: '0.74rem',
+                          fontWeight: 700,
+                          borderRadius: '6px',
+                          border: '1px solid #cbd5e1',
+                          background: '#ffffff',
+                          color: '#0f172a',
+                          cursor: 'pointer',
                           outline: 'none',
-                            flex: '1 1 auto',
-                            minWidth: 0,
-                            maxWidth: '100%'
-                          }}
-                          title="Select an employee to isolate and monitor their corporate deliverables"
-                        >
-                          <option value="ALL">All Monitored Staff ({tasks.filter(t => t.status !== 'Cancelled').length} tasks)</option>
-                          {activeMembers.filter(m => !isStrictCeo(m)).map(emp => (
-                            <option key={emp.id} value={emp.id}>
-                              {emp.name} ({emp.department})
-                            </option>
-                          ))}
-                        </select>
+                          flex: '1 1 auto',
+                          minWidth: 0,
+                          maxWidth: '100%'
+                        }}
+                        title="Select an employee to isolate and monitor their corporate deliverables"
+                      >
+                        <option value="ALL">All Monitored Staff ({tasks.filter(t => t.status !== 'Cancelled').length} tasks)</option>
+                        {activeMembers.filter(m => !isStrictCeo(m)).map(emp => (
+                          <option key={emp.id} value={emp.id}>
+                            {emp.name} ({emp.department})
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   ) : (
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', background: '#f1f5f9', padding: '3px', borderRadius: '8px', flexShrink: 0 }}>
