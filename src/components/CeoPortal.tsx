@@ -467,7 +467,7 @@ export const CeoPortal: React.FC = () => {
       ────────────────────────────────────────────────────────────── */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 155px), 1fr))',
         gap: '0.9rem'
       }}>
         {/* KPI 1: Total Active Deliverables */}

@@ -254,7 +254,7 @@ export const Header: React.FC = () => {
         <div
           className="logo-container"
           onClick={() => setActiveView('workspace')}
-          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', width: '100%' }}
+          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', minWidth: 0 }}
           title="UrbanGaon — a perfect balance"
         >
           <img
@@ -344,7 +344,7 @@ export const Header: React.FC = () => {
             title="Executive Oversight Active — Real-time Deliverable Monitoring across all employees"
           >
             
-            <span>Executive Monitor</span>
+            <span className="header-action-label">Executive Monitor</span>
           </div>
         )}
 
