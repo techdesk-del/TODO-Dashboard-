@@ -424,144 +424,6 @@ export const CeoPortal: React.FC = () => {
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          1.5 PENDING CEO FINAL APPROVALS COMMAND QUEUE
-      ────────────────────────────────────────────────────────────── */}
-      {pendingCeoApprovalTasks.length > 0 && (
-        <div style={{
-          background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
-          border: '1.5px solid #fde68a',
-          borderRadius: '14px',
-          padding: '1.1rem 1.4rem',
-          boxShadow: '0 4px 12px rgba(180, 83, 9, 0.08)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.6rem', marginBottom: '0.85rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '1.1rem' }}>⏳</span>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 800, color: '#92400e' }}>
-                  Deliverables Awaiting Your Final Approval ({pendingCeoApprovalTasks.length})
-                </h3>
-                <p style={{ margin: 0, fontSize: '0.74rem', color: '#b45309' }}>
-                  Staff have submitted these deliverables. Executive sign-off from Mr. Sukh Sagar Singh Bhati is required before completion.
-                </p>
-              </div>
-            </div>
-            <span style={{
-              background: '#fef08a',
-              border: '1px solid #fde047',
-              color: '#854d0e',
-              padding: '3px 10px',
-              borderRadius: '999px',
-              fontSize: '0.72rem',
-              fontWeight: 800
-            }}>
-              Final Approval Queue
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-            {pendingCeoApprovalTasks.map(t => (
-              <div
-                key={t.id}
-                onClick={() => setInspectingTaskId(t.id)}
-                style={{
-                  background: '#ffffff',
-                  border: '1px solid #fde68a',
-                  borderRadius: '10px',
-                  padding: '0.75rem 1rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: '0.65rem',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = '#fffbeb')}
-                onMouseLeave={(e) => (e.currentTarget.style.background = '#ffffff')}
-                title="Click to inspect deliverable details & full executive dossier"
-              >
-                <div style={{ minWidth: '240px', flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                    <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#0f172a' }}>
-                      {t.title}
-                    </span>
-                    <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '1px 6px', borderRadius: '4px', background: '#eff6ff', color: '#1d4ed8' }}>
-                      {t.department}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '3px' }}>
-                    Assignee: <strong style={{ color: '#0f172a' }}>{t.assignees?.map(a => a.name).join(', ') || 'Staff'}</strong>
-                    {t.ceoApprovalRequestedBy && <span> • Submitted by: <strong style={{ color: '#92400e' }}>{t.ceoApprovalRequestedBy}</strong></span>}
-                    <span> • Scheduled: <strong>{t.scheduledDate}</strong></span>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }} onClick={(e) => e.stopPropagation()}>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const note = prompt(`Enter optional CEO approval note for "${t.title}":`, 'Final approval granted. Deliverable verified and marked Completed.');
-                      if (note === null) return;
-                      confetti({ particleCount: 70, spread: 80, origin: { y: 0.6 } });
-                      approveTaskByCeo(t.id, note.trim());
-                    }}
-                    style={{
-                      background: 'linear-gradient(135deg, #16a34a, #15803d)',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '6px',
-                      padding: '6px 14px',
-                      fontSize: '0.75rem',
-                      fontWeight: 800,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      boxShadow: '0 2px 4px rgba(22, 163, 74, 0.25)'
-                    }}
-                    title="Grant Final Approval and Mark Done"
-                  >
-                    <Check size={14} />
-                    <span>Approve & Complete (Done)</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const reason = prompt(`Enter revision instructions for "${t.title}":`);
-                      if (!reason || !reason.trim()) return;
-                      rejectTaskByCeo(t.id, reason.trim());
-                    }}
-                    style={{
-                      background: '#ffffff',
-                      color: '#b91c1c',
-                      border: '1px solid #fca5a5',
-                      borderRadius: '6px',
-                      padding: '6px 10px',
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                    title="Return to staff with feedback for revision"
-                  >
-                    <X size={14} />
-                    <span>Request Changes</span>
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ─────────────────────────────────────────────────────────────
           2. EXECUTIVE KPI CARDS (4-CARD GRID)
       ────────────────────────────────────────────────────────────── */}
       <div style={{
@@ -767,7 +629,7 @@ export const CeoPortal: React.FC = () => {
           alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
-          gap: '0.75rem'
+          gap: '0.65rem'
         }}>
           {/* Search Box */}
           <div style={{
@@ -778,8 +640,8 @@ export const CeoPortal: React.FC = () => {
             border: '1px solid #cbd5e1',
             borderRadius: '8px',
             padding: '6px 11px',
-            flex: '1 1 240px',
-            maxWidth: '360px',
+            flex: '1 1 220px',
+            minWidth: '0',
             transition: 'border-color 0.15s ease'
           }}>
             <Search size={15} color="#64748b" style={{ flexShrink: 0 }} />
@@ -792,7 +654,7 @@ export const CeoPortal: React.FC = () => {
                 border: 'none',
                 background: 'transparent',
                 outline: 'none',
-                fontSize: '0.76rem',
+                fontSize: '0.78rem',
                 color: '#0f172a',
                 width: '100%'
               }}
@@ -801,7 +663,7 @@ export const CeoPortal: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 0 }}
+                style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 0, flexShrink: 0 }}
               >
                 <X size={13} color="#94a3b8" />
               </button>
@@ -809,7 +671,7 @@ export const CeoPortal: React.FC = () => {
           </div>
 
           {/* Member Picker Dropdown */}
-          <div style={{ position: 'relative', flex: '1 1 230px', maxWidth: '340px' }}>
+          <div style={{ position: 'relative', flex: '1 1 220px', minWidth: '0' }}>
             <button
               type="button"
               onClick={() => setIsMemberDropdownOpen(!isMemberDropdownOpen)}
@@ -971,12 +833,14 @@ export const CeoPortal: React.FC = () => {
           </div>
 
           {/* Department Filter */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b' }}>Cluster:</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: '1 1 180px', minWidth: '0' }}>
+            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', flexShrink: 0 }}>Cluster:</span>
             <select
               value={departmentFilter}
               onChange={(e) => setDepartmentFilter(e.target.value)}
               style={{
+                flex: 1,
+                minWidth: 0,
                 padding: '6px 10px',
                 borderRadius: '8px',
                 border: '1px solid #cbd5e1',
@@ -1012,6 +876,8 @@ export const CeoPortal: React.FC = () => {
                 fontSize: '0.72rem',
                 fontWeight: 700,
                 cursor: 'pointer',
+                flexShrink: 0,
+                whiteSpace: 'nowrap',
                 transition: 'all 0.15s ease'
               }}
               title="Clear all active search and filter constraints"
@@ -1026,13 +892,12 @@ export const CeoPortal: React.FC = () => {
         <div style={{
           display: 'flex',
           alignItems: 'center',
+          flexWrap: 'wrap',
           gap: '6px',
-          overflowX: 'auto',
-          paddingBottom: '2px',
           borderTop: '1px solid #f1f5f9',
           paddingTop: '0.65rem'
         }}>
-          <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em', marginRight: '4px' }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em', marginRight: '4px', flexShrink: 0 }}>
             Status:
           </span>
 
@@ -1051,7 +916,7 @@ export const CeoPortal: React.FC = () => {
                 type="button"
                 onClick={() => setStatusFilter(tab.id as any)}
                 style={{
-                  padding: '4px 10px',
+                  padding: '5px 10px',
                   borderRadius: '6px',
                   border: isActive ? '1px solid #2563eb' : '1px solid #e2e8f0',
                   background: isActive ? '#2563eb' : '#f8fafc',
@@ -1059,20 +924,22 @@ export const CeoPortal: React.FC = () => {
                   fontSize: '0.72rem',
                   fontWeight: 700,
                   cursor: 'pointer',
-                  display: 'flex',
+                  display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
                   whiteSpace: 'nowrap',
+                  flexShrink: 0,
                   transition: 'all 0.12s ease'
                 }}
               >
-                <span>{tab.label}</span>
+                <span style={{ whiteSpace: 'nowrap' }}>{tab.label}</span>
                 <span style={{
                   background: isActive ? 'rgba(255,255,255,0.25)' : '#e2e8f0',
                   color: isActive ? '#ffffff' : '#475569',
                   padding: '1px 5px',
                   borderRadius: '4px',
-                  fontSize: '0.66rem'
+                  fontSize: '0.66rem',
+                  flexShrink: 0
                 }}>
                   {tab.count}
                 </span>
@@ -1201,52 +1068,56 @@ export const CeoPortal: React.FC = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '0.75rem 1.25rem',
+          flexWrap: 'wrap',
+          gap: '0.5rem',
+          padding: '0.75rem 1rem',
           borderBottom: '1px solid #e2e8f0',
           background: '#f8fafc'
         }}>
-          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>
+          <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#334155' }}>
             Company Deliverables ({displayedTasks.length})
           </span>
-          <div style={{ display: 'flex', gap: '4px' }}>
+          <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
             <button
               type="button"
               onClick={() => setCeoTaskLayout('cards')}
               title="Box Cards View"
               style={{
-                display: 'flex', alignItems: 'center', gap: '4px',
+                display: 'inline-flex', alignItems: 'center', gap: '4px',
                 padding: '4px 10px',
                 borderRadius: '6px',
                 border: ceoTaskLayout === 'cards' ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
                 background: ceoTaskLayout === 'cards' ? '#eff6ff' : '#ffffff',
                 color: ceoTaskLayout === 'cards' ? '#2563eb' : '#64748b',
-                fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer'
+                fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer',
+                whiteSpace: 'nowrap', flexShrink: 0
               }}
             >
-              <Layers size={13} /> Cards
+              <Layers size={13} /> <span>Cards</span>
             </button>
             <button
               type="button"
               onClick={() => setCeoTaskLayout('table')}
               title="Table View"
               style={{
-                display: 'flex', alignItems: 'center', gap: '4px',
+                display: 'inline-flex', alignItems: 'center', gap: '4px',
                 padding: '4px 10px',
                 borderRadius: '6px',
                 border: ceoTaskLayout === 'table' ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
                 background: ceoTaskLayout === 'table' ? '#eff6ff' : '#ffffff',
                 color: ceoTaskLayout === 'table' ? '#2563eb' : '#64748b',
-                fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer'
+                fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer',
+                whiteSpace: 'nowrap', flexShrink: 0
               }}
             >
-              <FileSpreadsheet size={13} /> Table
+              <FileSpreadsheet size={13} /> <span>Table</span>
             </button>
           </div>
         </div>
 
         {/* ══ CARDS MODE ══ */}
         {ceoTaskLayout === 'cards' && (
-          <div style={{ padding: '0.75rem 1rem' }}>
+          <div style={{ padding: 'clamp(0.5rem, 2vw, 0.85rem)' }}>
             {displayedTasks.length === 0 ? (
               <div style={{ padding: '3rem 2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.6rem' }}>
                 <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1274,31 +1145,31 @@ export const CeoPortal: React.FC = () => {
         {ceoTaskLayout === 'table' && (
           <>
         <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '850px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '920px' }}>
             <thead>
               <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', width: '50px' }}>
+                <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', width: '50px', whiteSpace: 'nowrap' }}>
                   #
                 </th>
-                <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', minWidth: '250px' }}>
                   Task Name
                 </th>
-                <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
                   Department
                 </th>
-                <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', minWidth: '165px' }}>
                   Assignee
                 </th>
-                <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
                   Due Date
                 </th>
-                <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
                   Priority
                 </th>
-                <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
                   Status & Progress
                 </th>
-                <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'right' }}>
+                <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'right', whiteSpace: 'nowrap' }}>
                   Executive Governance
                 </th>
               </tr>
@@ -1337,7 +1208,7 @@ export const CeoPortal: React.FC = () => {
                     </td>
 
                     {/* Task Name */}
-                    <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
+                    <td style={{ padding: '12px 14px', verticalAlign: 'middle', minWidth: '250px' }}>
                       <span 
                         style={{ 
                           fontSize: '0.86rem', 
@@ -1515,7 +1386,68 @@ export const CeoPortal: React.FC = () => {
                       style={{ padding: '12px 14px', verticalAlign: 'middle', textAlign: 'right' }}
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '5px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '5px', flexWrap: 'wrap' }}>
+                        {isCeo && (task.status === 'Review' || task.pendingCeoApproval) && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const note = prompt(`Enter optional CEO approval note for "${task.title}":`, 'Final approval granted. Deliverable verified and marked Completed.');
+                                if (note === null) return;
+                                confetti({ particleCount: 70, spread: 80, origin: { y: 0.6 } });
+                                approveTaskByCeo(task.id, note.trim());
+                              }}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '4px 10px',
+                                background: 'linear-gradient(135deg, #16a34a, #15803d)',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '6px',
+                                fontSize: '0.7rem',
+                                fontWeight: 800,
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap',
+                                boxShadow: '0 1px 3px rgba(22, 163, 74, 0.25)'
+                              }}
+                              title="Grant Final Approval and Mark Done"
+                            >
+                              <Check size={12} />
+                              <span>Approve & Complete (Done)</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const reason = prompt(`Enter revision instructions for "${task.title}":`);
+                                if (!reason || !reason.trim()) return;
+                                rejectTaskByCeo(task.id, reason.trim());
+                              }}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                padding: '4px 8px',
+                                background: '#ffffff',
+                                color: '#b91c1c',
+                                border: '1px solid #fca5a5',
+                                borderRadius: '6px',
+                                fontSize: '0.7rem',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap'
+                              }}
+                              title="Return to staff with feedback for revision"
+                            >
+                              <X size={12} />
+                              <span>Request Changes</span>
+                            </button>
+                          </>
+                        )}
+
                         {/* Inspect Details Button */}
                         <button
                           type="button"

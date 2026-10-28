@@ -52,7 +52,13 @@ div, section, header, aside, main, nav, footer, article {
   min-width: 0;
 }
 
-button, input, select, textarea {
+button {
+  font-family: inherit;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input, select, textarea {
   font-family: inherit;
   -webkit-appearance: none;
   appearance: none;
@@ -1294,9 +1300,28 @@ p, span, div, h1, h2, h3, h4, h5, h6, label {
 
 @media (max-width: 768px) {
   .task-card-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.65rem;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.55rem !important;
+  }
+  .task-header-left {
+    width: 100% !important;
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+    align-items: flex-start !important;
+  }
+  .task-title-text {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    word-break: break-word !important;
+    min-width: 0 !important;
+  }
+  .task-header-right {
+    width: 100% !important;
+    flex-wrap: wrap !important;
+    justify-content: flex-start !important;
+    gap: 0.35rem !important;
   }
   .task-actions-group {
     margin-left: 0 !important;

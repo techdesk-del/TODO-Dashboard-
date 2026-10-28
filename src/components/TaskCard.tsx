@@ -487,9 +487,10 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
             userSelect: 'none',
             display: 'flex',
             flexDirection: 'row',
+            flexWrap: 'wrap',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: '0.65rem',
+            gap: '0.55rem 0.75rem',
             width: '100%',
             padding: '2px 0'
           }}
@@ -501,9 +502,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '0.65rem',
-              flex: '1 1 auto',
-              minWidth: 0
+              gap: '0.55rem',
+              flex: '1 1 240px',
+              minWidth: 'min(240px, 100%)'
             }}
           >
             <input
@@ -530,9 +531,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                 color: isCompleted ? '#94a3b8' : '#0f172a',
                 fontWeight: 700,
                 fontSize: '0.88rem',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
+                lineHeight: 1.4,
                 minWidth: 0,
                 flex: '1 1 auto'
               }}
@@ -552,8 +551,10 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '0.45rem',
-              flexShrink: 0
+              flexWrap: 'wrap',
+              gap: '0.4rem',
+              flexShrink: 0,
+              maxWidth: '100%'
             }}
           >
             {/* Scheduled Date */}
@@ -604,25 +605,95 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                 ✓ COMPLETED
               </span>
             ) : isAwaitingCeo ? (
-              <span
-                className="task-pill-badge"
+              <div
+                onClick={(e) => e.stopPropagation()}
                 style={{
-                  margin: 0,
-                  padding: '2px 8px',
-                  fontSize: '0.68rem',
-                  fontWeight: 800,
-                  background: '#fef3c7',
-                  color: '#92400e',
-                  border: '1px solid #fde68a',
-                  whiteSpace: 'nowrap',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '4px'
+                  flexWrap: 'wrap',
+                  gap: '5px'
                 }}
-                title={task.ceoApprovalRequestedBy ? `Submitted by ${task.ceoApprovalRequestedBy} for CEO Final Approval` : 'Awaiting CEO Final Approval before completion'}
               >
-                <span>⏳ AWAITING CEO APPROVAL</span>
-              </span>
+                <span
+                  className="task-pill-badge"
+                  style={{
+                    margin: 0,
+                    padding: '2px 8px',
+                    fontSize: '0.68rem',
+                    fontWeight: 800,
+                    background: '#fef3c7',
+                    color: '#92400e',
+                    border: '1px solid #fde68a',
+                    whiteSpace: 'nowrap',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                  title={task.ceoApprovalRequestedBy ? `Submitted by ${task.ceoApprovalRequestedBy} for CEO Final Approval` : 'Awaiting CEO Final Approval before completion'}
+                >
+                  <span>⏳ AWAITING CEO APPROVAL</span>
+                </span>
+                {isCeo && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const note = prompt(`Optional CEO approval note for "${task.title}":`, 'Final approval granted. Deliverable completed per standards.');
+                        if (note === null) return;
+                        confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
+                        approveTaskByCeo(task.id, note.trim());
+                      }}
+                      style={{
+                        background: 'linear-gradient(135deg, #16a34a, #15803d)',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '4px 10px',
+                        fontSize: '0.72rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        whiteSpace: 'nowrap',
+                        boxShadow: '0 1px 3px rgba(21, 128, 61, 0.2)'
+                      }}
+                      title="Grant CEO Final Approval to mark this deliverable Completed (Done)"
+                    >
+                      <Check size={13} />
+                      <span>Approve & Complete (Done)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const reason = prompt(`Enter revision instructions for "${task.title}":`);
+                        if (!reason || !reason.trim()) return;
+                        rejectTaskByCeo(task.id, reason.trim());
+                      }}
+                      style={{
+                        background: '#ffffff',
+                        color: '#b91c1c',
+                        border: '1px solid #fca5a5',
+                        borderRadius: '6px',
+                        padding: '4px 8px',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                        whiteSpace: 'nowrap'
+                      }}
+                      title="Return deliverable to staff with feedback for revision"
+                    >
+                      <X size={13} />
+                      <span>Request Changes</span>
+                    </button>
+                  </>
+                )}
+              </div>
             ) : isOverdue ? (
               <span className="task-pill-badge badge-overdue" style={{ margin: 0, padding: '2px 7px', fontSize: '0.68rem', whiteSpace: 'nowrap' }} title={hasDelayReason ? `Delay Reason: "${task.delayReason || task.pastDueReason}"` : 'Overdue without recorded reason'}>
                 {hasDelayReason ? 'OVERDUE (REASON RECORDED)' : 'PENDING NO REASON'}
