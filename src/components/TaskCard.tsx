@@ -57,7 +57,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
     members,
     currentUser,
     systemConfig,
-    setViewingAuditForTaskId
+    setViewingAuditForTaskId,
+    setBannerNotification
   } = useApp();
 
   const isCeo = isCeoUser(currentUser);
@@ -263,7 +264,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
   const handleConfirmReschedule = (e: React.FormEvent) => {
     e.preventDefault();
     if (!rescheduleDateInput) return;
-    updateTask(task.id, { scheduledDate: rescheduleDateInput }, `Rescheduled deliverable to ${rescheduleDateInput}`);
+    updateTask(task.id, { scheduledDate: rescheduleDateInput, dueDate: rescheduleDateInput }, `Rescheduled deliverable to ${rescheduleDateInput}`);
+    setBannerNotification({
+      message: `Deliverable "${task.title}" rescheduled to ${rescheduleDateInput}`,
+      badge: '✓ Rescheduled Live'
+    });
     setShowRescheduleModal(false);
   };
 
@@ -927,7 +932,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                   type="button"
                   className="btn-secondary task-btn-overdue-today"
                   onClick={() => {
-                    updateTask(task.id, { scheduledDate: todayStr }, `Rescheduled overdue deliverable to today (${todayStr})`);
+                    updateTask(task.id, { scheduledDate: todayStr, dueDate: todayStr }, `Rescheduled overdue deliverable to today (${todayStr})`);
                   }}
                   title="Reschedule this overdue task to today"
                 >
@@ -1626,14 +1631,52 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
       {/* Modal: Reschedule Date */}
       {showRescheduleModal && (
         <div className="stream-overlay" onClick={() => setShowRescheduleModal(false)}>
-          <div className="stream-modal-card" style={{ maxWidth: '420px' }} onClick={e => e.stopPropagation()}>
-            <div className="stream-modal-header">
-              <h3 style={{ fontSize: '1rem', fontWeight: 700 }}>Reschedule Deliverable</h3>
-              <button className="calendar-nav-btn" onClick={() => setShowRescheduleModal(false)}><X size={16} /></button>
+          <div className="stream-modal-card" style={{ maxWidth: '440px', width: '100%' }} onClick={e => e.stopPropagation()}>
+            <div className="stream-modal-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <CalendarClock size={18} color="#2563eb" />
+                <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>Reschedule Deliverable</h3>
+              </div>
+              <button className="calendar-nav-btn" type="button" onClick={() => setShowRescheduleModal(false)}><X size={16} /></button>
             </div>
-            <form onSubmit={handleConfirmReschedule} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+
+            <div style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              padding: '0.65rem 0.85rem',
+              fontSize: '0.8rem',
+              color: '#334155'
+            }}>
+              <div style={{ fontWeight: 700, color: '#0f172a', marginBottom: '2px' }}>{task.title}</div>
+              <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                Current Due Date: <strong style={{ color: '#1e293b' }}>{task.dueDate || task.scheduledDate}</strong> • Current Date: <strong style={{ color: '#2563eb' }}>{todayStr}</strong>
+              </div>
+            </div>
+
+            <form onSubmit={handleConfirmReschedule} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
               <div className="form-field-group">
-                <label className="form-field-label">New Target Date</label>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', marginBottom: '4px' }}>
+                  <label className="form-field-label" style={{ margin: 0 }}>New Target Date</label>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setRescheduleDateInput(todayStr)}
+                      style={{
+                        padding: '3px 10px',
+                        borderRadius: '6px',
+                        border: rescheduleDateInput === todayStr ? '1.5px solid #2563eb' : '1px solid #cbd5e1',
+                        background: rescheduleDateInput === todayStr ? '#2563eb' : '#f8fafc',
+                        color: rescheduleDateInput === todayStr ? '#ffffff' : '#334155',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Today ({todayStr})
+                    </button>
+                  </div>
+                </div>
                 <input
                   type="date"
                   className="form-input"
@@ -1642,7 +1685,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                   required
                 />
               </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+              <div className="stream-modal-footer-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <button type="button" className="btn-secondary" onClick={() => setShowRescheduleModal(false)}>Cancel</button>
                 <button type="submit" className="btn-primary">Update Schedule</button>
               </div>

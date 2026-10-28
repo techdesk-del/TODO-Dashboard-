@@ -188,6 +188,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [dbStatus, setDbStatus] = useState<DBStatus>('connecting');
   const [inAppNotifications, setInAppNotifications] = useState<InAppNotification[]>([]);
   const deletedIdsRef = useRef<Set<string>>(new Set());
+  const recentTaskMutationsRef = useRef<Map<string, { timestamp: number; task: Task }>>(new Map());
 
   const unreadNotificationsCount = inAppNotifications.filter(n => !n.read).length;
 
@@ -356,6 +357,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 !t.title?.toLowerCase().includes('mobile simulator') &&
                 t.id !== 'task-1790071325492'
               ) {
+                const recentMut = recentTaskMutationsRef.current.get(t.id);
+                if (recentMut && (now - recentMut.timestamp < 5000)) {
+                  const serverTime = t.updatedAt ? new Date(t.updatedAt).getTime() : 0;
+                  const localTime = recentMut.task.updatedAt ? new Date(recentMut.task.updatedAt).getTime() : recentMut.timestamp;
+                  if (serverTime < localTime) {
+                    uniqueMap.set(t.id, recentMut.task);
+                    return;
+                  }
+                }
                 uniqueMap.set(t.id, t);
               }
             });
@@ -381,11 +391,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               prev.length === nextList.length &&
               prev.every((p, i) => {
                 const n = nextList[i];
-                return n && p.id === n.id && p.status === n.status && p.updatedAt === n.updatedAt && p.title === n.title;
+                if (!n || p.id !== n.id) return false;
+                if (
+                  p.status !== n.status ||
+                  p.updatedAt !== n.updatedAt ||
+                  p.title !== n.title ||
+                  p.scheduledDate !== n.scheduledDate ||
+                  p.dueDate !== n.dueDate ||
+                  p.progressPercent !== n.progressPercent ||
+                  Boolean(p.pendingCeoApproval) !== Boolean(n.pendingCeoApproval) ||
+                  (p.assignees?.length || 0) !== (n.assignees?.length || 0)
+                ) {
+                  return false;
+                }
+                if (p.assignees && n.assignees) {
+                  for (let idx = 0; idx < p.assignees.length; idx++) {
+                    if (
+                      p.assignees[idx].id !== n.assignees[idx].id ||
+                      p.assignees[idx].status !== n.assignees[idx].status ||
+                      p.assignees[idx].name !== n.assignees[idx].name
+                    ) {
+                      return false;
+                    }
+                  }
+                }
+                return true;
               })
             ) {
               return prev;
             }
+
+            try {
+              localStorage.setItem('urbangaon_tasks_v2', JSON.stringify(nextList));
+            } catch { }
 
             return nextList;
           });
@@ -793,7 +831,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             });
           } else if (data?.action === 'UPDATED' && data.taskId && data.updates) {
             setTasks(prev => {
-              const updated = prev.map(t => t.id === data.taskId ? { ...t, ...data.updates } : t);
+              const updated = prev.map(t => {
+                if (t.id === data.taskId) {
+                  const nextTask = { ...t, ...data.updates, updatedAt: data.updates.updatedAt || new Date().toISOString() };
+                  recentTaskMutationsRef.current.set(data.taskId, { timestamp: Date.now(), task: nextTask });
+                  return nextTask;
+                }
+                return t;
+              });
               try {
                 localStorage.setItem('urbangaon_tasks_v2', JSON.stringify(updated));
               } catch { }
@@ -1124,6 +1169,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateTask = (taskId: string, updates: Partial<Task>, note?: string) => {
     // Flowchart A: If edited by Admin or Super Admin, set editedByAdmin = true
     const isAdmin = currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN';
+    const currentTask = tasks.find(t => t.id === taskId);
+    const nowIso = new Date().toISOString();
     const effectiveUpdates: Partial<Task> = (isAdmin && updates.editedByAdmin === undefined)
       ? { ...updates, editedByAdmin: true }
       : { ...updates };
@@ -1132,11 +1179,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (updates.delayReason && updates.delayReason.trim().length > 0) {
       effectiveUpdates.isPendingNoReason = false;
     }
-    // If deliverable is rescheduled to today or future date, clear overdue flags
-    if (updates.scheduledDate && updates.scheduledDate >= getTodayStr()) {
-      effectiveUpdates.isOverdue = false;
-      effectiveUpdates.isPendingNoReason = false;
-      effectiveUpdates.overdueDays = 0;
+    // If deliverable is rescheduled, keep dueDate in sync if not explicitly provided, and clear overdue flags if >= today
+    if (updates.scheduledDate) {
+      if (!updates.dueDate) {
+        effectiveUpdates.dueDate = updates.scheduledDate;
+      }
+      if (updates.scheduledDate >= getTodayStr()) {
+        effectiveUpdates.isOverdue = false;
+        effectiveUpdates.isPendingNoReason = false;
+        effectiveUpdates.overdueDays = 0;
+      }
+    }
+    // If task is reopened or moved back to In Progress / Not Started, reset any 'Done' assignees so computeMultiAssigneeStatus stays in sync
+    if ((updates.status === 'In Progress' || updates.status === 'Not Started') && !updates.assignees && currentTask?.assignees?.length) {
+      effectiveUpdates.assignees = currentTask.assignees.map(a =>
+        a.status === 'Done' ? { ...a, status: updates.status as TaskStatus, completedAt: undefined } : a
+      );
+      effectiveUpdates.pendingCeoApproval = false;
     }
     // When deliverable is marked Done, it is 100% completed: clear overdue, pending, and approval flags
     if (updates.status === 'Done') {
@@ -1147,24 +1206,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       effectiveUpdates.progressPercent = 100;
     }
 
-    // Optimistic UI update
-    setTasks(prev => prev.map(t => {
-      if (t.id !== taskId) return t;
-      return { ...t, ...effectiveUpdates, isJustAdded: false, updatedAt: new Date().toISOString() };
-    }));
+    // Optimistic UI update + protection from 1.5s background poll race condition
+    setTasks(prev => {
+      const nextList = prev.map(t => {
+        if (t.id !== taskId) return t;
+        const updatedTask: Task = { ...t, ...effectiveUpdates, isJustAdded: false, updatedAt: nowIso };
+        recentTaskMutationsRef.current.set(taskId, { timestamp: Date.now(), task: updatedTask });
+        return updatedTask;
+      });
+      try {
+        localStorage.setItem('urbangaon_tasks_v2', JSON.stringify(nextList));
+      } catch { }
+      return nextList;
+    });
 
     // Broadcast immediately to all open tabs on same browser
     try {
       if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
         const bc = new BroadcastChannel('urbangaon_task_sync');
-        bc.postMessage({ action: 'UPDATED', taskId, updates: effectiveUpdates });
+        bc.postMessage({ action: 'UPDATED', taskId, updates: { ...effectiveUpdates, updatedAt: nowIso } });
         bc.close();
       }
     } catch { }
 
     // Sync to MongoDB Atlas API with resilient fallback
-    const currentTask = tasks.find(t => t.id === taskId);
-    const mergedTask = currentTask ? { ...currentTask, ...effectiveUpdates } : effectiveUpdates;
+    const mergedTask = currentTask ? { ...currentTask, ...effectiveUpdates, updatedAt: nowIso } : { ...effectiveUpdates, updatedAt: nowIso };
+    if (currentTask) {
+      recentTaskMutationsRef.current.set(taskId, { timestamp: Date.now(), task: mergedTask as Task });
+    }
 
     const patchPayload = {
       ...effectiveUpdates,
@@ -1187,15 +1256,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       body: JSON.stringify(patchPayload)
     })
       .then(async res => {
-        if (!res.ok) {
+        if (res.ok) {
+          const resJson = await res.json().catch(() => null);
+          if (resJson?.success && resJson?.data) {
+            const serverTask = resJson.data as Task;
+            recentTaskMutationsRef.current.set(taskId, { timestamp: Date.now(), task: serverTask });
+            setTasks(prev => {
+              const nextList = prev.map(t => t.id === taskId ? { ...t, ...serverTask, isJustAdded: false } : t);
+              try {
+                localStorage.setItem('urbangaon_tasks_v2', JSON.stringify(nextList));
+              } catch { }
+              return nextList;
+            });
+          }
+        } else {
           // Secondary fallback to dynamic segment /api/tasks/:id
           const fallbackRes = await fetch(`/api/tasks/${encodeURIComponent(taskId)}`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'x-user-email': currentUser.email || '',
+              'x-user-name': currentUser.name || '',
+              'x-user-role': currentUser.role || '',
+              'x-user-id': currentUser.id || ''
+            },
             body: JSON.stringify(patchPayload)
           }).catch(() => null);
 
-          if (!fallbackRes || !fallbackRes.ok) {
+          if (fallbackRes && fallbackRes.ok) {
+            const fbJson = await fallbackRes.json().catch(() => null);
+            if (fbJson?.success && fbJson?.data) {
+              const serverTask = fbJson.data as Task;
+              recentTaskMutationsRef.current.set(taskId, { timestamp: Date.now(), task: serverTask });
+              setTasks(prev => {
+                const nextList = prev.map(t => t.id === taskId ? { ...t, ...serverTask, isJustAdded: false } : t);
+                try {
+                  localStorage.setItem('urbangaon_tasks_v2', JSON.stringify(nextList));
+                } catch { }
+                return nextList;
+              });
+            }
+          } else {
             const errText = await res.text().catch(() => '');
             let errData: any = {};
             try { errData = JSON.parse(errText); } catch { errData = { error: errText }; }
@@ -1551,9 +1652,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const reopenTask = (taskId: string, reason: string) => {
     const targetTask = tasks.find(t => t.id === taskId);
+    const reopenedAssignees = targetTask?.assignees?.map(a => ({
+      ...a,
+      status: 'In Progress' as TaskStatus,
+      completedAt: undefined,
+    }));
+
     updateTask(taskId, {
       status: 'In Progress',
       progressPercent: 50,
+      ...(reopenedAssignees ? { assignees: reopenedAssignees } : {}),
+      pendingCeoApproval: false,
+      ceoApprovedAt: undefined,
+      ceoApprovedBy: undefined,
       holdReason: undefined,
       cancellationReason: undefined,
       editedByAdmin: true,
@@ -2392,12 +2503,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let addedMembers: TeamMember[] = [];
     let removedAssignees: typeof oldAssignees = [];
 
-    const activeList = members.filter(m => m.status === 'ACTIVE');
+    const activeList = members.filter(m => {
+      if (!m) return false;
+      const st = String(m.status || 'ACTIVE').toUpperCase().trim();
+      return st !== 'DEACTIVATED' && st !== 'REMOVED' && st !== 'TERMINATED' && !(m as any).isDeactivated;
+    });
 
     if (mode === 'REPLACE_ALL') {
       // Flowchart 22: Replace all -> Remove old assignees and add new
       removedAssignees = [...oldAssignees];
-      addedMembers = activeList.filter(m => newAssigneeIds.includes(m.id));
+      addedMembers = activeList.filter(m => newAssigneeIds.includes(m.id) || (m.email && newAssigneeIds.includes(m.email)));
       updatedAssignees = addedMembers.map(m => ({
         id: m.id,
         name: m.name,
@@ -2411,7 +2526,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Flowchart 22: Add alongside -> Keep old assignees and add new
       removedAssignees = [];
       const newToAdd = activeList.filter(
-        m => newAssigneeIds.includes(m.id) && !oldAssignees.some(o => o.id === m.id)
+        m => (newAssigneeIds.includes(m.id) || (m.email && newAssigneeIds.includes(m.email))) && !oldAssignees.some(o => o.id === m.id || (o.email && m.email && o.email.toLowerCase() === m.email.toLowerCase()))
       );
       addedMembers = newToAdd;
       const newlyCreatedAssignees = newToAdd.map(m => ({
@@ -2426,9 +2541,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updatedAssignees = [...oldAssignees, ...newlyCreatedAssignees];
     } else if (mode === 'REMOVE_SPECIFIC') {
       // Flowchart 22: Remove specific -> Remove selected assignees only
-      removedAssignees = oldAssignees.filter(o => removeAssigneeIds.includes(o.id));
+      removedAssignees = oldAssignees.filter(o => removeAssigneeIds.includes(o.id) || (o.email && removeAssigneeIds.includes(o.email)));
       addedMembers = [];
-      updatedAssignees = oldAssignees.filter(o => !removeAssigneeIds.includes(o.id));
+      updatedAssignees = oldAssignees.filter(o => !removeAssigneeIds.includes(o.id) && !(o.email && removeAssigneeIds.includes(o.email)));
     }
 
     if (updatedAssignees.length === 0) {
@@ -2445,9 +2560,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     updateTask(taskId, {
       assignees: updatedAssignees,
+      department: updatedAssignees[0]?.department || targetTask.department,
       status: comp.status,
       progressPercent: comp.progressPercent,
+      pendingCeoApproval: comp.status === 'Done' ? targetTask.pendingCeoApproval : false,
     }, `Reassigned assignees (${mode}): Added ${addedMembers.length}, Removed ${removedAssignees.length}`);
+
+    setBannerNotification({
+      message: `Deliverable "${targetTask.title}" reassigned to ${updatedAssignees.map(a => a.name).join(', ')}`,
+      badge: '✓ Reassigned Live'
+    });
 
     // Flowchart 22: Notify removed and added assignees
     // 1. Notify newly added assignees

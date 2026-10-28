@@ -377,6 +377,23 @@ export async function PATCH(req: NextRequest) {
     }
 
     const hasAssignees = (body.assignees && Array.isArray(body.assignees)) || (existingTask.assignees && existingTask.assignees.length > 0);
+    if ((body.status === 'In Progress' || body.status === 'Not Started') && !body.assignees && existingTask.assignees && Array.isArray(existingTask.assignees)) {
+      body.assignees = existingTask.assignees.map((a: any) =>
+        a.status === 'Done' ? { ...a, status: body.status, completedAt: undefined } : a
+      );
+      body.pendingCeoApproval = false;
+    }
+    if (body.scheduledDate) {
+      if (!body.dueDate) {
+        body.dueDate = body.scheduledDate;
+      }
+      const todayIso = new Date().toISOString().slice(0, 10);
+      if (body.scheduledDate >= todayIso) {
+        body.isOverdue = false;
+        body.isPendingNoReason = false;
+        body.overdueDays = 0;
+      }
+    }
     if (hasAssignees && !body.status) {
       const mergedForCompute = { ...existingTask, ...body };
       const comp = computeMultiAssigneeStatus(mergedForCompute);

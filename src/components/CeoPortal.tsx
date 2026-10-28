@@ -6,29 +6,29 @@ import { isCeoUser, isStrictCeo } from '@/lib/rosterData';
 import { getTodayStr, formatDateDisplay, formatDateShort, formatCreationDate } from '@/lib/dateUtils';
 import { Task, TeamMember } from '@/types';
 import { TaskCard } from '@/components/TaskCard';
-import { 
-  LayoutDashboard, 
-  FileText, 
-  Download, 
-  ArrowLeft, 
-  ChevronDown, 
-  ShieldCheck, 
-  TrendingUp, 
-  Clock, 
-  AlertTriangle, 
-  CheckCircle2, 
-  Filter, 
-  Users, 
-  Trash2, 
-  Search, 
-  Eye, 
-  X, 
-  RotateCcw, 
-  Calendar, 
-  Layers, 
-  Sparkles, 
-  Building2, 
-  MapPin, 
+import {
+  LayoutDashboard,
+  FileText,
+  Download,
+  ArrowLeft,
+  ChevronDown,
+  ShieldCheck,
+  TrendingUp,
+  Clock,
+  AlertTriangle,
+  CheckCircle2,
+  Filter,
+  Users,
+  Trash2,
+  Search,
+  Eye,
+  X,
+  RotateCcw,
+  Calendar,
+  Layers,
+  Sparkles,
+  Building2,
+  MapPin,
   Briefcase,
   FileSpreadsheet,
   Printer,
@@ -40,17 +40,18 @@ import {
   CalendarClock,
   PauseCircle,
   Edit3,
-  User
+  User,
+  UserPlus
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export const CeoPortal: React.FC = () => {
-  const { 
-    tasks, 
-    members, 
+  const {
+    tasks,
+    members,
     activeMembers,
-    selectedMemberFilter, 
-    setSelectedMemberFilter, 
+    selectedMemberFilter,
+    setSelectedMemberFilter,
     exportToExcel,
     setViewingAuditForTaskId,
     setActiveView,
@@ -58,6 +59,8 @@ export const CeoPortal: React.FC = () => {
     updateTask,
     completeTask,
     holdTask,
+    reopenTask,
+    reassignTask,
     approveTaskByCeo,
     rejectTaskByCeo,
     currentUser,
@@ -84,6 +87,26 @@ export const CeoPortal: React.FC = () => {
 
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // CEO Interactive Modals for Reopen, Reassign, and Reschedule
+  const [ceoRescheduleModal, setCeoRescheduleModal] = useState<{ task: Task; dateInput: string } | null>(null);
+  const [ceoReopenModal, setCeoReopenModal] = useState<{ task: Task; reason: string } | null>(null);
+  const [ceoReassignModal, setCeoReassignModal] = useState<{
+    task: Task;
+    mode: 'REPLACE_ALL' | 'ADD_ALONGSIDE' | 'REMOVE_SPECIFIC';
+    newAssigneeIds: string[];
+    removeAssigneeIds: string[];
+    reason: string;
+  } | null>(null);
+
+  const assignableStaff = useMemo(() => {
+    return members.filter(m => {
+      if (!m) return false;
+      if (isStrictCeo(m)) return false;
+      const st = String(m.status || 'ACTIVE').toUpperCase().trim();
+      return st !== 'DEACTIVATED' && st !== 'REMOVED' && st !== 'TERMINATED' && !(m as any).isDeactivated;
+    });
+  }, [members]);
 
   // Close inspector on Escape key
   useEffect(() => {
@@ -120,13 +143,32 @@ export const CeoPortal: React.FC = () => {
   };
 
   const handleQuickRescheduleToday = (taskId: string) => {
-    updateTask(taskId, { scheduledDate: todayStr }, `Rescheduled overdue deliverable to today (${todayStr}) by CEO`);
+    const t = tasks.find(item => item.id === taskId);
+    updateTask(taskId, { scheduledDate: todayStr, dueDate: todayStr }, `Rescheduled overdue deliverable to today (${todayStr}) by CEO`);
+    setBannerNotification({
+      message: `Deliverable "${t?.title || 'Task'}" rescheduled to Today (${todayStr})`,
+      badge: '✓ Rescheduled Live'
+    });
   };
 
   const handleQuickRescheduleDate = (taskId: string, currentDate: string) => {
-    const newDate = prompt('Enter new deliverable scheduled date (YYYY-MM-DD):', currentDate);
-    if (!newDate || !newDate.trim() || newDate.trim() === currentDate) return;
-    updateTask(taskId, { scheduledDate: newDate.trim() }, `Rescheduled date from ${currentDate} to ${newDate.trim()} by CEO`);
+    const t = tasks.find(item => item.id === taskId);
+    if (!t) return;
+    setCeoRescheduleModal({ task: t, dateInput: currentDate || todayStr });
+  };
+
+  const handleOpenCeoReopen = (task: Task) => {
+    setCeoReopenModal({ task, reason: '' });
+  };
+
+  const handleOpenCeoReassign = (task: Task) => {
+    setCeoReassignModal({
+      task,
+      mode: 'REPLACE_ALL',
+      newAssigneeIds: [],
+      removeAssigneeIds: [],
+      reason: ''
+    });
   };
 
   const handleQuickAddDelayReason = (taskId: string, currentReason?: string) => {
@@ -175,12 +217,12 @@ export const CeoPortal: React.FC = () => {
     const memberNameClean = activeMember.name.toLowerCase().trim();
     const memberEmailClean = (activeMember.email || '').toLowerCase().trim();
     return uncancelledTasks.filter(t => {
-      const isAssignee = t.assignees?.some(a => 
-        a.id === activeMember.id || 
+      const isAssignee = t.assignees?.some(a =>
+        a.id === activeMember.id ||
         (a.name && a.name.toLowerCase().trim().includes(memberNameClean)) ||
         (a.email && a.email.toLowerCase().trim() === memberEmailClean)
       );
-      const isCreator = t.creator?.id === activeMember.id || 
+      const isCreator = t.creator?.id === activeMember.id ||
         (t.creator?.name && t.creator.name.toLowerCase().trim().includes(memberNameClean)) ||
         (t.creator?.email && t.creator.email.toLowerCase().trim() === memberEmailClean);
       return isAssignee || isCreator;
@@ -231,13 +273,13 @@ export const CeoPortal: React.FC = () => {
   const completedCount = memberFilteredTasks.filter(t => t.status === 'Done').length;
   const inProgressCount = memberFilteredTasks.filter(t => t.status === 'In Progress').length;
   const notStartedCount = memberFilteredTasks.filter(t => t.status === 'Not Started').length;
-  const pendingBlockersCount = memberFilteredTasks.filter(t => 
-    t.status === 'On Hold' || 
-    t.status === 'Escalated' || 
+  const pendingBlockersCount = memberFilteredTasks.filter(t =>
+    t.status === 'On Hold' ||
+    t.status === 'Escalated' ||
     (t.scheduledDate < todayStr && t.status !== 'Done')
   ).length;
 
-  const sprintVelocity = totalTasksCount > 0 
+  const sprintVelocity = totalTasksCount > 0
     ? Math.round((completedCount / totalTasksCount) * 100)
     : 100;
 
@@ -279,15 +321,15 @@ export const CeoPortal: React.FC = () => {
   };
 
   const hasActiveFilters = Boolean(
-    selectedMemberFilter || 
-    searchQuery.trim() || 
-    statusFilter !== 'ALL' || 
+    selectedMemberFilter ||
+    searchQuery.trim() ||
+    statusFilter !== 'ALL' ||
     departmentFilter !== 'ALL'
   );
 
   return (
     <div className="ceo-portal-view" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-      
+
       {/* ─────────────────────────────────────────────────────────────
           1. EXECUTIVE HERO COMMAND BANNER
       ────────────────────────────────────────────────────────────── */}
@@ -746,7 +788,7 @@ export const CeoPortal: React.FC = () => {
                       justifyContent: 'center',
                       fontSize: '0.65rem'
                     }}>
-                      </div>
+                    </div>
                     <span>All Company Members</span>
                   </div>
                   <span style={{ fontSize: '0.7rem', color: '#64748b', background: '#f1f5f9', padding: '1px 6px', borderRadius: '4px' }}>
@@ -756,7 +798,7 @@ export const CeoPortal: React.FC = () => {
 
                 {/* List each active member */}
                 {activeMembers.map(m => {
-                  const memberTasksCount = uncancelledTasks.filter(t => 
+                  const memberTasksCount = uncancelledTasks.filter(t =>
                     t.assignees?.some(a => a.id === m.id || a.name.toLowerCase() === m.name.toLowerCase()) ||
                     t.creator?.id === m.id
                   ).length;
@@ -1144,478 +1186,561 @@ export const CeoPortal: React.FC = () => {
         {/* ══ TABLE MODE ══ */}
         {ceoTaskLayout === 'table' && (
           <>
-        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '920px' }}>
-            <thead>
-              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', width: '50px', whiteSpace: 'nowrap' }}>
-                  #
-                </th>
-                <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', minWidth: '250px' }}>
-                  Task Name
-                </th>
-                <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
-                  Department
-                </th>
-                <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', minWidth: '165px' }}>
-                  Assignee
-                </th>
-                <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
-                  Due Date
-                </th>
-                <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
-                  Priority
-                </th>
-                <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
-                  Status & Progress
-                </th>
-                <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                  Executive Governance
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {displayedTasks.map((task, idx) => {
-                const isOverdue = task.scheduledDate < todayStr && task.status !== 'Done';
-                const isConfirmingDelete = deletingTaskId === task.id;
+            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '920px' }}>
+                <thead>
+                  <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                    <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', width: '50px', whiteSpace: 'nowrap' }}>
+                      #
+                    </th>
+                    <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', minWidth: '250px' }}>
+                      Task Name
+                    </th>
+                    <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                      Department
+                    </th>
+                    <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', minWidth: '165px' }}>
+                      Assignee
+                    </th>
+                    <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                      Due Date
+                    </th>
+                    <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                      Priority
+                    </th>
+                    <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                      Status & Progress
+                    </th>
+                    <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      Executive Governance
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {displayedTasks.map((task, idx) => {
+                    const isOverdue = task.scheduledDate < todayStr && task.status !== 'Done';
+                    const isConfirmingDelete = deletingTaskId === task.id;
 
-                return (
-                  <tr
-                    key={`${task.id}-${idx}`}
-                    onClick={() => setInspectingTaskId(task.id)}
-                    style={{
-                      borderBottom: '1px solid #f1f5f9',
-                      transition: 'background 0.12s ease',
-                      cursor: 'pointer'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = '#ffffff'}
-                    title="Click row to inspect full deliverable details & executive actions"
-                  >
-                    {/* Sequence Badge */}
-                    <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
-                      <span style={{
-                        background: '#f1f5f9',
-                        color: '#475569',
-                        border: '1px solid #e2e8f0',
-                        padding: '2px 6px',
-                        borderRadius: '6px',
-                        fontSize: '0.68rem',
-                        fontWeight: 800
-                      }}>
-                        #{idx + 1}
-                      </span>
-                    </td>
-
-                    {/* Task Name */}
-                    <td style={{ padding: '12px 14px', verticalAlign: 'middle', minWidth: '250px' }}>
-                      <span 
-                        style={{ 
-                          fontSize: '0.86rem', 
-                          fontWeight: 700, 
-                          color: '#0f172a',
-                          cursor: 'pointer',
-                          transition: 'color 0.15s ease',
-                          lineHeight: 1.45,
-                          display: 'block'
+                    return (
+                      <tr
+                        key={`${task.id}-${idx}`}
+                        onClick={() => setInspectingTaskId(task.id)}
+                        style={{
+                          borderBottom: '1px solid #f1f5f9',
+                          transition: 'background 0.12s ease',
+                          cursor: 'pointer'
                         }}
-                        onMouseEnter={(e) => (e.currentTarget.style.color = '#2563eb')}
-                        onMouseLeave={(e) => (e.currentTarget.style.color = '#0f172a')}
-                        title="Click to view complete details, project, location, and notes"
+                        onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = '#ffffff'}
+                        title="Click row to inspect full deliverable details & executive actions"
                       >
-                        {task.title}
-                      </span>
-                    </td>
-
-                    {/* Department Cluster */}
-                    <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
-                      <span style={{
-                        background: '#f8fafc',
-                        color: '#334155',
-                        border: '1px solid #e2e8f0',
-                        padding: '3px 8px',
-                        borderRadius: '6px',
-                        fontSize: '0.74rem',
-                        fontWeight: 600,
-                        whiteSpace: 'nowrap'
-                      }}>
-                        {task.department || 'Operations'}
-                      </span>
-                    </td>
-
-                    {/* Assignee */}
-                    <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-                        <div style={{
-                          width: '26px',
-                          height: '26px',
-                          borderRadius: '50%',
-                          background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
-                          color: '#ffffff',
-                          fontWeight: 800,
-                          fontSize: '0.66rem',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
-                          overflow: 'hidden'
-                        }}>
-                          {task.assignees?.[0]?.avatar?.startsWith('/') || task.assignees?.[0]?.avatar?.startsWith('http') ? (
-                            <img src={task.assignees[0].avatar} alt={task.assignees[0].name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
-                          ) : (
-                            task.assignees?.[0]?.avatar || task.assignees?.[0]?.name?.slice(0, 2).toUpperCase() || 'TM'
-                          )}
-                        </div>
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap' }}>
-                            {task.assignees?.map(a => a.name).join(', ') || 'Unassigned'}
-                          </div>
-                          {task.assignees?.[0]?.designation && (
-                            <div style={{ fontSize: '0.66rem', color: '#64748b', whiteSpace: 'nowrap' }}>
-                              {task.assignees[0].designation}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Due Date */}
-                    <td style={{ padding: '12px 14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.72rem', fontWeight: 600, color: '#475569' }}>
-                          <Calendar size={12} color="#64748b" />
-                          <span>Current Date: <strong style={{ color: '#0f172a' }}>{todayStr}</strong></span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.78rem', fontWeight: 700, color: isOverdue ? '#dc2626' : '#1e293b' }}>
-                          <CalendarClock size={13} color={isOverdue ? '#dc2626' : '#2563eb'} />
-                          <span>Due: {formatDateShort(task.scheduledDate) || task.scheduledDate}</span>
-                        </div>
-                        {isOverdue && (
+                        {/* Sequence Badge */}
+                        <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
                           <span style={{
-                            background: '#fee2e2',
-                            color: '#b91c1c',
-                            padding: '1px 6px',
-                            borderRadius: '4px',
-                            fontSize: '0.62rem',
-                            fontWeight: 800,
-                            display: 'inline-block',
-                            width: 'fit-content'
-                          }}>
-                            PAST DUE
-                          </span>
-                        )}
-                      </div>
-                    </td>
-
-                    {/* Priority */}
-                    <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
-                      {(() => {
-                        const pri = (task.priority || 'NORMAL').toUpperCase();
-                        let bg = '#eff6ff';
-                        let text = '#1d4ed8';
-                        let border = '#bfdbfe';
-
-                        if (pri === 'URGENT') {
-                          bg = '#fef2f2';
-                          text = '#b91c1c';
-                          border = '#fecaca';
-                        } else if (pri === 'HIGH') {
-                          bg = '#fff7ed';
-                          text = '#c2410c';
-                          border = '#fed7aa';
-                        } else if (pri === 'LOW') {
-                          bg = '#f8fafc';
-                          text = '#64748b';
-                          border = '#e2e8f0';
-                        }
-
-                        return (
-                          <span style={{
-                            background: bg,
-                            color: text,
-                            border: `1px solid ${border}`,
-                            padding: '2px 7px',
+                            background: '#f1f5f9',
+                            color: '#475569',
+                            border: '1px solid #e2e8f0',
+                            padding: '2px 6px',
                             borderRadius: '6px',
                             fontSize: '0.68rem',
-                            fontWeight: 800,
-                            letterSpacing: '0.04em',
-                            textTransform: 'uppercase'
+                            fontWeight: 800
                           }}>
-                            {pri}
+                            #{idx + 1}
                           </span>
-                        );
-                      })()}
-                    </td>
+                        </td>
 
-                    {/* Status & Progress */}
-                    <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        {/* Task Name */}
+                        <td style={{ padding: '12px 14px', verticalAlign: 'middle', minWidth: '250px' }}>
+                          <span
+                            style={{
+                              fontSize: '0.86rem',
+                              fontWeight: 700,
+                              color: '#0f172a',
+                              cursor: 'pointer',
+                              transition: 'color 0.15s ease',
+                              lineHeight: 1.45,
+                              display: 'block'
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.color = '#2563eb')}
+                            onMouseLeave={(e) => (e.currentTarget.style.color = '#0f172a')}
+                            title="Click to view complete details, project, location, and notes"
+                          >
+                            {task.title}
+                          </span>
+                        </td>
+
+                        {/* Department Cluster */}
+                        <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
                           <span style={{
-                            width: '7px',
-                            height: '7px',
-                            borderRadius: '50%',
-                            background: task.status === 'Done' ? '#10b981' : task.status === 'In Progress' ? '#3b82f6' : task.status === 'On Hold' ? '#f59e0b' : '#94a3b8'
-                          }} />
-                          <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#0f172a' }}>
-                            {task.status}
+                            background: '#f8fafc',
+                            color: '#334155',
+                            border: '1px solid #e2e8f0',
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            fontSize: '0.74rem',
+                            fontWeight: 600,
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {task.department || 'Operations'}
                           </span>
-                          {task.progressPercent !== undefined && task.status === 'In Progress' && (
-                            <span style={{ fontSize: '0.68rem', color: '#2563eb', fontWeight: 700 }}>
-                              ({task.progressPercent}%)
-                            </span>
-                          )}
-                        </div>
+                        </td>
 
-                        {/* Progress meter */}
-                        <div style={{ width: '80px', height: '3px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden' }}>
-                          <div style={{
-                            width: `${task.status === 'Done' ? 100 : task.status === 'In Progress' ? (task.progressPercent || 50) : 0}%`,
-                            height: '100%',
-                            background: task.status === 'Done' ? '#10b981' : '#3b82f6',
-                            borderRadius: '999px'
-                          }} />
-                        </div>
+                        {/* Assignee */}
+                        <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                            <div style={{
+                              width: '26px',
+                              height: '26px',
+                              borderRadius: '50%',
+                              background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                              color: '#ffffff',
+                              fontWeight: 800,
+                              fontSize: '0.66rem',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                              overflow: 'hidden'
+                            }}>
+                              {task.assignees?.[0]?.avatar?.startsWith('/') || task.assignees?.[0]?.avatar?.startsWith('http') ? (
+                                <img src={task.assignees[0].avatar} alt={task.assignees[0].name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                              ) : (
+                                task.assignees?.[0]?.avatar || task.assignees?.[0]?.name?.slice(0, 2).toUpperCase() || 'TM'
+                              )}
+                            </div>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap' }}>
+                                {task.assignees?.map(a => a.name).join(', ') || 'Unassigned'}
+                              </div>
+                              {task.assignees?.[0]?.designation && (
+                                <div style={{ fontSize: '0.66rem', color: '#64748b', whiteSpace: 'nowrap' }}>
+                                  {task.assignees[0].designation}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
 
-                        {task.holdReason && (
-                          <span style={{ fontSize: '0.65rem', color: '#b45309', fontWeight: 600 }}>
-                            Hold: {task.holdReason.slice(0, 25)}...
-                          </span>
-                        )}
-                      </div>
-                    </td>
-
-                    {/* Executive Governance Actions */}
-                    <td 
-                      style={{ padding: '12px 14px', verticalAlign: 'middle', textAlign: 'right' }}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '5px', flexWrap: 'wrap' }}>
-                        {isCeo && (task.status === 'Review' || task.pendingCeoApproval) && (
-                          <>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const note = prompt(`Enter optional CEO approval note for "${task.title}":`, 'Final approval granted. Deliverable verified and marked Completed.');
-                                if (note === null) return;
-                                confetti({ particleCount: 70, spread: 80, origin: { y: 0.6 } });
-                                approveTaskByCeo(task.id, note.trim());
-                              }}
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                padding: '4px 10px',
-                                background: 'linear-gradient(135deg, #16a34a, #15803d)',
-                                color: '#ffffff',
-                                border: 'none',
-                                borderRadius: '6px',
-                                fontSize: '0.7rem',
+                        {/* Due Date */}
+                        <td style={{ padding: '12px 14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.72rem', fontWeight: 600, color: '#475569' }}>
+                              <Calendar size={12} color="#64748b" />
+                              <span>Current Date: <strong style={{ color: '#0f172a' }}>{todayStr}</strong></span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.78rem', fontWeight: 700, color: isOverdue ? '#dc2626' : '#1e293b' }}>
+                              <CalendarClock size={13} color={isOverdue ? '#dc2626' : '#2563eb'} />
+                              <span>Due: {formatDateShort(task.scheduledDate) || task.scheduledDate}</span>
+                            </div>
+                            {isOverdue && (
+                              <span style={{
+                                background: '#fee2e2',
+                                color: '#b91c1c',
+                                padding: '1px 6px',
+                                borderRadius: '4px',
+                                fontSize: '0.62rem',
                                 fontWeight: 800,
-                                cursor: 'pointer',
-                                whiteSpace: 'nowrap',
-                                boxShadow: '0 1px 3px rgba(22, 163, 74, 0.25)'
-                              }}
-                              title="Grant Final Approval and Mark Done"
-                            >
-                              <Check size={12} />
-                              <span>Approve & Complete (Done)</span>
-                            </button>
+                                display: 'inline-block',
+                                width: 'fit-content'
+                              }}>
+                                PAST DUE
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Priority */}
+                        <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
+                          {(() => {
+                            const pri = (task.priority || 'NORMAL').toUpperCase();
+                            let bg = '#eff6ff';
+                            let text = '#1d4ed8';
+                            let border = '#bfdbfe';
+
+                            if (pri === 'URGENT') {
+                              bg = '#fef2f2';
+                              text = '#b91c1c';
+                              border = '#fecaca';
+                            } else if (pri === 'HIGH') {
+                              bg = '#fff7ed';
+                              text = '#c2410c';
+                              border = '#fed7aa';
+                            } else if (pri === 'LOW') {
+                              bg = '#f8fafc';
+                              text = '#64748b';
+                              border = '#e2e8f0';
+                            }
+
+                            return (
+                              <span style={{
+                                background: bg,
+                                color: text,
+                                border: `1px solid ${border}`,
+                                padding: '2px 7px',
+                                borderRadius: '6px',
+                                fontSize: '0.68rem',
+                                fontWeight: 800,
+                                letterSpacing: '0.04em',
+                                textTransform: 'uppercase'
+                              }}>
+                                {pri}
+                              </span>
+                            );
+                          })()}
+                        </td>
+
+                        {/* Status & Progress */}
+                        <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                              <span style={{
+                                width: '7px',
+                                height: '7px',
+                                borderRadius: '50%',
+                                background: task.status === 'Done' ? '#10b981' : task.status === 'In Progress' ? '#3b82f6' : task.status === 'On Hold' ? '#f59e0b' : '#94a3b8'
+                              }} />
+                              <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#0f172a' }}>
+                                {task.status}
+                              </span>
+                              {task.progressPercent !== undefined && task.status === 'In Progress' && (
+                                <span style={{ fontSize: '0.68rem', color: '#2563eb', fontWeight: 700 }}>
+                                  ({task.progressPercent}%)
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Progress meter */}
+                            <div style={{ width: '80px', height: '3px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden' }}>
+                              <div style={{
+                                width: `${task.status === 'Done' ? 100 : task.status === 'In Progress' ? (task.progressPercent || 50) : 0}%`,
+                                height: '100%',
+                                background: task.status === 'Done' ? '#10b981' : '#3b82f6',
+                                borderRadius: '999px'
+                              }} />
+                            </div>
+
+                            {task.holdReason && (
+                              <span style={{ fontSize: '0.65rem', color: '#b45309', fontWeight: 600 }}>
+                                Hold: {task.holdReason.slice(0, 25)}...
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Executive Governance Actions */}
+                        <td
+                          style={{ padding: '12px 14px', verticalAlign: 'middle', textAlign: 'right' }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '5px', flexWrap: 'wrap' }}>
+                            {isCeo && (task.status === 'Review' || task.pendingCeoApproval) && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const note = prompt(`Enter optional CEO approval note for "${task.title}":`, 'Final approval granted. Deliverable verified and marked Completed.');
+                                    if (note === null) return;
+                                    confetti({ particleCount: 70, spread: 80, origin: { y: 0.6 } });
+                                    approveTaskByCeo(task.id, note.trim());
+                                  }}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    padding: '4px 10px',
+                                    background: 'linear-gradient(135deg, #16a34a, #15803d)',
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    fontSize: '0.7rem',
+                                    fontWeight: 800,
+                                    cursor: 'pointer',
+                                    whiteSpace: 'nowrap',
+                                    boxShadow: '0 1px 3px rgba(22, 163, 74, 0.25)'
+                                  }}
+                                  title="Grant Final Approval and Mark Done"
+                                >
+                                  <Check size={12} />
+                                  <span>Approve & Complete (Done)</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const reason = prompt(`Enter revision instructions for "${task.title}":`);
+                                    if (!reason || !reason.trim()) return;
+                                    rejectTaskByCeo(task.id, reason.trim());
+                                  }}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '3px',
+                                    padding: '4px 8px',
+                                    background: '#ffffff',
+                                    color: '#b91c1c',
+                                    border: '1px solid #fca5a5',
+                                    borderRadius: '6px',
+                                    fontSize: '0.7rem',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    whiteSpace: 'nowrap'
+                                  }}
+                                  title="Return to staff with feedback for revision"
+                                >
+                                  <X size={12} />
+                                  <span>Request Changes</span>
+                                </button>
+                              </>
+                            )}
+
+                            {/* Inspect Details Button */}
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                const reason = prompt(`Enter revision instructions for "${task.title}":`);
-                                if (!reason || !reason.trim()) return;
-                                rejectTaskByCeo(task.id, reason.trim());
+                                setInspectingTaskId(task.id);
                               }}
                               style={{
-                                display: 'inline-flex',
+                                display: 'flex',
                                 alignItems: 'center',
                                 gap: '3px',
                                 padding: '4px 8px',
-                                background: '#ffffff',
-                                color: '#b91c1c',
-                                border: '1px solid #fca5a5',
+                                background: '#f8fafc',
+                                color: '#334155',
+                                border: '1px solid #cbd5e1',
                                 borderRadius: '6px',
                                 fontSize: '0.7rem',
                                 fontWeight: 700,
                                 cursor: 'pointer',
-                                whiteSpace: 'nowrap'
+                                transition: 'all 0.12s ease'
                               }}
-                              title="Return to staff with feedback for revision"
+                              title="Inspect comprehensive deliverable dossier"
                             >
-                              <X size={12} />
-                              <span>Request Changes</span>
+                              <Eye size={12} color="#0284c7" />
+                              <span>Inspect</span>
                             </button>
-                          </>
-                        )}
 
-                        {/* Inspect Details Button */}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setInspectingTaskId(task.id);
-                          }}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '3px',
-                            padding: '4px 8px',
-                            background: '#f8fafc',
-                            color: '#334155',
-                            border: '1px solid #cbd5e1',
-                            borderRadius: '6px',
-                            fontSize: '0.7rem',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            transition: 'all 0.12s ease'
-                          }}
-                          title="Inspect comprehensive deliverable dossier"
-                        >
-                          <Eye size={12} color="#0284c7" />
-                          <span>Inspect</span>
-                        </button>
+                            {/* Reschedule Button */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleQuickRescheduleDate(task.id, task.scheduledDate);
+                              }}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                padding: '4px 8px',
+                                background: '#f8fafc',
+                                color: '#475569',
+                                border: '1px solid #cbd5e1',
+                                borderRadius: '6px',
+                                fontSize: '0.7rem',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                transition: 'all 0.12s ease'
+                              }}
+                              title="Reschedule deliverable target date"
+                            >
+                              <Calendar size={12} color="#2563eb" />
+                              <span>Reschedule</span>
+                            </button>
 
-                        {/* Audit Trail Button */}
-                        <button
-                          type="button"
-                          onClick={() => setViewingAuditForTaskId(task.id)}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '3px',
-                            padding: '4px 8px',
-                            background: '#ecfdf5',
-                            color: '#065f46',
-                            border: '1px solid #a7f3d0',
-                            borderRadius: '6px',
-                            fontSize: '0.7rem',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            transition: 'all 0.12s ease'
-                          }}
-                          title="View complete immutable audit log history for this deliverable"
-                        >
-                          <ShieldCheck size={12} color="#059669" />
-                          <span>Audit</span>
-                        </button>
+                            {/* Reassign Button */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenCeoReassign(task);
+                              }}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                padding: '4px 8px',
+                                background: '#eff6ff',
+                                color: '#1d4ed8',
+                                border: '1px solid #bfdbfe',
+                                borderRadius: '6px',
+                                fontSize: '0.7rem',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                transition: 'all 0.12s ease'
+                              }}
+                              title="Reassign deliverable staff"
+                            >
+                              <UserPlus size={12} color="#2563eb" />
+                              <span>Reassign</span>
+                            </button>
 
-                        {/* Safe Delete Button */}
-                        {isCeo && (
-                          <>
-                            {!isConfirmingDelete ? (
+                            {/* Reopen Button (when Completed) */}
+                            {task.status === 'Done' && (
                               <button
                                 type="button"
-                                onClick={() => setDeletingTaskId(task.id)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenCeoReopen(task);
+                                }}
                                 style={{
-                                  padding: '4px 7px',
-                                  background: '#ffffff',
-                                  color: '#dc2626',
-                                  border: '1px solid #fecaca',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '3px',
+                                  padding: '4px 8px',
+                                  background: '#eef2ff',
+                                  color: '#1e40af',
+                                  border: '1px solid #c7d2fe',
                                   borderRadius: '6px',
                                   fontSize: '0.7rem',
+                                  fontWeight: 700,
                                   cursor: 'pointer',
                                   transition: 'all 0.12s ease'
                                 }}
-                                title="CEO Action: Permanently remove deliverable"
+                                title="Reopen completed deliverable"
                               >
-                                <Trash2 size={12} color="#dc2626" />
+                                <RotateCcw size={12} color="#1e40af" />
+                                <span>Reopen</span>
                               </button>
-                            ) : (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                                <button
-                                  type="button"
-                                  onClick={() => handleExecuteDelete(task.id)}
-                                  style={{
-                                    padding: '4px 7px',
-                                    background: '#dc2626',
-                                    color: '#ffffff',
-                                    border: 'none',
-                                    borderRadius: '5px',
-                                    fontSize: '0.68rem',
-                                    fontWeight: 800,
-                                    cursor: 'pointer'
-                                  }}
-                                  title="Confirm Permanent Deletion"
-                                >
-                                  Confirm
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setDeletingTaskId(null)}
-                                  style={{
-                                    padding: '4px 6px',
-                                    background: '#f1f5f9',
-                                    color: '#64748b',
-                                    border: '1px solid #cbd5e1',
-                                    borderRadius: '5px',
-                                    fontSize: '0.68rem',
-                                    cursor: 'pointer'
-                                  }}
-                                  title="Cancel"
-                                >
-                                  ✕
-                                </button>
-                              </div>
                             )}
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
 
-        {/* Empty State - Table Mode */}
-        {displayedTasks.length === 0 && (
-          <div style={{
-            padding: '3rem 2rem',
-            textAlign: 'center',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '0.6rem'
-          }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Search size={22} color="#94a3b8" />
+                            {/* Audit Trail Button */}
+                            <button
+                              type="button"
+                              onClick={() => setViewingAuditForTaskId(task.id)}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                padding: '4px 8px',
+                                background: '#ecfdf5',
+                                color: '#065f46',
+                                border: '1px solid #a7f3d0',
+                                borderRadius: '6px',
+                                fontSize: '0.7rem',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                transition: 'all 0.12s ease'
+                              }}
+                              title="View complete immutable audit log history for this deliverable"
+                            >
+                              <ShieldCheck size={12} color="#059669" />
+                              <span>Audit</span>
+                            </button>
+
+                            {/* Safe Delete Button */}
+                            {isCeo && (
+                              <>
+                                {!isConfirmingDelete ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => setDeletingTaskId(task.id)}
+                                    style={{
+                                      padding: '4px 7px',
+                                      background: '#ffffff',
+                                      color: '#dc2626',
+                                      border: '1px solid #fecaca',
+                                      borderRadius: '6px',
+                                      fontSize: '0.7rem',
+                                      cursor: 'pointer',
+                                      transition: 'all 0.12s ease'
+                                    }}
+                                    title="CEO Action: Permanently remove deliverable"
+                                  >
+                                    <Trash2 size={12} color="#dc2626" />
+                                  </button>
+                                ) : (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleExecuteDelete(task.id)}
+                                      style={{
+                                        padding: '4px 7px',
+                                        background: '#dc2626',
+                                        color: '#ffffff',
+                                        border: 'none',
+                                        borderRadius: '5px',
+                                        fontSize: '0.68rem',
+                                        fontWeight: 800,
+                                        cursor: 'pointer'
+                                      }}
+                                      title="Confirm Permanent Deletion"
+                                    >
+                                      Confirm
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setDeletingTaskId(null)}
+                                      style={{
+                                        padding: '4px 6px',
+                                        background: '#f1f5f9',
+                                        color: '#64748b',
+                                        border: '1px solid #cbd5e1',
+                                        borderRadius: '5px',
+                                        fontSize: '0.68rem',
+                                        cursor: 'pointer'
+                                      }}
+                                      title="Cancel"
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-            <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#1e293b' }}>
-              No deliverables found matching active filters
-            </div>
-            <div style={{ fontSize: '0.78rem', color: '#64748b', maxWidth: '380px' }}>
-              Try adjusting your search criteria or resetting filters to view all company deliverables.
-            </div>
-            {hasActiveFilters && (
-              <button
-                type="button"
-                onClick={resetAllFilters}
-                style={{
-                  marginTop: '0.5rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  padding: '6px 14px',
-                  background: '#2563eb',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '7px',
-                  fontSize: '0.76rem',
-                  fontWeight: 700,
-                  cursor: 'pointer'
-                }}
-              >
-                <RotateCcw size={13} />
-                <span>Show All Company Tasks</span>
-              </button>
+
+            {/* Empty State - Table Mode */}
+            {displayedTasks.length === 0 && (
+              <div style={{
+                padding: '3rem 2rem',
+                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '0.6rem'
+              }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Search size={22} color="#94a3b8" />
+                </div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#1e293b' }}>
+                  No deliverables found matching active filters
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#64748b', maxWidth: '380px' }}>
+                  Try adjusting your search criteria or resetting filters to view all company deliverables.
+                </div>
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    onClick={resetAllFilters}
+                    style={{
+                      marginTop: '0.5rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '6px 14px',
+                      background: '#2563eb',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '7px',
+                      fontSize: '0.76rem',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <RotateCcw size={13} />
+                    <span>Show All Company Tasks</span>
+                  </button>
+                )}
+              </div>
             )}
-          </div>
-        )}
           </>
         )}
 
@@ -1633,7 +1758,7 @@ export const CeoPortal: React.FC = () => {
           color: '#64748b'
         }}>
           <div>
-            Showing <strong>{displayedTasks.length}</strong> of <strong>{memberFilteredTasks.length}</strong> deliverables 
+            Showing <strong>{displayedTasks.length}</strong> of <strong>{memberFilteredTasks.length}</strong> deliverables
             {activeMember ? ` assigned to ${activeMember.name}` : ' across all corporate staff'}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1676,7 +1801,7 @@ export const CeoPortal: React.FC = () => {
         const progressVal = inspectingTask.status === 'Done' ? 100 : inspectingTask.status === 'In Progress' ? (inspectingTask.progressPercent ?? 50) : 0;
 
         return (
-          <div 
+          <div
             className="modal-overlay"
             style={{
               position: 'fixed',
@@ -2038,8 +2163,29 @@ export const CeoPortal: React.FC = () => {
 
               {/* Assignees */}
               <div>
-                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: '6px' }}>
-                  Assigned Team Members ({inspectingTask.assignees?.length || 0})
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>
+                    Assigned Team Members ({inspectingTask.assignees?.length || 0})
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenCeoReassign(inspectingTask)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#2563eb',
+                      fontSize: '0.68rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: 0
+                    }}
+                  >
+                    <UserPlus size={12} />
+                    <span>Reassign Staff</span>
+                  </button>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   {inspectingTask.assignees && inspectingTask.assignees.length > 0 ? (
@@ -2294,6 +2440,54 @@ export const CeoPortal: React.FC = () => {
                       <Calendar size={12} />
                       <span>Reschedule</span>
                     </button>
+
+                    {/* Reassign Staff */}
+                    <button
+                      type="button"
+                      onClick={() => handleOpenCeoReassign(inspectingTask)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '5px 10px',
+                        background: '#eff6ff',
+                        color: '#1d4ed8',
+                        border: '1px solid #bfdbfe',
+                        borderRadius: '6px',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                      title="Reassign deliverable to team members"
+                    >
+                      <UserPlus size={12} />
+                      <span>Reassign</span>
+                    </button>
+
+                    {/* Reopen Completed Deliverable */}
+                    {inspectingTask.status === 'Done' && (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenCeoReopen(inspectingTask)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '5px 10px',
+                          background: '#eef2ff',
+                          color: '#1e40af',
+                          border: '1px solid #c7d2fe',
+                          borderRadius: '6px',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                        title="Reopen completed deliverable with mandatory justification"
+                      >
+                        <RotateCcw size={12} />
+                        <span>Reopen</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -2380,6 +2574,415 @@ export const CeoPortal: React.FC = () => {
           </div>
         );
       })()}
+
+      {/* ─────────────────────────────────────────────────────────────
+          7. CEO INTERACTIVE MODALS: RESCHEDULE, REOPEN, REASSIGN
+      ────────────────────────────────────────────────────────────── */}
+      {ceoRescheduleModal && (
+        <div
+          className="stream-overlay"
+          style={{ zIndex: 10050 }}
+          onClick={() => setCeoRescheduleModal(null)}
+        >
+          <div
+            className="stream-modal-card"
+            style={{ maxWidth: '420px', width: '100%' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="stream-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  background: '#eff6ff',
+                  color: '#2563eb',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  <Calendar size={16} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                    Reschedule Deliverable
+                  </h3>
+                  <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>
+                    Update target execution & due date in real time
+                  </div>
+                </div>
+              </div>
+              <button type="button" className="calendar-nav-btn" onClick={() => setCeoRescheduleModal(null)}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              padding: '8px 10px',
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              color: '#1e293b',
+              lineHeight: 1.35
+            }}>
+              {ceoRescheduleModal.task.title}
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!ceoRescheduleModal.dateInput) return;
+                updateTask(
+                  ceoRescheduleModal.task.id,
+                  { scheduledDate: ceoRescheduleModal.dateInput, dueDate: ceoRescheduleModal.dateInput },
+                  `Rescheduled deliverable to ${ceoRescheduleModal.dateInput} by CEO`
+                );
+                setBannerNotification({
+                  message: `Deliverable "${ceoRescheduleModal.task.title}" rescheduled to ${ceoRescheduleModal.dateInput}`,
+                  badge: '✓ Rescheduled Live'
+                });
+                setCeoRescheduleModal(null);
+              }}
+              style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}
+            >
+              <div className="form-field-group">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                  <label className="form-field-label" style={{ margin: 0 }}>New Target Date</label>
+                  <button
+                    type="button"
+                    onClick={() => setCeoRescheduleModal(prev => prev ? { ...prev, dateInput: todayStr } : null)}
+                    style={{
+                      background: ceoRescheduleModal.dateInput === todayStr ? '#2563eb' : '#eff6ff',
+                      color: ceoRescheduleModal.dateInput === todayStr ? '#ffffff' : '#1d4ed8',
+                      border: '1px solid #bfdbfe',
+                      borderRadius: '6px',
+                      padding: '2px 8px',
+                      fontSize: '0.68rem',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Today ({todayStr})
+                  </button>
+                </div>
+                <input
+                  type="date"
+                  className="form-input"
+                  required
+                  value={ceoRescheduleModal.dateInput}
+                  onChange={(e) => setCeoRescheduleModal(prev => prev ? { ...prev, dateInput: e.target.value } : null)}
+                  style={{ marginTop: '4px' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', paddingTop: '4px' }}>
+                <button type="button" className="btn-secondary" onClick={() => setCeoRescheduleModal(null)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary">
+                  Update Schedule
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {ceoReopenModal && (
+        <div
+          className="stream-overlay"
+          style={{ zIndex: 10050 }}
+          onClick={() => setCeoReopenModal(null)}
+        >
+          <div
+            className="stream-modal-card"
+            style={{ maxWidth: '460px', width: '100%' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="stream-modal-header">
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#1e40af', margin: 0 }}>
+                Reopen Completed Deliverable (FC 10)
+              </h3>
+              <button type="button" className="calendar-nav-btn" onClick={() => setCeoReopenModal(null)}>
+                <X size={16} />
+              </button>
+            </div>
+            <p style={{ fontSize: '0.78rem', color: '#64748b', margin: 0 }}>
+              Reopening <strong>&ldquo;{ceoReopenModal.task.title}&rdquo;</strong> transitions it back to <strong>In Progress (50%)</strong> in real time and notifies all assigned staff.
+            </p>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!ceoReopenModal.reason.trim()) return;
+                reopenTask(ceoReopenModal.task.id, ceoReopenModal.reason.trim());
+                setCeoReopenModal(null);
+              }}
+              style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}
+            >
+              <div className="form-field-group">
+                <label className="form-field-label">Reason for Reopening *</label>
+                <textarea
+                  className="form-input"
+                  rows={3}
+                  required
+                  placeholder="Provide executive instructions or reason for reopening this deliverable..."
+                  value={ceoReopenModal.reason}
+                  onChange={(e) => setCeoReopenModal(prev => prev ? { ...prev, reason: e.target.value } : null)}
+                  autoFocus
+                />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                <button type="button" className="btn-secondary" onClick={() => setCeoReopenModal(null)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary" style={{ background: '#2563eb' }}>
+                  Reopen as In Progress
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {ceoReassignModal && (
+        <div
+          className="stream-overlay"
+          style={{ zIndex: 10050 }}
+          onClick={() => setCeoReassignModal(null)}
+        >
+          <div
+            className="stream-modal-card"
+            style={{ maxWidth: '520px', width: '100%' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="stream-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <UserPlus size={18} color="#2563eb" />
+                <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#1e3a8a', margin: 0 }}>
+                  Reassign Deliverable — Executive Control
+                </h3>
+              </div>
+              <button type="button" className="calendar-nav-btn" onClick={() => setCeoReassignModal(null)}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              padding: '8px 10px',
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              color: '#1e293b'
+            }}>
+              {ceoReassignModal.task.title}
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const { task, mode, newAssigneeIds, removeAssigneeIds, reason } = ceoReassignModal;
+                if ((mode === 'REPLACE_ALL' || mode === 'ADD_ALONGSIDE') && newAssigneeIds.length === 0) {
+                  alert('Please select at least one staff member to assign.');
+                  return;
+                }
+                if (mode === 'REMOVE_SPECIFIC' && removeAssigneeIds.length === 0) {
+                  alert('Please select at least one existing assignee to remove.');
+                  return;
+                }
+                await reassignTask({
+                  taskId: task.id,
+                  mode,
+                  newAssigneeIds,
+                  removeAssigneeIds,
+                  reason: reason.trim()
+                });
+                setCeoReassignModal(null);
+              }}
+              style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}
+            >
+              <div className="form-field-group">
+                <label className="form-field-label">Reassignment Mode *</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginTop: '0.25rem' }}>
+                  {[
+                    { key: 'REPLACE_ALL', title: 'Replace All', desc: 'Remove old & add new' },
+                    { key: 'ADD_ALONGSIDE', title: 'Add Alongside', desc: 'Keep old & add new' },
+                    { key: 'REMOVE_SPECIFIC', title: 'Remove Specific', desc: 'Remove selected only' }
+                  ].map((item) => {
+                    const active = ceoReassignModal.mode === item.key;
+                    return (
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() => setCeoReassignModal(prev => prev ? {
+                          ...prev,
+                          mode: item.key as 'REPLACE_ALL' | 'ADD_ALONGSIDE' | 'REMOVE_SPECIFIC',
+                          newAssigneeIds: [],
+                          removeAssigneeIds: []
+                        } : null)}
+                        style={{
+                          padding: '0.55rem 0.4rem',
+                          borderRadius: '8px',
+                          border: active ? '2px solid #2563eb' : '1px solid #cbd5e1',
+                          background: active ? '#eff6ff' : '#ffffff',
+                          color: active ? '#1e40af' : '#475569',
+                          fontSize: '0.74rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          textAlign: 'center'
+                        }}
+                      >
+                        <div>{item.title}</div>
+                        <div style={{ fontSize: '0.64rem', fontWeight: 500, color: '#64748b', marginTop: '2px' }}>
+                          {item.desc}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {(ceoReassignModal.mode === 'REPLACE_ALL' || ceoReassignModal.mode === 'ADD_ALONGSIDE') && (
+                <div className="form-field-group">
+                  <label className="form-field-label">Select Staff Members to Assign *</label>
+                  <div style={{
+                    maxHeight: '185px',
+                    overflowY: 'auto',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    padding: '0.45rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.35rem',
+                    background: '#f8fafc'
+                  }}>
+                    {assignableStaff
+                      .filter(m => ceoReassignModal.mode === 'REPLACE_ALL' ? true : !ceoReassignModal.task.assignees.some(a => a.id === m.id))
+                      .map(m => {
+                        const isChecked = ceoReassignModal.newAssigneeIds.includes(m.id);
+                        return (
+                          <label
+                            key={m.id}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.6rem',
+                              padding: '0.4rem 0.6rem',
+                              borderRadius: '6px',
+                              background: isChecked ? '#eff6ff' : '#ffffff',
+                              border: isChecked ? '1px solid #93c5fd' : '1px solid #e2e8f0',
+                              cursor: 'pointer',
+                              fontSize: '0.78rem'
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
+                                setCeoReassignModal(prev => {
+                                  if (!prev) return null;
+                                  const nextIds = checked
+                                    ? [...prev.newAssigneeIds, m.id]
+                                    : prev.newAssigneeIds.filter(id => id !== m.id);
+                                  return { ...prev, newAssigneeIds: nextIds };
+                                });
+                              }}
+                            />
+                            <span style={{ fontWeight: 700, color: '#0f172a' }}>{m.name}</span>
+                            <span style={{ fontSize: '0.7rem', color: '#64748b', marginLeft: 'auto' }}>
+                              {m.department} • {m.designation}
+                            </span>
+                          </label>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+
+              {ceoReassignModal.mode === 'REMOVE_SPECIFIC' && (
+                <div className="form-field-group">
+                  <label className="form-field-label">Select Current Assignees to Remove *</label>
+                  <div style={{
+                    maxHeight: '160px',
+                    overflowY: 'auto',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    padding: '0.45rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.35rem',
+                    background: '#fef2f2'
+                  }}>
+                    {ceoReassignModal.task.assignees.map(a => {
+                      const isChecked = ceoReassignModal.removeAssigneeIds.includes(a.id);
+                      return (
+                        <label
+                          key={a.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.6rem',
+                            padding: '0.4rem 0.6rem',
+                            borderRadius: '6px',
+                            background: isChecked ? '#fee2e2' : '#ffffff',
+                            border: isChecked ? '1px solid #fca5a5' : '1px solid #e2e8f0',
+                            cursor: 'pointer',
+                            fontSize: '0.78rem'
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setCeoReassignModal(prev => {
+                                if (!prev) return null;
+                                const nextIds = checked
+                                  ? [...prev.removeAssigneeIds, a.id]
+                                  : prev.removeAssigneeIds.filter(id => id !== a.id);
+                                return { ...prev, removeAssigneeIds: nextIds };
+                              });
+                            }}
+                          />
+                          <span style={{ fontWeight: 700, color: '#991b1b' }}>{a.name}</span>
+                          <span style={{ fontSize: '0.7rem', color: '#64748b', marginLeft: 'auto' }}>
+                            Status: {a.status}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div className="form-field-group">
+                <label className="form-field-label">Handover Notes / Executive Directive (Optional)</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="e.g., Shifting ownership for priority sprint execution..."
+                  value={ceoReassignModal.reason}
+                  onChange={(e) => setCeoReassignModal(prev => prev ? { ...prev, reason: e.target.value } : null)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                <button type="button" className="btn-secondary" onClick={() => setCeoReassignModal(null)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary" style={{ background: '#2563eb' }}>
+                  Confirm & Sync Reassignment
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );
