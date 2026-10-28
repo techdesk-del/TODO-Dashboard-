@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { isCeoUser, isStrictCeo } from '@/lib/rosterData';
 import { getTodayStr, formatDateDisplay, formatDateShort, formatCreationDate } from '@/lib/dateUtils';
 import { Task, TeamMember } from '@/types';
+import { TaskCard } from '@/components/TaskCard';
 import { 
   LayoutDashboard, 
   FileText, 
@@ -34,7 +35,12 @@ import {
   ChevronRight,
   ExternalLink,
   Activity,
-  Check
+  Check,
+  CalendarPlus,
+  CalendarClock,
+  PauseCircle,
+  Edit3,
+  User
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -49,6 +55,9 @@ export const CeoPortal: React.FC = () => {
     setViewingAuditForTaskId,
     setActiveView,
     deleteTask,
+    updateTask,
+    completeTask,
+    holdTask,
     approveTaskByCeo,
     rejectTaskByCeo,
     currentUser,
@@ -61,13 +70,77 @@ export const CeoPortal: React.FC = () => {
   const todayStr = getTodayStr();
 
   // Local Filter & Search States
+  const [ceoTaskLayout, setCeoTaskLayout] = useState<'cards' | 'table'>('cards');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'Not Started' | 'In Progress' | 'Review' | 'Done' | 'On Hold'>('ALL');
   const [departmentFilter, setDepartmentFilter] = useState<string>('ALL');
   const [isMemberDropdownOpen, setIsMemberDropdownOpen] = useState(false);
-  const [inspectingTask, setInspectingTask] = useState<Task | null>(null);
+  const [inspectingTaskId, setInspectingTaskId] = useState<string | null>(null);
+  const inspectingTask = useMemo(() => {
+    if (!inspectingTaskId) return null;
+    return tasks.find(t => t.id === inspectingTaskId) || null;
+  }, [tasks, inspectingTaskId]);
+  const setInspectingTask = (t: Task | null) => setInspectingTaskId(t ? t.id : null);
+
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Close inspector on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && inspectingTaskId) {
+        setInspectingTaskId(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [inspectingTaskId]);
+
+  // Executive Quick Action Handlers for CEO
+  const handleQuickMarkDone = (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    if (task.status === 'Review' || task.pendingCeoApproval) {
+      confetti({ particleCount: 70, spread: 80, origin: { y: 0.6 } });
+      approveTaskByCeo(taskId, 'CEO Approved and marked Complete.');
+    } else {
+      confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
+      completeTask(taskId);
+    }
+  };
+
+  const handleQuickSetInProgress = (taskId: string) => {
+    updateTask(taskId, { status: 'In Progress', progressPercent: 50 }, 'Status set to In Progress by CEO');
+  };
+
+  const handleQuickPutOnHold = (taskId: string) => {
+    const reason = prompt('Enter justification for placing deliverable On Hold:');
+    if (!reason || !reason.trim()) return;
+    holdTask(taskId, reason.trim());
+  };
+
+  const handleQuickRescheduleToday = (taskId: string) => {
+    updateTask(taskId, { scheduledDate: todayStr }, `Rescheduled overdue deliverable to today (${todayStr}) by CEO`);
+  };
+
+  const handleQuickRescheduleDate = (taskId: string, currentDate: string) => {
+    const newDate = prompt('Enter new deliverable scheduled date (YYYY-MM-DD):', currentDate);
+    if (!newDate || !newDate.trim() || newDate.trim() === currentDate) return;
+    updateTask(taskId, { scheduledDate: newDate.trim() }, `Rescheduled date from ${currentDate} to ${newDate.trim()} by CEO`);
+  };
+
+  const handleQuickAddDelayReason = (taskId: string, currentReason?: string) => {
+    const reason = prompt('Enter delay / past due justification for corporate audit trail:', currentReason || '');
+    if (reason === null) return;
+    updateTask(taskId, { delayReason: reason.trim(), pastDueReason: reason.trim() }, `Updated delay justification: "${reason.trim()}"`);
+  };
+
+  const handleQuickAddNote = (taskId: string, currentNotes?: string) => {
+    const noteDirective = prompt('Enter CEO note / executive instruction:');
+    if (!noteDirective || !noteDirective.trim()) return;
+    const combinedNotes = currentNotes ? `${currentNotes}\n[CEO Directive]: ${noteDirective.trim()}` : `[CEO Directive]: ${noteDirective.trim()}`;
+    updateTask(taskId, { notes: combinedNotes }, `CEO added directive note: "${noteDirective.trim()}"`);
+  };
 
   // Filter tasks based on member, search, status, and department
   const uncancelledTasks = useMemo(() => {
@@ -390,6 +463,7 @@ export const CeoPortal: React.FC = () => {
             {pendingCeoApprovalTasks.map(t => (
               <div
                 key={t.id}
+                onClick={() => setInspectingTaskId(t.id)}
                 style={{
                   background: '#ffffff',
                   border: '1px solid #fde68a',
@@ -400,8 +474,13 @@ export const CeoPortal: React.FC = () => {
                   justifyContent: 'space-between',
                   flexWrap: 'wrap',
                   gap: '0.65rem',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
                 }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = '#fffbeb')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = '#ffffff')}
+                title="Click to inspect deliverable details & full executive dossier"
               >
                 <div style={{ minWidth: '240px', flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
@@ -419,10 +498,11 @@ export const CeoPortal: React.FC = () => {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }} onClick={(e) => e.stopPropagation()}>
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       const note = prompt(`Enter optional CEO approval note for "${t.title}":`, 'Final approval granted. Deliverable verified and marked Completed.');
                       if (note === null) return;
                       confetti({ particleCount: 70, spread: 80, origin: { y: 0.6 } });
@@ -450,7 +530,8 @@ export const CeoPortal: React.FC = () => {
 
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       const reason = prompt(`Enter revision instructions for "${t.title}":`);
                       if (!reason || !reason.trim()) return;
                       rejectTaskByCeo(t.id, reason.trim());
@@ -1105,7 +1186,7 @@ export const CeoPortal: React.FC = () => {
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          5. POLISHED EXECUTIVE DELIVERABLES TABLE
+          5. COMPANY DELIVERABLES — CARDS / TABLE TOGGLE
       ────────────────────────────────────────────────────────────── */}
       <div style={{
         background: '#ffffff',
@@ -1114,6 +1195,84 @@ export const CeoPortal: React.FC = () => {
         overflow: 'hidden',
         boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
       }}>
+
+        {/* ── Header row: title + layout toggle ── */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0.75rem 1.25rem',
+          borderBottom: '1px solid #e2e8f0',
+          background: '#f8fafc'
+        }}>
+          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>
+            Company Deliverables ({displayedTasks.length})
+          </span>
+          <div style={{ display: 'flex', gap: '4px' }}>
+            <button
+              type="button"
+              onClick={() => setCeoTaskLayout('cards')}
+              title="Box Cards View"
+              style={{
+                display: 'flex', alignItems: 'center', gap: '4px',
+                padding: '4px 10px',
+                borderRadius: '6px',
+                border: ceoTaskLayout === 'cards' ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
+                background: ceoTaskLayout === 'cards' ? '#eff6ff' : '#ffffff',
+                color: ceoTaskLayout === 'cards' ? '#2563eb' : '#64748b',
+                fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer'
+              }}
+            >
+              <Layers size={13} /> Cards
+            </button>
+            <button
+              type="button"
+              onClick={() => setCeoTaskLayout('table')}
+              title="Table View"
+              style={{
+                display: 'flex', alignItems: 'center', gap: '4px',
+                padding: '4px 10px',
+                borderRadius: '6px',
+                border: ceoTaskLayout === 'table' ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
+                background: ceoTaskLayout === 'table' ? '#eff6ff' : '#ffffff',
+                color: ceoTaskLayout === 'table' ? '#2563eb' : '#64748b',
+                fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer'
+              }}
+            >
+              <FileSpreadsheet size={13} /> Table
+            </button>
+          </div>
+        </div>
+
+        {/* ══ CARDS MODE ══ */}
+        {ceoTaskLayout === 'cards' && (
+          <div style={{ padding: '0.75rem 1rem' }}>
+            {displayedTasks.length === 0 ? (
+              <div style={{ padding: '3rem 2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.6rem' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Search size={22} color="#94a3b8" />
+                </div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#1e293b' }}>No deliverables found</div>
+                <div style={{ fontSize: '0.78rem', color: '#64748b', maxWidth: '340px' }}>Adjust filters or reset to view all company deliverables.</div>
+                {hasActiveFilters && (
+                  <button type="button" onClick={resetAllFilters} style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 14px', background: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '7px', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer' }}>
+                    <RotateCcw size={13} /><span>Show All</span>
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="task-cards-list">
+                {displayedTasks.map((task, idx) => (
+                  <TaskCard key={task.id} task={task} index={idx + 1} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ══ TABLE MODE ══ */}
+        {ceoTaskLayout === 'table' && (
+          <>
         <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '850px' }}>
             <thead>
@@ -1122,7 +1281,7 @@ export const CeoPortal: React.FC = () => {
                   #
                 </th>
                 <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Deliverable & Project
+                  Task Name
                 </th>
                 <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Department
@@ -1131,7 +1290,7 @@ export const CeoPortal: React.FC = () => {
                   Assignee
                 </th>
                 <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Timeline & Due
+                  Due Date
                 </th>
                 <th style={{ padding: '10px 14px', fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Priority
@@ -1152,12 +1311,15 @@ export const CeoPortal: React.FC = () => {
                 return (
                   <tr
                     key={`${task.id}-${idx}`}
+                    onClick={() => setInspectingTaskId(task.id)}
                     style={{
                       borderBottom: '1px solid #f1f5f9',
-                      transition: 'background 0.12s ease'
+                      transition: 'background 0.12s ease',
+                      cursor: 'pointer'
                     }}
                     onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
                     onMouseLeave={(e) => e.currentTarget.style.background = '#ffffff'}
+                    title="Click row to inspect full deliverable details & executive actions"
                   >
                     {/* Sequence Badge */}
                     <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
@@ -1174,47 +1336,24 @@ export const CeoPortal: React.FC = () => {
                       </span>
                     </td>
 
-                    {/* Deliverable Title & Project */}
+                    {/* Task Name */}
                     <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0f172a' }}>
-                          {task.title}
-                        </span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                          {task.project && (
-                            <span style={{
-                              fontSize: '0.68rem',
-                              color: '#475569',
-                              background: '#f1f5f9',
-                              padding: '1px 6px',
-                              borderRadius: '4px',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '3px'
-                            }}>
-                              <Briefcase size={10} color="#64748b" />
-                              {task.project}
-                            </span>
-                          )}
-                          {task.location && (
-                            <span style={{
-                              fontSize: '0.68rem',
-                              color: '#64748b',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '2px'
-                            }}>
-                              <MapPin size={10} />
-                              {task.location}
-                            </span>
-                          )}
-                        </div>
-                        {task.notes && (
-                          <div style={{ fontSize: '0.68rem', color: '#0284c7', fontStyle: 'italic', marginTop: '1px' }}>
-                            Note: {task.notes.length > 50 ? `${task.notes.slice(0, 50)}...` : task.notes}
-                          </div>
-                        )}
-                      </div>
+                      <span 
+                        style={{ 
+                          fontSize: '0.86rem', 
+                          fontWeight: 700, 
+                          color: '#0f172a',
+                          cursor: 'pointer',
+                          transition: 'color 0.15s ease',
+                          lineHeight: 1.45,
+                          display: 'block'
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = '#2563eb')}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = '#0f172a')}
+                        title="Click to view complete details, project, location, and notes"
+                      >
+                        {task.title}
+                      </span>
                     </td>
 
                     {/* Department Cluster */}
@@ -1269,26 +1408,18 @@ export const CeoPortal: React.FC = () => {
                       </div>
                     </td>
 
-                    {/* Timeline & Due */}
-                    <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
+                    {/* Due Date */}
+                    <td style={{ padding: '12px 14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.67rem', color: '#64748b' }} title={`Created at: ${task.createdAt || 'Initial Task'}`}>
-                          <span style={{ fontWeight: 600 }}>Created:</span>
-                          <span style={{ color: '#475569' }}>{formatCreationDate(task.createdAt)}</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.76rem', fontWeight: 700, color: isOverdue ? '#dc2626' : '#1e293b' }}>
-                          <Calendar size={12} color={isOverdue ? '#dc2626' : '#2563eb'} />
-                          <span>Due: {formatDateShort(task.scheduledDate) || task.scheduledDate}</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', color: '#64748b' }}>
-                          <Clock size={11} />
-                          <span>{task.time || '09:00 AM'}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.78rem', fontWeight: 700, color: isOverdue ? '#dc2626' : '#1e293b' }}>
+                          <Calendar size={13} color={isOverdue ? '#dc2626' : '#2563eb'} />
+                          <span>{formatDateShort(task.scheduledDate) || task.scheduledDate}</span>
                         </div>
                         {isOverdue && (
                           <span style={{
                             background: '#fee2e2',
                             color: '#b91c1c',
-                            padding: '1px 5px',
+                            padding: '1px 6px',
                             borderRadius: '4px',
                             fontSize: '0.62rem',
                             fontWeight: 800,
@@ -1380,12 +1511,18 @@ export const CeoPortal: React.FC = () => {
                     </td>
 
                     {/* Executive Governance Actions */}
-                    <td style={{ padding: '12px 14px', verticalAlign: 'middle', textAlign: 'right' }}>
+                    <td 
+                      style={{ padding: '12px 14px', verticalAlign: 'middle', textAlign: 'right' }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '5px' }}>
                         {/* Inspect Details Button */}
                         <button
                           type="button"
-                          onClick={() => setInspectingTask(task)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setInspectingTaskId(task.id);
+                          }}
                           style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -1499,7 +1636,7 @@ export const CeoPortal: React.FC = () => {
           </table>
         </div>
 
-        {/* Empty State */}
+        {/* Empty State - Table Mode */}
         {displayedTasks.length === 0 && (
           <div style={{
             padding: '3rem 2rem',
@@ -1543,8 +1680,10 @@ export const CeoPortal: React.FC = () => {
             )}
           </div>
         )}
+          </>
+        )}
 
-        {/* Table Footer */}
+        {/* Footer */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -1571,249 +1710,740 @@ export const CeoPortal: React.FC = () => {
       {/* ─────────────────────────────────────────────────────────────
           6. EXECUTIVE TASK DETAIL INSPECTION DRAWER / MODAL
       ────────────────────────────────────────────────────────────── */}
-      {inspectingTask && (
-        <div 
-          className="modal-overlay"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(15, 23, 42, 0.65)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '1rem'
-          }}
-          onClick={() => setInspectingTask(null)}
-        >
-          <div
+      {inspectingTask && (() => {
+        const isInspectingOverdue = inspectingTask.scheduledDate < todayStr && inspectingTask.status !== 'Done';
+        const isAwaitingCeoApproval = inspectingTask.status === 'Review' || !!inspectingTask.pendingCeoApproval;
+        const taskIdx = displayedTasks.findIndex(t => t.id === inspectingTask.id);
+        const pri = (inspectingTask.priority || 'NORMAL').toUpperCase();
+
+        let priBg = '#eff6ff';
+        let priText = '#1d4ed8';
+        let priBorder = '#bfdbfe';
+        if (pri === 'URGENT') {
+          priBg = '#fef2f2';
+          priText = '#b91c1c';
+          priBorder = '#fecaca';
+        } else if (pri === 'HIGH') {
+          priBg = '#fff7ed';
+          priText = '#c2410c';
+          priBorder = '#fed7aa';
+        } else if (pri === 'LOW') {
+          priBg = '#f8fafc';
+          priText = '#64748b';
+          priBorder = '#e2e8f0';
+        }
+
+        const statusBg = inspectingTask.status === 'Done' ? '#ecfdf5' : inspectingTask.status === 'In Progress' ? '#eff6ff' : inspectingTask.status === 'On Hold' ? '#fffbeb' : '#f8fafc';
+        const statusText = inspectingTask.status === 'Done' ? '#059669' : inspectingTask.status === 'In Progress' ? '#1d4ed8' : inspectingTask.status === 'On Hold' ? '#b45309' : '#475569';
+        const statusBorder = inspectingTask.status === 'Done' ? '#a7f3d0' : inspectingTask.status === 'In Progress' ? '#bfdbfe' : inspectingTask.status === 'On Hold' ? '#fde68a' : '#cbd5e1';
+
+        const progressVal = inspectingTask.status === 'Done' ? 100 : inspectingTask.status === 'In Progress' ? (inspectingTask.progressPercent ?? 50) : 0;
+
+        return (
+          <div 
+            className="modal-overlay"
             style={{
-              background: '#ffffff',
-              borderRadius: '14px',
-              border: '1px solid #cbd5e1',
-              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.2)',
-              width: '100%',
-              maxWidth: '560px',
-              maxHeight: '90vh',
-              overflowY: 'auto',
-              padding: '1.4rem',
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(15, 23, 42, 0.65)',
+              backdropFilter: 'blur(4px)',
               display: 'flex',
-              flexDirection: 'column',
-              gap: '1rem'
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+              padding: '1rem'
             }}
-            onClick={(e) => e.stopPropagation()}
+            onClick={() => setInspectingTaskId(null)}
           >
-            {/* Modal Header */}
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                  <span style={{
-                    background: '#eff6ff',
-                    color: '#1d4ed8',
-                    border: '1px solid #bfdbfe',
-                    padding: '1px 6px',
-                    borderRadius: '4px',
-                    fontSize: '0.66rem',
-                    fontWeight: 800
-                  }}>
-                    {inspectingTask.department || 'General'}
-                  </span>
-                  <span style={{
-                    background: inspectingTask.status === 'Done' ? '#ecfdf5' : '#eff6ff',
-                    color: inspectingTask.status === 'Done' ? '#059669' : '#1d4ed8',
-                    border: inspectingTask.status === 'Done' ? '1px solid #a7f3d0' : '1px solid #bfdbfe',
-                    padding: '1px 6px',
-                    borderRadius: '4px',
-                    fontSize: '0.66rem',
-                    fontWeight: 800
-                  }}>
-                    {inspectingTask.status}
-                  </span>
-                </div>
-                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
-                  {inspectingTask.title}
-                </h3>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setInspectingTask(null)}
-                style={{
-                  border: 'none',
-                  background: '#f1f5f9',
-                  borderRadius: '6px',
-                  width: '28px',
-                  height: '28px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  color: '#64748b'
-                }}
-              >
-                <X size={15} />
-              </button>
-            </div>
-
-            {/* Core Info Grid */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '0.75rem',
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: '8px',
-              padding: '0.85rem'
-            }}>
-              <div>
-                <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Project</div>
-                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginTop: '1px' }}>
-                  {inspectingTask.project || 'Core Infrastructure'}
-                </div>
-              </div>
-
-              <div>
-                <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Location</div>
-                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginTop: '1px' }}>
-                  {inspectingTask.location || 'Jaipur'}
-                </div>
-              </div>
-
-              <div>
-                <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Due Date & Time</div>
-                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginTop: '1px' }}>
-                  {inspectingTask.scheduledDate} ({inspectingTask.time || '09:00 AM'})
-                </div>
-              </div>
-
-              <div>
-                <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Priority Level</div>
-                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginTop: '1px' }}>
-                  {inspectingTask.priority}
-                </div>
-              </div>
-            </div>
-
-            {/* Description */}
-            <div>
-              <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: '4px' }}>
-                Deliverable Description
-              </div>
-              <div style={{
-                fontSize: '0.8rem',
-                color: '#334155',
-                lineHeight: 1.5,
+            <div
+              style={{
                 background: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '8px',
-                padding: '0.75rem'
-              }}>
-                {inspectingTask.description || 'No detailed written description provided for this deliverable.'}
-              </div>
-            </div>
+                borderRadius: '16px',
+                border: '1px solid #cbd5e1',
+                boxShadow: '0 24px 48px -12px rgba(0, 0, 0, 0.25)',
+                width: '100%',
+                maxWidth: '640px',
+                maxHeight: '90vh',
+                overflowY: 'auto',
+                padding: '1.5rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1.1rem'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.85rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                    <span style={{
+                      background: '#f1f5f9',
+                      color: '#475569',
+                      border: '1px solid #e2e8f0',
+                      padding: '2px 7px',
+                      borderRadius: '6px',
+                      fontSize: '0.68rem',
+                      fontWeight: 800
+                    }}>
+                      #{taskIdx >= 0 ? taskIdx + 1 : inspectingTask.id}
+                    </span>
 
-            {/* Assignees */}
-            <div>
-              <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: '6px' }}>
-                Assigned Team Members ({inspectingTask.assignees?.length || 0})
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                {inspectingTask.assignees?.map((a, i) => (
-                  <div key={i} style={{
+                    <span style={{
+                      background: '#eff6ff',
+                      color: '#1d4ed8',
+                      border: '1px solid #bfdbfe',
+                      padding: '2px 8px',
+                      borderRadius: '6px',
+                      fontSize: '0.68rem',
+                      fontWeight: 800
+                    }}>
+                      {inspectingTask.department || 'Operations'}
+                    </span>
+
+                    <span style={{
+                      background: priBg,
+                      color: priText,
+                      border: `1px solid ${priBorder}`,
+                      padding: '2px 8px',
+                      borderRadius: '6px',
+                      fontSize: '0.68rem',
+                      fontWeight: 800,
+                      letterSpacing: '0.04em'
+                    }}>
+                      {pri}
+                    </span>
+
+                    <span style={{
+                      background: statusBg,
+                      color: statusText,
+                      border: `1px solid ${statusBorder}`,
+                      padding: '2px 8px',
+                      borderRadius: '6px',
+                      fontSize: '0.68rem',
+                      fontWeight: 800,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: statusText }} />
+                      {inspectingTask.status}
+                    </span>
+
+                    {isInspectingOverdue && (
+                      <span style={{
+                        background: '#fee2e2',
+                        color: '#b91c1c',
+                        border: '1px solid #fca5a5',
+                        padding: '2px 8px',
+                        borderRadius: '6px',
+                        fontSize: '0.68rem',
+                        fontWeight: 800,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '3px'
+                      }}>
+                        <AlertTriangle size={11} />
+                        PAST DUE
+                      </span>
+                    )}
+                  </div>
+
+                  <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.35 }}>
+                    {inspectingTask.title}
+                  </h3>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setInspectingTaskId(null)}
+                  style={{
+                    border: 'none',
+                    background: '#f1f5f9',
+                    borderRadius: '8px',
+                    width: '32px',
+                    height: '32px',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '6px 10px',
-                    background: '#f8fafc',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{
-                        width: '24px',
-                        height: '24px',
-                        borderRadius: '50%',
-                        background: '#2563eb',
-                        color: 'white',
-                        fontSize: '0.65rem',
-                        fontWeight: 800,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        {a.avatar || a.name?.slice(0, 2).toUpperCase()}
-                      </div>
-                      <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f172a' }}>{a.name}</span>
-                    </div>
-                    <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{a.status || 'Not Started'}</span>
-                  </div>
-                ))}
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    color: '#64748b',
+                    flexShrink: 0,
+                    transition: 'all 0.12s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#e2e8f0';
+                    e.currentTarget.style.color = '#0f172a';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = '#f1f5f9';
+                    e.currentTarget.style.color = '#64748b';
+                  }}
+                  title="Close inspection dialog (Esc)"
+                >
+                  <X size={16} />
+                </button>
               </div>
-            </div>
 
-            {/* Past Due / Hold Reason if any */}
-            {inspectingTask.pastDueReason && (
-              <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: '8px', padding: '0.7rem' }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#9f1239' }}>Past Due Justification</div>
-                <div style={{ fontSize: '0.76rem', color: '#881337', marginTop: '2px' }}>{inspectingTask.pastDueReason}</div>
-              </div>
-            )}
-
-            {inspectingTask.holdReason && (
-              <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '0.7rem' }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#92400e' }}>Hold / Blocker Reason</div>
-                <div style={{ fontSize: '0.76rem', color: '#78350f', marginTop: '2px' }}>{inspectingTask.holdReason}</div>
-              </div>
-            )}
-
-            {/* Modal Actions */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', borderTop: '1px solid #e2e8f0', paddingTop: '0.85rem' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  const id = inspectingTask.id;
-                  setInspectingTask(null);
-                  setViewingAuditForTaskId(id);
-                }}
-                style={{
+              {/* CEO Final Approval Banner if Awaiting Sign-off */}
+              {isAwaitingCeoApproval && (
+                <div style={{
+                  background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+                  border: '1.5px solid #fde68a',
+                  borderRadius: '10px',
+                  padding: '0.85rem 1rem',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '4px',
-                  padding: '7px 12px',
-                  background: '#eff6ff',
-                  color: '#1d4ed8',
-                  border: '1px solid #bfdbfe',
-                  borderRadius: '7px',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  cursor: 'pointer'
-                }}
-              >
-                <ShieldCheck size={14} color="#2563eb" />
-                <span>View Full Audit History</span>
-              </button>
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '0.75rem',
+                  boxShadow: '0 2px 6px rgba(180, 83, 9, 0.08)'
+                }}>
+                  <div style={{ minWidth: '220px', flex: 1 }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.82rem', color: '#92400e', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <span>⏳</span>
+                      <span>Pending CEO Final Sign-Off</span>
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: '#b45309', marginTop: '2px' }}>
+                      {inspectingTask.ceoApprovalRequestedBy ? `Submitted by ${inspectingTask.ceoApprovalRequestedBy} • ` : ''}
+                      Deliverable completed by staff. Executive approval from Mr. Sukh Sagar Singh Bhati required.
+                    </div>
+                  </div>
 
-              <button
-                type="button"
-                onClick={() => setInspectingTask(null)}
-                style={{
-                  padding: '7px 14px',
-                  background: '#f1f5f9',
-                  color: '#475569',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '7px',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  cursor: 'pointer'
-                }}
-              >
-                Close
-              </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const note = prompt(`Enter optional CEO approval endorsement for "${inspectingTask.title}":`, 'Final approval granted. Deliverable verified and marked Completed.');
+                        if (note === null) return;
+                        confetti({ particleCount: 70, spread: 80, origin: { y: 0.6 } });
+                        approveTaskByCeo(inspectingTask.id, note.trim());
+                      }}
+                      style={{
+                        background: 'linear-gradient(135deg, #16a34a, #15803d)',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '6px 14px',
+                        fontSize: '0.75rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        boxShadow: '0 2px 4px rgba(22, 163, 74, 0.25)'
+                      }}
+                    >
+                      <Check size={13} />
+                      <span>Approve & Complete (Done)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const reason = prompt(`Enter revision instructions for staff on "${inspectingTask.title}":`);
+                        if (!reason || !reason.trim()) return;
+                        rejectTaskByCeo(inspectingTask.id, reason.trim());
+                      }}
+                      style={{
+                        background: '#ffffff',
+                        color: '#b91c1c',
+                        border: '1px solid #fca5a5',
+                        borderRadius: '6px',
+                        padding: '6px 10px',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <X size={13} />
+                      <span>Request Revision</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Core Executive Dossier Grid */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                gap: '0.75rem',
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '10px',
+                padding: '0.9rem'
+              }}>
+                <div>
+                  <div style={{ fontSize: '0.64rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Project</div>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Briefcase size={12} color="#2563eb" />
+                    <span>{inspectingTask.project || 'General Portfolio'}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '0.64rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Location & Office</div>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <MapPin size={12} color="#64748b" />
+                    <span>{inspectingTask.location || 'Jaipur Headquarters'}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '0.64rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Date of Creation</div>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <CalendarPlus size={12} color="#64748b" />
+                    <span>{formatCreationDate(inspectingTask.createdAt)}</span>
+                  </div>
+                  {inspectingTask.creator && (
+                    <div style={{ fontSize: '0.66rem', color: '#64748b', marginTop: '1px' }}>
+                      By: {inspectingTask.creator.name} ({inspectingTask.creator.role || 'Staff'})
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '0.64rem', fontWeight: 800, color: isInspectingOverdue ? '#dc2626' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Due Date & Time
+                  </div>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: isInspectingOverdue ? '#dc2626' : '#0f172a', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <CalendarClock size={12} color={isInspectingOverdue ? '#dc2626' : '#2563eb'} />
+                    <span>{formatDateDisplay(inspectingTask.scheduledDate)} at {inspectingTask.time || '05:00 PM'}</span>
+                  </div>
+                  {isInspectingOverdue && (
+                    <div style={{ fontSize: '0.66rem', color: '#b91c1c', fontWeight: 700, marginTop: '1px' }}>
+                      Deliverable is overdue from past date
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ gridColumn: '1 / -1', borderTop: '1px solid #e2e8f0', paddingTop: '0.6rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '0.66rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>
+                      Live Progress & Completion
+                    </span>
+                    <span style={{ fontSize: '0.74rem', fontWeight: 800, color: statusText }}>
+                      {progressVal}% Complete
+                    </span>
+                  </div>
+                  <div style={{ width: '100%', height: '6px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden' }}>
+                    <div style={{
+                      width: `${progressVal}%`,
+                      height: '100%',
+                      background: inspectingTask.status === 'Done' ? '#10b981' : inspectingTask.status === 'In Progress' ? '#3b82f6' : inspectingTask.status === 'On Hold' ? '#f59e0b' : '#94a3b8',
+                      borderRadius: '999px',
+                      transition: 'width 0.3s ease'
+                    }} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Description & Objective */}
+              {inspectingTask.description && (
+                <div>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: '4px' }}>
+                    Deliverable Brief & Scope
+                  </div>
+                  <div style={{
+                    fontSize: '0.8rem',
+                    color: '#334155',
+                    lineHeight: 1.5,
+                    background: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    padding: '0.75rem'
+                  }}>
+                    {inspectingTask.description}
+                  </div>
+                </div>
+              )}
+
+              {/* Notes & Remarks (Daily Task details parity) */}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>
+                    Notes, Context & Remarks
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickAddNote(inspectingTask.id, inspectingTask.notes)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#2563eb',
+                      fontSize: '0.68rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                      padding: 0
+                    }}
+                  >
+                    <Edit3 size={11} />
+                    <span>+ Add Executive Note</span>
+                  </button>
+                </div>
+                <div style={{
+                  fontSize: '0.78rem',
+                  color: inspectingTask.notes ? '#1e293b' : '#94a3b8',
+                  lineHeight: 1.5,
+                  background: inspectingTask.notes ? '#eff6ff' : '#f8fafc',
+                  border: inspectingTask.notes ? '1px solid #bfdbfe' : '1px dashed #cbd5e1',
+                  borderRadius: '8px',
+                  padding: '0.75rem',
+                  whiteSpace: 'pre-line'
+                }}>
+                  {inspectingTask.notes || 'No remarks currently attached. Click "+ Add Executive Note" to record leadership instructions.'}
+                </div>
+              </div>
+
+              {/* Assignees */}
+              <div>
+                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: '6px' }}>
+                  Assigned Team Members ({inspectingTask.assignees?.length || 0})
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  {inspectingTask.assignees && inspectingTask.assignees.length > 0 ? (
+                    inspectingTask.assignees.map((a, i) => (
+                      <div key={i} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '6px 10px',
+                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{
+                            width: '26px',
+                            height: '26px',
+                            borderRadius: '50%',
+                            background: '#2563eb',
+                            color: 'white',
+                            fontSize: '0.65rem',
+                            fontWeight: 800,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            overflow: 'hidden',
+                            flexShrink: 0
+                          }}>
+                            {a.avatar?.startsWith('/') || a.avatar?.startsWith('http') ? (
+                              <img src={a.avatar} alt={a.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                              a.avatar || a.name?.slice(0, 2).toUpperCase()
+                            )}
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f172a' }}>{a.name}</div>
+                            {a.designation && <div style={{ fontSize: '0.66rem', color: '#64748b' }}>{a.designation} • {a.department}</div>}
+                          </div>
+                        </div>
+
+                        <span style={{
+                          fontSize: '0.68rem',
+                          fontWeight: 700,
+                          color: a.status === 'Done' ? '#059669' : a.status === 'In Progress' ? '#1d4ed8' : '#64748b',
+                          background: a.status === 'Done' ? '#ecfdf5' : a.status === 'In Progress' ? '#eff6ff' : '#f1f5f9',
+                          padding: '2px 7px',
+                          borderRadius: '4px',
+                          border: '1px solid',
+                          borderColor: a.status === 'Done' ? '#a7f3d0' : a.status === 'In Progress' ? '#bfdbfe' : '#e2e8f0'
+                        }}>
+                          {a.status || 'Not Started'}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic', padding: '4px 0' }}>
+                      No staff members assigned to this deliverable.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Contextual Justifications & Alerts (Overdue Delay, Hold, Escalation) */}
+              {(isInspectingOverdue || inspectingTask.delayReason || inspectingTask.pastDueReason) && (
+                <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: '8px', padding: '0.75rem', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.6rem' }}>
+                  <div>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#9f1239', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <AlertTriangle size={12} />
+                      <span>Past Due / Delay Justification</span>
+                    </div>
+                    <div style={{ fontSize: '0.76rem', color: '#881337', marginTop: '2px', lineHeight: 1.4 }}>
+                      {inspectingTask.delayReason || inspectingTask.pastDueReason || 'Deliverable is past due. Staff justification required under Governance Policy FC 21.'}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickAddDelayReason(inspectingTask.id, inspectingTask.delayReason || inspectingTask.pastDueReason)}
+                    style={{
+                      background: '#ffffff',
+                      color: '#be123c',
+                      border: '1px solid #fca5a5',
+                      borderRadius: '5px',
+                      padding: '3px 8px',
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {inspectingTask.delayReason || inspectingTask.pastDueReason ? 'Edit Reason' : 'Add Reason'}
+                  </button>
+                </div>
+              )}
+
+              {inspectingTask.holdReason && (
+                <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '0.75rem' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#92400e', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <PauseCircle size={12} />
+                    <span>Hold / Blocker Justification</span>
+                  </div>
+                  <div style={{ fontSize: '0.76rem', color: '#78350f', marginTop: '2px', lineHeight: 1.4 }}>
+                    {inspectingTask.holdReason}
+                  </div>
+                </div>
+              )}
+
+              {inspectingTask.escalationReason && (
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '0.75rem' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#991b1b', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <AlertTriangle size={12} />
+                    <span>Escalated to {inspectingTask.escalatedTo || 'Senior Leadership'}</span>
+                  </div>
+                  <div style={{ fontSize: '0.76rem', color: '#7f1d1d', marginTop: '2px', lineHeight: 1.4 }}>
+                    {inspectingTask.escalationReason}
+                  </div>
+                </div>
+              )}
+
+              {/* CEO Executive Quick Actions Toolbar (Daily task action parity) */}
+              <div style={{
+                borderTop: '1px solid #e2e8f0',
+                paddingTop: '0.85rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.65rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    CEO Quick Actions & Governance
+                  </span>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+                    {/* Mark Done */}
+                    {inspectingTask.status !== 'Done' && (
+                      <button
+                        type="button"
+                        onClick={() => handleQuickMarkDone(inspectingTask.id)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '5px 10px',
+                          background: '#ecfdf5',
+                          color: '#047857',
+                          border: '1px solid #a7f3d0',
+                          borderRadius: '6px',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                        title="Mark deliverable completed"
+                      >
+                        <Check size={12} />
+                        <span>Mark Done (100%)</span>
+                      </button>
+                    )}
+
+                    {/* Set In Progress */}
+                    {inspectingTask.status !== 'In Progress' && inspectingTask.status !== 'Done' && (
+                      <button
+                        type="button"
+                        onClick={() => handleQuickSetInProgress(inspectingTask.id)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '5px 10px',
+                          background: '#eff6ff',
+                          color: '#1d4ed8',
+                          border: '1px solid #bfdbfe',
+                          borderRadius: '6px',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                        title="Set status to In Progress"
+                      >
+                        <Activity size={12} />
+                        <span>Start In Progress</span>
+                      </button>
+                    )}
+
+                    {/* Put on Hold */}
+                    {inspectingTask.status !== 'On Hold' && inspectingTask.status !== 'Done' && (
+                      <button
+                        type="button"
+                        onClick={() => handleQuickPutOnHold(inspectingTask.id)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '5px 10px',
+                          background: '#fffbeb',
+                          color: '#b45309',
+                          border: '1px solid #fde68a',
+                          borderRadius: '6px',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                        title="Put deliverable on hold with justification"
+                      >
+                        <PauseCircle size={12} />
+                        <span>Hold</span>
+                      </button>
+                    )}
+
+                    {/* Move to Today (Overdue Shortcut) */}
+                    {isInspectingOverdue && (
+                      <button
+                        type="button"
+                        onClick={() => handleQuickRescheduleToday(inspectingTask.id)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '5px 10px',
+                          background: '#fff1f2',
+                          color: '#be123c',
+                          border: '1px solid #fecdd3',
+                          borderRadius: '6px',
+                          fontSize: '0.72rem',
+                          fontWeight: 800,
+                          cursor: 'pointer'
+                        }}
+                        title="Reschedule overdue deliverable to today"
+                      >
+                        <RotateCcw size={12} />
+                        <span>Move to Today</span>
+                      </button>
+                    )}
+
+                    {/* Reschedule Date */}
+                    <button
+                      type="button"
+                      onClick={() => handleQuickRescheduleDate(inspectingTask.id, inspectingTask.scheduledDate)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '5px 10px',
+                        background: '#f8fafc',
+                        color: '#475569',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '6px',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                      title="Reschedule deliverable date"
+                    >
+                      <Calendar size={12} />
+                      <span>Reschedule</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Footer Buttons: Audit Trail, Delete, Close */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', borderTop: '1px solid #f1f5f9', paddingTop: '0.75rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const id = inspectingTask.id;
+                        setInspectingTaskId(null);
+                        setViewingAuditForTaskId(id);
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '6px 12px',
+                        background: '#ecfdf5',
+                        color: '#065f46',
+                        border: '1px solid #a7f3d0',
+                        borderRadius: '7px',
+                        fontSize: '0.74rem',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                      title="Inspect immutable audit log history"
+                    >
+                      <ShieldCheck size={13} color="#059669" />
+                      <span>Audit Trail</span>
+                    </button>
+
+                    {isCeo && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const confirmMsg = `CEO Authorization: Permanently remove deliverable "${inspectingTask.title}" from company ledger?`;
+                          if (window.confirm(confirmMsg)) {
+                            const id = inspectingTask.id;
+                            handleExecuteDelete(id);
+                          }
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '6px 12px',
+                          background: '#ffffff',
+                          color: '#dc2626',
+                          border: '1px solid #fca5a5',
+                          borderRadius: '7px',
+                          fontSize: '0.74rem',
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                        title="Delete deliverable"
+                      >
+                        <Trash2 size={13} color="#dc2626" />
+                        <span>Delete</span>
+                      </button>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setInspectingTaskId(null)}
+                    style={{
+                      padding: '6px 16px',
+                      background: '#0f172a',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '7px',
+                      fontSize: '0.75rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 4px rgba(15, 23, 42, 0.2)'
+                    }}
+                  >
+                    Done Inspecting
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
     </div>
   );
