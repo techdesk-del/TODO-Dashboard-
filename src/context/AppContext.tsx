@@ -2758,7 +2758,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             status: 'Review'
           }
         })
-      }).catch(() => {});
+      }).catch(() => { });
 
       return;
     }
@@ -2862,7 +2862,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             notes: approvalNote || 'Final Approval Granted',
           }
         })
-      }).catch(() => {});
+      }).catch(() => { });
     }
   };
 
@@ -2918,7 +2918,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             notes: rejectionReason,
           }
         })
-      }).catch(() => {});
+      }).catch(() => { });
     }
   };
 
