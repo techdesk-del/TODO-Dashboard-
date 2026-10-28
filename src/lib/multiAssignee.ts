@@ -73,8 +73,19 @@ export function computeMultiAssigneeStatus(task: {
     };
   }
 
+  // If task status is explicitly Done, it is 100% Completed
+  if (task.status === 'Done') {
+    return {
+      status: 'Done',
+      progressPercent: 100,
+      completedCount: totalCount,
+      totalCount,
+      progressText: `${totalCount} of ${totalCount} completed`,
+    };
+  }
+
   // Executive Governance: Pending CEO Final Approval check (Awaiting Sukh Sagar Sir)
-  if (task.status === 'Review' || (task as any).pendingCeoApproval) {
+  if (task.status === 'Review' || ((task as any).pendingCeoApproval && task.status !== 'Done')) {
     return {
       status: 'Review',
       progressPercent: completedCount > 0 ? progressPercent : 95,

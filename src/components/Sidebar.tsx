@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import { getTodayStr, getTomorrowStr, formatDateDisplay, formatDateDayMonth } from '@/lib/dateUtils';
 import { isCeoUser, isStrictCeo, canAccessWorkflows, canAccessAdminHr, canViewAuditTrail } from '@/lib/rosterData';
+import { computeMultiAssigneeStatus } from '@/lib/multiAssignee';
+import type { Task } from '@/types';
 
 export const Sidebar: React.FC = () => {
   const {
@@ -91,10 +93,11 @@ export const Sidebar: React.FC = () => {
         return isCreator || isAssignee;
       });
 
-  // Filter tasks for today & tomorrow & overdue
+  // Filter tasks for today & tomorrow & overdue (Completed deliverables excluded from overdue)
+  const isDoneTask = (t: Task) => t.status === 'Done' || computeMultiAssigneeStatus(t).status === 'Done';
   const todayCount = isMounted ? userVisibleTasks.filter(t => t.scheduledDate === todayStr).length : 0;
   const tomorrowCount = isMounted ? userVisibleTasks.filter(t => t.scheduledDate === tomorrowStr).length : 0;
-  const overdueCount = isMounted ? userVisibleTasks.filter(t => t.scheduledDate < todayStr && t.status !== 'Done').length : 0;
+  const overdueCount = isMounted ? userVisibleTasks.filter(t => t.scheduledDate < todayStr && !isDoneTask(t)).length : 0;
 
   const currentYearMonthStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
   const daysWithTasks: Set<number> = isMounted

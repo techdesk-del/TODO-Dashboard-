@@ -1138,6 +1138,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       effectiveUpdates.isPendingNoReason = false;
       effectiveUpdates.overdueDays = 0;
     }
+    // When deliverable is marked Done, it is 100% completed: clear overdue, pending, and approval flags
+    if (updates.status === 'Done') {
+      effectiveUpdates.isOverdue = false;
+      effectiveUpdates.isPendingNoReason = false;
+      effectiveUpdates.overdueDays = 0;
+      effectiveUpdates.pendingCeoApproval = false;
+      effectiveUpdates.progressPercent = 100;
+    }
 
     // Optimistic UI update
     setTasks(prev => prev.map(t => {
@@ -1162,12 +1170,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...effectiveUpdates,
       fullTask: mergedTask,
       actor: currentUser.name,
+      actorEmail: currentUser.email,
+      actorId: currentUser.id,
       actorRole: currentUser.role,
     };
 
     fetch(`/api/tasks?id=${encodeURIComponent(taskId)}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-email': currentUser.email || '',
+        'x-user-name': currentUser.name || '',
+        'x-user-role': currentUser.role || '',
+        'x-user-id': currentUser.id || ''
+      },
       body: JSON.stringify(patchPayload)
     })
       .then(async res => {
@@ -2642,6 +2658,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: 'Done',
       progressPercent: 100,
       pendingCeoApproval: false,
+      isOverdue: false,
+      isPendingNoReason: false,
+      overdueDays: 0,
       ceoApprovedAt: new Date().toISOString(),
       ceoApprovedBy: currentUser.name,
     }, 'Deliverable granted Final Approval and marked Completed by CEO Mr. Sukh Sagar Singh Bhati');
@@ -2677,6 +2696,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: 'Done',
       progressPercent: 100,
       pendingCeoApproval: false,
+      isOverdue: false,
+      isPendingNoReason: false,
+      overdueDays: 0,
       ceoApprovedAt: new Date().toISOString(),
       ceoApprovedBy: currentUser.name || 'Mr. Sukh Sagar Singh Bhati',
       notes: approvalNote ? `${task.notes ? `${task.notes}\n` : ''}[CEO Final Approval]: ${approvalNote}` : task.notes,

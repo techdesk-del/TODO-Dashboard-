@@ -179,7 +179,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
   const [reopenReasonInput, setReopenReasonInput] = useState('');
 
   const comp = computeMultiAssigneeStatus(task);
-  const isCompleted = comp.status === 'Done';
+  const isCompleted = comp.status === 'Done' || task.status === 'Done';
 
   const handleCheckboxToggle = () => {
     if (!isCompleted) {
@@ -188,8 +188,12 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
         spread: 60,
         origin: { y: 0.7 }
       });
-      const myAssignee = task.assignees.find(a => a.id === currentUser.id || a.email?.toLowerCase() === currentUser.email?.toLowerCase());
-      completeTask(task.id, myAssignee?.id);
+      if (isCeo) {
+        approveTaskByCeo(task.id, 'Approved & Completed directly by CEO Mr. Sukh Sagar Singh Bhati');
+      } else {
+        const myAssignee = task.assignees.find(a => a.id === currentUser.id || a.email?.toLowerCase() === currentUser.email?.toLowerCase());
+        completeTask(task.id, myAssignee?.id);
+      }
     } else {
       setShowReopenModal(true);
       setReopenReasonInput('');
@@ -459,7 +463,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
 
   const todayStr = getTodayStr();
   const effectiveDeadline = task.dueDate || task.scheduledDate;
-  const isOverdue = Boolean(task.isOverdue || (effectiveDeadline < todayStr && task.status !== 'Done' && task.status !== 'Cancelled'));
+  const isAwaitingCeo = !isCompleted && (task.status === 'Review' || task.pendingCeoApproval);
+  const isOverdue = !isCompleted && Boolean(task.isOverdue || (effectiveDeadline < todayStr && task.status !== 'Cancelled'));
   const hasDelayReason = Boolean(
     (task.delayReason && task.delayReason.trim().length > 0) ||
     (task.pastDueReason && task.pastDueReason.trim().length > 0)
@@ -594,11 +599,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
             </span>
 
             {/* Single Primary Status Pill */}
-            {isOverdue ? (
-              <span className="task-pill-badge badge-overdue" style={{ margin: 0, padding: '2px 7px', fontSize: '0.68rem', whiteSpace: 'nowrap' }} title={hasDelayReason ? `Delay Reason: "${task.delayReason || task.pastDueReason}"` : 'Overdue without recorded reason'}>
-                {hasDelayReason ? 'OVERDUE (REASON RECORDED)' : 'PENDING NO REASON'}
+            {isCompleted ? (
+              <span className="task-pill-badge badge-done" style={{ margin: 0, padding: '2px 7px', fontSize: '0.68rem', whiteSpace: 'nowrap' }}>
+                ✓ COMPLETED
               </span>
-            ) : (task.status === 'Review' || task.pendingCeoApproval) ? (
+            ) : isAwaitingCeo ? (
               <span
                 className="task-pill-badge"
                 style={{
@@ -618,9 +623,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
               >
                 <span>⏳ AWAITING CEO APPROVAL</span>
               </span>
-            ) : comp.status === 'Done' ? (
-              <span className="task-pill-badge badge-done" style={{ margin: 0, padding: '2px 7px', fontSize: '0.68rem', whiteSpace: 'nowrap' }}>
-                ✓ COMPLETED
+            ) : isOverdue ? (
+              <span className="task-pill-badge badge-overdue" style={{ margin: 0, padding: '2px 7px', fontSize: '0.68rem', whiteSpace: 'nowrap' }} title={hasDelayReason ? `Delay Reason: "${task.delayReason || task.pastDueReason}"` : 'Overdue without recorded reason'}>
+                {hasDelayReason ? 'OVERDUE (REASON RECORDED)' : 'PENDING NO REASON'}
               </span>
             ) : comp.status === 'In Progress' ? (
               <span className="task-pill-badge badge-in-progress" style={{ margin: 0, padding: '2px 7px', fontSize: '0.68rem', whiteSpace: 'nowrap' }}>
@@ -698,7 +703,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
             }}
           >
             {/* CEO Final Approval Governance Banner */}
-            {(task.status === 'Review' || task.pendingCeoApproval) && (
+            {isAwaitingCeo && (
               <div
                 style={{
                   background: 'linear-gradient(135deg, #fef3c7, #fef9c3)',
@@ -801,6 +806,26 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                     Routed to CEO Desk for Final Sign-Off
                   </span>
                 )}
+              </div>
+            )}
+
+            {/* CEO Endorsement Granted Confirmation Badge */}
+            {isCompleted && task.ceoApprovedAt && (
+              <div
+                style={{
+                  background: '#f0fdf4',
+                  border: '1px solid #bbf7d0',
+                  borderRadius: '8px',
+                  padding: '0.45rem 0.75rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '0.74rem',
+                  color: '#166534',
+                  fontWeight: 600
+                }}
+              >
+                <span>✓ Final Approval granted by {task.ceoApprovedBy || 'Mr. Sukh Sagar Singh Bhati (CEO)'}</span>
               </div>
             )}
 

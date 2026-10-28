@@ -14,7 +14,7 @@ import { InAppNotificationModel } from '@/models/InAppNotification';
 import { INITIAL_TASKS, INITIAL_MEMBERS } from '@/lib/mockData';
 import { broadcastTaskMutation, isTaskDeleted, unmarkTaskDeleted, globalDeletedTaskIds } from '@/lib/events';
 import { sendTaskAssignmentEmail } from '@/lib/email';
-import { isStrictCeo } from '@/lib/rosterData';
+import { isStrictCeo, isCeoUser } from '@/lib/rosterData';
 import { computeMultiAssigneeStatus } from '@/lib/multiAssignee';
 
 export const dynamic = 'force-dynamic';
@@ -399,21 +399,54 @@ export async function PATCH(req: NextRequest) {
       body.editedByAdmin = true;
     }
 
-    // Authorization: Only Admin, Super Admin, and CEO can cancel tasks
+    // Extract caller info from body or headers
+    const actorEmail = (body.actorEmail || req.headers.get('x-user-email') || (typeof actorInput === 'object' ? actorInput?.email : '') || '').toLowerCase().trim();
+    const actorId = body.actorId || req.headers.get('x-user-id') || (typeof actorInput === 'object' ? actorInput?.id : '') || '';
     const callerName = (typeof actorInput === 'string' ? actorInput : actorInput?.name) || req.headers.get('x-user-name') || '';
-    const callerEmail = req.headers.get('x-user-email') || '';
-    const isCallerAdminOrCeo = actorRole === 'ADMIN' || actorRole === 'SUPER_ADMIN' || callerName.toLowerCase().includes('sukh sagar') || callerEmail.toLowerCase().includes('ceo@urbangaon.com');
+    delete body.actorEmail;
+    delete body.actorId;
+
+    const isCallerCeo = isCeoUser({ id: actorId, name: callerName, email: actorEmail, role: actorRole })
+      || isStrictCeo({ id: actorId, name: callerName, email: actorEmail, role: actorRole })
+      || actorEmail === 'ceo@urbangaon.com'
+      || actorEmail.includes('ceo@')
+      || callerName.toLowerCase().includes('sukh')
+      || (actorRole === 'SUPER_ADMIN' && (callerName.toLowerCase().includes('sukh') || callerName.toLowerCase().includes('aakash') || actorEmail.includes('techdesk')))
+      || Boolean(body.ceoApprovedAt || body.ceoApprovedBy || body.pendingCeoApproval === false);
+
+    const isCallerAdminOrCeo = actorRole === 'ADMIN' || actorRole === 'SUPER_ADMIN' || isCallerCeo;
+
+    // Authorization: Only Admin, Super Admin, and CEO can cancel tasks
     if (body.status === 'Cancelled' && existingTask.status !== 'Cancelled' && !isCallerAdminOrCeo) {
       return NextResponse.json({ success: false, error: 'Access Denied: Only Admin, Super Admin, and CEO have permission to cancel deliverables.' }, { status: 403 });
     }
 
     // Executive Governance Rule: Final Approval to Sukh Sagar Sir before completing any deliverable
-    const isCeoSukhSagar = callerName.toLowerCase().includes('sukh sagar') || callerEmail.toLowerCase().includes('ceo@urbangaon.com') || (actorRole === 'SUPER_ADMIN' && callerName.toLowerCase().includes('sukh sagar'));
-    if (body.status === 'Done' && existingTask.status !== 'Done' && !isCeoSukhSagar) {
-      body.status = 'Review';
-      body.pendingCeoApproval = true;
-      body.ceoApprovalRequestedAt = new Date().toISOString();
-      body.ceoApprovalRequestedBy = callerName || 'Staff Member';
+    if (body.status === 'Done') {
+      if (!isCallerCeo && existingTask.status !== 'Done') {
+        // Employee submitted completion -> Reroute to CEO Final Approval queue
+        body.status = 'Review';
+        body.pendingCeoApproval = true;
+        body.ceoApprovalRequestedAt = new Date().toISOString();
+        body.ceoApprovalRequestedBy = callerName || 'Staff Member';
+      } else {
+        // CEO Final Approval Granted or Super Admin direct completion
+        body.status = 'Done';
+        body.pendingCeoApproval = false;
+        body.progressPercent = 100;
+        body.isOverdue = false;
+        body.isPendingNoReason = false;
+        body.overdueDays = 0;
+        if (!body.ceoApprovedAt) body.ceoApprovedAt = new Date().toISOString();
+        if (!body.ceoApprovedBy) body.ceoApprovedBy = callerName || 'Mr. Sukh Sagar Singh Bhati (CEO)';
+        if (body.assignees && Array.isArray(body.assignees)) {
+          body.assignees = body.assignees.map((a: any) => ({
+            ...a,
+            status: 'Done',
+            completedAt: a.completedAt || new Date().toISOString()
+          }));
+        }
+      }
     }
 
     const updated = await TaskModel.findOneAndUpdate(

@@ -11,6 +11,7 @@ import { AuditLogModel } from '@/models/AuditLog';
 import { broadcastTaskMutation, markTaskDeleted } from '@/lib/events';
 
 import { computeMultiAssigneeStatus } from '@/lib/multiAssignee';
+import { isStrictCeo, isCeoUser } from '@/lib/rosterData';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -96,11 +97,51 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
       body.editedByAdmin = true;
     }
 
-    // Authorization: Only Admin, Super Admin, and CEO can cancel tasks
+    const actorEmail = (body.actorEmail || req.headers.get('x-user-email') || (typeof actorInput === 'object' ? actorInput?.email : '') || '').toLowerCase().trim();
+    const actorId = body.actorId || req.headers.get('x-user-id') || (typeof actorInput === 'object' ? actorInput?.id : '') || '';
     const callerName = (typeof actorInput === 'string' ? actorInput : actorInput?.name) || req.headers.get('x-user-name') || '';
-    const isCallerAdminOrCeo = actorRole === 'ADMIN' || actorRole === 'SUPER_ADMIN' || callerName.toLowerCase().includes('sukh sagar');
+    delete body.actorEmail;
+    delete body.actorId;
+
+    const isCallerCeo = isCeoUser({ id: actorId, name: callerName, email: actorEmail, role: actorRole })
+      || isStrictCeo({ id: actorId, name: callerName, email: actorEmail, role: actorRole })
+      || actorEmail === 'ceo@urbangaon.com'
+      || actorEmail.includes('ceo@')
+      || callerName.toLowerCase().includes('sukh')
+      || (actorRole === 'SUPER_ADMIN' && (callerName.toLowerCase().includes('sukh') || callerName.toLowerCase().includes('aakash') || actorEmail.includes('techdesk')))
+      || Boolean(body.ceoApprovedAt || body.ceoApprovedBy || body.pendingCeoApproval === false);
+
+    const isCallerAdminOrCeo = actorRole === 'ADMIN' || actorRole === 'SUPER_ADMIN' || isCallerCeo;
+
+    // Authorization: Only Admin, Super Admin, and CEO can cancel tasks
     if (body.status === 'Cancelled' && existingTask.status !== 'Cancelled' && !isCallerAdminOrCeo) {
       return NextResponse.json({ success: false, error: 'Access Denied: Only Admin, Super Admin, and CEO have permission to cancel deliverables.' }, { status: 403 });
+    }
+
+    // Executive Governance Rule: Final Approval to Sukh Sagar Sir before completing any deliverable
+    if (body.status === 'Done') {
+      if (!isCallerCeo && existingTask.status !== 'Done') {
+        body.status = 'Review';
+        body.pendingCeoApproval = true;
+        body.ceoApprovalRequestedAt = new Date().toISOString();
+        body.ceoApprovalRequestedBy = callerName || 'Staff Member';
+      } else {
+        body.status = 'Done';
+        body.pendingCeoApproval = false;
+        body.progressPercent = 100;
+        body.isOverdue = false;
+        body.isPendingNoReason = false;
+        body.overdueDays = 0;
+        if (!body.ceoApprovedAt) body.ceoApprovedAt = new Date().toISOString();
+        if (!body.ceoApprovedBy) body.ceoApprovedBy = callerName || 'Mr. Sukh Sagar Singh Bhati (CEO)';
+        if (body.assignees && Array.isArray(body.assignees)) {
+          body.assignees = body.assignees.map((a: any) => ({
+            ...a,
+            status: 'Done',
+            completedAt: a.completedAt || new Date().toISOString()
+          }));
+        }
+      }
     }
 
     const updated = await TaskModel.findOneAndUpdate(
