@@ -557,7 +557,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
               maxWidth: '100%'
             }}
           >
-            {/* Scheduled Date */}
+            {/* Current Date */}
             <span
               style={{
                 background: '#f8fafc',
@@ -572,10 +572,10 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                 gap: '4px',
                 whiteSpace: 'nowrap'
               }}
-              title={`Scheduled Date: ${task.scheduledDate}`}
+              title={`Current Date: ${todayStr}`}
             >
               <CalendarIcon size={12} color="#64748b" />
-              <span>Date: <strong style={{ color: '#1e293b' }}>{task.scheduledDate}</strong></span>
+              <span>Current Date: <strong style={{ color: '#1e293b' }}>{todayStr}</strong></span>
             </span>
 
             {/* Target Deadline / Due Date */}
@@ -1114,7 +1114,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
             <span>Created: <strong style={{ color: '#1e293b' }}>{creationDateFormatted}</strong></span>
           </div>
 
-          {/* 2. Scheduled Date */}
+          {/* 2. Current Date */}
           <div
             className="task-meta-item"
             style={{
@@ -1129,10 +1129,10 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
               alignItems: 'center',
               gap: '5px'
             }}
-            title={`Scheduled date: ${task.scheduledDate}`}
+            title={`Current date: ${todayStr}`}
           >
             <CalendarIcon size={12} color="#64748b" />
-            <span>Scheduled: <strong style={{ color: '#1e293b' }}>{task.scheduledDate}</strong></span>
+            <span>Current Date: <strong style={{ color: '#1e293b' }}>{todayStr}</strong></span>
           </div>
 
           {/* 3. Due Date */}

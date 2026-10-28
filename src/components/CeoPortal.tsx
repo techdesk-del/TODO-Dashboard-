@@ -1282,9 +1282,13 @@ export const CeoPortal: React.FC = () => {
                     {/* Due Date */}
                     <td style={{ padding: '12px 14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.72rem', fontWeight: 600, color: '#475569' }}>
+                          <Calendar size={12} color="#64748b" />
+                          <span>Current Date: <strong style={{ color: '#0f172a' }}>{todayStr}</strong></span>
+                        </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.78rem', fontWeight: 700, color: isOverdue ? '#dc2626' : '#1e293b' }}>
-                          <Calendar size={13} color={isOverdue ? '#dc2626' : '#2563eb'} />
-                          <span>{formatDateShort(task.scheduledDate) || task.scheduledDate}</span>
+                          <CalendarClock size={13} color={isOverdue ? '#dc2626' : '#2563eb'} />
+                          <span>Due: {formatDateShort(task.scheduledDate) || task.scheduledDate}</span>
                         </div>
                         {isOverdue && (
                           <span style={{
@@ -1924,10 +1928,10 @@ export const CeoPortal: React.FC = () => {
                 </div>
 
                 <div>
-                  <div style={{ fontSize: '0.64rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Date of Creation</div>
+                  <div style={{ fontSize: '0.64rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Current Date</div>
                   <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <CalendarPlus size={12} color="#64748b" />
-                    <span>{formatCreationDate(inspectingTask.createdAt)}</span>
+                    <Calendar size={12} color="#64748b" />
+                    <span>{todayStr}</span>
                   </div>
                   {inspectingTask.creator && (
                     <div style={{ fontSize: '0.66rem', color: '#64748b', marginTop: '1px' }}>
