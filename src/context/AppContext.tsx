@@ -282,10 +282,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const filteredMembers = json.data
             .filter((m: TeamMember) => m && !pIdSet.has(m.id) && !pEmailSet.has(m.email?.toLowerCase().trim()))
             .map((m: TeamMember) => {
+              const isCeoEntry = isStrictCeo(m) || m.department === 'Leadership & CEO Desk' || m.department === 'Leadership & CEO';
+              const normalizedDept = isCeoEntry ? 'Founder & CEO' : m.department;
+              const normalizedDesig = isStrictCeo(m) ? 'Founder & CEO' : m.designation;
               if (!m.avatar || m.avatar.includes('.png') || m.avatar.includes('urbangaon-employee-emblem')) {
-                return { ...m, avatar: sanitizeInitials(m.name) };
+                return { ...m, department: normalizedDept, designation: normalizedDesig, avatar: sanitizeInitials(m.name) };
               }
-              return m;
+              return { ...m, department: normalizedDept, designation: normalizedDesig };
             });
           setMembers(filteredMembers);
 

@@ -74,6 +74,10 @@ export async function syncOfficialRosterToDB(): Promise<void> {
         } else if (!existingMember.role) {
           missingFields.role = emp.role;
         }
+        if (emp.id === 'mem-1' || empEmailClean === 'ceo@urbangaon.com' || existingMember.department === 'Leadership & CEO Desk' || existingMember.department === 'Leadership & CEO') {
+          missingFields.department = 'Founder & CEO';
+          missingFields.designation = 'Founder & CEO';
+        }
         if (!existingMember.designation) missingFields.designation = emp.designation;
         if (!existingMember.department) missingFields.department = emp.department;
         if (!existingMember.status) missingFields.status = 'ACTIVE';
@@ -113,6 +117,10 @@ export async function syncOfficialRosterToDB(): Promise<void> {
           missingUserFields.designation = emp.designation;
         } else if (!existingUser.role) {
           missingUserFields.role = existingMember?.role || emp.role;
+        }
+        if (emp.id === 'mem-1' || empEmailClean === 'ceo@urbangaon.com' || existingUser.department === 'Leadership & CEO Desk' || existingUser.department === 'Leadership & CEO') {
+          missingUserFields.department = 'Founder & CEO';
+          missingUserFields.designation = 'Founder & CEO';
         }
         if (!existingUser.department) missingUserFields.department = existingMember?.department || emp.department;
         if (!existingUser.designation) missingUserFields.designation = existingMember?.designation || emp.designation;

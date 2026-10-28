@@ -286,13 +286,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
         officialMatch.aliases?.forEach(a => seenEmails.add(a.toLowerCase().trim()));
       }
 
+      const isCeoDept = cleanId === 'mem-1' || cleanEmail === 'ceo@urbangaon.com' || m.department === 'Leadership & CEO Desk' || m.department === 'Leadership & CEO';
       list.push({
         id: cleanId,
         name: m.name,
         email: m.email,
         role: m.role || 'EMPLOYEE',
-        department: m.department || 'General',
-        designation: m.designation || 'Specialist',
+        department: isCeoDept ? 'Founder & CEO' : (m.department || 'General'),
+        designation: (cleanId === 'mem-1' || cleanEmail === 'ceo@urbangaon.com') ? 'Founder & CEO' : (m.designation || 'Specialist'),
         avatar: (m.avatar && !m.avatar.includes('.png') && !m.avatar.includes('urbangaon-employee-emblem'))
           ? m.avatar
           : (m.name?.trim().split(/\s+/).length >= 2

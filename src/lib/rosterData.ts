@@ -25,7 +25,7 @@ export const OFFICIAL_ROSTER: OfficialEmployeeConfig[] = [
     aliases: ['sukhsagar.bhati@urbangaon.com', 'sukhsagar@urbangaon.com', 'ceo@urbangaon.com'],
     role: 'SUPER_ADMIN',
     department: 'Founder & CEO',
-    designation: 'CEO',
+    designation: 'Founder & CEO',
     avatar: 'SB',
     totalTasks: 0,
     completedTasks: 0,

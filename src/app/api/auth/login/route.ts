@@ -331,9 +331,10 @@ export async function POST(req: NextRequest) {
     const activeName = officialEmp ? officialEmp.name : user.name;
     const activeRole = officialEmp ? officialEmp.role : user.role;
 
-    if (officialEmp && (user.role !== activeRole || user.designation !== activeDesignation)) {
+    if (officialEmp && (user.role !== activeRole || user.designation !== activeDesignation || user.department !== activeDepartment)) {
       user.role = activeRole;
       user.designation = activeDesignation;
+      user.department = activeDepartment;
       await user.save().catch(() => {});
     }
 

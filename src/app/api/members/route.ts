@@ -55,13 +55,20 @@ export async function GET() {
     const members = rawMembers
       .filter(m => !purgedIds.has(m.id) && !purgedEmails.has(m.email?.toLowerCase().trim()))
       .map(m => {
+        const isCeoDept = m.id === 'mem-1' || m.email?.toLowerCase().trim() === 'ceo@urbangaon.com' || m.department === 'Leadership & CEO Desk' || m.department === 'Leadership & CEO';
+        const nextDept = isCeoDept ? 'Founder & CEO' : m.department;
+        const nextDesig = (m.id === 'mem-1' || m.email?.toLowerCase().trim() === 'ceo@urbangaon.com') ? 'Founder & CEO' : m.designation;
+        if (isCeoDept && (m.department !== 'Founder & CEO' || m.designation !== 'Founder & CEO')) {
+          MemberModel.updateOne({ _id: m._id }, { $set: { department: 'Founder & CEO', designation: 'Founder & CEO' } }).catch(() => {});
+          UserModel.updateMany({ email: m.email?.toLowerCase().trim() }, { $set: { department: 'Founder & CEO', designation: 'Founder & CEO' } }).catch(() => {});
+        }
         if (!m.avatar || m.avatar.includes('.png') || m.avatar.includes('urbangaon-employee-emblem')) {
           const initials = sanitizeInitials(m.name);
           MemberModel.updateOne({ _id: m._id }, { $set: { avatar: initials } }).catch(() => {});
           UserModel.updateMany({ email: m.email?.toLowerCase().trim() }, { $set: { avatar: initials } }).catch(() => {});
-          return { ...m, avatar: initials };
+          return { ...m, department: nextDept, designation: nextDesig, avatar: initials };
         }
-        return m;
+        return { ...m, department: nextDept, designation: nextDesig };
       });
 
     return NextResponse.json({
