@@ -3,9 +3,10 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useApp } from '@/context/AppContext';
 import { isCeoUser, isAakashUser } from '@/lib/rosterData';
-import { TeamMember, Task, TaskStatus } from '@/types';
+import { TeamMember, Task, TaskStatus, Role } from '@/types';
 import { 
   UserPlus, 
+  UserCheck,
   Users, 
   UserX, 
   Check, 
@@ -1402,8 +1403,13 @@ export const AdminHrPortal: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      setMemberToEditEmail(targetOversightMember);
-                      setNewEmailInput(targetOversightMember.email);
+                      setMemberToEditProfile(targetOversightMember);
+                      setEditMemberNameInput(targetOversightMember.name || '');
+                      setNewEmailInput(targetOversightMember.email || '');
+                      setEditMemberRoleInput(targetOversightMember.role || 'EMPLOYEE');
+                      setEditMemberEmpIdInput(targetOversightMember.employeeId || targetOversightMember.id || '');
+                      setEditMemberDeptInput(targetOversightMember.department || '');
+                      setEditMemberDesigInput(targetOversightMember.designation || '');
                       setEmailChangeReason('');
                       setEmailUpdateError(null);
                     }}

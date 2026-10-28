@@ -39,6 +39,7 @@ export function computeMultiAssigneeStatus(task: {
   scheduledDate?: string;
   pastDueReason?: string;
   status?: TaskStatus | string;
+  pendingCeoApproval?: boolean;
 }): MultiAssigneeComputation {
   const assignees = task.assignees || [];
   const totalCount = assignees.length;
