@@ -93,16 +93,25 @@ export const CalendarView: React.FC = () => {
       if (selectedEmployeeId !== 'ME' && selectedEmployeeId !== 'ALL') {
         const emp = members.find(m => m.id === selectedEmployeeId);
         const empEmail = (emp?.email || '').toLowerCase().trim();
-        const isCreator = t.creator?.id === selectedEmployeeId || (t.creator?.email && t.creator.email.toLowerCase().trim() === empEmail);
-        const isAssignee = t.assignees?.some(a => a.id === selectedEmployeeId || (a.email && a.email.toLowerCase().trim() === empEmail));
-        return isCreator || isAssignee;
+        const empName = (emp?.name || '').toLowerCase().trim();
+        const isAssignee = t.assignees?.some(a =>
+          a.id === selectedEmployeeId ||
+          (a.email && a.email.toLowerCase().trim() === empEmail) ||
+          (a.name && empName && a.name.toLowerCase().trim() === empName)
+        );
+        return Boolean(isAssignee);
       }
 
-      // Default: logged in user (shows tasks assigned to or created by current user)
+      // Default: logged in user (strictly shows tasks assigned to current user)
+      if (isCeoMonitoring) return true;
       const currentCleanEmail = (currentUser.email || '').toLowerCase().trim();
-      const isCreator = t.creator?.id === currentUser.id || (t.creator?.email && t.creator.email.toLowerCase().trim() === currentCleanEmail);
-      const isAssignee = t.assignees?.some(a => a.id === currentUser.id || (a.email && a.email.toLowerCase().trim() === currentCleanEmail));
-      return isCreator || isAssignee;
+      const currentCleanName = (currentUser.name || '').toLowerCase().trim();
+      const isAssignee = t.assignees?.some(a =>
+        a.id === currentUser.id ||
+        (a.email && a.email.toLowerCase().trim() === currentCleanEmail) ||
+        (a.name && currentCleanName && a.name.toLowerCase().trim() === currentCleanName)
+      );
+      return Boolean(isAssignee);
     });
   }, [tasks, selectedEmployeeId, members, currentUser]);
 

@@ -222,10 +222,7 @@ export const CeoPortal: React.FC = () => {
         (a.name && a.name.toLowerCase().trim().includes(memberNameClean)) ||
         (a.email && a.email.toLowerCase().trim() === memberEmailClean)
       );
-      const isCreator = t.creator?.id === activeMember.id ||
-        (t.creator?.name && t.creator.name.toLowerCase().trim().includes(memberNameClean)) ||
-        (t.creator?.email && t.creator.email.toLowerCase().trim() === memberEmailClean);
-      return isAssignee || isCreator;
+      return Boolean(isAssignee);
     });
   }, [uncancelledTasks, activeMember]);
 
@@ -799,8 +796,11 @@ export const CeoPortal: React.FC = () => {
                 {/* List each active member */}
                 {activeMembers.map(m => {
                   const memberTasksCount = uncancelledTasks.filter(t =>
-                    t.assignees?.some(a => a.id === m.id || a.name.toLowerCase() === m.name.toLowerCase()) ||
-                    t.creator?.id === m.id
+                    t.assignees?.some(a =>
+                      a.id === m.id ||
+                      (a.name && a.name.toLowerCase().trim() === m.name.toLowerCase().trim()) ||
+                      (a.email && m.email && a.email.toLowerCase().trim() === m.email.toLowerCase().trim())
+                    )
                   ).length;
                   const isSelected = activeMember?.id === m.id;
 

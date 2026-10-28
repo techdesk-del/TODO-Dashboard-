@@ -82,15 +82,12 @@ export const Sidebar: React.FC = () => {
         if (t.status === 'Cancelled') return false;
         const currentCleanEmail = (currentUser.email || '').toLowerCase().trim();
         const currentCleanName = (currentUser.name || '').toLowerCase().trim();
-        const isCreator = t.creator?.id === currentUser.id ||
-          (t.creator?.email && t.creator.email.toLowerCase().trim() === currentCleanEmail) ||
-          (t.creator?.name && currentCleanName && t.creator.name.toLowerCase().trim() === currentCleanName);
         const isAssignee = t.assignees?.some(a =>
           a.id === currentUser.id ||
           (a.email && a.email.toLowerCase().trim() === currentCleanEmail) ||
           (a.name && currentCleanName && a.name.toLowerCase().trim() === currentCleanName)
         );
-        return isCreator || isAssignee;
+        return Boolean(isAssignee);
       });
 
   // Filter tasks for today & tomorrow & overdue (Completed deliverables excluded from overdue)

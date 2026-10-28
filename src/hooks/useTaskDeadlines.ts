@@ -12,7 +12,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
 import { soundEngine } from '@/lib/sound';
 import { getTodayStr } from '@/lib/dateUtils';
-import { isCeoUser } from '@/lib/rosterData';
+import { isCeoUser, isStrictCeo } from '@/lib/rosterData';
 import { Task } from '@/types';
 
 export function useTaskDeadlines() {
@@ -50,15 +50,20 @@ export function useTaskDeadlines() {
 
   // Find user's active (uncompleted) deliverables
   const activeUserTasks = useMemo(() => {
+    const isStrictCeoAccount = isStrictCeo(currentUser);
     return tasks.filter(t => {
       if (t.status === 'Done' || t.status === 'Cancelled') return false;
-      if (isCeo) return true;
+      if (isStrictCeoAccount) return true;
       const cleanEmail = (currentUser.email || '').toLowerCase().trim();
-      const isCreator = t.creator?.id === currentUser.id || (t.creator?.email && t.creator.email.toLowerCase().trim() === cleanEmail);
-      const isAssignee = t.assignees?.some(a => a.id === currentUser.id || (a.email && a.email.toLowerCase().trim() === cleanEmail));
-      return isCreator || isAssignee;
+      const cleanName = (currentUser.name || '').toLowerCase().trim();
+      const isAssignee = t.assignees?.some(a =>
+        a.id === currentUser.id ||
+        (a.email && a.email.toLowerCase().trim() === cleanEmail) ||
+        (a.name && cleanName && a.name.toLowerCase().trim() === cleanName)
+      );
+      return Boolean(isAssignee);
     });
-  }, [tasks, currentUser, isCeo]);
+  }, [tasks, currentUser]);
 
   // Overdue Deliverables: Scheduled on previous date OR scheduled today with time past
   const overdueTasks = useMemo(() => {

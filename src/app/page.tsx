@@ -82,22 +82,19 @@ export default function Home() {
 
   // Role-based visibility isolation:
   // - Strict CEO (Mr. Sukh Sagar Singh Bhati) oversees all company deliverables across all staff members
-  // - All employees and administrators (including Super Admin Aakash Das) ONLY see tasks that they created OR are assigned to in their personal workspace
+  // - All employees and administrators (including Super Admin Aakash Das) strictly see tasks ASSIGNED to them in their personal profile
   const currentCleanEmail = (currentUser.email || '').toLowerCase().trim();
   const currentCleanName = (currentUser.name || '').toLowerCase().trim();
   const visibleTasks = useMemo(() => {
     if (!isStrictCeoUser) {
       return tasks.filter(t => {
         if (t.status === 'Cancelled') return false;
-        const isCreator = t.creator?.id === currentUser.id ||
-          (t.creator?.email && t.creator.email.toLowerCase().trim() === currentCleanEmail) ||
-          (t.creator?.name && currentCleanName && t.creator.name.toLowerCase().trim() === currentCleanName);
         const isAssignee = t.assignees?.some(a =>
           a.id === currentUser.id ||
           (a.email && a.email.toLowerCase().trim() === currentCleanEmail) ||
           (a.name && currentCleanName && a.name.toLowerCase().trim() === currentCleanName)
         );
-        return isCreator || isAssignee;
+        return Boolean(isAssignee);
       });
     }
 
@@ -107,52 +104,18 @@ export default function Home() {
       const targetEmail = (targetMember?.email || '').toLowerCase().trim();
       const targetName = (targetMember?.name || '').toLowerCase().trim();
       return uncancelled.filter(t => {
-        const isCreator = t.creator?.id === ceoEmployeeFilter ||
-          (t.creator?.email && t.creator.email.toLowerCase().trim() === targetEmail) ||
-          (t.creator?.name && targetName && t.creator.name.toLowerCase().trim() === targetName);
         const isAssignee = t.assignees?.some(a =>
           a.id === ceoEmployeeFilter ||
           (a.email && a.email.toLowerCase().trim() === targetEmail) ||
           (a.name && targetName && a.name.toLowerCase().trim() === targetName)
         );
-        return isCreator || isAssignee;
+        return Boolean(isAssignee);
       });
     }
     return uncancelled;
   }, [tasks, isStrictCeoUser, isCeoMonitoring, ceoEmployeeFilter, members, currentUser, currentCleanEmail, currentCleanName]);
 
-  // Flowchart 6 view partition:
-  // - Task appears in "Assigned to" for each assignee
-  // - Task appears in "Assigned by" for the creator
-  const assignedToMeCount = visibleTasks.filter(t =>
-    t.assignees?.some(a =>
-      a.id === currentUser.id ||
-      (a.email && a.email.toLowerCase().trim() === currentCleanEmail) ||
-      (a.name && currentCleanName && a.name.toLowerCase().trim() === currentCleanName)
-    )
-  ).length;
-
-  const assignedByMeCount = visibleTasks.filter(t =>
-    t.creator?.id === currentUser.id ||
-    (t.creator?.email && t.creator.email.toLowerCase().trim() === currentCleanEmail) ||
-    (t.creator?.name && currentCleanName && t.creator.name.toLowerCase().trim() === currentCleanName)
-  ).length;
-
-  const partitionedTasks = visibleTasks.filter(t => {
-    if (assigneeFilter === 'assigned_to_me') {
-      return t.assignees?.some(a =>
-        a.id === currentUser.id ||
-        (a.email && a.email.toLowerCase().trim() === currentCleanEmail) ||
-        (a.name && currentCleanName && a.name.toLowerCase().trim() === currentCleanName)
-      );
-    }
-    if (assigneeFilter === 'assigned_by_me') {
-      return t.creator?.id === currentUser.id ||
-        (t.creator?.email && t.creator.email.toLowerCase().trim() === currentCleanEmail) ||
-        (t.creator?.name && currentCleanName && t.creator.name.toLowerCase().trim() === currentCleanName);
-    }
-    return true;
-  });
+  const partitionedTasks = visibleTasks;
 
   const todayStr = getTodayStr();
   const overdueTasks = partitionedTasks.filter(t => t.scheduledDate < todayStr && t.status !== 'Done' && t.status !== 'Cancelled');
@@ -401,56 +364,14 @@ export default function Home() {
                           borderRadius: '6px',
                           cursor: 'pointer',
                           whiteSpace: 'nowrap',
-                          background: (assigneeFilter === 'all' && viewScope === 'all') ? '#2563eb' : (assigneeFilter === 'all' ? '#e0e7ff' : 'transparent'),
-                          color: (assigneeFilter === 'all' && viewScope === 'all') ? '#ffffff' : (assigneeFilter === 'all' ? '#1d4ed8' : '#64748b'),
-                          boxShadow: (assigneeFilter === 'all' && viewScope === 'all') ? '0 1px 3px rgba(37,99,235,0.25)' : 'none',
+                          background: viewScope === 'all' ? '#2563eb' : '#e0e7ff',
+                          color: viewScope === 'all' ? '#ffffff' : '#1d4ed8',
+                          boxShadow: viewScope === 'all' ? '0 1px 3px rgba(37,99,235,0.25)' : 'none',
                           transition: 'all 0.15s ease'
                         }}
-                        title="Show all deliverables across all dates (27, 28, 29, etc.)"
+                        title="Show all deliverables assigned to you across all dates"
                       >
-                        All Tasks ({visibleTasks.length})
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setAssigneeFilter('assigned_to_me')}
-                        style={{
-                          padding: '5px 11px',
-                          fontSize: '0.74rem',
-                          fontWeight: 700,
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          whiteSpace: 'nowrap',
-                          background: assigneeFilter === 'assigned_to_me' ? '#2563eb' : 'transparent',
-                          color: assigneeFilter === 'assigned_to_me' ? '#ffffff' : '#64748b',
-                          boxShadow: assigneeFilter === 'assigned_to_me' ? '0 1px 3px rgba(37,99,235,0.25)' : 'none',
-                          transition: 'all 0.15s ease'
-                        }}
-                        title="Tasks assigned to you"
-                      >
-                        Assigned to Me ({assignedToMeCount})
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setAssigneeFilter('assigned_by_me')}
-                        style={{
-                          padding: '5px 11px',
-                          fontSize: '0.74rem',
-                          fontWeight: 700,
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          whiteSpace: 'nowrap',
-                          background: assigneeFilter === 'assigned_by_me' ? '#2563eb' : 'transparent',
-                          color: assigneeFilter === 'assigned_by_me' ? '#ffffff' : '#64748b',
-                          boxShadow: assigneeFilter === 'assigned_by_me' ? '0 1px 3px rgba(37,99,235,0.25)' : 'none',
-                          transition: 'all 0.15s ease'
-                        }}
-                        title="Tasks created and assigned by you"
-                      >
-                        Assigned by Me ({assignedByMeCount})
+                        My Assigned Tasks ({visibleTasks.length})
                       </button>
                     </div>
                   )}

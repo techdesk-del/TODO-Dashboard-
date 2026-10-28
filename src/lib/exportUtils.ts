@@ -62,13 +62,12 @@ export function filterTasksByRole(
   const userId = currentUser.id;
 
   return allTasks.filter(t => {
-    const isCreator = t.creator.id === userId || (t.creator.email && t.creator.email.toLowerCase() === cleanEmail);
     const isAssignee = t.assignees.some(a => 
       a.id === userId || 
       (a.email && a.email.toLowerCase() === cleanEmail) ||
       a.name.toLowerCase().includes(cleanName)
     );
-    return isCreator || isAssignee;
+    return Boolean(isAssignee);
   });
 }
 
@@ -106,9 +105,7 @@ export function filterTasksByType(
           (idMatch && a.id === idMatch) ||
           (emailMatch && a.email.toLowerCase() === emailMatch) ||
           (nameMatch && a.name.toLowerCase().includes(nameMatch))
-        ) ||
-        (t.creator.id === idMatch) ||
-        (emailMatch && t.creator.email.toLowerCase() === emailMatch)
+        )
       );
     }
     case 'WHOLE_TASKS':
