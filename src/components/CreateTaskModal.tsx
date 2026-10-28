@@ -1121,7 +1121,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
                       onClick={() => setPriority(p)}
                       style={{
                         flex: 1,
-                        padding: '8px 4px',
+                        padding: '8px 6px',
                         fontSize: '0.75rem',
                         fontWeight: 700,
                         borderRadius: '6px',
@@ -1129,7 +1129,9 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
                         background: isSelected ? activeBg : bg,
                         color: isSelected ? '#ffffff' : text,
                         cursor: 'pointer',
-                        transition: 'all 0.12s'
+                        transition: 'all 0.12s',
+                        whiteSpace: 'nowrap',
+                        textAlign: 'center'
                       }}
                     >
                       {p}
