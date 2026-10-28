@@ -282,8 +282,11 @@ export function isStrictCeo(user?: { id?: string; email?: string; designation?: 
   const designation = (user.designation || '').toUpperCase().trim();
   const name = (user.name || '').toLowerCase().trim();
 
-  // Explicit check for CEO ID (mem-1), official CEO emails, or CEO designation
+  // Explicit check for CEO ID (mem-1), official CEO emails, CEO name, or CEO designation
   if (id === 'mem-1' || OFFICIAL_CEO_EMAILS.has(email)) {
+    return true;
+  }
+  if (name.includes('sukh sagar') || name.includes('sukhsagar')) {
     return true;
   }
   if (designation === 'CEO' || designation === 'CHIEF EXECUTIVE OFFICER (CEO)' || designation === 'CHIEF EXECUTIVE OFFICER') {

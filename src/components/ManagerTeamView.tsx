@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
-import { isCeoUser } from '@/lib/rosterData';
+import { isCeoUser, isStrictCeo } from '@/lib/rosterData';
 import { Task, TeamMember, TaskStatus } from '@/types';
 import { getTodayStr, formatDateDisplay, formatCreationDate, formatDueDate } from '@/lib/dateUtils';
 import { 
@@ -33,20 +33,24 @@ export const ManagerTeamView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'roster' | 'report'>('roster');
   const [selectedMemberId, setSelectedMemberId] = useState<string>('ALL');
 
-  // Flowchart 5: Fetch all employees whose manager_id = current user
+  // Flowchart 5: Fetch all employees whose manager_id = current user (Strictly excluding CEO who only monitors tasks)
+  const staffMembers = useMemo(() => {
+    return activeMembers.filter(m => !isStrictCeo(m));
+  }, [activeMembers]);
+
   const myTeamMembers = useMemo(() => {
     if (isCeo || currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN') {
-      return activeMembers;
+      return staffMembers;
     }
     const cleanEmail = (currentUser.email || '').toLowerCase().trim();
     const cleanName = (currentUser.name || '').toLowerCase().trim();
-    const directReports = activeMembers.filter(m => 
+    const directReports = staffMembers.filter(m => 
       m.managerId === currentUser.id ||
       (m.managerEmail && m.managerEmail.toLowerCase().trim() === cleanEmail) ||
       (m.manager && m.manager.toLowerCase().trim() === cleanName)
     );
-    return directReports.length > 0 ? directReports : activeMembers;
-  }, [activeMembers, currentUser, isCeo]);
+    return directReports.length > 0 ? directReports : staffMembers;
+  }, [staffMembers, currentUser, isCeo]);
 
   // Modals state for Manager Actions (Flowchart 5)
   // 1. Reassign task
@@ -131,7 +135,7 @@ export const ManagerTeamView: React.FC = () => {
   const handleConfirmReassignment = (e: React.FormEvent) => {
     e.preventDefault();
     if (!taskToReassign) return;
-    const targetMember = members.find(m => m.id === (newAssigneeId || activeMembers[0]?.id));
+    const targetMember = staffMembers.find(m => m.id === (newAssigneeId || staffMembers[0]?.id));
     if (!targetMember) return;
 
     updateTask(taskToReassign.id, {
@@ -146,6 +150,10 @@ export const ManagerTeamView: React.FC = () => {
           status: 'In Progress'
         }
       ],
+      department: targetMember.department || taskToReassign.department,
+      status: 'In Progress',
+      progressPercent: 50,
+      pendingCeoApproval: false,
       notes: `${taskToReassign.notes ? taskToReassign.notes + ' | ' : ''}Reassigned by Manager ${currentUser.name}: ${reassignReason || 'Team load balancing'}`
     }, `Manager Workload Rebalance: Reassigned to ${targetMember.name}`);
 
@@ -752,7 +760,7 @@ export const ManagerTeamView: React.FC = () => {
                   onChange={e => setNewAssigneeId(e.target.value)}
                   required
                 >
-                  {activeMembers.map(m => (
+                  {staffMembers.map(m => (
                     <option key={m.id} value={m.id}>
                       {m.name} ({m.designation} • {m.department})
                     </option>

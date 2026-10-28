@@ -211,7 +211,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
 
   const handleSaveInline = () => {
     // Assigned to feature: strictly exclusive to CEO Mr. Sukh Sagar Singh Bhati
-    const selectedMember = members.find(m => m.id === editedAssigneeId) || members[0];
+    const selectedMember = activeMembers.find(m => m.id === editedAssigneeId) || activeMembers[0] || members.find(m => !isStrictCeo(m)) || members[0];
     const updatedAssignees = isCeo
       ? [
         {

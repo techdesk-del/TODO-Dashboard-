@@ -139,10 +139,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [purgedMemberEmails, setPurgedMemberEmails] = useState<string[]>([]);
   const [members, setMembers] = useState<TeamMember[]>(INITIAL_MEMBERS);
 
-  // Real-time active members list: strictly excludes any DEACTIVATED, REMOVED, or TERMINATED accounts
+  // Real-time active members list: strictly excludes CEO (monitoring-only role) and any DEACTIVATED, REMOVED, or TERMINATED accounts
   const activeMembers = React.useMemo(() => {
     return members.filter(m => {
       if (!m) return false;
+      if (isStrictCeo(m)) return false;
       const status = String(m.status || '').toUpperCase().trim();
       const isDeactivated = (m as any).isDeactivated === true || status === 'DEACTIVATED' || status === 'REMOVED' || status === 'TERMINATED' || status === 'EXITED';
       return !isDeactivated;
@@ -2505,6 +2506,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const activeList = members.filter(m => {
       if (!m) return false;
+      if (isStrictCeo(m)) return false;
       const st = String(m.status || 'ACTIVE').toUpperCase().trim();
       return st !== 'DEACTIVATED' && st !== 'REMOVED' && st !== 'TERMINATED' && !(m as any).isDeactivated;
     });

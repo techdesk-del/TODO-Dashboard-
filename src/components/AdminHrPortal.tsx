@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useApp } from '@/context/AppContext';
-import { isCeoUser, isAakashUser } from '@/lib/rosterData';
+import { isCeoUser, isAakashUser, isStrictCeo } from '@/lib/rosterData';
 import { TeamMember, Task, TaskStatus, Role } from '@/types';
 import { 
   UserPlus, 
@@ -225,13 +225,13 @@ export const AdminHrPortal: React.FC = () => {
   const [isDeactivating, setIsDeactivating] = useState(false);
   const [deactivationError, setDeactivationError] = useState<string | null>(null);
 
-  // Active vs Deactivated members
+  // Active vs Deactivated members (strictly excluding CEO who only monitors company deliverables)
   const activeMembers = useMemo(() => {
-    return members.filter(m => m && m.status !== 'DEACTIVATED' && (m as any).isDeactivated !== true);
+    return members.filter(m => m && !isStrictCeo(m) && m.status !== 'DEACTIVATED' && (m as any).isDeactivated !== true);
   }, [members]);
 
   const deactivatedMembers = useMemo(() => {
-    return members.filter(m => m && (m.status === 'DEACTIVATED' || (m as any).isDeactivated === true));
+    return members.filter(m => m && !isStrictCeo(m) && (m.status === 'DEACTIVATED' || (m as any).isDeactivated === true));
   }, [members]);
 
   // Offboardable active members (excluding deactivated staff and CEO)
@@ -455,9 +455,10 @@ export const AdminHrPortal: React.FC = () => {
     );
   }, [oversightFilteredMembers, userSearchQuery]);
 
-  // Filtered members for directory tab
+  // Filtered members for directory tab (excluding CEO monitoring account)
   const filteredDirectoryMembers = useMemo(() => {
     return members.filter(m => {
+      if (!m || isStrictCeo(m)) return false;
       if (directoryDeptFilter !== 'ALL' && m.department !== directoryDeptFilter) return false;
       if (directoryStatusFilter !== 'ALL' && (m.status || 'ACTIVE') !== directoryStatusFilter) return false;
       if (directorySearchQuery.trim()) {
