@@ -187,18 +187,18 @@ export default function Home() {
 
               {/* Executive Overdue & Pending Deliverables Alert Card */}
               {overdueTasks.length > 0 && (
-                <div style={{
-                  background: 'linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)',
-                  border: '1px solid #fecdd3',
-                  borderRadius: '10px',
-                  padding: '0.85rem 1.25rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '1rem',
-                  flexWrap: 'wrap',
-                  boxShadow: '0 2px 8px rgba(225, 29, 72, 0.08)'
-                }}>
+                < div className="overdue-alert-banner" style={{
+                    background: 'linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)',
+                    border: '1px solid #fecdd3',
+                    borderRadius: '10px',
+                    padding: '0.85rem 1.25rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '1rem',
+                    flexWrap: 'wrap',
+                    boxShadow: '0 2px 8px rgba(225, 29, 72, 0.08)'
+                  }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 'min(100%, 260px)' }}>
                     <div style={{
                       width: '32px',
@@ -318,35 +318,40 @@ export default function Home() {
                       background: '#f1f5f9',
                       padding: '3px 8px',
                       borderRadius: '8px',
-                      flexShrink: 0,
+                      flex: '1 1 auto',
+                      maxWidth: '100%',
+                      minWidth: 0,
                       border: '1px solid #e2e8f0'
                     }}>
-                      <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#1e293b' }}>
-                        Staff Filter:
-                      </span>
-                      <select
-                        value={ceoEmployeeFilter}
-                        onChange={(e) => setCeoEmployeeFilter(e.target.value)}
-                        style={{
-                          padding: '3px 8px',
-                          fontSize: '0.74rem',
-                          fontWeight: 700,
-                          borderRadius: '6px',
-                          border: '1px solid #cbd5e1',
-                          background: '#ffffff',
-                          color: '#0f172a',
-                          cursor: 'pointer',
-                          outline: 'none'
-                        }}
-                        title="Select an employee to isolate and monitor their corporate deliverables"
-                      >
-                        <option value="ALL">All Monitored Staff ({tasks.filter(t => t.status !== 'Cancelled').length} tasks)</option>
-                        {activeMembers.filter(m => !isStrictCeo(m)).map(emp => (
-                          <option key={emp.id} value={emp.id}>
-                            {emp.name} ({emp.department})
-                          </option>
-                        ))}
-                      </select>
+                        <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#1e293b', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                          Staff Filter:
+                        </span>
+                        <select
+                          value={ceoEmployeeFilter}
+                          onChange={(e) => setCeoEmployeeFilter(e.target.value)}
+                          style={{
+                            padding: '3px 8px',
+                            fontSize: '0.74rem',
+                            fontWeight: 700,
+                            borderRadius: '6px',
+                            border: '1px solid #cbd5e1',
+                            background: '#ffffff',
+                            color: '#0f172a',
+                            cursor: 'pointer',
+                          outline: 'none',
+                            flex: '1 1 auto',
+                            minWidth: 0,
+                            maxWidth: '100%'
+                          }}
+                          title="Select an employee to isolate and monitor their corporate deliverables"
+                        >
+                          <option value="ALL">All Monitored Staff ({tasks.filter(t => t.status !== 'Cancelled').length} tasks)</option>
+                          {activeMembers.filter(m => !isStrictCeo(m)).map(emp => (
+                            <option key={emp.id} value={emp.id}>
+                              {emp.name} ({emp.department})
+                            </option>
+                          ))}
+                        </select>
                     </div>
                   ) : (
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', background: '#f1f5f9', padding: '3px', borderRadius: '8px', flexShrink: 0 }}>
