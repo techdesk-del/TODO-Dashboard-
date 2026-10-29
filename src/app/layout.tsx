@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import "../styles/tokens.css";
-import "../styles/globals.css";
+import "@/frontend/styles/tokens.css";
+import "@/frontend/styles/globals.css";
 import { AppProvider } from "@/context/AppContext";
 
 export const metadata: Metadata = {
