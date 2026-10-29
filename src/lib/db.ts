@@ -43,6 +43,8 @@ export async function connectDB(): Promise<Connection> {
       minPoolSize: isServerless ? 1 : 5,
       serverSelectionTimeoutMS: 8000,
       socketTimeoutMS: 45000,
+      family: 4, // Force IPv4 to prevent AWS Lambda / Vercel IPv6 TLS handshake failures
+      retryWrites: true,
     };
 
     cache.promise = mongoose
@@ -57,6 +59,10 @@ export async function connectDB(): Promise<Connection> {
       .catch((err) => {
         console.error('[DB] ✗ Connection failed:', err.message);
         cache.promise = null; // Allow retry on next call
+        cache.conn = null;
+        if (err?.message && (err.message.includes('SSL') || err.message.includes('tlsv1 alert internal error') || err.message.includes('0A000438') || err.message.includes('alert number 80'))) {
+          throw new Error('MongoDB Atlas connection rejected (TLS alert internal error): Your Vercel deployment IP is not whitelisted. Please add 0.0.0.0/0 in MongoDB Atlas Network Access.');
+        }
         throw err;
       });
   }

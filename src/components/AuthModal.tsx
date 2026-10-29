@@ -990,7 +990,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                 <AlertCircle size={14} style={{ flexShrink: 0 }} />
                 <span>{error}</span>
               </div>
-              {authMode === 'LOGIN' && !isAccountLocked && (
+              {authMode === 'LOGIN' && !isAccountLocked && !error.includes('MongoDB Atlas') && !error.includes('SSL') && !error.includes('whitelist') && (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #fee2e2', paddingTop: '6px', marginTop: '2px' }}>
                   <span style={{ fontSize: '0.7rem', color: '#b91c1c' }}>Forgot credentials or password not set?</span>
                   <button

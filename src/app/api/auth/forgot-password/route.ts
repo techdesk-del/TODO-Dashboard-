@@ -125,9 +125,16 @@ export async function POST(req: NextRequest) {
       previewUrl: emailResult.previewUrl,
     });
   } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Failed to dispatch verification code.';
     console.error('[Auth/ForgotPassword] Error:', err);
+    if (msg.includes('SSL') || msg.includes('tlsv1 alert internal error') || msg.includes('0A000438') || msg.includes('alert number 80')) {
+      return NextResponse.json(
+        { success: false, error: 'MongoDB Atlas connection rejected: Your Vercel deployment IP is not whitelisted. Please add 0.0.0.0/0 in MongoDB Atlas Network Access.' },
+        { status: 503 }
+      );
+    }
     return NextResponse.json(
-      { success: false, error: err instanceof Error ? err.message : 'Failed to dispatch verification code.' },
+      { success: false, error: msg },
       { status: 500 }
     );
   }
