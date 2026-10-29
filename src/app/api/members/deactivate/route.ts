@@ -209,18 +209,39 @@ export async function POST(req: NextRequest) {
       }).catch(e => console.warn('[Offboarding Email Warn]', e));
     }
 
-    // 6. Flowchart 4: Notify reporting manager of handover
-    const mgrEmail = departingMember.managerEmail || 'rekha.pareek@urbangaon.com';
+    // 6. Flowchart 4: Notify Reporting Manager, Founder & CEO, and Admin users of handover / long leave
+    const mgrEmail = (departingMember.managerEmail || 'rekha.pareek@urbangaon.com').toLowerCase().trim();
     const mgrName = departingMember.manager || 'Dr. Rekha Pareek';
-    sendHandoverNotificationToManagerEmail({
-      managerName: mgrName,
-      managerEmail: mgrEmail,
-      departingName: departingMember.name,
-      successorName: successorMember.name,
-      reassignedCount,
-      reason,
-      deactivationType: deactivationType as any
-    }).catch(e => console.warn('[Manager Handover Email Warn]', e));
+    const governanceRecipients = new Map<string, string>();
+    if (mgrEmail && mgrEmail.includes('@')) {
+      governanceRecipients.set(mgrEmail, mgrName);
+    }
+    governanceRecipients.set('ceo@urbangaon.com', 'Mr. Sukh Sagar Singh (Founder & CEO)');
+    const adminMembers = await MemberModel.find({
+      role: { $in: ['ADMIN', 'SUPER_ADMIN'] },
+      status: { $ne: 'DEACTIVATED' },
+    }).lean().exec();
+    adminMembers.forEach((adm: any) => {
+      const admEmail = (adm.email || '').toLowerCase().trim();
+      if (admEmail && admEmail.includes('@') && !governanceRecipients.has(admEmail)) {
+        governanceRecipients.set(admEmail, adm.name || 'Admin Operations');
+      }
+    });
+    const departingEmailClean = (departingMember.email || '').toLowerCase().trim();
+    if (departingEmailClean && departingEmailClean !== 'ceo@urbangaon.com') {
+      governanceRecipients.delete(departingEmailClean);
+    }
+    for (const [recEmail, recName] of governanceRecipients.entries()) {
+      sendHandoverNotificationToManagerEmail({
+        managerName: recName,
+        managerEmail: recEmail,
+        departingName: departingMember.name,
+        successorName: successorMember.name,
+        reassignedCount,
+        reason,
+        deactivationType: deactivationType as any
+      }).catch(e => console.warn('[Manager/Admin/CEO Handover Email Warn]', e));
+    }
 
     // 7. Flowchart 4: Preserve all history & create immutable audit log entry
     await AuditLogModel.create({

@@ -324,6 +324,9 @@ export async function PATCH(req: NextRequest) {
       status,
       employeeId: inputEmployeeId,
       newEmployeeId,
+      managerId,
+      manager,
+      managerEmail,
       reason,
       actor = 'Admin / Talent HR',
       actorRole = 'ADMIN',
@@ -419,6 +422,9 @@ export async function PATCH(req: NextRequest) {
     if (department && typeof department === 'string' && department.trim()) updates.department = department.trim();
     if (designation && typeof designation === 'string' && designation.trim()) updates.designation = designation.trim();
     if (status) updates.status = status;
+    if (managerId !== undefined && typeof managerId === 'string') updates.managerId = managerId.trim();
+    if (manager !== undefined && typeof manager === 'string') updates.manager = manager.trim();
+    if (managerEmail !== undefined && typeof managerEmail === 'string') updates.managerEmail = managerEmail.trim().toLowerCase();
     updates.updatedAt = new Date().toISOString();
 
     // Apply updates to MemberModel
@@ -433,7 +439,7 @@ export async function PATCH(req: NextRequest) {
     const finalEmail = (updates.email as string) || oldEmail;
     const finalName = (updates.name as string) || oldName;
 
-    if (updates.id || updates.email || updates.name || updates.role || updates.department || updates.designation || updates.avatar) {
+    if (updates.id || updates.email || updates.name || updates.role || updates.department || updates.designation || updates.avatar || updates.manager !== undefined || updates.managerEmail !== undefined) {
       const userUpdateRes = await UserModel.updateOne(
         { $or: [{ id: memberId }, { id: finalId }, { email: oldEmail.toLowerCase() }, { email: finalEmail.toLowerCase() }] },
         {
@@ -446,6 +452,9 @@ export async function PATCH(req: NextRequest) {
             ...(updates.role ? { role: updates.role } : {}),
             ...(updates.department ? { department: updates.department } : {}),
             ...(updates.designation ? { designation: updates.designation } : {}),
+            ...(updates.managerId !== undefined ? { managerId: updates.managerId } : {}),
+            ...(updates.manager !== undefined ? { manager: updates.manager } : {}),
+            ...(updates.managerEmail !== undefined ? { managerEmail: updates.managerEmail } : {}),
             updatedAt: new Date().toISOString(),
           }
         }

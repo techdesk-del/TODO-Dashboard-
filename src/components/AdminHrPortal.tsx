@@ -184,6 +184,7 @@ export const AdminHrPortal: React.FC = () => {
   const [editMemberEmpIdInput, setEditMemberEmpIdInput] = useState<string>('');
   const [editMemberDeptInput, setEditMemberDeptInput] = useState<string>('');
   const [editMemberDesigInput, setEditMemberDesigInput] = useState<string>('');
+  const [editMemberManagerIdInput, setEditMemberManagerIdInput] = useState<string>('');
   const [emailChangeReason, setEmailChangeReason] = useState<string>('');
   const [isUpdatingEmail, setIsUpdatingEmail] = useState<boolean>(false);
   const [emailUpdateError, setEmailUpdateError] = useState<string | null>(null);
@@ -269,6 +270,48 @@ export const AdminHrPortal: React.FC = () => {
   const reportingManagers = useMemo(() => {
     return activeMembers.filter(m => m.role === 'MANAGER' || m.role === 'ADMIN' || m.role === 'SUPER_ADMIN' || isCeoUser(m));
   }, [activeMembers]);
+
+  // All eligible Reporting Manager options for Edit Employee Profile (Leadership/Managers/Admins prioritized first, plus all active members & CEO)
+  const eligibleProfileManagers = useMemo(() => {
+    const seen = new Set<string>();
+    const list: TeamMember[] = [];
+    const sorted = [...members]
+      .filter(m => m && m.status !== 'DEACTIVATED' && (m as any).isDeactivated !== true)
+      .sort((a, b) => {
+        const rank = (r: string) => (r === 'SUPER_ADMIN' ? 0 : r === 'ADMIN' ? 1 : r === 'MANAGER' ? 2 : 3);
+        const diff = rank(a.role) - rank(b.role);
+        return diff !== 0 ? diff : a.name.localeCompare(b.name);
+      });
+    for (const m of sorted) {
+      const key = (m.email || m.id).toLowerCase().trim();
+      if (!seen.has(key)) {
+        seen.add(key);
+        list.push(m);
+      }
+    }
+    return list;
+  }, [members]);
+
+  const resolveMemberManagerId = useCallback((target: TeamMember): string => {
+    if (!target) return '';
+    if (target.managerId) {
+      const byId = eligibleProfileManagers.find(m => m.id === target.managerId || m.employeeId === target.managerId);
+      if (byId) return byId.id;
+    }
+    if (target.managerEmail) {
+      const cleanEmail = target.managerEmail.toLowerCase().trim();
+      const byEmail = eligibleProfileManagers.find(m => (m.email || '').toLowerCase().trim() === cleanEmail);
+      if (byEmail) return byEmail.id;
+    }
+    if (target.manager) {
+      const cleanName = target.manager.replace(/\s*\(.*\)$/, '').toLowerCase().trim();
+      const byName = eligibleProfileManagers.find(
+        m => m.name.toLowerCase().trim() === cleanName || m.name.toLowerCase().includes(cleanName)
+      );
+      if (byName) return byName.id;
+    }
+    return '';
+  }, [eligibleProfileManagers]);
 
   // Derived current departing and successor members
   const departingMember = useMemo(() => {
@@ -1715,6 +1758,7 @@ export const AdminHrPortal: React.FC = () => {
                       setEditMemberEmpIdInput(targetOversightMember.employeeId || targetOversightMember.id || '');
                       setEditMemberDeptInput(targetOversightMember.department || '');
                       setEditMemberDesigInput(targetOversightMember.designation || '');
+                      setEditMemberManagerIdInput(resolveMemberManagerId(targetOversightMember));
                       setEmailChangeReason('');
                       setEmailUpdateError(null);
                     }}
@@ -4593,17 +4637,22 @@ export const AdminHrPortal: React.FC = () => {
                     </td>
                     <td style={{ padding: '10px 14px' }}>
                       <div style={{ color: '#0f172a', fontWeight: 600 }}>{member.department}</div>
-                      <span style={{
-                        fontSize: '0.65rem',
-                        fontWeight: 700,
-                        padding: '1px 6px',
-                        borderRadius: '4px',
-                        background: member.role === 'SUPER_ADMIN' ? '#fdf2f8' : member.role === 'ADMIN' ? '#fef3c7' : '#f1f5f9',
-                        color: member.role === 'SUPER_ADMIN' ? '#be185d' : member.role === 'ADMIN' ? '#b45309' : '#475569',
-                        border: '1px solid #cbd5e1'
-                      }}>
-                        {member.role}
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
+                        <span style={{
+                          fontSize: '0.65rem',
+                          fontWeight: 700,
+                          padding: '1px 6px',
+                          borderRadius: '4px',
+                          background: member.role === 'SUPER_ADMIN' ? '#fdf2f8' : member.role === 'ADMIN' ? '#fef3c7' : '#f1f5f9',
+                          color: member.role === 'SUPER_ADMIN' ? '#be185d' : member.role === 'ADMIN' ? '#b45309' : '#475569',
+                          border: '1px solid #cbd5e1'
+                        }}>
+                          {member.role}
+                        </span>
+                        <span style={{ fontSize: '0.68rem', color: '#475569', fontWeight: 600 }}>
+                          • Reporting Mgr: <strong style={{ color: '#0369a1' }}>{member.manager || 'Dr. Rekha Pareek'}</strong>
+                        </span>
+                      </div>
                     </td>
                     <td style={{ padding: '10px 14px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
@@ -4635,6 +4684,7 @@ export const AdminHrPortal: React.FC = () => {
                           setEditMemberEmpIdInput(member.employeeId || member.id || '');
                           setEditMemberDeptInput(member.department || '');
                           setEditMemberDesigInput(member.designation || '');
+                          setEditMemberManagerIdInput(resolveMemberManagerId(member));
                           setEmailChangeReason('');
                           setEmailUpdateError(null);
                         }}
@@ -5035,6 +5085,10 @@ export const AdminHrPortal: React.FC = () => {
               <div style={{ fontSize: '0.74rem', color: '#475569', marginTop: '4px' }}>
                 Current Email: <strong style={{ color: '#0f172a' }}>{memberToEditProfile.email}</strong>
               </div>
+              <div style={{ fontSize: '0.74rem', color: '#0369a1', marginTop: '4px' }}>
+                Current Reporting Manager: <strong>{memberToEditProfile.manager || 'Not Assigned (Defaults to Operations Head)'}</strong>
+                {memberToEditProfile.managerEmail ? ` (${memberToEditProfile.managerEmail})` : ''}
+              </div>
             </div>
 
             {emailUpdateError && (
@@ -5079,6 +5133,7 @@ export const AdminHrPortal: React.FC = () => {
                 setIsUpdatingEmail(true);
                 setEmailUpdateError(null);
 
+                const selectedManagerObj = eligibleProfileManagers.find(m => m.id === editMemberManagerIdInput);
                 const res = await updateMember(
                   memberToEditProfile.id,
                   {
@@ -5088,9 +5143,12 @@ export const AdminHrPortal: React.FC = () => {
                     employeeId: cleanEmpId,
                     id: cleanEmpId,
                     department: editMemberDeptInput.trim() || memberToEditProfile.department,
-                    designation: editMemberDesigInput.trim() || memberToEditProfile.designation
+                    designation: editMemberDesigInput.trim() || memberToEditProfile.designation,
+                    managerId: selectedManagerObj ? selectedManagerObj.id : '',
+                    manager: selectedManagerObj ? selectedManagerObj.name : '',
+                    managerEmail: selectedManagerObj ? selectedManagerObj.email.toLowerCase().trim() : ''
                   },
-                  emailChangeReason.trim() || `Profile updated by Admin (${currentUser.name})`
+                  emailChangeReason.trim() || `Profile & Reporting Manager updated by Admin (${currentUser.name})`
                 );
 
                 setIsUpdatingEmail(false);
@@ -5172,6 +5230,27 @@ export const AdminHrPortal: React.FC = () => {
                     value={editMemberDesigInput}
                     onChange={e => setEditMemberDesigInput(e.target.value)}
                   />
+                </div>
+              </div>
+
+              <div className="form-field-group">
+                <label className="form-field-label">Reporting Manager (For Leave &amp; Escalation Alerts) *</label>
+                <select
+                  className="form-select"
+                  value={editMemberManagerIdInput}
+                  onChange={e => setEditMemberManagerIdInput(e.target.value)}
+                >
+                  <option value="">-- Select Reporting Manager --</option>
+                  {eligibleProfileManagers
+                    .filter(m => m.id !== memberToEditProfile.id)
+                    .map(mgr => (
+                      <option key={mgr.id} value={mgr.id}>
+                        {mgr.name} — {mgr.designation || mgr.role} ({mgr.email})
+                      </option>
+                    ))}
+                </select>
+                <div style={{ fontSize: '0.69rem', color: '#0369a1', marginTop: '4px', lineHeight: 1.35 }}>
+                  When this employee is marked On Leave, official leave alert emails are strictly dispatched to this <strong>Reporting Manager</strong>, <strong>Founder &amp; CEO</strong>, and <strong>Admin Operations</strong>.
                 </div>
               </div>
 
@@ -5578,10 +5657,14 @@ export const AdminHrPortal: React.FC = () => {
                 <div style={{ fontSize: '0.73rem', color: '#64748b', marginTop: '2px' }}>
                   {leaveTargetMember.designation} • {leaveTargetMember.department} • ({leaveTargetMember.email})
                 </div>
+                <div style={{ fontSize: '0.73rem', color: '#0369a1', marginTop: '4px', fontWeight: 600 }}>
+                  Reporting Manager: <strong>{leaveTargetMember.manager || 'Dr. Rekha Pareek (Operations Head)'}</strong>
+                  {leaveTargetMember.managerEmail ? ` (${leaveTargetMember.managerEmail})` : ''}
+                </div>
               </div>
 
               <div style={{ fontSize: '0.74rem', color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '6px', padding: '0.55rem 0.75rem', marginBottom: '0.85rem', lineHeight: 1.45 }}>
-                <strong>Leave Handling Protocol:</strong> When marked on leave, the system pauses automated morning reminders for this employee, attaches the on-leave badge to their active deliverables, and dispatches notices to task creators and reporting managers.
+                <strong>Leave Handling Protocol:</strong> When marked on leave, the system pauses automated morning reminders for this employee, attaches the on-leave badge to their active deliverables, and dispatches official leave alert emails strictly to their <strong>Reporting Manager ({leaveTargetMember.manager || 'Dr. Rekha Pareek'})</strong>, <strong>Founder &amp; CEO</strong>, and <strong>Admin Operations</strong>.
               </div>
 
               <form onSubmit={async (e) => {

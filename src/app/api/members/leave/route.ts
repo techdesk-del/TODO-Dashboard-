@@ -86,9 +86,19 @@ export async function POST(req: NextRequest) {
       });
     });
 
-    // Resolve reporting manager name and email
-    let resolvedManagerName = member.manager || '';
+    // Resolve reporting manager name and email (checking managerId, managerEmail, manager name, and roster fallback)
+    let resolvedManagerName = (member.manager || '').trim();
     let resolvedManagerEmail = (member.managerEmail || '').toLowerCase().trim();
+
+    if (member.managerId) {
+      const mgrById = allMembers.find(
+        m => m.id === member.managerId || m.employeeId === member.managerId
+      );
+      if (mgrById) {
+        if (!resolvedManagerName) resolvedManagerName = mgrById.name;
+        if (!resolvedManagerEmail && mgrById.email) resolvedManagerEmail = mgrById.email.toLowerCase().trim();
+      }
+    }
 
     if (!resolvedManagerEmail || !resolvedManagerName) {
       const rosterMatch = OFFICIAL_ROSTER.find(
@@ -100,8 +110,18 @@ export async function POST(req: NextRequest) {
       }
     }
     if (!resolvedManagerEmail && resolvedManagerName) {
-      const mgrRecord = allMembers.find(m => m.name.toLowerCase().trim() === resolvedManagerName.toLowerCase().trim());
-      if (mgrRecord?.email) resolvedManagerEmail = mgrRecord.email.toLowerCase().trim();
+      const cleanTargetMgr = resolvedManagerName.replace(/\s*\(.*\)$/, '').toLowerCase().trim();
+      const mgrRecord = allMembers.find(
+        m => m.name.toLowerCase().trim() === cleanTargetMgr || m.name.toLowerCase().includes(cleanTargetMgr)
+      );
+      if (mgrRecord?.email) {
+        resolvedManagerEmail = mgrRecord.email.toLowerCase().trim();
+      } else {
+        const rosterMgr = OFFICIAL_ROSTER.find(
+          r => r.name.toLowerCase().trim() === cleanTargetMgr || r.name.toLowerCase().includes(cleanTargetMgr)
+        );
+        if (rosterMgr?.email) resolvedManagerEmail = rosterMgr.email.toLowerCase().trim();
+      }
     }
     if (resolvedManagerEmail && !resolvedManagerName) {
       resolvedManagerName = emailToNameMap.get(resolvedManagerEmail) || 'Reporting Manager';
@@ -212,37 +232,57 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Node 6: Synchronize recipient list (Employee on Leave + Reporting Manager + Task Creators) with REAL names
+    // Node 6: Strict Governance Recipient List -> ONLY Reporting Manager + Founder & CEO + Admin Users
     const recipientsMap = new Map<string, { email: string; name: string }>();
+    const onLeaveEmpEmail = (member.email || '').toLowerCase().trim();
 
-    // 1. Always notify the employee placed on leave with their real name
-    if (member.email && member.email.includes('@')) {
-      const empEmail = member.email.toLowerCase().trim();
-      recipientsMap.set(empEmail, {
-        email: empEmail,
-        name: member.name,
+    // 1. Employee's Reporting Manager
+    if (resolvedManagerEmail && resolvedManagerEmail.includes('@')) {
+      recipientsMap.set(resolvedManagerEmail, {
+        email: resolvedManagerEmail,
+        name: resolvedManagerName.replace(/\s*\(.*\)$/, '').trim() || emailToNameMap.get(resolvedManagerEmail) || 'Reporting Manager',
       });
     }
 
-    // 2. Notify Reporting Manager
-    if (resolvedManagerEmail && resolvedManagerEmail.includes('@')) {
-      if (!recipientsMap.has(resolvedManagerEmail)) {
-        recipientsMap.set(resolvedManagerEmail, {
-          email: resolvedManagerEmail,
-          name: resolvedManagerName.replace(/\s*\(.*\)$/, '').trim() || 'Reporting Manager',
-        });
-      }
-    }
+    // 2. Founder & CEO (Mr. Sukh Sagar Singh - ceo@urbangaon.com)
+    const ceoEmail = 'ceo@urbangaon.com';
+    recipientsMap.set(ceoEmail, {
+      email: ceoEmail,
+      name: emailToNameMap.get(ceoEmail) || 'Mr. Sukh Sagar Singh (Founder & CEO)',
+    });
 
-    // 3. Notify Creators of active/affected tasks using their real names
-    creatorRecipients.forEach((cName, cEmail) => {
-      if (!recipientsMap.has(cEmail)) {
-        recipientsMap.set(cEmail, {
-          email: cEmail,
-          name: cName,
+    // 3. All Active ADMIN and SUPER_ADMIN Users from Database & Official Roster
+    allMembers.forEach(m => {
+      const mEmail = (m.email || '').toLowerCase().trim();
+      if (!mEmail || !mEmail.includes('@') || m.status === 'DEACTIVATED') return;
+      const isAdminOrCeo =
+        m.role === 'ADMIN' ||
+        m.role === 'SUPER_ADMIN' ||
+        mEmail === 'ceo@urbangaon.com' ||
+        (m.designation || '').toLowerCase().includes('ceo');
+      if (isAdminOrCeo && !recipientsMap.has(mEmail)) {
+        recipientsMap.set(mEmail, {
+          email: mEmail,
+          name: m.name || emailToNameMap.get(mEmail) || 'Admin Operations',
         });
       }
     });
+
+    OFFICIAL_ROSTER.forEach(r => {
+      const rEmail = (r.email || '').toLowerCase().trim();
+      if (!rEmail || !rEmail.includes('@') || (r as any).status === 'DEACTIVATED') return;
+      if ((r.role === 'ADMIN' || r.role === 'SUPER_ADMIN') && !recipientsMap.has(rEmail)) {
+        recipientsMap.set(rEmail, {
+          email: rEmail,
+          name: r.name,
+        });
+      }
+    });
+
+    // Exclude the employee going on leave themselves (unless they are the CEO) so strictly Reporting Manager, CEO & Admins receive the alert
+    if (onLeaveEmpEmail && onLeaveEmpEmail !== 'ceo@urbangaon.com') {
+      recipientsMap.delete(onLeaveEmpEmail);
+    }
 
     const recipientsToNotify = Array.from(recipientsMap.values());
     const leaveDaysCount = calculateInclusiveLeaveDays(leaveStartDate, leaveEndDate);
@@ -374,16 +414,58 @@ export async function PATCH(req: NextRequest) {
       ],
     });
 
-    const returnRecipients: Array<{ email: string; name: string }> = [];
-    if (member.email && member.email.includes('@')) {
-      returnRecipients.push({ email: member.email.toLowerCase().trim(), name: member.name });
+    // Strict Governance Recipient List on Return from Leave -> Reporting Manager + Founder & CEO + Admin Users
+    const allMembersForReturn = await MemberModel.find({}).lean().exec();
+    const returnMap = new Map<string, { email: string; name: string }>();
+    const returningEmpEmail = (member.email || '').toLowerCase().trim();
+
+    let retMgrEmail = (member.managerEmail || '').toLowerCase().trim();
+    let retMgrName = (member.manager || '').trim();
+    if (member.managerId) {
+      const mgrDoc = allMembersForReturn.find(m => m.id === member.managerId || m.employeeId === member.managerId);
+      if (mgrDoc) {
+        if (!retMgrEmail && mgrDoc.email) retMgrEmail = mgrDoc.email.toLowerCase().trim();
+        if (!retMgrName && mgrDoc.name) retMgrName = mgrDoc.name;
+      }
     }
-    if (member.managerEmail && member.managerEmail.includes('@') && member.managerEmail.toLowerCase().trim() !== member.email.toLowerCase().trim()) {
-      returnRecipients.push({
-        email: member.managerEmail.toLowerCase().trim(),
-        name: member.manager || 'Reporting Manager',
+    if (!retMgrEmail && retMgrName) {
+      const cleanMgr = retMgrName.replace(/\s*\(.*\)$/, '').toLowerCase().trim();
+      const mgrDoc = allMembersForReturn.find(m => m.name.toLowerCase().trim() === cleanMgr || m.name.toLowerCase().includes(cleanMgr));
+      if (mgrDoc?.email) retMgrEmail = mgrDoc.email.toLowerCase().trim();
+    }
+    if (retMgrEmail && retMgrEmail.includes('@')) {
+      returnMap.set(retMgrEmail, {
+        email: retMgrEmail,
+        name: retMgrName.replace(/\s*\(.*\)$/, '').trim() || 'Reporting Manager',
       });
     }
+
+    returnMap.set('ceo@urbangaon.com', {
+      email: 'ceo@urbangaon.com',
+      name: 'Mr. Sukh Sagar Singh (Founder & CEO)',
+    });
+
+    allMembersForReturn.forEach(m => {
+      const mEmail = (m.email || '').toLowerCase().trim();
+      if (!mEmail || !mEmail.includes('@') || m.status === 'DEACTIVATED') return;
+      if ((m.role === 'ADMIN' || m.role === 'SUPER_ADMIN') && !returnMap.has(mEmail)) {
+        returnMap.set(mEmail, { email: mEmail, name: m.name });
+      }
+    });
+
+    OFFICIAL_ROSTER.forEach(r => {
+      const rEmail = (r.email || '').toLowerCase().trim();
+      if (!rEmail || !rEmail.includes('@') || (r as any).status === 'DEACTIVATED') return;
+      if ((r.role === 'ADMIN' || r.role === 'SUPER_ADMIN') && !returnMap.has(rEmail)) {
+        returnMap.set(rEmail, { email: rEmail, name: r.name });
+      }
+    });
+
+    if (returningEmpEmail && returningEmpEmail !== 'ceo@urbangaon.com') {
+      returnMap.delete(returningEmpEmail);
+    }
+
+    const returnRecipients = Array.from(returnMap.values());
 
     if (returnRecipients.length > 0) {
       await dispatchNotificationFlow({
