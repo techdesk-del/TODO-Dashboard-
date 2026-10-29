@@ -22,7 +22,11 @@ import {
   Send, 
   ShieldAlert,
   MessageSquare,
-  FileSpreadsheet
+  FileSpreadsheet,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
 } from 'lucide-react';
 
 export const ManagerTeamView: React.FC = () => {
@@ -32,6 +36,8 @@ export const ManagerTeamView: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'roster' | 'report'>('roster');
   const [selectedMemberId, setSelectedMemberId] = useState<string>('ALL');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(8);
 
   // Flowchart 5: Fetch all employees whose manager_id = current user (Strictly excluding CEO who only monitors tasks)
   const staffMembers = useMemo(() => {
@@ -88,6 +94,16 @@ export const ManagerTeamView: React.FC = () => {
       return a.id.localeCompare(b.id);
     });
   }, [isAllMembers, tasks, myTeamMembers, selectedMember]);
+
+  // Pagination calculations for Active Tasks Portfolio
+  const totalTasksCount = memberTasks.length;
+  const totalPages = Math.max(1, Math.ceil(totalTasksCount / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (safeCurrentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalTasksCount);
+  const paginatedMemberTasks = useMemo(() => {
+    return memberTasks.slice(startIndex, startIndex + pageSize);
+  }, [memberTasks, startIndex, pageSize]);
 
   // Helper: check if task is overdue
   const isTaskOverdue = (t: Task): boolean => {
@@ -427,7 +443,7 @@ export const ManagerTeamView: React.FC = () => {
           }}>
             {/* All Members Card */}
             <div
-              onClick={() => setSelectedMemberId('ALL')}
+              onClick={() => { setSelectedMemberId('ALL'); setCurrentPage(1); }}
               style={{
                 background: '#ffffff',
                 border: isAllMembers ? '2px solid #2563eb' : '1px solid #e2e8f0',
@@ -479,7 +495,7 @@ export const ManagerTeamView: React.FC = () => {
               return (
                 <div
                   key={member.id}
-                  onClick={() => setSelectedMemberId(member.id)}
+                  onClick={() => { setSelectedMemberId(member.id); setCurrentPage(1); }}
                   style={{
                     background: '#ffffff',
                     border: isSelected ? '2px solid #2563eb' : '1px solid #e2e8f0',
@@ -556,9 +572,24 @@ export const ManagerTeamView: React.FC = () => {
                 </span>
               </div>
 
-              <span className="filter-badge-count" style={{ background: '#eff6ff', color: '#2563eb' }}>
-                {memberTasks.length} Assigned Deliverables
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {totalTasksCount > 0 && (
+                  <span style={{
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    color: '#475569',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    padding: '0.2rem 0.6rem',
+                    borderRadius: '6px'
+                  }}>
+                    Showing {startIndex + 1}–{endIndex} of {totalTasksCount}
+                  </span>
+                )}
+                <span className="filter-badge-count" style={{ background: '#eff6ff', color: '#2563eb' }}>
+                  {memberTasks.length} Assigned Deliverables
+                </span>
+              </div>
             </div>
 
             <div className="enterprise-table-wrapper">
@@ -573,7 +604,8 @@ export const ManagerTeamView: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {memberTasks.map((t, idx) => {
+                  {paginatedMemberTasks.map((t, idx) => {
+                    const globalIdx = startIndex + idx + 1;
                     const overdue = isTaskOverdue(t);
                     const hasDelayReason = Boolean(t.pastDueReason || t.holdReason);
                     const canReopen = t.status === 'Done' || t.status === 'On Hold' || t.status === 'Cancelled';
@@ -582,12 +614,25 @@ export const ManagerTeamView: React.FC = () => {
                       <tr key={t.id} style={{ background: overdue ? '#fff5f5' : undefined }}>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <span className="task-sequence-badge" style={{ fontSize: '0.7rem' }}>#{idx + 1}</span>
+                            <span className="task-sequence-badge" style={{ fontSize: '0.7rem' }}>#{globalIdx}</span>
                             <span style={{ fontWeight: 700, color: overdue ? '#991b1b' : '#0f172a' }}>{t.title}</span>
                           </div>
 
                           {t.notes && (
-                            <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '2px' }}>
+                            <div
+                              style={{
+                                fontSize: '0.68rem',
+                                color: '#64748b',
+                                marginTop: '3px',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                                maxWidth: '460px',
+                                lineHeight: 1.4
+                              }}
+                              title={t.notes}
+                            >
                               {t.notes}
                             </div>
                           )}
@@ -730,6 +775,194 @@ export const ManagerTeamView: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Enterprise Pagination Bar */}
+            {totalTasksCount > 0 && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '0.75rem',
+                paddingTop: '0.65rem',
+                borderTop: '1px solid #e2e8f0'
+              }}>
+                {/* Left: Showing summary & Rows per page */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#475569', fontWeight: 600 }}>
+                    Showing <strong style={{ color: '#0f172a' }}>{startIndex + 1}</strong> to <strong style={{ color: '#0f172a' }}>{endIndex}</strong> of <strong style={{ color: '#0f172a' }}>{totalTasksCount}</strong> deliverables
+                  </span>
+
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '0.73rem', color: '#64748b', fontWeight: 600 }}>Rows per page:</span>
+                    <select
+                      value={pageSize}
+                      onChange={(e) => {
+                        setPageSize(Number(e.target.value));
+                        setCurrentPage(1);
+                      }}
+                      style={{
+                        padding: '3px 24px 3px 8px',
+                        fontSize: '0.74rem',
+                        fontWeight: 700,
+                        borderRadius: '6px',
+                        border: '1px solid #cbd5e1',
+                        background: '#f8fafc',
+                        color: '#0f172a',
+                        cursor: 'pointer',
+                        minHeight: '30px',
+                        height: '30px'
+                      }}
+                    >
+                      <option value={5}>5</option>
+                      <option value={8}>8</option>
+                      <option value={10}>10</option>
+                      <option value={20}>20</option>
+                      <option value={50}>50</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Right: Page navigation buttons */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage(1)}
+                    disabled={safeCurrentPage <= 1}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '30px',
+                      height: '30px',
+                      minHeight: '30px',
+                      padding: 0,
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      background: safeCurrentPage <= 1 ? '#f8fafc' : '#ffffff',
+                      color: safeCurrentPage <= 1 ? '#cbd5e1' : '#334155',
+                      cursor: safeCurrentPage <= 1 ? 'not-allowed' : 'pointer'
+                    }}
+                    title="First Page"
+                  >
+                    <ChevronsLeft size={14} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage(Math.max(1, safeCurrentPage - 1))}
+                    disabled={safeCurrentPage <= 1}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                      height: '30px',
+                      minHeight: '30px',
+                      padding: '0 8px',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      background: safeCurrentPage <= 1 ? '#f8fafc' : '#ffffff',
+                      color: safeCurrentPage <= 1 ? '#94a3b8' : '#1e293b',
+                      fontSize: '0.74rem',
+                      fontWeight: 700,
+                      cursor: safeCurrentPage <= 1 ? 'not-allowed' : 'pointer'
+                    }}
+                    title="Previous Page"
+                  >
+                    <ChevronLeft size={14} />
+                    <span>Prev</span>
+                  </button>
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(p => p === 1 || p === totalPages || Math.abs(p - safeCurrentPage) <= 1)
+                    .reduce<(number | 'ellipsis')[]>((acc, p, i, arr) => {
+                      if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push('ellipsis');
+                      acc.push(p);
+                      return acc;
+                    }, [])
+                    .map((item, idx) =>
+                      item === 'ellipsis' ? (
+                        <span key={`ellipsis-${idx}`} style={{ padding: '0 4px', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 700 }}>
+                          …
+                        </span>
+                      ) : (
+                        <button
+                          key={item}
+                          type="button"
+                          onClick={() => setCurrentPage(item)}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minWidth: '30px',
+                            height: '30px',
+                            minHeight: '30px',
+                            padding: '0 8px',
+                            borderRadius: '6px',
+                            border: safeCurrentPage === item ? '1px solid #2563eb' : '1px solid #cbd5e1',
+                            background: safeCurrentPage === item ? '#2563eb' : '#ffffff',
+                            color: safeCurrentPage === item ? '#ffffff' : '#334155',
+                            fontSize: '0.74rem',
+                            fontWeight: 800,
+                            cursor: 'pointer',
+                            boxShadow: safeCurrentPage === item ? '0 1px 3px rgba(37, 99, 235, 0.25)' : 'none'
+                          }}
+                        >
+                          {item}
+                        </button>
+                      )
+                    )}
+
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage(Math.min(totalPages, safeCurrentPage + 1))}
+                    disabled={safeCurrentPage >= totalPages}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                      height: '30px',
+                      minHeight: '30px',
+                      padding: '0 8px',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      background: safeCurrentPage >= totalPages ? '#f8fafc' : '#ffffff',
+                      color: safeCurrentPage >= totalPages ? '#94a3b8' : '#1e293b',
+                      fontSize: '0.74rem',
+                      fontWeight: 700,
+                      cursor: safeCurrentPage >= totalPages ? 'not-allowed' : 'pointer'
+                    }}
+                    title="Next Page"
+                  >
+                    <span>Next</span>
+                    <ChevronRight size={14} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={safeCurrentPage >= totalPages}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '30px',
+                      height: '30px',
+                      minHeight: '30px',
+                      padding: 0,
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      background: safeCurrentPage >= totalPages ? '#f8fafc' : '#ffffff',
+                      color: safeCurrentPage >= totalPages ? '#cbd5e1' : '#334155',
+                      cursor: safeCurrentPage >= totalPages ? 'not-allowed' : 'pointer'
+                    }}
+                    title="Last Page"
+                  >
+                    <ChevronsRight size={14} />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </>
       )}
