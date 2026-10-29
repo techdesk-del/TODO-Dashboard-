@@ -215,16 +215,16 @@ export const INITIAL_TASKS: Task[] = [
     priority: 'NORMAL',
     status: 'Done',
     progressPercent: 100,
-    department: 'Admin Desk',
-    project: 'Operations & Facilities',
+    department: 'Front Desk',
+    project: 'Front Desk',
     location: 'Jaipur',
     assignees: [
       {
         id: 'mem-8',
         name: 'Kanchan Jain',
         email: 'frontdesk@urbangaon.com',
-        department: 'Admin Desk',
-        designation: 'Admin Desk Specialist',
+        department: 'Front Desk',
+        designation: 'Front Desk Specialist',
         avatar: 'KJ',
         status: 'Done',
         completedAt: '2026-09-16T10:55:00Z',
@@ -531,7 +531,8 @@ export const INITIAL_SYSTEM_CONFIG: SystemConfig = {
       'Talent',
       'Purchase',
       'Legal',
-      'Accounts'
+      'Accounts',
+      'Front Desk'
     ],
     locations: [
       'Jaipur'

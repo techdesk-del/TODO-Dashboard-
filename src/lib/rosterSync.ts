@@ -68,9 +68,10 @@ export async function syncOfficialRosterToDB(): Promise<void> {
       } else {
         // Member already exists in database; backfill missing core fields or enforce official role changes
         const missingFields: Record<string, unknown> = {};
-        if (emp.id === 'mem-8' || empEmailClean.includes('kanchan.jain')) {
+        if (emp.id === 'mem-8' || empEmailClean.includes('kanchan.jain') || empEmailClean.includes('frontdesk')) {
           missingFields.role = 'EMPLOYEE';
-          missingFields.designation = emp.designation;
+          missingFields.department = 'Front Desk';
+          missingFields.designation = emp.designation || 'Front Desk Specialist';
         } else if (!existingMember.role) {
           missingFields.role = emp.role;
         }
@@ -112,9 +113,10 @@ export async function syncOfficialRosterToDB(): Promise<void> {
       } else {
         // User exists; enforce official role correction if needed or backfill missing fields
         const missingUserFields: Record<string, unknown> = {};
-        if (emp.id === 'mem-8' || empEmailClean.includes('kanchan.jain')) {
+        if (emp.id === 'mem-8' || empEmailClean.includes('kanchan.jain') || empEmailClean.includes('frontdesk')) {
           missingUserFields.role = 'EMPLOYEE';
-          missingUserFields.designation = emp.designation;
+          missingUserFields.department = 'Front Desk';
+          missingUserFields.designation = emp.designation || 'Front Desk Specialist';
         } else if (!existingUser.role) {
           missingUserFields.role = existingMember?.role || emp.role;
         }

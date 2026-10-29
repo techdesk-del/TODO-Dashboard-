@@ -5,23 +5,23 @@ import { useApp } from '@/context/AppContext';
 import { TaskPriority, TeamMember, AssigneeInfo } from '@/types';
 import { getTodayStr, getTomorrowStr } from '@/lib/dateUtils';
 import { isStrictCeo } from '@/lib/rosterData';
-import { 
-  X, 
-  Mic, 
-  MicOff, 
-  Keyboard, 
-  User, 
-  Users, 
-  UserPlus, 
-  AlertTriangle, 
-  CheckCircle2, 
-  Calendar, 
-  Clock, 
-  Flag, 
-  Building2, 
-  MapPin, 
-  FolderKanban, 
-  FileText, 
+import {
+  X,
+  Mic,
+  MicOff,
+  Keyboard,
+  User,
+  Users,
+  UserPlus,
+  AlertTriangle,
+  CheckCircle2,
+  Calendar,
+  Clock,
+  Flag,
+  Building2,
+  MapPin,
+  FolderKanban,
+  FileText,
   MessageSquare,
   Sparkles,
   Loader2
@@ -32,12 +32,12 @@ interface CreateTaskModalProps {
 }
 
 export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => {
-  const { 
-    currentUser, 
-    members, 
+  const {
+    currentUser,
+    members,
     activeMembers,
-    systemConfig, 
-    addTask, 
+    systemConfig,
+    addTask,
     setBannerNotification,
     isCreateTaskModalOpen,
     setIsCreateTaskModalOpen,
@@ -52,22 +52,213 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
   const [speechSupported, setSpeechSupported] = useState(true);
   const recognitionRef = useRef<any>(null);
 
-  // Form fields per Flowchart 6
+  // Original Standard Master Departments (Per Company Policy)
+  const departmentOptions = React.useMemo(() => {
+    const base = systemConfig?.masterLists?.departments || [
+      'Civil',
+      'Sales',
+      'AI & IT',
+      'Talent',
+      'Purchase',
+      'Legal',
+      'Accounts',
+      'Front Desk'
+    ];
+    const list = [...base];
+    if (currentUser?.department && !list.includes(currentUser.department)) {
+      list.push(currentUser.department);
+    }
+    return Array.from(new Set(list));
+  }, [systemConfig?.masterLists?.departments, currentUser?.department]);
+
+  // Dynamic Project Master List
+  const projectOptions = React.useMemo(() => {
+    const list = [
+      'Front Desk',
+      'Site Development & Civil',
+      'Sales & Client Acquisition',
+      'IT & Digital Systems',
+      'Procurement & Materials',
+      'Legal & Land Documentation',
+      'Finance & Accounts',
+      'HR & Talent Operations',
+      'General Operations',
+      ...(systemConfig?.masterLists?.projects || [])
+    ];
+    return Array.from(new Set(list));
+  }, [systemConfig?.masterLists?.projects]);
+
+  // Universal Enterprise Role & Department-Based Auto-Fill Resolver (SDE-3 / CEO Architecture)
+  // Maps every existing staff member and any newly provisioned employee account strictly
+  // to their accurate master department, operational initiative, and priority.
+  const getRoleBasedDefaults = useCallback(() => {
+    const rawDept = String(currentUser?.department || '').toLowerCase().trim();
+    const rawDesig = String(currentUser?.designation || '').toLowerCase().trim();
+    const rawRole = String(currentUser?.role || '').toUpperCase().trim();
+    const userId = String(currentUser?.id || '').trim();
+    const userEmail = String(currentUser?.email || '').toLowerCase().trim();
+
+    let resolvedDept = 'Civil';
+    let resolvedProject = 'General Operations';
+
+    // 1. Front Desk & Reception Operations (Kanchan Jain, Front Desk, Reception, Admin Desk)
+    if (
+      rawDept.includes('front') ||
+      rawDept.includes('desk') ||
+      rawDesig.includes('front desk') ||
+      rawDesig.includes('admin desk') ||
+      rawDesig.includes('reception') ||
+      userId === 'mem-8' ||
+      userEmail.includes('frontdesk') ||
+      userEmail.includes('kanchan')
+    ) {
+      resolvedDept = 'Front Desk';
+      resolvedProject = 'Front Desk';
+    }
+    // 2. Talent & People Operations (Talent Team, HR, Hiring)
+    else if (
+      rawDept.includes('talent') ||
+      rawDept.includes('hr') ||
+      rawDept.includes('people') ||
+      rawDesig.includes('talent') ||
+      rawDesig.includes('hr') ||
+      userId === 'mem-9' ||
+      userId === 'mem-10' ||
+      userId === 'mem-11' ||
+      userEmail.includes('rekha') ||
+      userEmail.includes('sharmila') ||
+      userEmail.includes('satya')
+    ) {
+      resolvedDept = 'Talent';
+      resolvedProject = 'HR & Talent Operations';
+    }
+    // 3. AI & IT Operations (Software, Systems, Cloud, Tech, Developers)
+    else if (
+      rawDept.includes('ai') ||
+      rawDept.includes('tech') ||
+      rawDept.includes('software') ||
+      rawDept.includes('developer') ||
+      rawDept.includes('engineer') ||
+      /(it|ai|tech|developer|software|cloud|systems)/i.test(rawDept) ||
+      /(it|ai|developer|engineer|software|techdesk)/i.test(rawDesig) ||
+      userId === 'mem-12' ||
+      userEmail.includes('techdesk') ||
+      userEmail.includes('aakash')
+    ) {
+      resolvedDept = 'AI & IT';
+      resolvedProject = 'IT & Digital Systems';
+    }
+    // 4. Sales & Business Acquisition (Sales, BD, Growth, Client Outreach)
+    else if (
+      rawDept.includes('sale') ||
+      rawDept.includes('client') ||
+      rawDept.includes('market') ||
+      rawDept.includes('growth') ||
+      rawDesig.includes('sale') ||
+      userId === 'mem-2' ||
+      userEmail.includes('yudhister') ||
+      userEmail.includes('sanjay')
+    ) {
+      resolvedDept = 'Sales';
+      resolvedProject = 'Sales & Client Acquisition';
+    }
+    // 5. Civil & Site Infrastructure (Civil, Construction, Site, Architecture)
+    else if (
+      rawDept.includes('civil') ||
+      rawDept.includes('site') ||
+      rawDept.includes('const') ||
+      rawDept.includes('infra') ||
+      rawDesig.includes('civil') ||
+      userId === 'mem-4' ||
+      userId === 'usr-1791978627510-808' ||
+      userEmail.includes('ayaz') ||
+      userEmail.includes('vishvendra')
+    ) {
+      resolvedDept = 'Civil';
+      resolvedProject = 'Site Development & Civil';
+    }
+    // 6. Purchase & Procurement (Purchase, Procurement, Vendor Management, Inventory)
+    else if (
+      rawDept.includes('purchase') ||
+      rawDept.includes('procure') ||
+      rawDept.includes('vendor') ||
+      rawDept.includes('supply') ||
+      rawDesig.includes('purchase') ||
+      userId === 'mem-7' ||
+      userId === 'EMP 2026' ||
+      userEmail.includes('utkarsh') ||
+      userEmail.includes('ravindra')
+    ) {
+      resolvedDept = 'Purchase';
+      resolvedProject = 'Procurement & Materials';
+    }
+    // 7. Legal & Land Documentation (Legal Team, Counsel, Compliance, Contracts)
+    else if (
+      rawDept.includes('legal') ||
+      rawDept.includes('law') ||
+      rawDept.includes('compliance') ||
+      rawDept.includes('contract') ||
+      rawDesig.includes('legal') ||
+      userId === 'UG00010' ||
+      userId === 'mem-5' ||
+      userEmail.includes('legal') ||
+      userEmail.includes('shyamsunder')
+    ) {
+      resolvedDept = 'Legal';
+      resolvedProject = 'Legal & Land Documentation';
+    }
+    // 8. Accounts & Finance (Accounts, Finance, Tax, Billing, Audit)
+    else if (
+      rawDept.includes('account') ||
+      rawDept.includes('finance') ||
+      rawDept.includes('tax') ||
+      rawDept.includes('audit') ||
+      rawDept.includes('billing') ||
+      rawDesig.includes('account') ||
+      userId === 'mem-6' ||
+      userEmail.includes('accounts') ||
+      userEmail.includes('pratap')
+    ) {
+      resolvedDept = 'Accounts';
+      resolvedProject = 'Finance & Accounts';
+    }
+    // 9. Exact Match Fallback
+    else {
+      const exact = departmentOptions.find(d => d.toLowerCase() === rawDept);
+      if (exact) resolvedDept = exact;
+    }
+
+    let resolvedPriority: TaskPriority = 'NORMAL';
+    if (rawRole === 'ADMIN' || rawRole === 'SUPER_ADMIN') {
+      resolvedPriority = 'HIGH';
+    }
+
+    return {
+      department: resolvedDept,
+      project: resolvedProject,
+      location: systemConfig?.masterLists?.locations?.[0] || 'Jaipur',
+      priority: resolvedPriority,
+    };
+  }, [currentUser, systemConfig, departmentOptions]);
+
+  const initialDefaults = getRoleBasedDefaults();
+
+  // Form fields per Flowchart 6 with automatic role-based defaults
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [assigneeMode, setAssigneeMode] = useState<'Self' | 'Others' | 'Both'>('Self');
   const [selectedOthersIds, setSelectedOthersIds] = useState<string[]>([]);
-  const [project, setProject] = useState(systemConfig?.masterLists?.projects?.[0] || 'General Operations');
+  const [project, setProject] = useState(initialDefaults.project);
   const [isCustomProject, setIsCustomProject] = useState(false);
   const [customProjectName, setCustomProjectName] = useState('');
-  const [location, setLocation] = useState(systemConfig?.masterLists?.locations?.[0] || 'Jaipur');
-  const [department, setDepartment] = useState(currentUser.department || systemConfig?.masterLists?.departments?.[0] || 'Civil');
+  const [location, setLocation] = useState(initialDefaults.location);
+  const [department, setDepartment] = useState(initialDefaults.department);
   const [dueDate, setDueDate] = useState(selectedDate || getTodayStr());
   const [dueTime, setDueTime] = useState('05:00 PM');
-  const [priority, setPriority] = useState<TaskPriority>('NORMAL');
+  const [priority, setPriority] = useState<TaskPriority>(initialDefaults.priority);
   const [pastDueReason, setPastDueReason] = useState('');
   const [notes, setNotes] = useState('');
-  
+
   // Validation state
   const [missingFields, setMissingFields] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -77,6 +268,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
   const isPastDue = dueDate < todayStr;
 
   const resetForm = useCallback(() => {
+    const defaults = getRoleBasedDefaults();
     setTitle('');
     setDescription('');
     setInputMethod('Type');
@@ -84,27 +276,27 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
     setSpeechTranscript('');
     setAssigneeMode('Self');
     setSelectedOthersIds([]);
-    setProject(systemConfig?.masterLists?.projects?.[0] || 'General Operations');
+    setProject(defaults.project);
     setIsCustomProject(false);
     setCustomProjectName('');
-    setLocation(systemConfig?.masterLists?.locations?.[0] || 'Jaipur');
-    setDepartment(currentUser.department || systemConfig?.masterLists?.departments?.[0] || 'Civil');
+    setLocation(defaults.location);
+    setDepartment(defaults.department);
     setDueDate(selectedDate || getTodayStr());
     setDueTime('05:00 PM');
-    setPriority('NORMAL');
+    setPriority(defaults.priority);
     setPastDueReason('');
     setNotes('');
     setMissingFields([]);
     setIsSubmitting(false);
     setServerError(null);
-  }, [systemConfig, currentUser.department, selectedDate]);
+  }, [getRoleBasedDefaults, selectedDate]);
 
-  // Whenever modal opens, ensure clean form and submission state
+  // Whenever modal opens or logged-in user changes (including new accounts), re-sync form with role-based defaults
   useEffect(() => {
     if (isCreateTaskModalOpen) {
       resetForm();
     }
-  }, [isCreateTaskModalOpen, resetForm]);
+  }, [isCreateTaskModalOpen, currentUser?.id, currentUser?.department, currentUser?.role, resetForm]);
 
   const handleClose = () => {
     resetForm();
@@ -155,7 +347,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
       if (recognitionRef.current) {
         try {
           recognitionRef.current.stop();
-        } catch {}
+        } catch { }
       }
     };
   }, [title]);
@@ -348,8 +540,8 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
   if (!isCreateTaskModalOpen || isStrictCeo(currentUser)) return null;
 
   return (
-    <div 
-      className="modal-overlay" 
+    <div
+      className="modal-overlay"
       style={{
         position: 'fixed',
         inset: 0,
@@ -365,7 +557,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
         if (e.target === e.currentTarget) handleClose();
       }}
     >
-      <div 
+      <div
         className="modal-container"
         style={{
           background: '#ffffff',
@@ -763,68 +955,68 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
                   {activeMembers
                     .filter(m => m.id !== currentUser.id && !isStrictCeo(m))
                     .length === 0 ? (
-                      <div style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.75rem', color: '#94a3b8' }}>
-                        No other active team members available for assignment.
-                      </div>
-                    ) : (
-                      activeMembers
-                        .filter(m => m.id !== currentUser.id && !isStrictCeo(m))
-                        .map(member => {
-                          const isSelected = selectedOthersIds.includes(member.id);
-                          return (
-                            <label
-                              key={member.id}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.6rem',
-                                padding: '6px 10px',
-                                borderRadius: '6px',
-                                background: isSelected ? '#dbeafe' : '#ffffff',
-                                border: isSelected ? '1px solid #93c5fd' : '1px solid #e2e8f0',
-                                cursor: 'pointer',
-                                fontSize: '0.8rem',
-                                transition: 'all 0.12s ease'
+                    <div style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.75rem', color: '#94a3b8' }}>
+                      No other active team members available for assignment.
+                    </div>
+                  ) : (
+                    activeMembers
+                      .filter(m => m.id !== currentUser.id && !isStrictCeo(m))
+                      .map(member => {
+                        const isSelected = selectedOthersIds.includes(member.id);
+                        return (
+                          <label
+                            key={member.id}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.6rem',
+                              padding: '6px 10px',
+                              borderRadius: '6px',
+                              background: isSelected ? '#dbeafe' : '#ffffff',
+                              border: isSelected ? '1px solid #93c5fd' : '1px solid #e2e8f0',
+                              cursor: 'pointer',
+                              fontSize: '0.8rem',
+                              transition: 'all 0.12s ease'
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedOthersIds(prev => [...prev, member.id]);
+                                } else {
+                                  setSelectedOthersIds(prev => prev.filter(id => id !== member.id));
+                                }
                               }}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setSelectedOthersIds(prev => [...prev, member.id]);
-                                  } else {
-                                    setSelectedOthersIds(prev => prev.filter(id => id !== member.id));
-                                  }
-                                }}
-                              />
-                              <span style={{
-                                width: '24px',
-                                height: '24px',
-                                borderRadius: '50%',
-                                background: '#2563eb',
-                                color: '#ffffff',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '0.65rem',
-                                fontWeight: 700,
-                                overflow: 'hidden'
-                              }}>
-                                {member.avatar?.startsWith('/') || member.avatar?.startsWith('http') ? (
-                                  <img src={member.avatar} alt={member.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                ) : (
-                                  member.avatar || member.name.slice(0, 2).toUpperCase()
-                                )}
-                              </span>
-                              <span style={{ fontWeight: 600, color: '#1e293b' }}>{member.name}</span>
-                              <span style={{ color: '#64748b', fontSize: '0.72rem' }}>
-                                ({member.designation} • {member.department})
-                              </span>
-                            </label>
-                          );
-                        })
-                    )}
+                            />
+                            <span style={{
+                              width: '24px',
+                              height: '24px',
+                              borderRadius: '50%',
+                              background: '#2563eb',
+                              color: '#ffffff',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '0.65rem',
+                              fontWeight: 700,
+                              overflow: 'hidden'
+                            }}>
+                              {member.avatar?.startsWith('/') || member.avatar?.startsWith('http') ? (
+                                <img src={member.avatar} alt={member.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              ) : (
+                                member.avatar || member.name.slice(0, 2).toUpperCase()
+                              )}
+                            </span>
+                            <span style={{ fontWeight: 600, color: '#1e293b' }}>{member.name}</span>
+                            <span style={{ color: '#64748b', fontSize: '0.72rem' }}>
+                              ({member.designation} • {member.department})
+                            </span>
+                          </label>
+                        );
+                      })
+                  )}
                 </div>
               </div>
             )}
@@ -833,8 +1025,8 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
             <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
               <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Assigned ({getAssignees().length}):</span>
               {getAssignees().map(a => (
-                <span 
-                  key={a.id} 
+                <span
+                  key={a.id}
                   style={{
                     background: '#f1f5f9',
                     border: '1px solid #cbd5e1',
@@ -892,16 +1084,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
                   outline: 'none'
                 }}
               >
-                {(systemConfig?.masterLists?.projects || [
-                  'General Operations',
-                  'Site Development & Civil',
-                  'Sales & Client Acquisition',
-                  'Procurement & Materials',
-                  'Legal & Land Documentation',
-                  'Finance & Accounts',
-                  'IT & Digital Systems',
-                  'HR & Talent Operations'
-                ]).map(p => (
+                {projectOptions.map(p => (
                   <option key={p} value={p}>{p}</option>
                 ))}
                 <option value="__CUSTOM__">Enter Custom Project / Site Name...</option>
@@ -989,15 +1172,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
                   outline: 'none'
                 }}
               >
-                {(systemConfig?.masterLists?.departments || [
-                  'Civil',
-                  'Sales',
-                  'AI & IT',
-                  'Talent',
-                  'Purchase',
-                  'Legal',
-                  'Accounts'
-                ]).map(d => (
+                {departmentOptions.map(d => (
                   <option key={d} value={d}>{d}</option>
                 ))}
               </select>

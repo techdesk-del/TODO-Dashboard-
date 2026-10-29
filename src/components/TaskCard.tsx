@@ -390,7 +390,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
               value={editedDepartment}
               onChange={(e) => setEditedDepartment(e.target.value)}
             >
-              {(systemConfig?.masterLists?.departments || ['Civil', 'Sales', 'AI & IT', 'Talent', 'Purchase', 'Legal', 'Accounts']).map(d => (
+              {(systemConfig?.masterLists?.departments || ['Civil', 'Sales', 'AI & IT', 'Talent', 'Purchase', 'Legal', 'Accounts', 'Front Desk']).map(d => (
                 <option key={d} value={d}>{d}</option>
               ))}
             </select>
