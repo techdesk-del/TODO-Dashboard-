@@ -1853,8 +1853,17 @@ export const AdminHrPortal: React.FC = () => {
           </div>
 
           {/* Deliverables Oversight Table (Flowchart A: Row view with status, project, due date) */}
-          <div className="enterprise-table-wrapper">
-            <table className="enterprise-table">
+          <div style={{
+            background: '#ffffff',
+            border: '1px solid var(--border-subtle, #e2e8f0)',
+            borderRadius: 'var(--radius-md, 8px)',
+            boxShadow: 'var(--shadow-xs, 0 1px 3px rgba(0,0,0,0.05))',
+            overflow: 'hidden',
+            width: '100%',
+            boxSizing: 'border-box'
+          }}>
+            <div className="enterprise-table-wrapper" style={{ border: 'none', borderRadius: 0, boxShadow: 'none' }}>
+              <table className="enterprise-table">
               <thead>
                 <tr>
                   <th style={{ width: '38px', textAlign: 'center' }}>
@@ -2089,6 +2098,7 @@ export const AdminHrPortal: React.FC = () => {
                 No tasks match the selected monitoring filters.
               </div>
             )}
+            </div>
             {renderEnterprisePaginationBar({
               totalCount: totalOversightCount,
               startIndex: oversightStartIndex,
@@ -2420,8 +2430,17 @@ export const AdminHrPortal: React.FC = () => {
           </div>
 
           {/* Filtered Deliverables Table for the Report */}
-          <div className="enterprise-table-wrapper">
-            <table className="enterprise-table">
+          <div style={{
+            background: '#ffffff',
+            border: '1px solid var(--border-subtle, #e2e8f0)',
+            borderRadius: 'var(--radius-md, 8px)',
+            boxShadow: 'var(--shadow-xs, 0 1px 3px rgba(0,0,0,0.05))',
+            overflow: 'hidden',
+            width: '100%',
+            boxSizing: 'border-box'
+          }}>
+            <div className="enterprise-table-wrapper" style={{ border: 'none', borderRadius: 0, boxShadow: 'none' }}>
+              <table className="enterprise-table">
               <thead>
                 <tr>
                   <th style={{ width: '40px' }}>#</th>
@@ -2469,6 +2488,7 @@ export const AdminHrPortal: React.FC = () => {
                 No deliverables found for this report configuration.
               </div>
             )}
+            </div>
             {renderEnterprisePaginationBar({
               totalCount: totalReportsCount,
               startIndex: reportsStartIndex,
@@ -4582,8 +4602,9 @@ export const AdminHrPortal: React.FC = () => {
           </div>
 
           {/* Directory Table */}
-          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', overflowX: 'auto', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem' }}>
+          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <div style={{ overflowX: 'auto', width: '100%' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem' }}>
               <thead>
                 <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #cbd5e1' }}>
                   <th style={{ padding: '10px 14px', fontWeight: 800, color: '#334155' }}>Staff Member</th>
@@ -4767,6 +4788,7 @@ export const AdminHrPortal: React.FC = () => {
                 ))}
               </tbody>
             </table>
+            </div>
             {renderEnterprisePaginationBar({
               totalCount: totalDirectoryCount,
               startIndex: directoryStartIndex,
@@ -4906,7 +4928,8 @@ export const AdminHrPortal: React.FC = () => {
 
           {/* Email Logs Table */}
           <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}>
-            <table className="admin-oversight-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+            <div style={{ overflowX: 'auto', width: '100%' }}>
+              <table className="admin-oversight-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
               <thead>
                 <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', textAlign: 'left' }}>
                   <th style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#475569' }}>TIMESTAMP</th>
@@ -5031,6 +5054,7 @@ export const AdminHrPortal: React.FC = () => {
                 )}
               </tbody>
             </table>
+            </div>
             {renderEnterprisePaginationBar({
               totalCount: totalEmailLogsCount,
               startIndex: emailLogsStartIndex,
