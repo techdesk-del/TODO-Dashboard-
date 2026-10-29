@@ -41,7 +41,11 @@ import {
   Download,
   CheckSquare,
   Square,
-  ChevronDown
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
 } from 'lucide-react';
 
 import { OFFICIAL_HOLIDAYS_2026_27, HOLIDAY_METADATA } from '@/lib/holidayData';
@@ -188,6 +192,16 @@ export const AdminHrPortal: React.FC = () => {
   const [directorySearchQuery, setDirectorySearchQuery] = useState<string>('');
   const [directoryDeptFilter, setDirectoryDeptFilter] = useState<string>('ALL');
   const [directoryStatusFilter, setDirectoryStatusFilter] = useState<string>('ALL');
+
+  // Enterprise Pagination States for Admin & Talent HR Operations Center
+  const [oversightPage, setOversightPage] = useState<number>(1);
+  const [oversightPageSize, setOversightPageSize] = useState<number>(8);
+  const [reportsPage, setReportsPage] = useState<number>(1);
+  const [reportsPageSize, setReportsPageSize] = useState<number>(8);
+  const [directoryPage, setDirectoryPage] = useState<number>(1);
+  const [directoryPageSize, setDirectoryPageSize] = useState<number>(8);
+  const [emailLogsPage, setEmailLogsPage] = useState<number>(1);
+  const [emailLogsPageSize, setEmailLogsPageSize] = useState<number>(8);
   
   // Flowchart: Employee Provisioning (Admin Dashboard -> Create Employee)
   const [newUserName, setNewUserName] = useState('');
@@ -623,6 +637,296 @@ export const AdminHrPortal: React.FC = () => {
       rescheduleMap
     };
   }, [tasks, members, reportType, reportSelectedEmployeeId, reportStartDate, reportEndDate, reportPendingStatus, reportDepartment]);
+
+  // Filtered Email Logs for Tab 8
+  const filteredEmailLogs = useMemo(() => {
+    return emailLogs.filter(l => {
+      if (emailLogFilter === 'DELIVERED' && l.status !== 'DELIVERED') return false;
+      if (emailLogFilter === 'FAILED' && l.status !== 'FAILED') return false;
+      if (emailLogSearch.trim()) {
+        const q = emailLogSearch.toLowerCase();
+        const matchEmail = (l.recipientEmail || '').toLowerCase().includes(q);
+        const matchName = (l.recipientName || '').toLowerCase().includes(q);
+        const matchSubject = (l.subject || '').toLowerCase().includes(q);
+        const matchTask = (l.taskTitle || '').toLowerCase().includes(q);
+        if (!matchEmail && !matchName && !matchSubject && !matchTask) return false;
+      }
+      return true;
+    });
+  }, [emailLogs, emailLogFilter, emailLogSearch]);
+
+  // Reset pagination to Page 1 when filters change
+  useEffect(() => {
+    setOversightPage(1);
+  }, [selectedUserForOversight, departmentFilterForOversight, managerFilterForOversight, statusFilter, searchFilter]);
+
+  useEffect(() => {
+    setReportsPage(1);
+  }, [reportType, reportSelectedEmployeeId, reportStartDate, reportEndDate, reportPendingStatus, reportDepartment]);
+
+  useEffect(() => {
+    setDirectoryPage(1);
+  }, [directorySearchQuery, directoryDeptFilter, directoryStatusFilter]);
+
+  useEffect(() => {
+    setEmailLogsPage(1);
+  }, [emailLogFilter, emailLogSearch]);
+
+  // 1. Oversight Pagination Slice
+  const totalOversightCount = filteredTasks.length;
+  const totalOversightPages = Math.max(1, Math.ceil(totalOversightCount / oversightPageSize));
+  const safeOversightPage = Math.min(oversightPage, totalOversightPages);
+  const oversightStartIndex = (safeOversightPage - 1) * oversightPageSize;
+  const oversightEndIndex = Math.min(oversightStartIndex + oversightPageSize, totalOversightCount);
+  const paginatedOversightTasks = useMemo(() => {
+    return filteredTasks.slice(oversightStartIndex, oversightStartIndex + oversightPageSize);
+  }, [filteredTasks, oversightStartIndex, oversightPageSize]);
+
+  // 2. Reports Pagination Slice
+  const totalReportsCount = reportMetrics.filtered.length;
+  const totalReportsPages = Math.max(1, Math.ceil(totalReportsCount / reportsPageSize));
+  const safeReportsPage = Math.min(reportsPage, totalReportsPages);
+  const reportsStartIndex = (safeReportsPage - 1) * reportsPageSize;
+  const reportsEndIndex = Math.min(reportsStartIndex + reportsPageSize, totalReportsCount);
+  const paginatedReportTasks = useMemo(() => {
+    return reportMetrics.filtered.slice(reportsStartIndex, reportsStartIndex + reportsPageSize);
+  }, [reportMetrics.filtered, reportsStartIndex, reportsPageSize]);
+
+  // 3. Directory Pagination Slice
+  const totalDirectoryCount = filteredDirectoryMembers.length;
+  const totalDirectoryPages = Math.max(1, Math.ceil(totalDirectoryCount / directoryPageSize));
+  const safeDirectoryPage = Math.min(directoryPage, totalDirectoryPages);
+  const directoryStartIndex = (safeDirectoryPage - 1) * directoryPageSize;
+  const directoryEndIndex = Math.min(directoryStartIndex + directoryPageSize, totalDirectoryCount);
+  const paginatedDirectoryMembers = useMemo(() => {
+    return filteredDirectoryMembers.slice(directoryStartIndex, directoryStartIndex + directoryPageSize);
+  }, [filteredDirectoryMembers, directoryStartIndex, directoryPageSize]);
+
+  // 4. Email Logs Pagination Slice
+  const totalEmailLogsCount = filteredEmailLogs.length;
+  const totalEmailLogsPages = Math.max(1, Math.ceil(totalEmailLogsCount / emailLogsPageSize));
+  const safeEmailLogsPage = Math.min(emailLogsPage, totalEmailLogsPages);
+  const emailLogsStartIndex = (safeEmailLogsPage - 1) * emailLogsPageSize;
+  const emailLogsEndIndex = Math.min(emailLogsStartIndex + emailLogsPageSize, totalEmailLogsCount);
+  const paginatedEmailLogs = useMemo(() => {
+    return filteredEmailLogs.slice(emailLogsStartIndex, emailLogsStartIndex + emailLogsPageSize);
+  }, [filteredEmailLogs, emailLogsStartIndex, emailLogsPageSize]);
+
+  // Reusable Enterprise Pagination Bar Renderer
+  const renderEnterprisePaginationBar = (opts: {
+    totalCount: number;
+    startIndex: number;
+    endIndex: number;
+    safeCurrentPage: number;
+    totalPages: number;
+    pageSize: number;
+    setCurrentPage: (p: number) => void;
+    setPageSize: (s: number) => void;
+    itemLabel?: string;
+  }) => {
+    const {
+      totalCount,
+      startIndex,
+      endIndex,
+      safeCurrentPage,
+      totalPages,
+      pageSize,
+      setCurrentPage,
+      setPageSize,
+      itemLabel = 'deliverables'
+    } = opts;
+
+    if (totalCount === 0) return null;
+
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '0.75rem',
+        padding: '0.85rem 1.15rem',
+        background: '#f8fafc',
+        borderTop: '1px solid #e2e8f0'
+      }}>
+        {/* Left: Showing Range & Page Size Selector */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', fontSize: '0.76rem', color: '#475569', fontWeight: 600 }}>
+          <span>
+            Showing <strong style={{ color: '#0f172a' }}>{startIndex + 1}</strong> to{' '}
+            <strong style={{ color: '#0f172a' }}>{endIndex}</strong> of{' '}
+            <strong style={{ color: '#0f172a' }}>{totalCount}</strong> {itemLabel}
+          </span>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ color: '#64748b', fontSize: '0.72rem' }}>Per page:</span>
+            <select
+              value={pageSize}
+              onChange={e => {
+                setPageSize(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              style={{
+                padding: '3px 8px',
+                borderRadius: '6px',
+                border: '1px solid #cbd5e1',
+                background: '#ffffff',
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                color: '#0f172a',
+                cursor: 'pointer',
+                height: '28px',
+                minHeight: '28px'
+              }}
+            >
+              <option value={5}>5</option>
+              <option value={8}>8</option>
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Right: Page Navigation Controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => setCurrentPage(1)}
+            disabled={safeCurrentPage <= 1}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '30px',
+              height: '30px',
+              minHeight: '30px',
+              padding: 0,
+              borderRadius: '6px',
+              border: '1px solid #cbd5e1',
+              background: safeCurrentPage <= 1 ? '#f8fafc' : '#ffffff',
+              color: safeCurrentPage <= 1 ? '#cbd5e1' : '#334155',
+              cursor: safeCurrentPage <= 1 ? 'not-allowed' : 'pointer'
+            }}
+            title="First Page"
+          >
+            <ChevronsLeft size={14} />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setCurrentPage(Math.max(1, safeCurrentPage - 1))}
+            disabled={safeCurrentPage <= 1}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '3px',
+              height: '30px',
+              minHeight: '30px',
+              padding: '0 8px',
+              borderRadius: '6px',
+              border: '1px solid #cbd5e1',
+              background: safeCurrentPage <= 1 ? '#f8fafc' : '#ffffff',
+              color: safeCurrentPage <= 1 ? '#94a3b8' : '#1e293b',
+              fontSize: '0.74rem',
+              fontWeight: 700,
+              cursor: safeCurrentPage <= 1 ? 'not-allowed' : 'pointer'
+            }}
+            title="Previous Page"
+          >
+            <ChevronLeft size={14} />
+            <span>Prev</span>
+          </button>
+
+          {Array.from({ length: totalPages }, (_, i) => i + 1)
+            .filter(p => p === 1 || p === totalPages || Math.abs(p - safeCurrentPage) <= 1)
+            .reduce<(number | 'ellipsis')[]>((acc, p, i, arr) => {
+              if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push('ellipsis');
+              acc.push(p);
+              return acc;
+            }, [])
+            .map((item, idx) =>
+              item === 'ellipsis' ? (
+                <span key={`ellipsis-${idx}`} style={{ padding: '0 4px', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 700 }}>
+                  …
+                </span>
+              ) : (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => setCurrentPage(item)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minWidth: '30px',
+                    height: '30px',
+                    minHeight: '30px',
+                    padding: '0 8px',
+                    borderRadius: '6px',
+                    border: safeCurrentPage === item ? '1px solid #2563eb' : '1px solid #cbd5e1',
+                    background: safeCurrentPage === item ? '#2563eb' : '#ffffff',
+                    color: safeCurrentPage === item ? '#ffffff' : '#334155',
+                    fontSize: '0.74rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    boxShadow: safeCurrentPage === item ? '0 1px 3px rgba(37, 99, 235, 0.25)' : 'none'
+                  }}
+                >
+                  {item}
+                </button>
+              )
+            )}
+
+          <button
+            type="button"
+            onClick={() => setCurrentPage(Math.min(totalPages, safeCurrentPage + 1))}
+            disabled={safeCurrentPage >= totalPages}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '3px',
+              height: '30px',
+              minHeight: '30px',
+              padding: '0 8px',
+              borderRadius: '6px',
+              border: '1px solid #cbd5e1',
+              background: safeCurrentPage >= totalPages ? '#f8fafc' : '#ffffff',
+              color: safeCurrentPage >= totalPages ? '#94a3b8' : '#1e293b',
+              fontSize: '0.74rem',
+              fontWeight: 700,
+              cursor: safeCurrentPage >= totalPages ? 'not-allowed' : 'pointer'
+            }}
+            title="Next Page"
+          >
+            <span>Next</span>
+            <ChevronRight size={14} />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setCurrentPage(totalPages)}
+            disabled={safeCurrentPage >= totalPages}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '30px',
+              height: '30px',
+              minHeight: '30px',
+              padding: 0,
+              borderRadius: '6px',
+              border: '1px solid #cbd5e1',
+              background: safeCurrentPage >= totalPages ? '#f8fafc' : '#ffffff',
+              color: safeCurrentPage >= totalPages ? '#cbd5e1' : '#334155',
+              cursor: safeCurrentPage >= totalPages ? 'not-allowed' : 'pointer'
+            }}
+            title="Last Page"
+          >
+            <ChevronsRight size={14} />
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   // Flowchart A: Admin Actions (Edit, Bulk Reassign, Export)
   const handleConfirmEditTask = (e: React.FormEvent) => {
@@ -1399,7 +1703,7 @@ export const AdminHrPortal: React.FC = () => {
                 <span>Scope: <strong>{selectedUserForOversight === 'ALL' ? 'Company-Wide' : selectedUserForOversight}</strong></span>
                 {departmentFilterForOversight !== 'ALL' && <span>• Dept: <strong>{departmentFilterForOversight}</strong></span>}
                 {managerFilterForOversight !== 'ALL' && <span>• Manager: <strong>{managerFilterForOversight}</strong></span>}
-                <span>• Showing <strong>{filteredTasks.length}</strong> tasks</span>
+                <span>• Showing <strong>{totalOversightCount > 0 ? `${oversightStartIndex + 1}–${oversightEndIndex} of ${totalOversightCount}` : 0}</strong> tasks</span>
                 {targetOversightMember && (
                   <button
                     type="button"
@@ -1532,7 +1836,7 @@ export const AdminHrPortal: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredTasks.map((t, idx) => {
+                {paginatedOversightTasks.map((t, idx) => {
                   const isDone = t.status === 'Done';
                   const isOnHold = t.status === 'On Hold';
                   const isCancelled = t.status === 'Cancelled';
@@ -1558,7 +1862,7 @@ export const AdminHrPortal: React.FC = () => {
                       <td>
                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem' }}>
                           <span className="task-sequence-badge" style={{ fontSize: '0.7rem', marginTop: '1px' }}>
-                            #{idx + 1}
+                            #{oversightStartIndex + idx + 1}
                           </span>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontWeight: 700, color: '#0f172a', lineHeight: 1.4 }}>{t.title}</div>
@@ -1741,6 +2045,17 @@ export const AdminHrPortal: React.FC = () => {
                 No tasks match the selected monitoring filters.
               </div>
             )}
+            {renderEnterprisePaginationBar({
+              totalCount: totalOversightCount,
+              startIndex: oversightStartIndex,
+              endIndex: oversightEndIndex,
+              safeCurrentPage: safeOversightPage,
+              totalPages: totalOversightPages,
+              pageSize: oversightPageSize,
+              setCurrentPage: setOversightPage,
+              setPageSize: setOversightPageSize,
+              itemLabel: 'deliverables'
+            })}
           </div>
         </div>
       )}
@@ -2075,9 +2390,9 @@ export const AdminHrPortal: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {reportMetrics.filtered.slice(0, 50).map((t, idx) => (
+                {paginatedReportTasks.map((t, idx) => (
                   <tr key={t.id}>
-                    <td style={{ fontSize: '0.7rem', color: '#64748b' }}>#{idx + 1}</td>
+                    <td style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700 }}>#{reportsStartIndex + idx + 1}</td>
                     <td>
                       <div style={{ fontWeight: 700, fontSize: '0.78rem' }}>{t.title}</div>
                       <div style={{ fontSize: '0.68rem', color: '#64748b' }}>Project: {t.project || 'General'}</div>
@@ -2110,6 +2425,17 @@ export const AdminHrPortal: React.FC = () => {
                 No deliverables found for this report configuration.
               </div>
             )}
+            {renderEnterprisePaginationBar({
+              totalCount: totalReportsCount,
+              startIndex: reportsStartIndex,
+              endIndex: reportsEndIndex,
+              safeCurrentPage: safeReportsPage,
+              totalPages: totalReportsPages,
+              pageSize: reportsPageSize,
+              setCurrentPage: setReportsPage,
+              setPageSize: setReportsPageSize,
+              itemLabel: 'report deliverables'
+            })}
           </div>
         </div>
       )}
@@ -4225,7 +4551,7 @@ export const AdminHrPortal: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredDirectoryMembers.map(member => (
+                {paginatedDirectoryMembers.map(member => (
                   <tr key={member.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                     <td style={{ padding: '10px 14px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -4391,6 +4717,17 @@ export const AdminHrPortal: React.FC = () => {
                 ))}
               </tbody>
             </table>
+            {renderEnterprisePaginationBar({
+              totalCount: totalDirectoryCount,
+              startIndex: directoryStartIndex,
+              endIndex: directoryEndIndex,
+              safeCurrentPage: safeDirectoryPage,
+              totalPages: totalDirectoryPages,
+              pageSize: directoryPageSize,
+              setCurrentPage: setDirectoryPage,
+              setPageSize: setDirectoryPageSize,
+              itemLabel: 'staff members'
+            })}
           </div>
         </div>
       )}
@@ -4531,21 +4868,7 @@ export const AdminHrPortal: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {emailLogs
-                  .filter(l => {
-                    if (emailLogFilter === 'DELIVERED' && l.status !== 'DELIVERED') return false;
-                    if (emailLogFilter === 'FAILED' && l.status !== 'FAILED') return false;
-                    if (emailLogSearch.trim()) {
-                      const q = emailLogSearch.toLowerCase();
-                      const matchEmail = (l.recipientEmail || '').toLowerCase().includes(q);
-                      const matchName = (l.recipientName || '').toLowerCase().includes(q);
-                      const matchSubject = (l.subject || '').toLowerCase().includes(q);
-                      const matchTask = (l.taskTitle || '').toLowerCase().includes(q);
-                      if (!matchEmail && !matchName && !matchSubject && !matchTask) return false;
-                    }
-                    return true;
-                  })
-                  .map((log, idx) => {
+                {paginatedEmailLogs.map((log, idx) => {
                     const logId = log._id || log.id || `log-${idx}`;
                     const isRetrying = retryingEmailId === logId;
                     return (
@@ -4645,7 +4968,7 @@ export const AdminHrPortal: React.FC = () => {
                     );
                   })}
 
-                {emailLogs.length === 0 && !isFetchingEmailLogs && (
+                {filteredEmailLogs.length === 0 && !isFetchingEmailLogs && (
                   <tr>
                     <td colSpan={6} style={{ padding: '2.5rem 1rem', textAlign: 'center', color: '#94a3b8' }}>
                       <Mail size={32} style={{ margin: '0 auto 0.5rem auto', opacity: 0.5 }} />
@@ -4658,6 +4981,17 @@ export const AdminHrPortal: React.FC = () => {
                 )}
               </tbody>
             </table>
+            {renderEnterprisePaginationBar({
+              totalCount: totalEmailLogsCount,
+              startIndex: emailLogsStartIndex,
+              endIndex: emailLogsEndIndex,
+              safeCurrentPage: safeEmailLogsPage,
+              totalPages: totalEmailLogsPages,
+              pageSize: emailLogsPageSize,
+              setCurrentPage: setEmailLogsPage,
+              setPageSize: setEmailLogsPageSize,
+              itemLabel: 'email logs'
+            })}
           </div>
         </div>
       )}
