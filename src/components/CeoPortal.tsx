@@ -965,7 +965,7 @@ export const CeoPortal: React.FC = () => {
 
           {[
             { id: 'ALL', label: 'All Tasks', count: memberFilteredTasks.length },
-            { id: 'Review', label: '⏳ Awaiting Final Approval', count: memberFilteredTasks.filter(t => t.status === 'Review' || t.pendingCeoApproval).length },
+            { id: 'Review', label: ' Awaiting Final Approval', count: memberFilteredTasks.filter(t => t.status === 'Review' || t.pendingCeoApproval).length },
             { id: 'In Progress', label: 'In Progress', count: inProgressCount },
             { id: 'Not Started', label: 'Queued', count: notStartedCount },
             { id: 'Done', label: 'Completed', count: completedCount },
