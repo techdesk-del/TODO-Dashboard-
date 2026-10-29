@@ -391,7 +391,7 @@ export const AdminHrPortal: React.FC = () => {
     setVerifyDept(req.department || 'General Staff');
     setVerifyDesignation(req.designation || 'Specialist');
     setVerifyManager(req.manager || 'Dr. Rekha Pareek');
-    setVerifyManagerEmail('rekha.pareek@urbangaon.com');
+    setVerifyManagerEmail('pareekrekha471@gmail.com');
     setVerifyEmployeeId(`EMP-${Math.floor(1000 + Math.random() * 9000)}`);
   };
 

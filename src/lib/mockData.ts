@@ -21,7 +21,7 @@ export const INITIAL_TASKS: Task[] = [
       {
         id: 'mem-4',
         name: 'Ayaz',
-        email: 'ayaz@urbangaon.com',
+        email: 'ayaz.khilji@urbangaon.com',
         department: 'Civil',
         designation: 'Civil Project Lead',
         avatar: 'AY',
@@ -91,7 +91,7 @@ export const INITIAL_TASKS: Task[] = [
       {
         id: 'mem-6',
         name: 'Pratap',
-        email: 'pratap@urbangaon.com',
+        email: 'accounts@urbangaon.com',
         department: 'Accounts',
         designation: 'Accounts & Finance Lead',
         avatar: 'PR',
@@ -123,7 +123,7 @@ export const INITIAL_TASKS: Task[] = [
       {
         id: 'mem-5',
         name: 'Shyam Sunder Varma',
-        email: 'shyamsunder.varma@urbangaon.com',
+        email: 'legal@urbangaon.com',
         department: 'Legal Team',
         designation: 'Legal Counsel & Compliance Head',
         avatar: 'SV',
@@ -158,7 +158,7 @@ export const INITIAL_TASKS: Task[] = [
       {
         id: 'mem-7',
         name: 'Utkarsh Pandey',
-        email: 'utkarsh.pandey@urbangaon.com',
+        email: 'purchase@urbangaon.com',
         department: 'Purchase Department',
         designation: 'Purchase & Procurement Lead',
         avatar: 'UP',
@@ -190,7 +190,7 @@ export const INITIAL_TASKS: Task[] = [
       {
         id: 'mem-9',
         name: 'Dr. Rekha Pareek',
-        email: 'rekha.pareek@urbangaon.com',
+        email: 'pareekrekha471@gmail.com',
         department: 'Talent Team',
         designation: 'Talent Acquisition & HR Lead',
         avatar: 'RP',
@@ -222,7 +222,7 @@ export const INITIAL_TASKS: Task[] = [
       {
         id: 'mem-8',
         name: 'Kanchan Jain',
-        email: 'kanchan.jain@urbangaon.com',
+        email: 'frontdesk@urbangaon.com',
         department: 'Admin Desk',
         designation: 'Admin Desk Specialist',
         avatar: 'KJ',
