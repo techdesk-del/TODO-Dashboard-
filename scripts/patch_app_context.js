@@ -387,3 +387,4 @@ if (normalizeCRLFs(content).includes(normalizeCRLFs(profileReturnTarget))) {
 
 fs.writeFileSync(contextPath, content, 'utf8');
 console.log('✓ Saved AppContext.tsx');
+
