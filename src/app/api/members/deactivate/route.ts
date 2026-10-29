@@ -210,7 +210,9 @@ export async function POST(req: NextRequest) {
     }
 
     // 6. Flowchart 4: Notify Reporting Manager, Founder & CEO, and Admin users of handover / long leave
-    const mgrEmail = (departingMember.managerEmail || 'rekha.pareek@urbangaon.com').toLowerCase().trim();
+    const liveRekha = await MemberModel.findOne({ $or: [{ id: 'mem-9' }, { name: /rekha/i }] }).lean().exec();
+    const defaultMgrEmail = (liveRekha as any)?.email || 'pareekrekha471@gmail.com';
+    const mgrEmail = (departingMember.managerEmail && departingMember.managerEmail !== 'rekha.pareek@urbangaon.com' ? departingMember.managerEmail : defaultMgrEmail).toLowerCase().trim();
     const mgrName = departingMember.manager || 'Dr. Rekha Pareek';
     const governanceRecipients = new Map<string, string>();
     if (mgrEmail && mgrEmail.includes('@')) {

@@ -20,6 +20,9 @@ import connectDB from './db';
 import { InAppNotificationModel } from '@/models/InAppNotification';
 import { EmailLogModel } from '@/models/EmailLog';
 import { AuditLogModel } from '@/models/AuditLog';
+import { MemberModel } from '@/models/Member';
+import { PurgedMemberModel } from '@/models/PurgedMember';
+import { findOfficialEmployeeByEmail } from './rosterData';
 import {
   sendTaskAssignedEmail,
   sendTaskEscalatedEmail,
@@ -64,8 +67,93 @@ export async function dispatchNotificationFlow(
   let inAppCreatedCount = 0;
   const emailResults: DispatchResult['emailResults'] = [];
 
-  // 1. Log in notifications table (In-App Notifications) for each recipient
-  for (const recipient of event.recipients) {
+  // Synchronize recipients strictly with live active Login Panel directory (MemberModel)
+  // Any legacy/disabled alias email (e.g. rekha.pareek@urbangaon.com, kanchan.jain@urbangaon.com, etc.)
+  // is automatically resolved to the employee's current active Login Panel email, and deactivated/purged accounts are skipped.
+  const [liveMembers, purgedRecords] = await Promise.all([
+    MemberModel.find({}).lean().exec().catch(() => []),
+    PurgedMemberModel.find({}).lean().exec().catch(() => []),
+  ]);
+
+  const purgedIds = new Set(purgedRecords.map((p: any) => String(p.id || '').trim()));
+  const purgedEmails = new Set(purgedRecords.map((p: any) => String(p.email || '').toLowerCase().trim()));
+
+  const resolvedRecipientsMap = new Map<string, { email: string; name: string }>();
+
+  for (const rawRec of event.recipients) {
+    const rawEmail = String(rawRec.email || '').toLowerCase().trim();
+    const rawName = String(rawRec.name || '').trim();
+    if (!rawEmail || !rawEmail.includes('@')) continue;
+    if (purgedEmails.has(rawEmail)) continue;
+
+    // 1. Direct match by live email in MemberModel
+    let matchedMember: any = liveMembers.find(
+      (m: any) => m && m.email && String(m.email).toLowerCase().trim() === rawEmail
+    );
+
+    // 2. If not found by direct email, check if rawEmail is an old alias in OFFICIAL_ROSTER or match by name
+    if (!matchedMember) {
+      const rosterEmp = findOfficialEmployeeByEmail(rawEmail);
+      if (rosterEmp) {
+        matchedMember = liveMembers.find(
+          (m: any) =>
+            m &&
+            (m.id === rosterEmp.id ||
+              m.employeeId === rosterEmp.id ||
+              String(m.name || '').toLowerCase().trim() === rosterEmp.name.toLowerCase().trim() ||
+              String(m.email || '').toLowerCase().trim() === rosterEmp.email.toLowerCase().trim())
+        );
+      }
+    }
+
+    // 3. Fallback match by exact recipient name in liveMembers
+    if (!matchedMember && rawName) {
+      const cleanRawName = rawName.replace(/\s*\(.*\)$/, '').toLowerCase().trim();
+      matchedMember = liveMembers.find(
+        (m: any) => m && String(m.name || '').toLowerCase().trim() === cleanRawName
+      );
+    }
+
+    if (matchedMember) {
+      const memberStatus = String(matchedMember.status || 'ACTIVE').toUpperCase().trim();
+      const isDeactivated =
+        matchedMember.isDeactivated === true ||
+        memberStatus === 'DEACTIVATED' ||
+        memberStatus === 'REMOVED' ||
+        memberStatus === 'TERMINATED' ||
+        memberStatus === 'EXITED' ||
+        purgedIds.has(String(matchedMember.id || '').trim());
+
+      if (isDeactivated) {
+        continue; // Never send notifications to deactivated or purged accounts
+      }
+
+      const activeLoginEmail = String(matchedMember.email || '').toLowerCase().trim();
+      const activeLoginName = String(matchedMember.name || rawName || 'Team Member').trim();
+      if (activeLoginEmail && activeLoginEmail.includes('@') && !purgedEmails.has(activeLoginEmail)) {
+        resolvedRecipientsMap.set(activeLoginEmail, {
+          email: activeLoginEmail,
+          name: activeLoginName,
+        });
+      }
+    } else {
+      // If not in MemberModel, check if it maps to an official roster entry with a newer canonical email
+      const rosterEmp = findOfficialEmployeeByEmail(rawEmail);
+      const canonicalEmail = rosterEmp ? rosterEmp.email.toLowerCase().trim() : rawEmail;
+      const canonicalName = rosterEmp ? rosterEmp.name : (rawName || 'Team Member');
+      if (!purgedEmails.has(canonicalEmail) && (!rosterEmp || !purgedIds.has(rosterEmp.id))) {
+        resolvedRecipientsMap.set(canonicalEmail, {
+          email: canonicalEmail,
+          name: canonicalName,
+        });
+      }
+    }
+  }
+
+  const synchronizedRecipients = Array.from(resolvedRecipientsMap.values());
+
+  // 1. Log in notifications table (In-App Notifications) for each synchronized recipient
+  for (const recipient of synchronizedRecipients) {
     if (!recipient.email || !recipient.email.includes('@')) continue;
 
     try {
@@ -87,7 +175,7 @@ export async function dispatchNotificationFlow(
   }
 
   // 2. Process Email Dispatch with 3x Retry Loop per Flowchart 20
-  for (const recipient of event.recipients) {
+  for (const recipient of synchronizedRecipients) {
     if (!recipient.email || !recipient.email.includes('@')) continue;
 
     const emailLogId = `elog-${Date.now()}-${Math.floor(Math.random() * 10000)}`;

@@ -479,6 +479,26 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
+    // Cascade manager email/name changes to any subordinates reporting to this member
+    if (updates.email || updates.name || updates.id) {
+      await MemberModel.updateMany(
+        {
+          $or: [
+            { managerId: memberId },
+            ...(oldEmail ? [{ managerEmail: oldEmail.toLowerCase() }] : []),
+            ...(oldName ? [{ manager: oldName }] : []),
+          ],
+        },
+        {
+          $set: {
+            managerId: finalId,
+            manager: finalName,
+            managerEmail: finalEmail.toLowerCase(),
+          },
+        }
+      ).exec().catch(() => {});
+    }
+
     // Cascade name, email, employeeId, or designation changes to TaskModel assignees & creator
     if ((updates.email || updates.name || updates.id || updates.designation) && updateTaskAssignees) {
       try {

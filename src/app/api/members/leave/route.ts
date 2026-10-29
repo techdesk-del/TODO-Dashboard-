@@ -51,6 +51,7 @@ export async function POST(req: NextRequest) {
       actorRole = 'ADMIN',
     } = body;
 
+
     if (!memberId || !leaveStartDate || !leaveEndDate) {
       return NextResponse.json(
         { success: false, error: 'memberId, leaveStartDate, and leaveEndDate are required.' },
@@ -150,7 +151,7 @@ export async function POST(req: NextRequest) {
           updatedAt: nowIso,
         },
       }
-    ).catch(() => {});
+    ).catch(() => { });
 
     // Node 5: Evaluate tasks assigned to this employee
     const activeTasks = await TaskModel.find({
@@ -206,6 +207,7 @@ export async function POST(req: NextRequest) {
           await t.save();
         }
 
+
         affectedTasks.push({
           id: t.id,
           title: t.title,
@@ -231,6 +233,7 @@ export async function POST(req: NextRequest) {
         });
       }
     }
+
 
     // Node 6: Strict Governance Recipient List -> ONLY Reporting Manager + Founder & CEO + Admin Users
     const recipientsMap = new Map<string, { email: string; name: string }>();
@@ -403,7 +406,7 @@ export async function PATCH(req: NextRequest) {
         $set: { status: 'ACTIVE', updatedAt: nowIso },
         $unset: { leaveStartDate: '', leaveEndDate: '' },
       }
-    ).catch(() => {});
+    ).catch(() => { });
 
     const activeTasksCount = await TaskModel.countDocuments({
       status: { $nin: ['Done', 'Cancelled'] },
