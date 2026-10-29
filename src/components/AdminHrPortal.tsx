@@ -5420,23 +5420,15 @@ export const AdminHrPortal: React.FC = () => {
                   <label style={{ display: 'block', fontSize: '0.73rem', fontWeight: 700, color: '#334155', marginBottom: '3px' }}>
                     Verify Department *
                   </label>
-                  <select
-                    className="form-select"
+                  <input
+                    type="text"
+                    className="form-input"
                     required
+                    placeholder="e.g. Sales, Civil, AI & IT Operations..."
                     value={verifyDept}
                     onChange={e => setVerifyDept(e.target.value)}
                     style={{ width: '100%', fontSize: '0.78rem' }}
-                  >
-                    <option value="Executive Management">Executive Management</option>
-                    <option value="AI & IT Operations">AI & IT Operations</option>
-                    <option value="Full-Stack Engineering">Full-Stack Engineering</option>
-                    <option value="Product & UI/UX">Product & UI/UX</option>
-                    <option value="Talent HR & People">Talent HR & People</option>
-                    <option value="Marketing & Growth">Marketing & Growth</option>
-                    <option value="Client Success & Support">Client Success & Support</option>
-                    <option value="Finance & Compliance">Finance & Compliance</option>
-                    <option value="General Staff">General Staff</option>
-                  </select>
+                  />
                 </div>
 
                 <div>

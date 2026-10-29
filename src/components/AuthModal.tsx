@@ -297,8 +297,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
         avatar: (m.avatar && !m.avatar.includes('.png') && !m.avatar.includes('urbangaon-employee-emblem'))
           ? m.avatar
           : (m.name?.trim().split(/\s+/).length >= 2
-              ? (m.name.trim().split(/\s+/)[0][0] + m.name.trim().split(/\s+/).slice(-1)[0][0]).toUpperCase()
-              : (m.name || 'EM').slice(0, 2).toUpperCase()),
+            ? (m.name.trim().split(/\s+/)[0][0] + m.name.trim().split(/\s+/).slice(-1)[0][0]).toUpperCase()
+            : (m.name || 'EM').slice(0, 2).toUpperCase()),
         aliases: officialMatch?.aliases,
         totalTasks: m.totalTasks ?? 0,
         completedTasks: m.completedTasks ?? 0,
@@ -1671,8 +1671,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                       <label style={{ display: 'block', fontSize: '0.73rem', fontWeight: 700, color: '#334155', marginBottom: '3px' }}>
                         Department *
                       </label>
-                      <select
+                        <input
+                        type="text"
                         required
+                        placeholder="e.g. Sales, Civil, AI & IT Operations..."
                         value={reqDept}
                         onChange={e => setReqDept(e.target.value)}
                         style={{
@@ -1686,17 +1688,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                           color: '#0f172a',
                           boxSizing: 'border-box'
                         }}
-                      >
-                        <option value="">Select Dept...</option>
-                        <option value="Executive Management">Executive Management</option>
-                        <option value="AI & IT Operations">AI & IT Operations</option>
-                        <option value="Full-Stack Engineering">Full-Stack Engineering</option>
-                        <option value="Product & UI/UX">Product & UI/UX</option>
-                        <option value="Talent HR & People">Talent HR & People</option>
-                        <option value="Marketing & Growth">Marketing & Growth</option>
-                        <option value="Client Success & Support">Client Success & Support</option>
-                        <option value="Finance & Compliance">Finance & Compliance</option>
-                      </select>
+                      />
                     </div>
 
                     <div>
@@ -1920,8 +1912,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                                 (emp.avatar && !emp.avatar.includes('.') && emp.avatar.length <= 4)
                                   ? emp.avatar.toUpperCase()
                                   : (emp.name?.trim().split(/\s+/).length >= 2
-                                      ? (emp.name.trim().split(/\s+/)[0][0] + emp.name.trim().split(/\s+/).slice(-1)[0][0]).toUpperCase()
-                                      : (emp.name || 'EM').slice(0, 2).toUpperCase())
+                                    ? (emp.name.trim().split(/\s+/)[0][0] + emp.name.trim().split(/\s+/).slice(-1)[0][0]).toUpperCase()
+                                    : (emp.name || 'EM').slice(0, 2).toUpperCase())
                               )}
                             </div>
                             <div style={{ minWidth: 0 }}>
