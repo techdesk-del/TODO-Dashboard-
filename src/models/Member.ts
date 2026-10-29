@@ -25,6 +25,10 @@ const MemberSchema = new Schema<TeamMember>(
     activeTasks:    { type: Number, default: 0 },
     overdueTasks:   { type: Number, default: 0 },
     velocity:       { type: Number, default: 100 },
+    leaveStartDate: { type: String },
+    leaveEndDate:   { type: String },
+    leaveAction:    { type: String },
+    leaveNotes:     { type: String },
     updatedAt:      { type: String, default: () => new Date().toISOString() },
   },
   { timestamps: false, versionKey: false, strict: false }

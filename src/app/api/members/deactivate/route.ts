@@ -151,6 +151,9 @@ export async function POST(req: NextRequest) {
       {
         $set: {
           status: newStatus,
+          ...(isLongLeave && leaveStartDate ? { leaveStartDate } : {}),
+          ...(isLongLeave && leaveEndDate ? { leaveEndDate } : {}),
+          ...(isLongLeave && reason ? { leaveNotes: reason } : {}),
           activeTasks: 0,
           totalTasks: Math.max(0, (departingMember.totalTasks || 0) - reassignedCount),
           updatedAt: nowIso

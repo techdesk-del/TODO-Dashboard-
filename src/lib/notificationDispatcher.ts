@@ -29,7 +29,9 @@ import {
   sendOverdueAutoFlagEmail,
   sendMorningDigestEmail,
   sendWeeklyDigestEmail,
-  sendConfigRollbackEmail
+  sendConfigRollbackEmail,
+  sendStaffLeaveAlertEmail,
+  sendStaffReturnFromLeaveEmail
 } from './email';
 import type { NotificationEventType, InAppNotification, EmailLog } from '@/types';
 
@@ -119,7 +121,7 @@ export async function dispatchNotificationFlow(
             sendRes = await sendTaskAssignedEmail({
               toEmail: recipient.email,
               toName: recipient.name,
-              taskId: event.taskId || 'N/A',
+              taskId: (event.taskId && event.taskId !== 'N/A') ? event.taskId : '',
               taskTitle: event.taskTitle || event.title,
               scheduledDate: event.metadata?.scheduledDate || '',
               time: event.metadata?.time || '',
@@ -222,6 +224,48 @@ export async function dispatchNotificationFlow(
               previousVersion: event.metadata?.previousVersion || 'Unknown',
               triggeredBy: event.metadata?.triggeredBy || 'Super Admin',
               problemReason: event.metadata?.problemReason || event.message,
+              baseUrl: event.metadata?.baseUrl,
+            });
+            break;
+
+
+          case 'STAFF_LEAVE_ALERT':
+            sendRes = await sendStaffLeaveAlertEmail({
+              toEmail: recipient.email,
+              toName: recipient.name,
+              employeeName: event.metadata?.employeeName || 'Team Member',
+              employeeEmail: event.metadata?.employeeEmail || recipient.email,
+              employeeId: event.metadata?.employeeId || 'EMP',
+              department: event.metadata?.department || 'Operations',
+              designation: event.metadata?.designation || 'Specialist',
+              managerName: event.metadata?.managerName || 'Reporting Manager',
+              leaveStartDate: event.metadata?.leaveStartDate || '',
+              leaveEndDate: event.metadata?.leaveEndDate || '',
+              leaveDaysCount: event.metadata?.leaveDaysCount || 1,
+              taskDueAction: event.metadata?.taskDueAction || 'AUTO_EXTEND',
+              leaveNotes: event.metadata?.notes || 'Authorized staff leave',
+              authorizedBy: event.metadata?.authorizedBy || 'Admin HR',
+              authorizedRole: event.metadata?.authorizedRole || 'ADMIN',
+              totalActiveTasksCount: event.metadata?.totalActiveTasksCount ?? 0,
+              affectedTasks: event.metadata?.affectedTasks || [],
+              otherActiveTasks: event.metadata?.otherActiveTasks || [],
+              baseUrl: event.metadata?.baseUrl,
+            });
+            break;
+
+          case 'STAFF_RETURN_FROM_LEAVE':
+            sendRes = await sendStaffReturnFromLeaveEmail({
+              toEmail: recipient.email,
+              toName: recipient.name,
+              employeeName: event.metadata?.employeeName || 'Team Member',
+              employeeEmail: event.metadata?.employeeEmail || recipient.email,
+              employeeId: event.metadata?.employeeId || 'EMP',
+              department: event.metadata?.department || 'Operations',
+              designation: event.metadata?.designation || 'Specialist',
+              leaveStartDate: event.metadata?.leaveStartDate || 'N/A',
+              leaveEndDate: event.metadata?.leaveEndDate || 'N/A',
+              restoredBy: event.metadata?.restoredBy || 'Admin HR',
+              activeTasksCount: event.metadata?.activeTasksCount ?? 0,
               baseUrl: event.metadata?.baseUrl,
             });
             break;

@@ -120,7 +120,9 @@ export type NotificationEventType =
   | 'WEEKLY_DIGEST'
   | 'CHRONIC_DELAY'
   | 'CONFIG_ROLLBACK'
-  | 'DATA_RETENTION';
+  | 'DATA_RETENTION'
+  | 'STAFF_LEAVE_ALERT'
+  | 'STAFF_RETURN_FROM_LEAVE';
 
 export interface InAppNotification {
   id: string;

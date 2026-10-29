@@ -32,7 +32,10 @@ import {
   Briefcase,
   FileSpreadsheet,
   Printer,
+  ChevronLeft,
   ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   ExternalLink,
   Activity,
   Check,
@@ -78,6 +81,8 @@ export const CeoPortal: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'Not Started' | 'In Progress' | 'Review' | 'Done' | 'On Hold'>('ALL');
   const [departmentFilter, setDepartmentFilter] = useState<string>('ALL');
   const [isMemberDropdownOpen, setIsMemberDropdownOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(8);
   const [inspectingTaskId, setInspectingTaskId] = useState<string | null>(null);
   const inspectingTask = useMemo(() => {
     if (!inspectingTaskId) return null;
@@ -264,6 +269,21 @@ export const CeoPortal: React.FC = () => {
       return a.id.localeCompare(b.id);
     });
   }, [memberFilteredTasks, statusFilter, departmentFilter, searchQuery]);
+
+  // Reset to page 1 when filters or search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedMemberFilter, statusFilter, departmentFilter, searchQuery]);
+
+  // Pagination Calculations for Executive Command Center
+  const totalDisplayedCount = displayedTasks.length;
+  const totalPages = Math.max(1, Math.ceil(totalDisplayedCount / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (safeCurrentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalDisplayedCount);
+  const paginatedTasks = useMemo(() => {
+    return displayedTasks.slice(startIndex, startIndex + pageSize);
+  }, [displayedTasks, startIndex, pageSize]);
 
   // Executive KPI Calculations
   const totalTasksCount = memberFilteredTasks.length;
@@ -1116,9 +1136,24 @@ export const CeoPortal: React.FC = () => {
           borderBottom: '1px solid #e2e8f0',
           background: '#f8fafc'
         }}>
-          <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#334155' }}>
-            Company Deliverables ({displayedTasks.length})
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#334155' }}>
+              Company Deliverables ({displayedTasks.length})
+            </span>
+            {totalDisplayedCount > 0 && (
+              <span style={{
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                color: '#2563eb',
+                background: '#eff6ff',
+                border: '1px solid #bfdbfe',
+                padding: '2px 8px',
+                borderRadius: '6px'
+              }}>
+                Showing {startIndex + 1}–{endIndex} of {totalDisplayedCount}
+              </span>
+            )}
+          </div>
           <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
             <button
               type="button"
@@ -1175,8 +1210,8 @@ export const CeoPortal: React.FC = () => {
               </div>
             ) : (
               <div className="task-cards-list">
-                {displayedTasks.map((task, idx) => (
-                  <TaskCard key={task.id} task={task} index={idx + 1} />
+                {paginatedTasks.map((task, idx) => (
+                  <TaskCard key={task.id} task={task} index={startIndex + idx + 1} />
                 ))}
               </div>
             )}
@@ -1217,13 +1252,14 @@ export const CeoPortal: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {displayedTasks.map((task, idx) => {
+                  {paginatedTasks.map((task, idx) => {
+                    const globalIdx = startIndex + idx + 1;
                     const isOverdue = task.scheduledDate < todayStr && task.status !== 'Done';
                     const isConfirmingDelete = deletingTaskId === task.id;
 
                     return (
                       <tr
-                        key={`${task.id}-${idx}`}
+                        key={`${task.id}-${globalIdx}`}
                         onClick={() => setInspectingTaskId(task.id)}
                         style={{
                           borderBottom: '1px solid #f1f5f9',
@@ -1245,7 +1281,7 @@ export const CeoPortal: React.FC = () => {
                             fontSize: '0.68rem',
                             fontWeight: 800
                           }}>
-                            #{idx + 1}
+                            #{globalIdx}
                           </span>
                         </td>
 
@@ -1744,27 +1780,209 @@ export const CeoPortal: React.FC = () => {
           </>
         )}
 
-        {/* Footer */}
+        {/* Enterprise Pagination & Governance Footer */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
-          gap: '0.5rem',
-          padding: '0.75rem 1.25rem',
+          gap: '0.75rem',
+          padding: '0.85rem 1.25rem',
           background: '#f8fafc',
           borderTop: '1px solid #e2e8f0',
-          fontSize: '0.72rem',
+          fontSize: '0.74rem',
           color: '#64748b'
         }}>
-          <div>
-            Showing <strong>{displayedTasks.length}</strong> of <strong>{memberFilteredTasks.length}</strong> deliverables
-            {activeMember ? ` assigned to ${activeMember.name}` : ' across all corporate staff'}
+          {/* Left: Showing summary & Rows per page */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
+            <div>
+              {totalDisplayedCount > 0 ? (
+                <>
+                  Showing <strong style={{ color: '#0f172a' }}>{startIndex + 1}</strong> to <strong style={{ color: '#0f172a' }}>{endIndex}</strong> of <strong style={{ color: '#0f172a' }}>{totalDisplayedCount}</strong> deliverables
+                  {activeMember ? ` assigned to ${activeMember.name}` : ' across all corporate staff'}
+                </>
+              ) : (
+                <>Showing <strong>0</strong> deliverables</>
+              )}
+            </div>
+
+            {totalDisplayedCount > 0 && (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '0.73rem', color: '#64748b', fontWeight: 600 }}>Per page:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  style={{
+                    padding: '3px 24px 3px 8px',
+                    fontSize: '0.74rem',
+                    fontWeight: 700,
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    background: '#ffffff',
+                    color: '#0f172a',
+                    cursor: 'pointer',
+                    minHeight: '30px',
+                    height: '30px'
+                  }}
+                >
+                  <option value={5}>5</option>
+                  <option value={8}>8</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+            )}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
-            <span>Executive Governance Ledger • Synchronized Real-Time</span>
-          </div>
+
+          {/* Right: Page Navigation Controls */}
+          {totalDisplayedCount > 0 ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => setCurrentPage(1)}
+                disabled={safeCurrentPage <= 1}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '30px',
+                  height: '30px',
+                  minHeight: '30px',
+                  padding: 0,
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1',
+                  background: safeCurrentPage <= 1 ? '#f8fafc' : '#ffffff',
+                  color: safeCurrentPage <= 1 ? '#cbd5e1' : '#334155',
+                  cursor: safeCurrentPage <= 1 ? 'not-allowed' : 'pointer'
+                }}
+                title="First Page"
+              >
+                <ChevronsLeft size={14} />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCurrentPage(Math.max(1, safeCurrentPage - 1))}
+                disabled={safeCurrentPage <= 1}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                  height: '30px',
+                  minHeight: '30px',
+                  padding: '0 8px',
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1',
+                  background: safeCurrentPage <= 1 ? '#f8fafc' : '#ffffff',
+                  color: safeCurrentPage <= 1 ? '#94a3b8' : '#1e293b',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  cursor: safeCurrentPage <= 1 ? 'not-allowed' : 'pointer'
+                }}
+                title="Previous Page"
+              >
+                <ChevronLeft size={14} />
+                <span>Prev</span>
+              </button>
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(p => p === 1 || p === totalPages || Math.abs(p - safeCurrentPage) <= 1)
+                .reduce<(number | 'ellipsis')[]>((acc, p, i, arr) => {
+                  if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push('ellipsis');
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map((item, idx) =>
+                  item === 'ellipsis' ? (
+                    <span key={`ellipsis-${idx}`} style={{ padding: '0 4px', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 700 }}>
+                      …
+                    </span>
+                  ) : (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => setCurrentPage(item)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minWidth: '30px',
+                        height: '30px',
+                        minHeight: '30px',
+                        padding: '0 8px',
+                        borderRadius: '6px',
+                        border: safeCurrentPage === item ? '1px solid #2563eb' : '1px solid #cbd5e1',
+                        background: safeCurrentPage === item ? '#2563eb' : '#ffffff',
+                        color: safeCurrentPage === item ? '#ffffff' : '#334155',
+                        fontSize: '0.74rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        boxShadow: safeCurrentPage === item ? '0 1px 3px rgba(37, 99, 235, 0.25)' : 'none'
+                      }}
+                    >
+                      {item}
+                    </button>
+                  )
+                )}
+
+              <button
+                type="button"
+                onClick={() => setCurrentPage(Math.min(totalPages, safeCurrentPage + 1))}
+                disabled={safeCurrentPage >= totalPages}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                  height: '30px',
+                  minHeight: '30px',
+                  padding: '0 8px',
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1',
+                  background: safeCurrentPage >= totalPages ? '#f8fafc' : '#ffffff',
+                  color: safeCurrentPage >= totalPages ? '#94a3b8' : '#1e293b',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  cursor: safeCurrentPage >= totalPages ? 'not-allowed' : 'pointer'
+                }}
+                title="Next Page"
+              >
+                <span>Next</span>
+                <ChevronRight size={14} />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={safeCurrentPage >= totalPages}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '30px',
+                  height: '30px',
+                  minHeight: '30px',
+                  padding: 0,
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1',
+                  background: safeCurrentPage >= totalPages ? '#f8fafc' : '#ffffff',
+                  color: safeCurrentPage >= totalPages ? '#cbd5e1' : '#334155',
+                  cursor: safeCurrentPage >= totalPages ? 'not-allowed' : 'pointer'
+                }}
+                title="Last Page"
+              >
+                <ChevronsRight size={14} />
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
+              <span>Executive Governance Ledger • Synchronized Real-Time</span>
+            </div>
+          )}
         </div>
       </div>
 

@@ -1179,7 +1179,7 @@ export async function sendTaskAssignmentEmail(opts: SendTaskAssignmentOptions) {
 
   const from = process.env.SMTP_FROM || '"UrbanGaon Task Operations" <techdesk@urbangaon.com>';
   const appBase = getAppBaseUrl(opts.loginUrl);
-  const taskDirectLink = opts.taskId ? `${appBase}/?taskId=${encodeURIComponent(opts.taskId)}` : appBase;
+  const taskDirectLink = (opts.taskId && opts.taskId !== 'N/A' && opts.taskId !== 'undefined') ? `${appBase}/?taskId=${encodeURIComponent(opts.taskId)}` : appBase;
   const executionTime = opts.time || '09:00 AM';
 
   const priorityBg = opts.priority === 'URGENT' ? '#fee2e2' : opts.priority === 'HIGH' ? '#ffedd5' : opts.priority === 'LOW' ? '#f1f5f9' : '#eff6ff';
@@ -1737,7 +1737,7 @@ export async function sendOverdueAutoFlagEmail(opts: SendOverdueAutoFlagOptions)
     const { transporter, isTestAccount } = await createEmailTransporter();
     const from = process.env.SMTP_FROM || '"UrbanGaon Automated Monitor" <alerts@urbangaon.com>';
     const appBase = getAppBaseUrl(opts.baseUrl);
-    const taskDirectLink = opts.taskId ? `${appBase}/?taskId=${encodeURIComponent(opts.taskId)}` : appBase;
+    const taskDirectLink = (opts.taskId && opts.taskId !== 'N/A' && opts.taskId !== 'undefined') ? `${appBase}/?taskId=${encodeURIComponent(opts.taskId)}` : appBase;
 
     const statusBadge = opts.isEscalated
       ? '<span style="background: #fee2e2; color: #b91c1c; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 12px; border: 1px solid #fca5a5;">AUTO-ESCALATED TO MANAGER</span>'
@@ -1896,7 +1896,7 @@ export async function sendTaskCancelledEmail(opts: SendTaskCancelledOptions) {
     const { transporter } = await createEmailTransporter();
     const from = process.env.SMTP_FROM || '"UrbanGaon Task Operations" <techdesk@urbangaon.com>';
     const appBase = getAppBaseUrl(opts.baseUrl);
-    const taskDirectLink = opts.taskId ? `${appBase}/?taskId=${encodeURIComponent(opts.taskId)}` : appBase;
+    const taskDirectLink = (opts.taskId && opts.taskId !== 'N/A' && opts.taskId !== 'undefined') ? `${appBase}/?taskId=${encodeURIComponent(opts.taskId)}` : appBase;
 
     const subject = `[UrbanGaon] Deliverable Cancelled: "${opts.taskTitle}"`;
 
@@ -2059,3 +2059,354 @@ export async function sendConfigRollbackEmail(opts: SendConfigRollbackEmailOptio
   }
 }
 
+
+export interface AffectedLeaveTaskItem {
+  id: string;
+  title: string;
+  originalDueDate: string;
+  scheduledDate: string;
+  time?: string;
+  priority: string;
+  status: string;
+  department: string;
+  creatorName: string;
+  actionApplied: string;
+}
+
+export interface OtherActiveLeaveTaskItem {
+  id: string;
+  title: string;
+  scheduledDate: string;
+  time?: string;
+  priority: string;
+  status: string;
+  department: string;
+  creatorName?: string;
+}
+
+export interface SendStaffLeaveAlertOptions {
+  toEmail: string;
+  toName: string;
+  recipientRoleLabel?: string;
+  employeeName: string;
+  employeeEmail: string;
+  employeeId: string;
+  department: string;
+  designation: string;
+  managerName: string;
+  leaveStartDate: string;
+  leaveEndDate: string;
+  leaveDaysCount: number;
+  taskDueAction: 'AUTO_EXTEND' | 'FLAG_ADMIN';
+  leaveNotes?: string;
+  authorizedBy: string;
+  authorizedRole?: string;
+  totalActiveTasksCount: number;
+  affectedTasks: AffectedLeaveTaskItem[];
+  otherActiveTasks?: OtherActiveLeaveTaskItem[];
+  baseUrl?: string;
+}
+
+/**
+ * Flowchart 23: Dedicated Enterprise Staff Leave & Deliverable Sync Notification Email
+ * Sent to the Employee on Leave, their Reporting Manager, and Task Creators / Stakeholders
+ * with complete leave metadata and full deliverable impact details.
+ */
+export async function sendStaffLeaveAlertEmail(opts: SendStaffLeaveAlertOptions): Promise<{ success: boolean; messageId?: string; isTestAccount?: boolean; error?: string }> {
+  try {
+    const { transporter, isTestAccount } = await createEmailTransporter();
+    const appBase = getAppBaseUrl(opts.baseUrl);
+    const from = process.env.SMTP_FROM || '"UrbanGaon HR & Operations" <techdesk@urbangaon.com>';
+    const logoAttachments = getEmailLogoAttachments();
+
+    const isRecipientEmployeeOnLeave = opts.toEmail.toLowerCase().trim() === opts.employeeEmail.toLowerCase().trim();
+    const policyLabel = opts.taskDueAction === 'AUTO_EXTEND'
+      ? `Auto-Extended to Return Date (${opts.leaveEndDate})`
+      : 'Flagged for Admin / Managerial Review';
+
+    const subject = isRecipientEmployeeOnLeave
+      ? `[UrbanGaon HR & Operations] Official Leave Confirmation & Deliverable Sync (${opts.leaveStartDate} to ${opts.leaveEndDate})`
+      : `[UrbanGaon HR & Operations] Staff Leave Notice: ${opts.employeeName} (${opts.leaveStartDate} to ${opts.leaveEndDate})`;
+
+    const introParagraph = isRecipientEmployeeOnLeave
+      ? `Your official leave schedule (<strong>${opts.leaveStartDate}</strong> to <strong>${opts.leaveEndDate}</strong>) has been registered and synchronized in the UrbanGaon workspace by <strong>${opts.authorizedBy}</strong>. During your leave window, your profile is marked <strong>ON LEAVE</strong>, automated daily reminders are paused, and your active deliverables have been synchronized below.`
+      : `Please be advised that team member <strong>${opts.employeeName}</strong> (<strong>${opts.designation}</strong>, <strong>${opts.department}</strong>) has been officially placed <strong>On Leave</strong> from <strong>${opts.leaveStartDate}</strong> to <strong>${opts.leaveEndDate}</strong> by <strong>${opts.authorizedBy}</strong>. Automated reminders for this employee are paused during the leave window, and all active deliverables have been evaluated below.`;
+
+    const otherTasks = opts.otherActiveTasks || [];
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+  <style>
+    body { margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; color: #1e293b; -webkit-font-smoothing: antialiased; }
+    .email-container { max-width: 620px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #cbd5e1; overflow: hidden; box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08); }
+    .email-body { padding: 28px; font-size: 14px; line-height: 1.6; color: #334155; }
+    .greeting { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
+    .profile-card { background: #fffbeb; border: 1px solid #fde68a; border-top: 4px solid #d97706; border-radius: 8px; padding: 18px 20px; margin: 20px 0; }
+    .section-heading { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: #92400e; margin: 0 0 12px 0; border-bottom: 1px solid #fde68a; padding-bottom: 8px; }
+    .meta-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .meta-table td { padding: 6px 0; vertical-align: top; border-bottom: 1px dashed #fef3c7; }
+    .meta-table tr:last-child td { border-bottom: none; }
+    .meta-label { color: #78350f; font-weight: 600; width: 42%; }
+    .meta-value { color: #0f172a; font-weight: 700; text-align: right; }
+    .leave-badge { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; background: #fef3c7; color: #b45309; border: 1px solid #f59e0b; }
+    .policy-badge { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; background: ${opts.taskDueAction === 'AUTO_EXTEND' ? '#eff6ff' : '#fff7ed'}; color: ${opts.taskDueAction === 'AUTO_EXTEND' ? '#1d4ed8' : '#c2410c'}; border: 1px solid ${opts.taskDueAction === 'AUTO_EXTEND' ? '#bfdbfe' : '#fdba74'}; }
+    .kpi-row { width: 100%; border-collapse: separate; border-spacing: 8px 0; margin: 18px -8px; }
+    .kpi-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center; width: 33.33%; }
+    .kpi-num { font-size: 20px; font-weight: 800; color: #0f172a; line-height: 1.2; }
+    .kpi-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #64748b; margin-top: 4px; letter-spacing: 0.04em; }
+    .task-item { background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #2563eb; border-radius: 6px; padding: 14px; margin-bottom: 10px; }
+    .task-item-flagged { border-left-color: #ea580c; background: #fff7ed; border-color: #fed7aa; }
+    .cta-container { text-align: center; margin: 28px 0 18px 0; }
+    .cta-button { display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff !important; padding: 14px 34px; border-radius: 8px; font-weight: 800; font-size: 15px; text-decoration: none; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35); }
+    .email-footer { background: #f8fafc; padding: 18px 24px; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0; text-align: center; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    ${getEmailHeaderHtml('Human Resources & Operations Governance | Staff Leave & Deliverable Sync', appBase)}
+    <div class="email-body">
+      <div class="greeting">Dear ${opts.toName},</div>
+      <p style="margin: 0 0 16px 0;">${introParagraph}</p>
+
+      <!-- Section 1: Employee & Leave Details -->
+      <div class="profile-card">
+        <div class="section-heading">Official Employee &amp; Leave Registration Details</div>
+        <table class="meta-table">
+          <tr>
+            <td class="meta-label">Employee Name &amp; ID:</td>
+            <td class="meta-value">${opts.employeeName} <span style="color: #64748b; font-weight: 600;">(${opts.employeeId})</span></td>
+          </tr>
+          <tr>
+            <td class="meta-label">Department &amp; Designation:</td>
+            <td class="meta-value">${opts.department} &bull; ${opts.designation}</td>
+          </tr>
+          <tr>
+            <td class="meta-label">Corporate Email:</td>
+            <td class="meta-value" style="color: #2563eb;">${opts.employeeEmail}</td>
+          </tr>
+          <tr>
+            <td class="meta-label">Reporting Manager:</td>
+            <td class="meta-value">${opts.managerName}</td>
+          </tr>
+          <tr>
+            <td class="meta-label">Current Profile Status:</td>
+            <td class="meta-value"><span class="leave-badge">ON LEAVE</span></td>
+          </tr>
+          <tr>
+            <td class="meta-label">Leave Start Date:</td>
+            <td class="meta-value">${opts.leaveStartDate}</td>
+          </tr>
+          <tr>
+            <td class="meta-label">Leave End / Return Date:</td>
+            <td class="meta-value">${opts.leaveEndDate}</td>
+          </tr>
+          <tr>
+            <td class="meta-label">Total Leave Duration:</td>
+            <td class="meta-value">${opts.leaveDaysCount} Day${opts.leaveDaysCount === 1 ? '' : 's'}</td>
+          </tr>
+          <tr>
+            <td class="meta-label">Deliverable Policy Applied:</td>
+            <td class="meta-value"><span class="policy-badge">${policyLabel}</span></td>
+          </tr>
+          <tr>
+            <td class="meta-label">Reminder &amp; SLA Engine:</td>
+            <td class="meta-value" style="color: #059669;">Paused until ${opts.leaveEndDate} (Auto-Restores)</td>
+          </tr>
+          <tr>
+            <td class="meta-label">Authorized / Logged By:</td>
+            <td class="meta-value">${opts.authorizedBy}${opts.authorizedRole ? ` (${opts.authorizedRole})` : ''}</td>
+          </tr>
+          <tr>
+            <td class="meta-label">Leave Notes / Reason:</td>
+            <td class="meta-value">${opts.leaveNotes || 'Authorized staff leave'}</td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Section 2: Deliverable Impact Summary -->
+      <table class="kpi-row">
+        <tr>
+          <td class="kpi-box">
+            <div class="kpi-num">${opts.totalActiveTasksCount}</div>
+            <div class="kpi-lbl">Total Active Tasks</div>
+          </td>
+          <td class="kpi-box" style="background: #fffbeb; border-color: #fde68a;">
+            <div class="kpi-num" style="color: #d97706;">${opts.affectedTasks.length}</div>
+            <div class="kpi-lbl" style="color: #92400e;">Due During Leave</div>
+          </td>
+          <td class="kpi-box" style="background: #eff6ff; border-color: #bfdbfe;">
+            <div class="kpi-num" style="color: #2563eb;">${otherTasks.length}</div>
+            <div class="kpi-lbl" style="color: #1e40af;">Other Active Tasks</div>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Affected Deliverables List -->
+      <div style="font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #0f172a; margin: 22px 0 10px 0;">
+        Deliverables Due Within Leave Window (${opts.leaveStartDate} to ${opts.leaveEndDate})
+      </div>
+      ${opts.affectedTasks.length === 0 ? `
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; font-size: 13px; color: #166534; font-weight: 600;">
+          &#10003; Zero active deliverables had deadlines falling within ${opts.leaveStartDate} to ${opts.leaveEndDate}. No deadline adjustments were required.
+        </div>
+      ` : opts.affectedTasks.map(t => {
+        const taskUrl = `${appBase}/?taskId=${encodeURIComponent(t.id)}`;
+        const isFlagged = opts.taskDueAction === 'FLAG_ADMIN';
+        return `
+        <div class="task-item ${isFlagged ? 'task-item-flagged' : ''}">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+            <span style="font-size: 14px; font-weight: 800; color: #0f172a;">#${t.id} &mdash; ${t.title}</span>
+          </div>
+          <div style="font-size: 12px; color: #475569; margin-bottom: 6px; line-height: 1.5;">
+            <strong>Priority:</strong> ${t.priority} &nbsp;|&nbsp;
+            <strong>Status:</strong> ${t.status} &nbsp;|&nbsp;
+            <strong>Department:</strong> ${t.department} &nbsp;|&nbsp;
+            <strong>Assigned By:</strong> ${t.creatorName}
+          </div>
+          <div style="font-size: 12px; color: #0f172a; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 5px; padding: 8px 10px; margin-top: 6px;">
+            <div><strong>Original Deadline:</strong> ${t.originalDueDate} at ${t.time || '05:00 PM'}</div>
+            <div style="margin-top: 3px;"><strong>Updated Deadline:</strong> <span style="color: #2563eb; font-weight: 800;">${t.scheduledDate} at ${t.time || '05:00 PM'}</span></div>
+            <div style="margin-top: 3px;"><strong>Policy Action:</strong> <span style="color: ${isFlagged ? '#c2410c' : '#059669'}; font-weight: 700;">${t.actionApplied}</span></div>
+          </div>
+          <div style="margin-top: 8px;">
+            <a href="${taskUrl}" target="_blank" style="font-size: 12px; font-weight: 700; color: #2563eb; text-decoration: none;">
+              Open Deliverable #${t.id} in Workspace &rarr;
+            </a>
+          </div>
+        </div>
+        `;
+      }).join('')}
+
+      ${otherTasks.length > 0 ? `
+        <div style="font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #475569; margin: 22px 0 10px 0;">
+          Other Active Deliverables Assigned to ${opts.employeeName} (${otherTasks.length})
+        </div>
+        ${otherTasks.slice(0, 10).map(t => {
+          const taskUrl = `${appBase}/?taskId=${encodeURIComponent(t.id)}`;
+          return `
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 14px; margin-bottom: 8px; font-size: 12px;">
+            <div style="font-weight: 800; color: #0f172a; font-size: 13px;">#${t.id} &mdash; ${t.title}</div>
+            <div style="color: #64748b; margin-top: 3px;">
+              <strong>Due:</strong> ${t.scheduledDate} at ${t.time || '05:00 PM'} &nbsp;|&nbsp;
+              <strong>Priority:</strong> ${t.priority} &nbsp;|&nbsp;
+              <strong>Status:</strong> ${t.status} &nbsp;|&nbsp;
+              <a href="${taskUrl}" target="_blank" style="color: #2563eb; font-weight: 700; text-decoration: none;">View &rarr;</a>
+            </div>
+          </div>
+          `;
+        }).join('')}
+      ` : ''}
+
+      <div class="cta-container">
+        <a href="${appBase}" target="_blank" class="cta-button">
+          🚀 Open Workspace
+        </a>
+        <div style="margin-top: 10px; font-size: 12px; color: #64748b;">
+          Direct Access: <a href="${appBase}" target="_blank" style="color: #2563eb; text-decoration: underline;">${appBase}</a>
+        </div>
+      </div>
+    </div>
+    <div class="email-footer">
+      UrbanGaon Technologies Private Limited | HR &amp; Operations Management System<br>
+      Automated leave governance dispatch sent to ${opts.toEmail}.
+    </div>
+  </div>
+</body>
+</html>`;
+
+    const info = await transporter.sendMail({
+      from,
+      to: opts.toEmail,
+      subject,
+      html,
+      attachments: logoAttachments,
+    });
+
+    return { success: true, messageId: info.messageId, isTestAccount };
+  } catch (err: any) {
+    console.warn('[Staff Leave Alert Email Error]:', err);
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+
+export interface SendStaffReturnFromLeaveOptions {
+  toEmail: string;
+  toName: string;
+  employeeName: string;
+  employeeEmail: string;
+  employeeId: string;
+  department: string;
+  designation: string;
+  leaveStartDate: string;
+  leaveEndDate: string;
+  restoredBy: string;
+  activeTasksCount: number;
+  baseUrl?: string;
+}
+
+/**
+ * Flowchart 23 Node 7: Staff Return from Leave Confirmation Email
+ */
+export async function sendStaffReturnFromLeaveEmail(opts: SendStaffReturnFromLeaveOptions): Promise<{ success: boolean; messageId?: string; isTestAccount?: boolean; error?: string }> {
+  try {
+    const { transporter, isTestAccount } = await createEmailTransporter();
+    const appBase = getAppBaseUrl(opts.baseUrl);
+    const from = process.env.SMTP_FROM || '"UrbanGaon HR & Operations" <techdesk@urbangaon.com>';
+    const logoAttachments = getEmailLogoAttachments();
+
+    const subject = `[UrbanGaon HR & Operations] Return from Leave & Active Status Restored: ${opts.employeeName}`;
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+</head>
+<body style="margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f1f5f9; color: #1e293b;">
+  <div style="max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #cbd5e1; overflow: hidden; box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);">
+    ${getEmailHeaderHtml('Human Resources & Operations Governance | Return from Leave', appBase)}
+    <div style="padding: 28px; font-size: 14px; line-height: 1.6; color: #334155;">
+      <div style="font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 8px;">Dear ${opts.toName},</div>
+      <p style="margin: 0 0 16px 0;">
+        This notice confirms that <strong>${opts.employeeName}</strong> (<strong>${opts.designation}</strong>, <strong>${opts.department}</strong>) has returned from leave and their workspace profile has been restored to <strong>ACTIVE</strong> status by <strong>${opts.restoredBy}</strong>.
+      </p>
+      <div style="background: #f0fdf4; border: 1px solid #86efac; border-top: 4px solid #16a34a; border-radius: 8px; padding: 16px 18px; margin: 18px 0; font-size: 13px;">
+        <div style="margin-bottom: 6px;"><strong>Employee:</strong> ${opts.employeeName} (${opts.employeeId})</div>
+        <div style="margin-bottom: 6px;"><strong>Department &amp; Role:</strong> ${opts.department} &bull; ${opts.designation}</div>
+        <div style="margin-bottom: 6px;"><strong>Completed Leave Window:</strong> ${opts.leaveStartDate} to ${opts.leaveEndDate}</div>
+        <div style="margin-bottom: 6px;"><strong>Restored Status:</strong> <span style="background: #dcfce7; color: #15803d; padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 11px;">ACTIVE</span></div>
+        <div style="margin-bottom: 6px;"><strong>Automated Reminders &amp; SLA:</strong> Resumed &amp; Active</div>
+        <div><strong>Active Deliverables in Queue:</strong> ${opts.activeTasksCount} deliverable(s)</div>
+      </div>
+      <div style="text-align: center; margin: 26px 0 16px 0;">
+        <a href="${appBase}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff !important; padding: 13px 30px; border-radius: 8px; font-weight: 800; font-size: 14px; text-decoration: none;">
+          🚀 Open Workspace
+        </a>
+      </div>
+    </div>
+    <div style="background: #f8fafc; padding: 16px 24px; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0; text-align: center;">
+      UrbanGaon Technologies Private Limited | HR &amp; Operations Management System
+    </div>
+  </div>
+</body>
+</html>`;
+
+    const info = await transporter.sendMail({
+      from,
+      to: opts.toEmail,
+      subject,
+      html,
+      attachments: logoAttachments,
+    });
+
+    return { success: true, messageId: info.messageId, isTestAccount };
+  } catch (err: any) {
+    console.warn('[Staff Return Email Error]:', err);
+    return { success: false, error: err?.message || String(err) };
+  }
+}
