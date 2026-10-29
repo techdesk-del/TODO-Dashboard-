@@ -472,14 +472,25 @@ export const CalendarView: React.FC = () => {
             {/* Days Grid */}
             <div className="cal-days-grid" style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(7, 1fr)',
-              gridAutoRows: 'minmax(120px, auto)'
+              gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
+              gridAutoRows: 'minmax(120px, auto)',
+              width: '100%',
+              boxSizing: 'border-box'
             }}>
               {/* Previous month padding */}
               {prevMonthDays.map(prevDay => (
                 <div 
                   key={`prev-${prevDay}`} 
-                  style={{ background: '#f8fafc', border: '1px solid #f1f5f9', padding: '0.5rem', color: '#cbd5e1', fontSize: '0.8rem' }}
+                  style={{
+                    background: '#f8fafc',
+                    border: '1px solid #f1f5f9',
+                    padding: '0.5rem',
+                    color: '#cbd5e1',
+                    fontSize: '0.8rem',
+                    minWidth: 0,
+                    width: '100%',
+                    boxSizing: 'border-box'
+                  }}
                 >
                   {prevDay}
                 </div>
@@ -521,7 +532,14 @@ export const CalendarView: React.FC = () => {
                               : '#ffffff',
                       display: 'flex',
                       flexDirection: 'column',
+                      alignItems: 'stretch',
+                      justifyContent: 'flex-start',
                       gap: '0.35rem',
+                      width: '100%',
+                      minWidth: 0,
+                      maxWidth: '100%',
+                      overflow: 'hidden',
+                      boxSizing: 'border-box',
                       transition: 'all 0.15s ease'
                     }}
                     title={holiday ? `${holiday.name} — Official Holiday` : `Click to view and manage tasks for ${dateStr}`}
@@ -606,7 +624,16 @@ export const CalendarView: React.FC = () => {
                     )}
 
                     {/* Tasks List for Day */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', overflow: 'hidden' }}>
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '3px',
+                      overflow: 'hidden',
+                      width: '100%',
+                      minWidth: 0,
+                      maxWidth: '100%',
+                      boxSizing: 'border-box'
+                    }}>
                       {dayTasks.slice(0, 3).map(t => {
                         const taskOverdue = isOverdue(t);
                         return (
@@ -630,7 +657,12 @@ export const CalendarView: React.FC = () => {
                               whiteSpace: 'nowrap',
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
-                              cursor: 'pointer'
+                              cursor: 'pointer',
+                              width: '100%',
+                              minWidth: 0,
+                              maxWidth: '100%',
+                              boxSizing: 'border-box',
+                              display: 'block'
                             }}
                             title={`${t.title} [${t.status}] — Click for detail popup`}
                           >
@@ -654,7 +686,16 @@ export const CalendarView: React.FC = () => {
               {nextMonthDays.map(nextDay => (
                 <div 
                   key={`next-${nextDay}`} 
-                  style={{ background: '#f8fafc', border: '1px solid #f1f5f9', padding: '0.5rem', color: '#cbd5e1', fontSize: '0.8rem' }}
+                  style={{
+                    background: '#f8fafc',
+                    border: '1px solid #f1f5f9',
+                    padding: '0.5rem',
+                    color: '#cbd5e1',
+                    fontSize: '0.8rem',
+                    minWidth: 0,
+                    width: '100%',
+                    boxSizing: 'border-box'
+                  }}
                 >
                   {nextDay}
                 </div>
