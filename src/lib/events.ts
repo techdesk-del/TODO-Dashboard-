@@ -66,6 +66,7 @@ export function broadcastTaskMutation(payload: {
 export function broadcastMemberMutation(payload: {
   action: 'CREATED' | 'UPDATED' | 'DEACTIVATED' | 'DELETED';
   memberId: string;
+  oldMemberId?: string;
   memberName?: string;
   memberEmail?: string;
   oldEmail?: string;

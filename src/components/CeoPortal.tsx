@@ -570,6 +570,8 @@ export const CeoPortal: React.FC = () => {
           </div>
         </div>
 
+
+
         {/* KPI 3: Bottleneck Watch */}
         <div style={{
           background: '#ffffff',

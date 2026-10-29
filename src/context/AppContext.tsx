@@ -291,6 +291,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               return { ...m, department: normalizedDept, designation: normalizedDesig };
             });
           setMembers(filteredMembers);
+          try {
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('urbangaon_members_v2', JSON.stringify(filteredMembers));
+            }
+          } catch { }
 
           // Live session sync: If this user's email/name/status was updated on another PC by an Admin, synchronize currentUser seamlessly
           setCurrentUser(curr => {
@@ -444,6 +449,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ── Load persisted data / fetch from API on mount
   useEffect(() => {
     // Check localStorage first for instant hydration
+    try {
+      const cachedMembers = localStorage.getItem('urbangaon_members_v2');
+      if (cachedMembers) {
+        const parsed = JSON.parse(cachedMembers);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMembers(parsed);
+        }
+      }
+    } catch { }
+
     try {
       const cachedPurged = localStorage.getItem('urbangaon_purged_members_v1');
       if (cachedPurged) {
@@ -681,18 +696,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               const memberId = data.memberId || updatedMemberData.id;
 
               // 1. Immediately update members list in memory across all connected PCs
-              setMembers(prev => prev.map(m => {
-                const isMatch = (memberId && m.id === memberId) ||
-                  (oldEmail && m.email?.toLowerCase() === oldEmail) ||
-                  (newEmail && m.email?.toLowerCase() === newEmail);
-                if (!isMatch) return m;
-                return {
-                  ...m,
-                  ...updatedMemberData,
-                  ...(newEmail ? { email: newEmail } : {}),
-                  ...(newName ? { name: newName } : {})
-                };
-              }));
+              setMembers(prev => {
+                const next = prev.map(m => {
+                  const isMatch = (memberId && m.id === memberId) ||
+                    (data.oldMemberId && m.id === data.oldMemberId) ||
+                    (oldEmail && m.email?.toLowerCase() === oldEmail) ||
+                    (newEmail && m.email?.toLowerCase() === newEmail);
+                  if (!isMatch) return m;
+                  return {
+                    ...m,
+                    ...updatedMemberData,
+                    ...(newEmail ? { email: newEmail } : {}),
+                    ...(newName ? { name: newName } : {})
+                  };
+                });
+                try {
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem('urbangaon_members_v2', JSON.stringify(next));
+                  }
+                } catch { }
+                return next;
+              });
 
               // 2. Immediately cascade new email/name into task assignees & creator across all devices
               if (newEmail || newName) {
@@ -1794,16 +1818,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     reason?: string
   ): Promise<{ success: boolean; member?: TeamMember; error?: string }> => {
     try {
+      const oldMember = members.find(m => m.id === memberId || (m as any)._id === memberId);
+      const oldMemberEmail = oldMember?.email?.toLowerCase();
+      const targetEmpId = updates.employeeId || updates.id || memberId;
+
+      const payload = {
+        targetMemberId: memberId,
+        id: memberId,
+        currentEmail: oldMemberEmail,
+        newEmployeeId: targetEmpId,
+        employeeId: targetEmpId,
+        ...updates,
+        reason,
+        actor: currentUser.name || 'Admin / Talent HR',
+        actorRole: currentUser.role || 'ADMIN',
+      };
+
       const res = await fetch('/api/members', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: memberId,
-          ...updates,
-          reason,
-          actor: currentUser.name || 'Admin / Talent HR',
-          actorRole: currentUser.role || 'ADMIN',
-        }),
+        body: JSON.stringify(payload),
       });
 
       const json = await res.json().catch(() => ({}));
@@ -1811,14 +1845,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         throw new Error(json.error || 'Failed to update employee details.');
       }
 
-      const updatedMember = json.data as TeamMember;
-      const oldMemberEmail = members.find(m => m.id === memberId)?.email.toLowerCase();
+      const updatedMember = (json.data || { ...oldMember, ...updates, id: targetEmpId, employeeId: targetEmpId }) as TeamMember;
 
-      // Update members in state
-      setMembers(prev => prev.map(m => m.id === memberId ? { ...m, ...updatedMember } : m));
+      // Update members in state immediately (optimistic & accurate)
+      setMembers(prev => {
+        const next = prev.map(m => {
+          const isMatch = m.id === memberId ||
+            (oldMemberEmail && m.email?.toLowerCase() === oldMemberEmail) ||
+            (updatedMember?.id && m.id === updatedMember.id) ||
+            ((m as any)._id && (m as any)._id === (updatedMember as any)?._id);
+          return isMatch ? { ...m, ...updatedMember } : m;
+        });
+        try {
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('urbangaon_members_v2', JSON.stringify(next));
+          }
+        } catch { }
+        return next;
+      });
 
       // If current user is being updated, sync current user & storage
-      if (currentUser.id === memberId || (oldMemberEmail && currentUser.email?.toLowerCase() === oldMemberEmail)) {
+      if (currentUser.id === memberId || (oldMemberEmail && currentUser.email?.toLowerCase() === oldMemberEmail) || currentUser.id === updatedMember.id) {
         const synced = { ...currentUser, ...updatedMember };
         setCurrentUser(synced);
         try {
@@ -1827,27 +1874,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         } catch { }
       }
 
-      // If email or name was updated, sync task assignees and creator in local state immediately
-      if (updates.email || updates.name) {
+      // If email, name, designation, role or ID was updated, sync task assignees and creator in local state immediately
+      if (updates.email || updates.name || updates.designation || updates.id || updates.employeeId || updates.role) {
         setTasks(prev => prev.map(t => {
           let hasChange = false;
           const newAssignees = t.assignees.map(a => {
-            if (a.id === memberId || (oldMemberEmail && a.email?.toLowerCase() === oldMemberEmail)) {
+            if (a.id === memberId || (oldMemberEmail && a.email?.toLowerCase() === oldMemberEmail) || a.id === targetEmpId) {
               hasChange = true;
               return {
                 ...a,
+                id: targetEmpId,
                 ...(updates.email ? { email: updates.email } : {}),
                 ...(updates.name ? { name: updates.name } : {}),
+                ...(updates.designation ? { designation: updates.designation } : {}),
                 ...(updatedMember.avatar ? { avatar: updatedMember.avatar } : {})
               };
             }
             return a;
           });
-          const isCreatorMatch = t.creator.id === memberId || (oldMemberEmail && t.creator.email?.toLowerCase() === oldMemberEmail);
+          const isCreatorMatch = t.creator.id === memberId || (oldMemberEmail && t.creator.email?.toLowerCase() === oldMemberEmail) || t.creator.id === targetEmpId;
           const newCreator = isCreatorMatch ? {
             ...t.creator,
+            id: targetEmpId,
             ...(updates.email ? { email: updates.email } : {}),
-            ...(updates.name ? { name: updates.name } : {})
+            ...(updates.name ? { name: updates.name } : {}),
+            ...(updates.role ? { role: updates.role } : {})
           } : t.creator;
           if (newCreator !== t.creator) hasChange = true;
 
@@ -1867,6 +1918,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         message: json.message || `Employee ${updatedMember.name} updated successfully.`,
         badge: '✓ Employee Updated'
       });
+
+      // Synchronize with database in background
+      await refreshMembersFromDB();
 
       return { success: true, member: updatedMember };
     } catch (err: unknown) {
@@ -1966,22 +2020,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } catch { }
 
       // Sync members list in state
-      setMembers(prev => prev.map(m => {
-        if (m.id === currentUser.id || m.id === finalId || (currentUser.email && m.email?.toLowerCase() === currentUser.email.toLowerCase())) {
-          return {
-            ...m,
-            id: finalId,
-            employeeId: finalId,
-            name: finalName,
-            email: finalEmail,
-            role: finalRole,
-            designation: finalDesignation,
-            department: finalDepartment,
-            avatar: finalAvatar
-          };
-        }
-        return m;
-      }));
+      setMembers(prev => {
+        const next = prev.map(m => {
+          if (m.id === currentUser.id || m.id === finalId || (currentUser.email && m.email?.toLowerCase() === currentUser.email.toLowerCase())) {
+            return {
+              ...m,
+              id: finalId,
+              employeeId: finalId,
+              name: finalName,
+              email: finalEmail,
+              role: finalRole,
+              designation: finalDesignation,
+              department: finalDepartment,
+              avatar: finalAvatar
+            };
+          }
+          return m;
+        });
+        try {
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('urbangaon_members_v2', JSON.stringify(next));
+          }
+        } catch { }
+        return next;
+      });
 
       // Sync tasks state immediately for both assignees and creator
       setTasks(prev => prev.map(t => {
@@ -2012,6 +2074,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         message: `Profile updated successfully (${finalDesignation ? `${finalDesignation} • ` : ''}ID: ${finalId}).`,
         badge: '✓ Profile Updated'
       });
+
+      await refreshMembersFromDB();
 
       return { success: true, member: syncedUser };
     } catch (err: unknown) {

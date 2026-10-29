@@ -38,8 +38,6 @@ export async function GET() {
   try {
     await connectDB();
     await seedMembersIfEmpty();
-    // Keep roster in sync with official designations and roles
-    await syncOfficialRosterToDB().catch(() => {});
 
     const purgedRecords = await PurgedMemberModel.find({}).lean().exec();
     const purgedIds = new Set(purgedRecords.map(p => p.id));
@@ -316,7 +314,12 @@ export async function PATCH(req: NextRequest) {
     const body = await req.json();
     const {
       id,
+      targetMemberId,
+      memberId: paramMemberId,
+      _id,
       email,
+      currentEmail: inputCurrentEmail,
+      oldEmail: inputOldEmail,
       name,
       department,
       designation,
@@ -333,14 +336,25 @@ export async function PATCH(req: NextRequest) {
       updateTaskAssignees = true,
     } = body;
 
-    if (!id && !email) {
+    const lookupId = (targetMemberId || paramMemberId || id || '').trim();
+    const currentEmail = (inputCurrentEmail || inputOldEmail || '').trim().toLowerCase();
+    const cleanInputEmail = email && typeof email === 'string' ? email.trim().toLowerCase() : '';
+
+    if (!lookupId && !_id && !currentEmail && !cleanInputEmail) {
       return NextResponse.json({ success: false, error: 'Member ID or Email is required for updates.' }, { status: 400 });
     }
 
-    const cleanInputEmail = email && typeof email === 'string' ? email.trim().toLowerCase() : '';
     let member = null;
-    if (id && id !== 'guest') {
-      member = await MemberModel.findOne({ id }).exec();
+    if (_id) {
+      member = await MemberModel.findById(_id).exec();
+    }
+    if (!member && lookupId && lookupId !== 'guest') {
+      member = await MemberModel.findOne({
+        $or: [{ id: lookupId }, { employeeId: lookupId }]
+      }).exec();
+    }
+    if (!member && currentEmail) {
+      member = await MemberModel.findOne({ email: currentEmail }).exec();
     }
     if (!member && cleanInputEmail) {
       member = await MemberModel.findOne({ email: cleanInputEmail }).exec();
@@ -552,10 +566,11 @@ export async function PATCH(req: NextRequest) {
     broadcastMemberMutation({
       action: 'UPDATED',
       memberId: finalId,
+      oldMemberId: memberId,
       memberName: updatedMember?.name || oldName,
       memberEmail: updatedMember?.email || oldEmail,
       oldEmail: oldEmail,
-      member: updatedMember
+      member: updatedMember ? (updatedMember.toObject ? updatedMember.toObject() : updatedMember) : null
     });
 
     // Flowchart 12: Audit Log entry

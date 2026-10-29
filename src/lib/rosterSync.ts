@@ -26,6 +26,8 @@ export async function syncOfficialRosterToDB(): Promise<void> {
     const purgedIds = new Set(purgedRecords.map(p => p.id));
     const purgedEmails = new Set(purgedRecords.map(p => p.email.toLowerCase().trim()));
 
+    const existingMemberCount = await MemberModel.countDocuments();
+
     for (const emp of OFFICIAL_ROSTER) {
       const empEmailClean = emp.email.toLowerCase().trim();
       const empAliases = emp.aliases ? emp.aliases.map(a => a.toLowerCase().trim()) : [];
@@ -40,7 +42,7 @@ export async function syncOfficialRosterToDB(): Promise<void> {
         continue;
       }
 
-      // 1. Ensure MemberModel record exists — NEVER overwrite user-updated name, email, avatar or status!
+      // 1. Ensure MemberModel record exists — NEVER overwrite user-updated role, designation, department, name, or email!
       const existingMember = await MemberModel.findOne({
         $or: [
           { id: emp.id },
@@ -50,44 +52,47 @@ export async function syncOfficialRosterToDB(): Promise<void> {
       });
 
       if (!existingMember) {
-        await MemberModel.create({
-          id: emp.id,
-          name: emp.name,
-          email: empEmailClean,
-          role: emp.role,
-          designation: emp.designation,
-          department: emp.department,
-          avatar: emp.avatar,
-          status: 'ACTIVE',
-          totalTasks: emp.totalTasks ?? 0,
-          completedTasks: emp.completedTasks ?? 0,
-          activeTasks: emp.activeTasks ?? 0,
-          overdueTasks: emp.overdueTasks ?? 0,
-          velocity: emp.velocity ?? 100,
-        });
+        // ONLY seed if database was completely empty; never re-insert employees whose email/ID was edited by admin
+        if (existingMemberCount === 0) {
+          await MemberModel.create({
+            id: emp.id,
+            name: emp.name,
+            email: empEmailClean,
+            role: emp.role,
+            designation: emp.designation,
+            department: emp.department,
+            avatar: emp.avatar,
+            status: 'ACTIVE',
+            totalTasks: emp.totalTasks ?? 0,
+            completedTasks: emp.completedTasks ?? 0,
+            activeTasks: emp.activeTasks ?? 0,
+            overdueTasks: emp.overdueTasks ?? 0,
+            velocity: emp.velocity ?? 100,
+          });
+        }
       } else {
-        // Member already exists in database; backfill missing core fields or enforce official role changes
+        // Member already exists in database; ONLY backfill strictly missing (undefined/empty) fields
+        // NEVER overwrite role, designation, department, name, or email updated by Admin!
         const missingFields: Record<string, unknown> = {};
-        if (emp.id === 'mem-8' || empEmailClean.includes('kanchan.jain') || empEmailClean.includes('frontdesk')) {
-          missingFields.role = 'EMPLOYEE';
-          missingFields.department = 'Front Desk';
-          missingFields.designation = emp.designation || 'Front Desk Specialist';
-        } else if (!existingMember.role) {
-          missingFields.role = emp.role;
-        }
-        if (emp.id === 'mem-1' || empEmailClean === 'ceo@urbangaon.com' || existingMember.department === 'Leadership & CEO Desk' || existingMember.department === 'Leadership & CEO') {
-          missingFields.department = 'Founder & CEO';
-          missingFields.designation = 'Founder & CEO';
-        }
-        if (!existingMember.designation) missingFields.designation = emp.designation;
-        if (!existingMember.department) missingFields.department = emp.department;
+        if (!existingMember.role && emp.role) missingFields.role = emp.role;
+        if (!existingMember.designation && emp.designation) missingFields.designation = emp.designation;
+        if (!existingMember.department && emp.department) missingFields.department = emp.department;
         if (!existingMember.status) missingFields.status = 'ACTIVE';
+
+        // Legacy cleanup only for mem-1 / ceo
+        if (emp.id === 'mem-1' || empEmailClean === 'ceo@urbangaon.com') {
+          if (existingMember.department === 'Leadership & CEO Desk' || existingMember.department === 'Leadership & CEO') {
+            missingFields.department = 'Founder & CEO';
+            missingFields.designation = 'Founder & CEO';
+          }
+        }
+
         if (Object.keys(missingFields).length > 0) {
           await MemberModel.updateOne({ _id: existingMember._id }, { $set: missingFields });
         }
       }
 
-      // 2. Ensure UserModel record exists — NEVER overwrite user-updated name or email!
+      // 2. Ensure UserModel record exists — NEVER overwrite user-updated fields!
       const existingUser = await UserModel.findOne({
         $or: [
           { id: emp.id },
@@ -98,34 +103,32 @@ export async function syncOfficialRosterToDB(): Promise<void> {
       });
 
       if (!existingUser) {
-        await UserModel.create({
-          id: existingMember?.id || emp.id,
-          name: existingMember?.name || emp.name,
-          email: existingMember?.email?.toLowerCase().trim() || empEmailClean,
-          passwordHash: defaultPasswordHash,
-          role: emp.id === 'mem-8' ? 'EMPLOYEE' : (existingMember?.role || emp.role),
-          department: existingMember?.department || emp.department,
-          designation: existingMember?.designation || emp.designation,
-          avatar: existingMember?.avatar || emp.avatar,
-          isTwoFactorEnabled: false,
-          createdAt: new Date().toISOString(),
-        });
+        if (existingMemberCount === 0 || existingMember) {
+          await UserModel.create({
+            id: existingMember?.id || emp.id,
+            name: existingMember?.name || emp.name,
+            email: existingMember?.email?.toLowerCase().trim() || empEmailClean,
+            passwordHash: defaultPasswordHash,
+            role: existingMember?.role || emp.role,
+            department: existingMember?.department || emp.department,
+            designation: existingMember?.designation || emp.designation,
+            avatar: existingMember?.avatar || emp.avatar,
+            isTwoFactorEnabled: false,
+            createdAt: new Date().toISOString(),
+          });
+        }
       } else {
-        // User exists; enforce official role correction if needed or backfill missing fields
+        // User exists; ONLY backfill strictly missing fields, never overwrite user changes
         const missingUserFields: Record<string, unknown> = {};
-        if (emp.id === 'mem-8' || empEmailClean.includes('kanchan.jain') || empEmailClean.includes('frontdesk')) {
-          missingUserFields.role = 'EMPLOYEE';
-          missingUserFields.department = 'Front Desk';
-          missingUserFields.designation = emp.designation || 'Front Desk Specialist';
-        } else if (!existingUser.role) {
+        if (!existingUser.role && (existingMember?.role || emp.role)) {
           missingUserFields.role = existingMember?.role || emp.role;
         }
-        if (emp.id === 'mem-1' || empEmailClean === 'ceo@urbangaon.com' || existingUser.department === 'Leadership & CEO Desk' || existingUser.department === 'Leadership & CEO') {
-          missingUserFields.department = 'Founder & CEO';
-          missingUserFields.designation = 'Founder & CEO';
+        if (!existingUser.department && (existingMember?.department || emp.department)) {
+          missingUserFields.department = existingMember?.department || emp.department;
         }
-        if (!existingUser.department) missingUserFields.department = existingMember?.department || emp.department;
-        if (!existingUser.designation) missingUserFields.designation = existingMember?.designation || emp.designation;
+        if (!existingUser.designation && (existingMember?.designation || emp.designation)) {
+          missingUserFields.designation = existingMember?.designation || emp.designation;
+        }
         if (Object.keys(missingUserFields).length > 0) {
           await UserModel.updateOne({ _id: existingUser._id }, { $set: missingUserFields });
         }
