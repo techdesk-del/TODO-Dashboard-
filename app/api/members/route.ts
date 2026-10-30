@@ -519,7 +519,7 @@ export async function PATCH(req: NextRequest) {
         const { TaskModel } = await import('@/models/Task');
         // Update assignees
         await TaskModel.updateMany(
-          { $or: [{ 'assignees.id': memberId }, { 'assignees.id': finalId }, { 'assignees.email': oldEmail.toLowerCase() }] },
+          { $or: [{ 'assignees.id': memberId }, { 'assignees.id': finalId }, { 'assignees.email': oldEmail.toLowerCase() }, ...(cleanInputEmail ? [{ 'assignees.email': cleanInputEmail }] : [])] },
           {
             $set: {
               ...(updates.id ? { 'assignees.$[elem].id': updates.id } : {}),
@@ -531,7 +531,7 @@ export async function PATCH(req: NextRequest) {
             }
           },
           {
-            arrayFilters: [{ $or: [{ 'elem.id': memberId }, { 'elem.id': finalId }, { 'elem.email': oldEmail.toLowerCase() }] }]
+            arrayFilters: [{ $or: [{ 'elem.id': memberId }, { 'elem.id': finalId }, { 'elem.email': oldEmail.toLowerCase() }, ...(cleanInputEmail ? [{ 'elem.email': cleanInputEmail }] : [])] }]
           }
         ).exec().catch(() => {});
 

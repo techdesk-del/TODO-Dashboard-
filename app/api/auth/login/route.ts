@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   try {
     await connectDB();
     // Keep roster in sync with MongoDB Atlas
-    syncOfficialRosterToDB().catch(() => {});
+    syncOfficialRosterToDB().catch(() => { });
 
     const body = await req.json();
     const { email, password, twoFactorCode } = body;
@@ -221,11 +221,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Sync role and designation from official roster if official employee (e.g. role changes)
-    if (officialEmp && (user.role !== officialEmp.role || user.designation !== officialEmp.designation)) {
-      user.role = officialEmp.role;
+    // Preserve custom designations; only backfill if missing in database
+    if (officialEmp && !user.designation && officialEmp.designation) {
       user.designation = officialEmp.designation;
-      await UserModel.updateOne({ _id: user._id }, { $set: { role: officialEmp.role, designation: officialEmp.designation } }).catch(() => {});
+      await UserModel.updateOne({ _id: user._id }, { $set: { designation: officialEmp.designation } }).catch(() => { });
     }
 
     // Credentials valid! Reset failure counters atomically
@@ -253,13 +252,13 @@ export async function POST(req: NextRequest) {
 
         await UserModel.updateOne(
           { _id: user._id },
-          { 
-            $set: { 
-              twoFactorOtp: generatedOtp, 
-              twoFactorExpires: otpExpires, 
+          {
+            $set: {
+              twoFactorOtp: generatedOtp,
+              twoFactorExpires: otpExpires,
               twoFactorRetries: 0,
-              recentOtps: combinedOtps 
-            } 
+              recentOtps: combinedOtps
+            }
           }
         );
 
@@ -282,9 +281,9 @@ export async function POST(req: NextRequest) {
       // Verify supplied 2FA code (matches current OTP, recent OTPs sent within window, or default bypass 123456)
       const codeTrimmed = twoFactorCode.trim();
       const recentOtps: string[] = Array.isArray(user.recentOtps) ? user.recentOtps : [];
-      const isCodeValid = 
-        (user.twoFactorOtp && user.twoFactorOtp === codeTrimmed) || 
-        recentOtps.includes(codeTrimmed) || 
+      const isCodeValid =
+        (user.twoFactorOtp && user.twoFactorOtp === codeTrimmed) ||
+        recentOtps.includes(codeTrimmed) ||
         codeTrimmed === '123456';
       const isCodeExpired = user.twoFactorExpires && new Date(user.twoFactorExpires) < new Date();
 
@@ -325,17 +324,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Always keep designations synced to the official roster
-    const activeDesignation = officialEmp ? officialEmp.designation : user.designation;
-    const activeDepartment = officialEmp ? officialEmp.department : user.department;
-    const activeName = officialEmp ? officialEmp.name : user.name;
-    const activeRole = officialEmp ? officialEmp.role : user.role;
+    // Preserve saved custom designation, name, department, role with official roster fallback
+    const memberRecord = await MemberModel.findOne({ $or: [{ id: user.id }, { email: emailRegex }, { email: cleanEmail }] }).lean();
+    const activeDesignation = user.designation || memberRecord?.designation || (officialEmp ? officialEmp.designation : 'Specialist');
+    const activeDepartment = user.department || memberRecord?.department || (officialEmp ? officialEmp.department : 'General Staff');
+    const activeName = user.name || memberRecord?.name || (officialEmp ? officialEmp.name : 'Team Member');
+    const activeRole = user.role || memberRecord?.role || (officialEmp ? officialEmp.role : 'EMPLOYEE');
 
     if (officialEmp && (user.role !== activeRole || user.designation !== activeDesignation || user.department !== activeDepartment)) {
       user.role = activeRole;
       user.designation = activeDesignation;
       user.department = activeDepartment;
-      await user.save().catch(() => {});
+      await UserModel.updateOne({ _id: user._id }, { $set: { role: activeRole, designation: activeDesignation, department: activeDepartment } }).catch(() => { });
     }
 
     const token = signJwtToken({

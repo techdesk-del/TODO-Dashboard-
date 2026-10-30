@@ -1585,7 +1585,7 @@ export const Header: React.FC = () => {
                 gap: '4px'
               }}
             >
-              <span>Designation: <strong style={{ color: '#166534' }}>{currentUser.designation || (currentUser.role !== 'EMPLOYEE' ? currentUser.role.replace('_', ' ') : 'Team Member')}</strong></span>
+              <span>Designation: <strong style={{ color: '#166534' }}>{designationInput.trim() || currentUser.designation || (currentUser.role !== 'EMPLOYEE' ? currentUser.role.replace('_', ' ') : 'Team Member')}</strong></span>
               <span>Employee ID: <strong style={{ color: '#0f172a' }}>{currentUser.employeeId || currentUser.id}</strong></span>
               <span>Department: <strong style={{ color: '#475569' }}>{currentUser.department || 'UrbanGaon'}</strong></span>
             </div>

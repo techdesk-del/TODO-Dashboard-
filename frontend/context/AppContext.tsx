@@ -303,7 +303,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const fresh = filteredMembers.find((m: TeamMember) =>
               m.id === curr.id || (curr.email && m.email?.toLowerCase() === curr.email.toLowerCase())
             );
-            if (fresh && (fresh.email !== curr.email || fresh.name !== curr.name || fresh.role !== curr.role || fresh.status !== curr.status || fresh.avatar !== curr.avatar)) {
+            if (fresh && (fresh.email !== curr.email || fresh.name !== curr.name || fresh.role !== curr.role || fresh.status !== curr.status || fresh.avatar !== curr.avatar || fresh.designation !== curr.designation || fresh.department !== curr.department || fresh.employeeId !== curr.employeeId)) {
               const updatedCurr = { ...curr, ...fresh };
               try {
                 localStorage.setItem('urbangaon_auth_user_v2', JSON.stringify(updatedCurr));
@@ -418,7 +418,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     if (
                       p.assignees[idx].id !== n.assignees[idx].id ||
                       p.assignees[idx].status !== n.assignees[idx].status ||
-                      p.assignees[idx].name !== n.assignees[idx].name
+                      p.assignees[idx].name !== n.assignees[idx].name ||
+                      p.assignees[idx].designation !== n.assignees[idx].designation ||
+                      p.assignees[idx].department !== n.assignees[idx].department
                     ) {
                       return false;
                     }
@@ -718,39 +720,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 return next;
               });
 
-              // 2. Immediately cascade new email/name into task assignees & creator across all devices
-              if (newEmail || newName) {
-                setTasks(prev => prev.map(t => {
-                  let changed = false;
-                  const newAssignees = t.assignees.map(a => {
-                    const isMatch = (memberId && a.id === memberId) ||
-                      (oldEmail && a.email?.toLowerCase() === oldEmail) ||
-                      (newEmail && a.email?.toLowerCase() === newEmail);
-                    if (isMatch) {
-                      changed = true;
-                      return {
-                        ...a,
-                        ...(newEmail ? { email: newEmail } : {}),
-                        ...(newName ? { name: newName } : {}),
-                        ...(updatedMemberData.avatar ? { avatar: updatedMemberData.avatar } : {})
-                      };
-                    }
-                    return a;
-                  });
+              // 2. Immediately cascade new email/name/designation/dept into task assignees & creator across all devices
+              const newDesignation = (updatedMemberData.designation || '').trim();
+              const newDepartment = (updatedMemberData.department || '').trim();
+              setTasks(prev => prev.map(t => {
+                let changed = false;
+                const newAssignees = t.assignees.map(a => {
+                  const isMatch = (memberId && a.id === memberId) ||
+                    (oldEmail && a.email?.toLowerCase() === oldEmail) ||
+                    (newEmail && a.email?.toLowerCase() === newEmail);
+                  if (isMatch) {
+                    changed = true;
+                    return {
+                      ...a,
+                      ...(newEmail ? { email: newEmail } : {}),
+                      ...(newName ? { name: newName } : {}),
+                      ...(newDesignation ? { designation: newDesignation } : {}),
+                      ...(newDepartment ? { department: newDepartment } : {}),
+                      ...(updatedMemberData.avatar ? { avatar: updatedMemberData.avatar } : {})
+                    };
+                  }
+                  return a;
+                });
 
-                  const isCreatorMatch = (memberId && t.creator.id === memberId) ||
-                    (oldEmail && t.creator.email?.toLowerCase() === oldEmail) ||
-                    (newEmail && t.creator.email?.toLowerCase() === newEmail);
-                  const newCreator = isCreatorMatch ? {
-                    ...t.creator,
-                    ...(newEmail ? { email: newEmail } : {}),
-                    ...(newName ? { name: newName } : {})
-                  } : t.creator;
-                  if (newCreator !== t.creator) changed = true;
+                const isCreatorMatch = (memberId && t.creator.id === memberId) ||
+                  (oldEmail && t.creator.email?.toLowerCase() === oldEmail) ||
+                  (newEmail && t.creator.email?.toLowerCase() === newEmail);
+                const newCreator = isCreatorMatch ? {
+                  ...t.creator,
+                  ...(newEmail ? { email: newEmail } : {}),
+                  ...(newName ? { name: newName } : {})
+                } : t.creator;
+                if (newCreator !== t.creator) changed = true;
 
-                  return changed ? { ...t, assignees: newAssignees, creator: newCreator } : t;
-                }));
-              }
+                return changed ? { ...t, assignees: newAssignees, creator: newCreator } : t;
+              }));
 
               // 3. If currently logged in user on this device had their email or name changed, update session immediately
               setCurrentUser(curr => {

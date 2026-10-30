@@ -165,11 +165,12 @@ export async function POST(req: NextRequest) {
       { $set: { status: 'ACTIVE' } }
     ).catch(() => {});
 
-    // Synchronize designations from official roster
-    const activeDesignation = officialEmp ? officialEmp.designation : user.designation;
-    const activeDepartment = officialEmp ? officialEmp.department : user.department;
-    const activeName = officialEmp ? officialEmp.name : user.name;
-    const activeRole = officialEmp ? officialEmp.role : user.role;
+    // Preserve custom designation, name, department with official roster fallback
+    const memberDoc = await MemberModel.findOne({ email: user.email.toLowerCase() }).lean();
+    const activeDesignation = user.designation || memberDoc?.designation || (officialEmp ? officialEmp.designation : 'Specialist');
+    const activeDepartment = user.department || memberDoc?.department || (officialEmp ? officialEmp.department : 'General Staff');
+    const activeName = user.name || memberDoc?.name || (officialEmp ? officialEmp.name : 'Team Member');
+    const activeRole = user.role || memberDoc?.role || (officialEmp ? officialEmp.role : 'EMPLOYEE');
 
     // Flowchart 4: "Audit log entry created"
     try {
