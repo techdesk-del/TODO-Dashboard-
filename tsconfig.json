@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -19,19 +23,54 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@/frontend/*": ["./src/frontend/*"],
-      "@/backend/*": ["./src/backend/*"],
-      "@/components/*": ["./src/frontend/components/*", "./src/components/*"],
-      "@/context/*": ["./src/frontend/context/*", "./src/context/*"],
-      "@/hooks/*": ["./src/frontend/hooks/*", "./src/hooks/*"],
-      "@/styles/*": ["./src/frontend/styles/*", "./src/styles/*"],
-      "@/models/*": ["./src/backend/models/*", "./src/models/*"],
-      "@/lib/*": ["./src/backend/lib/*", "./src/lib/*"],
-      "@/types": ["./src/types"],
-      "@/types/*": ["./src/types/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@/frontend/*": [
+        "./src/frontend/*"
+      ],
+      "@/backend/*": [
+        "./src/backend/*"
+      ],
+      "@/components/*": [
+        "./src/frontend/components/*",
+        "./src/components/*"
+      ],
+      "@/context/*": [
+        "./src/frontend/context/*",
+        "./src/context/*"
+      ],
+      "@/hooks/*": [
+        "./src/frontend/hooks/*",
+        "./src/hooks/*"
+      ],
+      "@/styles/*": [
+        "./src/frontend/styles/*",
+        "./src/styles/*"
+      ],
+      "@/models/*": [
+        "./src/backend/models/*",
+        "./src/models/*"
+      ],
+      "@/lib/*": [
+        "./src/backend/lib/*",
+        "./src/lib/*"
+      ],
+      "@/types": [
+        "./src/types"
+      ],
+      "@/types/*": [
+        "./src/types/*"
+      ]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

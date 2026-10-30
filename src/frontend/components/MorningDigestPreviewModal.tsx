@@ -65,16 +65,31 @@ export const MorningDigestPreviewModal: React.FC = () => {
     );
   }, [uncancelledTasks, previewMode, isCeo, currentCleanEmail, currentCleanName, currentUser.id]);
 
+  const getDeadline = (t: any) => (t.dueDate && t.dueDate.trim().length > 0) ? t.dueDate.trim() : t.scheduledDate;
+
   const overdueTasks = useMemo(() => {
-    return userTasks.filter(t => (t.isOverdue || t.scheduledDate < todayStr) && t.status !== 'Done');
+    return userTasks.filter(t => {
+      const dl = getDeadline(t);
+      return (t.isOverdue || Boolean(dl && dl < todayStr)) && t.status !== 'Done';
+    });
   }, [userTasks, todayStr]);
 
   const todayTasks = useMemo(() => {
-    return userTasks.filter(t => !t.isOverdue && t.scheduledDate === todayStr && t.status !== 'Done');
+    return userTasks.filter(t => {
+      const dl = getDeadline(t);
+      const isOver = t.isOverdue || Boolean(dl && dl < todayStr);
+      if (isOver) return false;
+      return dl === todayStr && t.status !== 'Done';
+    });
   }, [userTasks, todayStr]);
 
   const upcomingTasks = useMemo(() => {
-    return userTasks.filter(t => !t.isOverdue && t.scheduledDate > todayStr && t.status !== 'Done');
+    return userTasks.filter(t => {
+      const dl = getDeadline(t);
+      const isOver = t.isOverdue || Boolean(dl && dl < todayStr);
+      if (isOver) return false;
+      return Boolean(dl && dl > todayStr) && t.status !== 'Done';
+    });
   }, [userTasks, todayStr]);
 
   const handleSendLiveEmail = async (dispatchAll: boolean = false) => {
@@ -285,7 +300,7 @@ export const MorningDigestPreviewModal: React.FC = () => {
                 <div key={t.id} style={{ background: '#fef2f2', border: '1px solid #fecaca', padding: '0.5rem 0.75rem', borderRadius: '6px', marginBottom: '0.35rem' }}>
                   <div style={{ fontWeight: 700, fontSize: '0.78rem', color: '#991b1b' }}>{t.title}</div>
                   <div style={{ fontSize: '0.68rem', color: '#b91c1c', marginTop: '2px' }}>
-                    Scheduled: {t.scheduledDate} ({t.time || '09:00 AM'}) • Priority: {t.priority} • Assignees: {t.assignees?.map(a => a.name).join(', ')}
+                    Deadline was: {t.dueDate || t.scheduledDate} ({t.time || '09:00 AM'}) • Priority: {t.priority} • Assignees: {t.assignees?.map(a => a.name).join(', ')}
                   </div>
                 </div>
               ))
@@ -351,7 +366,7 @@ export const MorningDigestPreviewModal: React.FC = () => {
                 <div key={t.id} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', padding: '0.5rem 0.75rem', borderRadius: '6px', marginBottom: '0.35rem' }}>
                   <div style={{ fontWeight: 700, fontSize: '0.78rem', color: '#1e40af' }}>{t.title}</div>
                   <div style={{ fontSize: '0.68rem', color: '#3b82f6', marginTop: '2px' }}>
-                    Due: {t.scheduledDate} at {t.time || '09:00 AM'} • Assignees: {t.assignees?.map(a => a.name).join(', ')}
+                    Target Deadline: {t.dueDate || t.scheduledDate} at {t.time || '09:00 AM'} • Assignees: {t.assignees?.map(a => a.name).join(', ')}
                   </div>
                 </div>
               ))

@@ -93,7 +93,8 @@ export async function runOverdueAndNoReasonEvaluation(options?: {
     let notificationsDispatched = 0;
 
     for (const task of pendingTasks) {
-      const isDuePassed = task.scheduledDate < todayStr;
+      const effectiveDeadline = (task.dueDate && task.dueDate.trim().length > 0) ? task.dueDate.trim() : task.scheduledDate;
+      const isDuePassed = Boolean(effectiveDeadline && effectiveDeadline < todayStr);
 
       // Diamond: Due date passed?
       if (!isDuePassed) {
@@ -109,7 +110,7 @@ export async function runOverdueAndNoReasonEvaluation(options?: {
 
       // Branch: "Yes -> Apply Overdue auto-flag"
       const wasOverdueBefore = task.isOverdue;
-      const taskTime = new Date(task.scheduledDate).getTime();
+      const taskTime = new Date(effectiveDeadline).getTime();
       const diffDays = Math.max(1, Math.floor((todayTime - taskTime) / (1000 * 60 * 60 * 24)));
 
       task.isOverdue = true;
@@ -228,7 +229,7 @@ export async function runOverdueAndNoReasonEvaluation(options?: {
               managerName: reportingManagerName,
               taskId: task.id,
               taskTitle: task.title,
-              scheduledDate: task.scheduledDate,
+              scheduledDate: effectiveDeadline,
               daysOverdue: diffDays,
               hasReason: hasRecordedReason,
               delayReason: activeReason,

@@ -193,7 +193,8 @@ export const CalendarView: React.FC = () => {
   };
 
   const isOverdue = (task: Task): boolean => {
-    return Boolean(task.isOverdue || (task.scheduledDate < todayStr && task.status !== 'Done' && task.status !== 'Cancelled'));
+    const effectiveDl = (task.dueDate && task.dueDate.trim().length > 0) ? task.dueDate.trim() : task.scheduledDate;
+    return Boolean(task.isOverdue || (effectiveDl < todayStr && task.status !== 'Done' && task.status !== 'Cancelled'));
   };
 
   const getStatusColor = (status: string, taskOverdue: boolean) => {

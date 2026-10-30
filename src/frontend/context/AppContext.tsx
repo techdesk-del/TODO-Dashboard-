@@ -1604,7 +1604,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return t;
       }
 
-      const isDuePassed = t.scheduledDate < todayStr;
+      const effectiveDeadline = (t.dueDate && t.dueDate.trim().length > 0) ? t.dueDate.trim() : t.scheduledDate;
+      const isDuePassed = Boolean(effectiveDeadline && effectiveDeadline < todayStr);
       if (!isDuePassed) {
         if (t.isOverdue || t.isPendingNoReason) {
           stateChanged = true;
@@ -1615,7 +1616,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // Due date has passed: Apply Overdue auto-flag
       overdueCount++;
-      const taskTime = new Date(t.scheduledDate).getTime();
+      const taskTime = new Date(effectiveDeadline).getTime();
       const diffDays = Math.max(1, Math.floor((todayTime - taskTime) / (1000 * 60 * 60 * 24)));
       const hasReason = Boolean(
         (t.delayReason && t.delayReason.trim().length > 0) ||

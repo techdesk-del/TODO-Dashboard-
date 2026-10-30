@@ -178,16 +178,35 @@ export async function runMorningDigest(options: DigestOptions = {}): Promise<Dig
       continue;
     }
 
-    // Categorize into Overdue, Today, Upcoming
-    const overdue = userTasks.filter(t => t.isOverdue || t.scheduledDate < todayStr);
-    const today = userTasks.filter(t => !t.isOverdue && t.scheduledDate === todayStr);
-    const upcoming = userTasks.filter(t => !t.isOverdue && t.scheduledDate > todayStr);
+    // Helper to determine task's effective deadline
+    const getDeadline = (t: any) => (t.dueDate && t.dueDate.trim().length > 0) ? t.dueDate.trim() : t.scheduledDate;
+
+    // Categorize into Overdue, Today, Upcoming based on real commitment deadline
+    const overdue = userTasks.filter(t => {
+      const dl = getDeadline(t);
+      return t.isOverdue || Boolean(dl && dl < todayStr);
+    });
+
+    const today = userTasks.filter(t => {
+      const dl = getDeadline(t);
+      const isOver = t.isOverdue || Boolean(dl && dl < todayStr);
+      if (isOver) return false;
+      return dl === todayStr;
+    });
+
+    const upcoming = userTasks.filter(t => {
+      const dl = getDeadline(t);
+      const isOver = t.isOverdue || Boolean(dl && dl < todayStr);
+      if (isOver) return false;
+      return Boolean(dl && dl > todayStr);
+    });
 
     // Track chronic delays (overdue >= 3 days)
     const todayTime = new Date(todayStr).getTime();
     overdue.forEach(t => {
-      const taskTime = new Date(t.scheduledDate).getTime();
-      const diffDays = Math.floor((todayTime - taskTime) / (1000 * 60 * 60 * 24));
+      const dl = getDeadline(t);
+      const taskTime = new Date(dl).getTime();
+      const diffDays = Math.max(1, Math.floor((todayTime - taskTime) / (1000 * 60 * 60 * 24)));
       if (diffDays >= 3) {
         chronicDelays.push({
           task: t,

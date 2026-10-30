@@ -167,7 +167,7 @@ export function generateDigestHtml(opts: SendDigestOptions): string {
             return `
             <div class="task-card card-red">
               <div class="task-name">${t.title}</div>
-              <div class="task-meta">Scheduled: ${t.scheduledDate} at ${t.time} | Priority: ${t.priority} | Department: ${t.department}</div>
+              <div class="task-meta">Deadline was: ${t.dueDate || t.scheduledDate} (Overdue) | Target: ${t.time} | Priority: ${t.priority} | Department: ${t.department}</div>
               <div style="margin-top: 4px;">
                 <a href="${appBase}/?taskId=${t.id}" class="task-link">View Deliverable #${t.id}</a>
               </div>
@@ -209,7 +209,7 @@ export function generateDigestHtml(opts: SendDigestOptions): string {
           : upcomingTasks.map(t => `
             <div class="task-card card-blue">
               <div class="task-name">${t.title}</div>
-              <div class="task-meta">Due: ${t.scheduledDate} at ${t.time} | Priority: ${t.priority}</div>
+              <div class="task-meta">Target Deadline: ${t.dueDate || t.scheduledDate} at ${t.time} | Priority: ${t.priority}</div>
               <div style="margin-top: 4px;">
                 <a href="${appBase}/?taskId=${t.id}" class="task-link">Open Deliverable #${t.id}</a>
               </div>

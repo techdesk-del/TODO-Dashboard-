@@ -1256,7 +1256,8 @@ export const CeoPortal: React.FC = () => {
                 <tbody>
                   {paginatedTasks.map((task, idx) => {
                     const globalIdx = startIndex + idx + 1;
-                    const isOverdue = task.scheduledDate < todayStr && task.status !== 'Done';
+                    const effectiveDl = (task.dueDate && task.dueDate.trim().length > 0) ? task.dueDate.trim() : task.scheduledDate;
+                    const isOverdue = (task.isOverdue || effectiveDl < todayStr) && task.status !== 'Done';
                     const isConfirmingDelete = deletingTaskId === task.id;
 
                     return (
