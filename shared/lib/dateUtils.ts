@@ -122,26 +122,18 @@ export const formatCreationDate = (createdAt?: string): string => {
     const yesterday = getYesterdayStr();
     const taskDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-    const timeStr = d.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    });
-
     if (taskDateStr === today) {
-      return `Today, ${timeStr}`;
+      return 'Today';
     }
     if (taskDateStr === yesterday) {
-      return `Yesterday, ${timeStr}`;
+      return 'Yesterday';
     }
 
-    const dateFormatted = d.toLocaleDateString('en-GB', {
+    return d.toLocaleDateString('en-GB', {
       day: 'numeric',
       month: 'short',
       year: 'numeric'
     });
-
-    return `${dateFormatted}, ${timeStr}`;
   } catch {
     return createdAt || 'Initial';
   }

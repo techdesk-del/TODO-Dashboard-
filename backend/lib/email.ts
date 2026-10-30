@@ -167,7 +167,7 @@ export function generateDigestHtml(opts: SendDigestOptions): string {
             return `
             <div class="task-card card-red">
               <div class="task-name">${t.title}</div>
-              <div class="task-meta">Deadline was: ${t.dueDate || t.scheduledDate} (Overdue) | Target: ${t.time} | Priority: ${t.priority} | Department: ${t.department}</div>
+              <div class="task-meta">Deadline was: ${t.dueDate || t.scheduledDate} (Overdue) | Priority: ${t.priority} | Department: ${t.department}</div>
               <div style="margin-top: 4px;">
                 <a href="${appBase}/?taskId=${t.id}" class="task-link">View Deliverable #${t.id}</a>
               </div>
@@ -193,7 +193,7 @@ export function generateDigestHtml(opts: SendDigestOptions): string {
           : todayTasks.map(t => `
             <div class="task-card card-amber">
               <div class="task-name">${t.title}</div>
-              <div class="task-meta">Execution Target: ${t.time} | Priority: ${t.priority} | Department: ${t.department}</div>
+              <div class="task-meta">Priority: ${t.priority} | Department: ${t.department}</div>
               <div style="margin-top: 4px;">
                 <a href="${appBase}/?taskId=${t.id}" class="task-link">Open Deliverable #${t.id}</a>
               </div>
@@ -209,7 +209,7 @@ export function generateDigestHtml(opts: SendDigestOptions): string {
           : upcomingTasks.map(t => `
             <div class="task-card card-blue">
               <div class="task-name">${t.title}</div>
-              <div class="task-meta">Target Deadline: ${t.dueDate || t.scheduledDate} at ${t.time} | Priority: ${t.priority}</div>
+              <div class="task-meta">Target Deadline: ${t.dueDate || t.scheduledDate} | Priority: ${t.priority}</div>
               <div style="margin-top: 4px;">
                 <a href="${appBase}/?taskId=${t.id}" class="task-link">Open Deliverable #${t.id}</a>
               </div>
@@ -1258,7 +1258,7 @@ export async function sendTaskAssignmentEmail(opts: SendTaskAssignmentOptions) {
         <table class="meta-table">
           <tr>
             <td class="meta-label">Target Deadline:</td>
-            <td class="meta-value">${opts.scheduledDate} at ${executionTime}</td>
+            <td class="meta-value">${opts.scheduledDate}</td>
           </tr>
           <tr>
             <td class="meta-label">Priority Level:</td>
@@ -2268,8 +2268,8 @@ export async function sendStaffLeaveAlertEmail(opts: SendStaffLeaveAlertOptions)
             <strong>Assigned By:</strong> ${t.creatorName}
           </div>
           <div style="font-size: 12px; color: #0f172a; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 5px; padding: 8px 10px; margin-top: 6px;">
-            <div><strong>Original Deadline:</strong> ${t.originalDueDate} at ${t.time || '05:00 PM'}</div>
-            <div style="margin-top: 3px;"><strong>Updated Deadline:</strong> <span style="color: #2563eb; font-weight: 800;">${t.scheduledDate} at ${t.time || '05:00 PM'}</span></div>
+            <div><strong>Original Deadline:</strong> ${t.originalDueDate}</div>
+            <div style="margin-top: 3px;"><strong>Updated Deadline:</strong> <span style="color: #2563eb; font-weight: 800;">${t.scheduledDate}</span></div>
             <div style="margin-top: 3px;"><strong>Policy Action:</strong> <span style="color: ${isFlagged ? '#c2410c' : '#059669'}; font-weight: 700;">${t.actionApplied}</span></div>
           </div>
           <div style="margin-top: 8px;">
@@ -2291,7 +2291,7 @@ export async function sendStaffLeaveAlertEmail(opts: SendStaffLeaveAlertOptions)
           <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 14px; margin-bottom: 8px; font-size: 12px;">
             <div style="font-weight: 800; color: #0f172a; font-size: 13px;">#${t.id} &mdash; ${t.title}</div>
             <div style="color: #64748b; margin-top: 3px;">
-              <strong>Due:</strong> ${t.scheduledDate} at ${t.time || '05:00 PM'} &nbsp;|&nbsp;
+              <strong>Due:</strong> ${t.scheduledDate} &nbsp;|&nbsp;
               <strong>Priority:</strong> ${t.priority} &nbsp;|&nbsp;
               <strong>Status:</strong> ${t.status} &nbsp;|&nbsp;
               <a href="${taskUrl}" target="_blank" style="color: #2563eb; font-weight: 700; text-decoration: none;">View &rarr;</a>

@@ -341,16 +341,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
             />
           </div>
 
-          <div className="form-field-group">
-            <label className="form-field-label">Due Time</label>
-            <input
-              type="text"
-              className="form-input"
-              value={editedTime}
-              onChange={(e) => setEditedTime(e.target.value)}
-              placeholder="e.g. 05:00 PM"
-            />
-          </div>
 
           {/* Assigned To - Strictly Visible and Accessible to CEO Only */}
           {isCeo && (
@@ -475,7 +465,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
     (task.pastDueReason && task.pastDueReason.trim().length > 0)
   );
 
-  const dueDateInfo = formatDueDate(task.scheduledDate, task.time, task.dueDate);
+  const dueDateInfo = formatDueDate(task.scheduledDate, undefined, task.dueDate);
   const creationDateFormatted = formatCreationDate(task.createdAt);
 
   // Standard Task Card (Slide 4)
@@ -562,27 +552,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
               maxWidth: '100%'
             }}
           >
-            {/* Current Date */}
-            <span
-              style={{
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                borderRadius: '6px',
-                padding: '2px 8px',
-                fontSize: '0.72rem',
-                color: '#475569',
-                fontWeight: 600,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                whiteSpace: 'nowrap'
-              }}
-              title={`Current Date: ${todayStr}`}
-            >
-              <CalendarIcon size={12} color="#64748b" />
-              <span>Current Date: <strong style={{ color: '#1e293b' }}>{todayStr}</strong></span>
-            </span>
-
             {/* Target Deadline / Due Date */}
             <span
               style={{
@@ -1119,28 +1088,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
             <span>Created: <strong style={{ color: '#1e293b' }}>{creationDateFormatted}</strong></span>
           </div>
 
-          {/* 2. Current Date */}
-          <div
-            className="task-meta-item"
-            style={{
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: '6px',
-              padding: '2px 8px',
-              fontSize: '0.72rem',
-              color: '#475569',
-              fontWeight: 600,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '5px'
-            }}
-            title={`Current date: ${todayStr}`}
-          >
-            <CalendarIcon size={12} color="#64748b" />
-            <span>Current Date: <strong style={{ color: '#1e293b' }}>{todayStr}</strong></span>
-          </div>
-
-          {/* 3. Due Date */}
+          {/* 2. Due Date */}
           <div
             className="task-meta-item"
             style={{

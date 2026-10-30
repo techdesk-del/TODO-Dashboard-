@@ -4,18 +4,18 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useApp } from '@/context/AppContext';
 import { isCeoUser, isAakashUser, isStrictCeo } from '@/shared/lib/rosterData';
 import { TeamMember, Task, TaskStatus, Role } from '@/types';
-import { 
-  UserPlus, 
+import {
+  UserPlus,
   UserCheck,
-  Users, 
-  UserX, 
-  Check, 
-  X, 
-  Search, 
-  Mail, 
-  Building, 
-  Briefcase, 
-  Shield, 
+  Users,
+  UserX,
+  Check,
+  X,
+  Search,
+  Mail,
+  Building,
+  Briefcase,
+  Shield,
   RefreshCw,
   Send,
   RotateCcw,
@@ -132,6 +132,7 @@ export const AdminHrPortal: React.FC = () => {
     try {
       const res = await fetch(`/api/notifications/email-logs?limit=100&_t=${Date.now()}`);
       if (res.ok) {
+
         const json = await res.json();
         if (json.success && Array.isArray(json.data)) {
           setEmailLogs(json.data);
@@ -203,7 +204,7 @@ export const AdminHrPortal: React.FC = () => {
   const [directoryPageSize, setDirectoryPageSize] = useState<number>(8);
   const [emailLogsPage, setEmailLogsPage] = useState<number>(1);
   const [emailLogsPageSize, setEmailLogsPageSize] = useState<number>(8);
-  
+
   // Flowchart: Employee Provisioning (Admin Dashboard -> Create Employee)
   const [newUserName, setNewUserName] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
@@ -335,8 +336,8 @@ export const AdminHrPortal: React.FC = () => {
     const activeStatuses: TaskStatus[] = ['In Progress', 'Queued', 'On Hold', 'Escalated', 'Review'];
     return tasks.filter(t => {
       if (!activeStatuses.includes(t.status)) return false;
-      return t.assignees.some(a => 
-        a.id === departingMember.id || 
+      return t.assignees.some(a =>
+        a.id === departingMember.id ||
         a.name.toLowerCase() === departingMember.name.toLowerCase() ||
         (departingMember.email && a.email.toLowerCase() === departingMember.email.toLowerCase())
       );
@@ -408,7 +409,7 @@ export const AdminHrPortal: React.FC = () => {
       if (typeof document !== 'undefined' && document.hidden && quiet) {
         return;
       }
-      const res = await fetch(`/api/auth/request-access?_t=${Date.now()}`, { 
+      const res = await fetch(`/api/auth/request-access?_t=${Date.now()}`, {
         cache: 'no-store',
         signal,
         headers: { 'Cache-Control': 'no-cache, no-store' }
@@ -463,7 +464,7 @@ export const AdminHrPortal: React.FC = () => {
           }
         };
       }
-    } catch {}
+    } catch { }
 
     // Real-time heartbeat poll every 5 seconds when tab is active
     const interval = setInterval(() => {
@@ -503,7 +504,7 @@ export const AdminHrPortal: React.FC = () => {
   const searchMatchedMembers = useMemo(() => {
     if (!userSearchQuery.trim()) return oversightFilteredMembers;
     const q = userSearchQuery.toLowerCase();
-    return oversightFilteredMembers.filter(m => 
+    return oversightFilteredMembers.filter(m =>
       m.name.toLowerCase().includes(q) ||
       m.email.toLowerCase().includes(q) ||
       (m.employeeId && m.employeeId.toLowerCase().includes(q)) ||
@@ -547,7 +548,7 @@ export const AdminHrPortal: React.FC = () => {
           const staffMember = members.find(m => m.id === a.id || m.email.toLowerCase() === (a.email || '').toLowerCase());
           if (!staffMember) return false;
           return (staffMember.managerId && mgr && staffMember.managerId === mgr.id) ||
-                 (staffMember.manager && mgr && staffMember.manager.toLowerCase().includes(mgr.name.toLowerCase()));
+            (staffMember.manager && mgr && staffMember.manager.toLowerCase().includes(mgr.name.toLowerCase()));
         });
         if (!hasManagedAssignee) return false;
       }
@@ -555,7 +556,7 @@ export const AdminHrPortal: React.FC = () => {
       // 3. User filter
       if (!isAllUsers) {
         const targetName = targetOversightMember?.name || selectedUserForOversight;
-        const matchesUser = t.assignees.some(a => 
+        const matchesUser = t.assignees.some(a =>
           a.name.toLowerCase().includes(targetName.toLowerCase()) ||
           (targetOversightMember?.email && (a.email || '').toLowerCase() === targetOversightMember.email.toLowerCase())
         );
@@ -1184,7 +1185,7 @@ export const AdminHrPortal: React.FC = () => {
           const host = window.location.origin;
           setPwdLink = `${host}/?inviteCode=${invCode}&email=${encodeURIComponent(cleanEmail)}`;
         }
-      } catch {}
+      } catch { }
 
       setInviteSuccessMsg(`✓ Employee record created for ${cleanName} in status "Pending First Login". One-time set-password link dispatched!`);
       setProvisionedDetails({
@@ -1240,7 +1241,7 @@ export const AdminHrPortal: React.FC = () => {
         bc.postMessage({ action: 'REQUEST_RESOLVED', id: req.id });
         bc.close();
       }
-    } catch {}
+    } catch { }
 
     const deptToAssign = overrides?.department || verifyDept || req.department || 'General Staff';
     const desigToAssign = overrides?.designation || verifyDesignation || req.designation || 'Specialist';
@@ -1285,7 +1286,7 @@ export const AdminHrPortal: React.FC = () => {
           newValue: `Approved ID: ${empIdToAssign} (Pending First Login)`,
           notes: `Admin ${currentUser.name} approved access request for ${req.name}. Assigned ${empIdToAssign}, Dept: ${deptToAssign}.`
         });
-      } catch {}
+      } catch { }
 
       // Async background sync with AppContext member cache
       addMember({
@@ -1312,7 +1313,7 @@ export const AdminHrPortal: React.FC = () => {
           bc.postMessage({ action: 'REQUEST_RESTORE', request: req });
           bc.close();
         }
-      } catch {}
+      } catch { }
       setApprovalBanner(`Failed to approve ${req.name}: ${err instanceof Error ? err.message : 'Network error'}. Request restored.`);
       setTimeout(() => setApprovalBanner(null), 8000);
     } finally {
@@ -1344,7 +1345,7 @@ export const AdminHrPortal: React.FC = () => {
         bc.postMessage({ action: 'REQUEST_RESOLVED', id });
         bc.close();
       }
-    } catch {}
+    } catch { }
 
     setApprovalBanner(`Applicant ${name} rejected. Formal notification email dispatching...`);
 
@@ -1372,7 +1373,7 @@ export const AdminHrPortal: React.FC = () => {
           newValue: `Rejected ("${reason.trim()}")`,
           notes: `Admin ${currentUser.name} rejected access request for ${name}. Reason: "${reason.trim()}". Rejection email dispatched.`
         });
-      } catch {}
+      } catch { }
 
       setApprovalBanner(`✓ Rejection recorded for ${name}. Rejection email dispatched with documented rationale.`);
       setTimeout(() => setApprovalBanner(null), 6000);
@@ -1386,7 +1387,7 @@ export const AdminHrPortal: React.FC = () => {
             bc.postMessage({ action: 'REQUEST_RESTORE', request: existingReq });
             bc.close();
           }
-        } catch {}
+        } catch { }
       }
       setApprovalBanner(`Could not reject ${name}: ${err instanceof Error ? err.message : 'Network error'}.`);
       setTimeout(() => setApprovalBanner(null), 8000);
@@ -1459,9 +1460,9 @@ export const AdminHrPortal: React.FC = () => {
       setHandoverAcknowledged(false);
       setHandoverNotes('');
       // Automatically advance to the next active non-CEO employee that is NOT the departing person
-      const nextDeparting = offboardableMembers.find(m => 
-        m.id !== departingMember.id && 
-        m.name.toLowerCase() !== departingMember.name.toLowerCase() && 
+      const nextDeparting = offboardableMembers.find(m =>
+        m.id !== departingMember.id &&
+        m.name.toLowerCase() !== departingMember.name.toLowerCase() &&
         (departingMember.email ? m.email.toLowerCase() !== departingMember.email.toLowerCase() : true)
       );
       setDepartingMemberId(nextDeparting ? nextDeparting.id : (offboardableMembers[0]?.id || ''));
@@ -1864,240 +1865,240 @@ export const AdminHrPortal: React.FC = () => {
           }}>
             <div className="enterprise-table-wrapper" style={{ border: 'none', borderRadius: 0, boxShadow: 'none' }}>
               <table className="enterprise-table">
-              <thead>
-                <tr>
-                  <th style={{ width: '38px', textAlign: 'center' }}>
-                    <input
-                      type="checkbox"
-                      checked={filteredTasks.length > 0 && selectedTaskIds.length === filteredTasks.length}
-                      onChange={e => {
-                        if (e.target.checked) {
-                          setSelectedTaskIds(filteredTasks.map(t => t.id));
-                        } else {
-                          setSelectedTaskIds([]);
-                        }
-                      }}
-                      title="Select all tasks for bulk reassignment"
-                    />
-                  </th>
-                  <th style={{ minWidth: '320px' }}>Deliverable &amp; Project</th>
-                  <th style={{ minWidth: '150px', whiteSpace: 'nowrap' }}>Assignee(s)</th>
-                  <th style={{ minWidth: '120px', whiteSpace: 'nowrap' }}>Scheduled</th>
-                  <th style={{ minWidth: '90px', textAlign: 'center', whiteSpace: 'nowrap' }}>Priority</th>
-                  <th style={{ minWidth: '130px', whiteSpace: 'nowrap' }}>Status</th>
-                  <th style={{ minWidth: '200px', whiteSpace: 'nowrap', textAlign: 'right' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedOversightTasks.map((t, idx) => {
-                  const isDone = t.status === 'Done';
-                  const isOnHold = t.status === 'On Hold';
-                  const isCancelled = t.status === 'Cancelled';
-                  const canReopen = isDone || isOnHold || isCancelled;
-                  const isSelected = selectedTaskIds.includes(t.id);
-                  const isEditedByAdmin = t.editedByAdmin || (t.notes && t.notes.toLowerCase().includes('edited by admin'));
+                <thead>
+                  <tr>
+                    <th style={{ width: '38px', textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={filteredTasks.length > 0 && selectedTaskIds.length === filteredTasks.length}
+                        onChange={e => {
+                          if (e.target.checked) {
+                            setSelectedTaskIds(filteredTasks.map(t => t.id));
+                          } else {
+                            setSelectedTaskIds([]);
+                          }
+                        }}
+                        title="Select all tasks for bulk reassignment"
+                      />
+                    </th>
+                    <th style={{ minWidth: '320px' }}>Deliverable &amp; Project</th>
+                    <th style={{ minWidth: '150px', whiteSpace: 'nowrap' }}>Assignee(s)</th>
+                    <th style={{ minWidth: '120px', whiteSpace: 'nowrap' }}>Scheduled</th>
+                    <th style={{ minWidth: '90px', textAlign: 'center', whiteSpace: 'nowrap' }}>Priority</th>
+                    <th style={{ minWidth: '130px', whiteSpace: 'nowrap' }}>Status</th>
+                    <th style={{ minWidth: '200px', whiteSpace: 'nowrap', textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedOversightTasks.map((t, idx) => {
+                    const isDone = t.status === 'Done';
+                    const isOnHold = t.status === 'On Hold';
+                    const isCancelled = t.status === 'Cancelled';
+                    const canReopen = isDone || isOnHold || isCancelled;
+                    const isSelected = selectedTaskIds.includes(t.id);
+                    const isEditedByAdmin = t.editedByAdmin || (t.notes && t.notes.toLowerCase().includes('edited by admin'));
 
-                  return (
-                    <tr key={t.id} style={{ background: isSelected ? '#eff6ff' : undefined }}>
-                      <td style={{ textAlign: 'center' }}>
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={e => {
-                            if (e.target.checked) {
-                              setSelectedTaskIds(prev => [...prev, t.id]);
-                            } else {
-                              setSelectedTaskIds(prev => prev.filter(id => id !== t.id));
-                            }
-                          }}
-                        />
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem' }}>
-                          <span className="task-sequence-badge" style={{ fontSize: '0.7rem', marginTop: '1px' }}>
-                            #{oversightStartIndex + idx + 1}
-                          </span>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: 700, color: '#0f172a', lineHeight: 1.4 }}>{t.title}</div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap', marginTop: '4px' }}>
-                              {/* Flowchart A: "Show edited by Admin tag on the task" */}
-                              {isEditedByAdmin && (
+                    return (
+                      <tr key={t.id} style={{ background: isSelected ? '#eff6ff' : undefined }}>
+                        <td style={{ textAlign: 'center' }}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={e => {
+                              if (e.target.checked) {
+                                setSelectedTaskIds(prev => [...prev, t.id]);
+                              } else {
+                                setSelectedTaskIds(prev => prev.filter(id => id !== t.id));
+                              }
+                            }}
+                          />
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem' }}>
+                            <span className="task-sequence-badge" style={{ fontSize: '0.7rem', marginTop: '1px' }}>
+                              #{oversightStartIndex + idx + 1}
+                            </span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontWeight: 700, color: '#0f172a', lineHeight: 1.4 }}>{t.title}</div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap', marginTop: '4px' }}>
+                                {/* Flowchart A: "Show edited by Admin tag on the task" */}
+                                {isEditedByAdmin && (
+                                  <span style={{
+                                    background: '#eff6ff',
+                                    color: '#1d4ed8',
+                                    border: '1px solid #bfdbfe',
+                                    fontSize: '0.64rem',
+                                    fontWeight: 700,
+                                    padding: '1px 6px',
+                                    borderRadius: '999px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '3px',
+                                    whiteSpace: 'nowrap'
+                                  }} title="Modified under Admin Task Oversight">
+                                    Edited by Admin
+                                  </span>
+                                )}
+                                <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                                  {t.project || 'General Operations'}{t.department ? ` • ${t.department}` : ''}
+                                </span>
+                              </div>
+                              {t.holdReason && (
+                                <div style={{ fontSize: '0.68rem', color: '#b45309', background: '#fef3c7', padding: '2px 6px', borderRadius: '4px', marginTop: '6px', display: 'inline-block' }}>
+                                  Hold: {t.holdReason}
+                                </div>
+                              )}
+                              {t.escalationReason && (
+                                <div style={{ fontSize: '0.68rem', color: '#b91c1c', background: '#fee2e2', padding: '2px 6px', borderRadius: '4px', marginTop: '6px', display: 'inline-block' }}>
+                                  Escalated to {t.escalatedTo || 'Senior Leadership'}: {t.escalationReason}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {t.assignees.map(a => (
+                              <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
                                 <span style={{
-                                  background: '#eff6ff',
-                                  color: '#1d4ed8',
-                                  border: '1px solid #bfdbfe',
-                                  fontSize: '0.64rem',
+                                  width: '22px',
+                                  height: '22px',
+                                  borderRadius: '50%',
+                                  background: '#e2e8f0',
+                                  color: '#1e293b',
+                                  fontSize: '0.65rem',
                                   fontWeight: 700,
-                                  padding: '1px 6px',
-                                  borderRadius: '999px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0
+                                }}>
+                                  {a.avatar || a.name.slice(0, 2).toUpperCase()}
+                                </span>
+                                <span style={{ fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap' }}>{a.name}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </td>
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          <div style={{ fontWeight: 600, fontSize: '0.75rem', whiteSpace: 'nowrap' }}>{t.scheduledDate}</div>
+                          <div style={{ fontSize: '0.7rem', color: '#64748b', whiteSpace: 'nowrap' }}>{t.time}</div>
+                        </td>
+                        <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                          <span className={`priority-badge priority-${t.priority.toLowerCase()}`}>
+                            {t.priority}
+                          </span>
+                        </td>
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            fontWeight: 700,
+                            fontSize: '0.74rem',
+                            padding: '2px 8px',
+                            borderRadius: '999px',
+                            color: isDone ? '#15803d' : isOnHold ? '#b45309' : t.status === 'Escalated' ? '#b91c1c' : '#1d4ed8',
+                            background: isDone ? '#f0fdf4' : isOnHold ? '#fffbeb' : t.status === 'Escalated' ? '#fef2f2' : '#eff6ff'
+                          }}>
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'currentColor' }} />
+                            {t.status}
+                          </span>
+                          {t.progressPercent !== undefined && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}>
+                              <div style={{ width: '64px', height: '4px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden' }}>
+                                <div style={{ width: `${Math.min(100, Math.max(0, t.progressPercent))}%`, height: '100%', background: isDone ? '#16a34a' : '#2563eb', borderRadius: '999px' }} />
+                              </div>
+                              <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>{t.progressPercent}%</span>
+                            </div>
+                          )}
+                        </td>
+                        {/* Flowchart A: Admin Actions (Edit, Reopen, View Only) */}
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.35rem', flexWrap: 'nowrap' }}>
+                            {/* 1. Edit Action */}
+                            <button
+                              type="button"
+                              className="btn-secondary"
+                              style={{ padding: '0.28rem 0.55rem', fontSize: '0.7rem', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                              onClick={() => {
+                                setTaskToEdit(t);
+                                setEditStatus(t.status);
+                                setEditReason(t.holdReason || t.escalationReason || '');
+                                setEditRemarks(t.notes || '');
+                              }}
+                              title="Edit status, reason, notes and remarks"
+                            >
+                              <Edit3 size={11} />
+                              Edit
+                            </button>
+
+                            {/* 2. Reopen Action */}
+                            {canReopen && (
+                              <button
+                                type="button"
+                                className="btn-primary"
+                                style={{
+                                  padding: '0.28rem 0.55rem',
+                                  fontSize: '0.7rem',
+                                  background: '#1e40af',
                                   display: 'inline-flex',
                                   alignItems: 'center',
                                   gap: '3px',
                                   whiteSpace: 'nowrap'
-                                }} title="Modified under Admin Task Oversight">
-                                  Edited by Admin
-                                </span>
-                              )}
-                              <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
-                                {t.project || 'General Operations'}{t.department ? ` • ${t.department}` : ''}
-                              </span>
-                            </div>
-                        {t.holdReason && (
-                          <div style={{ fontSize: '0.68rem', color: '#b45309', background: '#fef3c7', padding: '2px 6px', borderRadius: '4px', marginTop: '6px', display: 'inline-block' }}>
-                            Hold: {t.holdReason}
-                          </div>
-                        )}
-                        {t.escalationReason && (
-                          <div style={{ fontSize: '0.68rem', color: '#b91c1c', background: '#fee2e2', padding: '2px 6px', borderRadius: '4px', marginTop: '6px', display: 'inline-block' }}>
-                            Escalated to {t.escalatedTo || 'Senior Leadership'}: {t.escalationReason}
-                          </div>
-                        )}
-                          </div>
-                        </div>
-                      </td>
-                      <td style={{ whiteSpace: 'nowrap' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          {t.assignees.map(a => (
-                            <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
-                              <span style={{
-                                width: '22px',
-                                height: '22px',
-                                borderRadius: '50%',
-                                background: '#e2e8f0',
-                                color: '#1e293b',
-                                fontSize: '0.65rem',
-                                fontWeight: 700,
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                flexShrink: 0
-                              }}>
-                                {a.avatar || a.name.slice(0, 2).toUpperCase()}
-                              </span>
-                              <span style={{ fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap' }}>{a.name}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </td>
-                      <td style={{ whiteSpace: 'nowrap' }}>
-                        <div style={{ fontWeight: 600, fontSize: '0.75rem', whiteSpace: 'nowrap' }}>{t.scheduledDate}</div>
-                        <div style={{ fontSize: '0.7rem', color: '#64748b', whiteSpace: 'nowrap' }}>{t.time}</div>
-                      </td>
-                      <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
-                        <span className={`priority-badge priority-${t.priority.toLowerCase()}`}>
-                          {t.priority}
-                        </span>
-                      </td>
-                      <td style={{ whiteSpace: 'nowrap' }}>
-                        <span style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '5px',
-                          fontWeight: 700,
-                          fontSize: '0.74rem',
-                          padding: '2px 8px',
-                          borderRadius: '999px',
-                          color: isDone ? '#15803d' : isOnHold ? '#b45309' : t.status === 'Escalated' ? '#b91c1c' : '#1d4ed8',
-                          background: isDone ? '#f0fdf4' : isOnHold ? '#fffbeb' : t.status === 'Escalated' ? '#fef2f2' : '#eff6ff'
-                        }}>
-                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'currentColor' }} />
-                          {t.status}
-                        </span>
-                        {t.progressPercent !== undefined && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}>
-                            <div style={{ width: '64px', height: '4px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden' }}>
-                              <div style={{ width: `${Math.min(100, Math.max(0, t.progressPercent))}%`, height: '100%', background: isDone ? '#16a34a' : '#2563eb', borderRadius: '999px' }} />
-                            </div>
-                            <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>{t.progressPercent}%</span>
-                          </div>
-                        )}
-                      </td>
-                      {/* Flowchart A: Admin Actions (Edit, Reopen, View Only) */}
-                      <td style={{ whiteSpace: 'nowrap' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.35rem', flexWrap: 'nowrap' }}>
-                          {/* 1. Edit Action */}
-                          <button
-                            type="button"
-                            className="btn-secondary"
-                            style={{ padding: '0.28rem 0.55rem', fontSize: '0.7rem', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
-                            onClick={() => {
-                              setTaskToEdit(t);
-                              setEditStatus(t.status);
-                              setEditReason(t.holdReason || t.escalationReason || '');
-                              setEditRemarks(t.notes || '');
-                            }}
-                            title="Edit status, reason, notes and remarks"
-                          >
-                            <Edit3 size={11} />
-                            Edit
-                          </button>
+                                }}
+                                onClick={() => {
+                                  setTaskToReopen(t);
+                                  setReopenReason('');
+                                }}
+                                title="Reopen completed task"
+                              >
+                                <RotateCcw size={11} />
+                                Reopen
+                              </button>
+                            )}
 
-                          {/* 2. Reopen Action */}
-                          {canReopen && (
+                            {/* 3. View Only Action */}
                             <button
                               type="button"
-                              className="btn-primary"
-                              style={{
-                                padding: '0.28rem 0.55rem',
-                                fontSize: '0.7rem',
-                                background: '#1e40af',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '3px',
-                                whiteSpace: 'nowrap'
-                              }}
-                              onClick={() => {
-                                setTaskToReopen(t);
-                                setReopenReason('');
-                              }}
-                              title="Reopen completed task"
+                              className="btn-secondary"
+                              style={{ padding: '0.28rem 0.55rem', fontSize: '0.7rem', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                              onClick={() => setTaskToView(t)}
+                              title="See task details, status, notes and reasons"
                             >
-                              <RotateCcw size={11} />
-                              Reopen
+                              <Eye size={11} />
+                              View
                             </button>
-                          )}
 
-                          {/* 3. View Only Action */}
-                          <button
-                            type="button"
-                            className="btn-secondary"
-                            style={{ padding: '0.28rem 0.55rem', fontSize: '0.7rem', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
-                            onClick={() => setTaskToView(t)}
-                            title="See task details, status, notes and reasons"
-                          >
-                            <Eye size={11} />
-                            View
-                          </button>
+                            {/* CEO Delete */}
+                            {isCeo && (
+                              <button
+                                type="button"
+                                className="btn-secondary btn-delete-task"
+                                style={{ padding: '0.28rem 0.45rem', fontSize: '0.7rem', color: '#dc2626', borderColor: '#fca5a5' }}
+                                onClick={() => {
+                                  if (window.confirm(`CEO Action: Are you sure you want to permanently delete "${t.title}"?`)) {
+                                    deleteTask(t.id);
+                                  }
+                                }}
+                                title="Delete Deliverable (CEO Only)"
+                              >
+                                <Trash2 size={11} color="#dc2626" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
 
-                          {/* CEO Delete */}
-                          {isCeo && (
-                            <button
-                              type="button"
-                              className="btn-secondary btn-delete-task"
-                              style={{ padding: '0.28rem 0.45rem', fontSize: '0.7rem', color: '#dc2626', borderColor: '#fca5a5' }}
-                              onClick={() => {
-                                if (window.confirm(`CEO Action: Are you sure you want to permanently delete "${t.title}"?`)) {
-                                  deleteTask(t.id);
-                                }
-                              }}
-                              title="Delete Deliverable (CEO Only)"
-                            >
-                              <Trash2 size={11} color="#dc2626" />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-
-            {filteredTasks.length === 0 && (
-              <div style={{ padding: '2.5rem', textAlign: 'center', color: '#94a3b8' }}>
-                No tasks match the selected monitoring filters.
-              </div>
-            )}
+              {filteredTasks.length === 0 && (
+                <div style={{ padding: '2.5rem', textAlign: 'center', color: '#94a3b8' }}>
+                  No tasks match the selected monitoring filters.
+                </div>
+              )}
             </div>
             {renderEnterprisePaginationBar({
               totalCount: totalOversightCount,
@@ -2441,53 +2442,53 @@ export const AdminHrPortal: React.FC = () => {
           }}>
             <div className="enterprise-table-wrapper" style={{ border: 'none', borderRadius: 0, boxShadow: 'none' }}>
               <table className="enterprise-table">
-              <thead>
-                <tr>
-                  <th style={{ width: '40px' }}>#</th>
-                  <th>Deliverable Title</th>
-                  <th>Assignees</th>
-                  <th>Department</th>
-                  <th>Scheduled Date</th>
-                  <th>Priority</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedReportTasks.map((t, idx) => (
-                  <tr key={t.id}>
-                    <td style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700 }}>#{reportsStartIndex + idx + 1}</td>
-                    <td>
-                      <div style={{ fontWeight: 700, fontSize: '0.78rem' }}>{t.title}</div>
-                      <div style={{ fontSize: '0.68rem', color: '#64748b' }}>Project: {t.project || 'General'}</div>
-                      {t.holdReason && <div style={{ fontSize: '0.65rem', color: '#b45309' }}>Hold: {t.holdReason}</div>}
-                      {t.escalationReason && <div style={{ fontSize: '0.65rem', color: '#b91c1c' }}>Escalation: {t.escalationReason}</div>}
-                    </td>
-                    <td>{t.assignees.map(a => a.name).join(', ')}</td>
-                    <td>{t.department}</td>
-                    <td>{t.scheduledDate} {t.time}</td>
-                    <td>
-                      <span className={`priority-badge priority-${t.priority.toLowerCase()}`}>
-                        {t.priority}
-                      </span>
-                    </td>
-                    <td>
-                      <span style={{
-                        fontWeight: 700,
-                        fontSize: '0.75rem',
-                        color: t.status === 'Done' ? '#16a34a' : t.status === 'On Hold' ? '#d97706' : t.status === 'Escalated' ? '#dc2626' : '#2563eb'
-                      }}>
-                        {t.status}
-                      </span>
-                    </td>
+                <thead>
+                  <tr>
+                    <th style={{ width: '40px' }}>#</th>
+                    <th>Deliverable Title</th>
+                    <th>Assignees</th>
+                    <th>Department</th>
+                    <th>Scheduled Date</th>
+                    <th>Priority</th>
+                    <th>Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            {reportMetrics.filtered.length === 0 && (
-              <div style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>
-                No deliverables found for this report configuration.
-              </div>
-            )}
+                </thead>
+                <tbody>
+                  {paginatedReportTasks.map((t, idx) => (
+                    <tr key={t.id}>
+                      <td style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700 }}>#{reportsStartIndex + idx + 1}</td>
+                      <td>
+                        <div style={{ fontWeight: 700, fontSize: '0.78rem' }}>{t.title}</div>
+                        <div style={{ fontSize: '0.68rem', color: '#64748b' }}>Project: {t.project || 'General'}</div>
+                        {t.holdReason && <div style={{ fontSize: '0.65rem', color: '#b45309' }}>Hold: {t.holdReason}</div>}
+                        {t.escalationReason && <div style={{ fontSize: '0.65rem', color: '#b91c1c' }}>Escalation: {t.escalationReason}</div>}
+                      </td>
+                      <td>{t.assignees.map(a => a.name).join(', ')}</td>
+                      <td>{t.department}</td>
+                      <td>{t.scheduledDate} {t.time}</td>
+                      <td>
+                        <span className={`priority-badge priority-${t.priority.toLowerCase()}`}>
+                          {t.priority}
+                        </span>
+                      </td>
+                      <td>
+                        <span style={{
+                          fontWeight: 700,
+                          fontSize: '0.75rem',
+                          color: t.status === 'Done' ? '#16a34a' : t.status === 'On Hold' ? '#d97706' : t.status === 'Escalated' ? '#dc2626' : '#2563eb'
+                        }}>
+                          {t.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {reportMetrics.filtered.length === 0 && (
+                <div style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>
+                  No deliverables found for this report configuration.
+                </div>
+              )}
             </div>
             {renderEnterprisePaginationBar({
               totalCount: totalReportsCount,
@@ -3560,7 +3561,7 @@ export const AdminHrPortal: React.FC = () => {
       {/* Tab 4: Deactivation & Mandatory Handover (FC 18 — Clean & Organized) */}
       {activeTab === 'deactivation' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          
+
           {/* Header & Clean Sub-Nav */}
           <div style={{
             background: '#ffffff',
@@ -3836,7 +3837,7 @@ export const AdminHrPortal: React.FC = () => {
                               />
                             </div>
                             <div style={{ fontSize: '0.7rem', color: '#b45309', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '6px', padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              
+
                               <span><strong>Protocol:</strong> Block login immediately after last working day ({lastWorkingDay}). Deliverables reassigned.</span>
                             </div>
                           </div>
@@ -3860,7 +3861,7 @@ export const AdminHrPortal: React.FC = () => {
                               />
                             </div>
                             <div style={{ fontSize: '0.7rem', color: '#991b1b', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              
+
                               <span><strong>Protocol:</strong> Block login immediately after effective date ({effectiveDate}). Session terminated.</span>
                             </div>
                           </div>
@@ -3898,7 +3899,7 @@ export const AdminHrPortal: React.FC = () => {
                             </div>
                           </div>
                           <div style={{ fontSize: '0.7rem', color: '#166534', background: '#dcfce7', border: '1px solid #86efac', borderRadius: '6px', padding: '6px 8px', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            
+
                             <span><strong>Protocol:</strong> Mark On Leave, block login until return date ({leaveEndDate || 'Indefinite'}). Tasks reallocated.</span>
                           </div>
                         </div>
@@ -4355,7 +4356,7 @@ export const AdminHrPortal: React.FC = () => {
           }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                
+
                 <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
                   UrbanGaon Holidays for Financial Year 2026-27
                 </h3>
@@ -4440,7 +4441,7 @@ export const AdminHrPortal: React.FC = () => {
                         alignItems: 'center',
                         gap: '4px'
                       }}>
-                         Auto-Paused (Zero Dispatches)
+                        Auto-Paused (Zero Dispatches)
                       </span>
                     </td>
                   </tr>
@@ -4509,7 +4510,7 @@ export const AdminHrPortal: React.FC = () => {
           }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                
+
                 <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0369a1' }}>
                   Employee Directory &amp; Corporate Email Management
                 </h3>
@@ -4605,166 +4606,109 @@ export const AdminHrPortal: React.FC = () => {
           <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
             <div style={{ overflowX: 'auto', width: '100%' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem' }}>
-              <thead>
-                <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #cbd5e1' }}>
-                  <th style={{ padding: '10px 14px', fontWeight: 800, color: '#334155' }}>Staff Member</th>
-                  <th style={{ padding: '10px 14px', fontWeight: 800, color: '#334155' }}>Employee ID</th>
-                  <th style={{ padding: '10px 14px', fontWeight: 800, color: '#334155' }}>Department &amp; Role</th>
-                  <th style={{ padding: '10px 14px', fontWeight: 800, color: '#334155' }}>Corporate Email</th>
-                  <th style={{ padding: '10px 14px', fontWeight: 800, color: '#334155' }}>Status</th>
-                  <th style={{ padding: '10px 14px', fontWeight: 800, color: '#334155', textAlign: 'center' }}>Profile Configuration</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedDirectoryMembers.map(member => (
-                  <tr key={member.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '10px 14px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{
-                          width: '32px',
-                          height: '32px',
-                          borderRadius: '50%',
-                          background: isAakashUser(member) ? '#ecfdf5' : '#eff6ff',
-                          color: isAakashUser(member) ? '#059669' : '#2563eb',
-                          fontWeight: 700,
-                          fontSize: '0.75rem',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          border: isAakashUser(member) ? '1px solid #a7f3d0' : '1px solid #bfdbfe',
-                          overflow: 'hidden'
-                        }}>
-                          {member.avatar?.startsWith('/') || member.avatar?.startsWith('http') ? (
-                            <img src={member.avatar} alt={member.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          ) : (
-                            member.avatar || member.name.slice(0, 2).toUpperCase()
-                          )}
-                        </div>
-                        <div>
-                          <div style={{ fontWeight: 700, color: '#0f172a' }}>
-                            {member.name}
-                            {isAakashUser(member) && (
-                              <span style={{ marginLeft: '6px', fontSize: '0.65rem', background: '#dcfce7', color: '#15803d', padding: '1px 5px', borderRadius: '4px', fontWeight: 800 }}>
-                                AI &amp; IT OFFICER
-                              </span>
+                <thead>
+                  <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #cbd5e1' }}>
+                    <th style={{ padding: '10px 14px', fontWeight: 800, color: '#334155' }}>Staff Member</th>
+                    <th style={{ padding: '10px 14px', fontWeight: 800, color: '#334155' }}>Employee ID</th>
+                    <th style={{ padding: '10px 14px', fontWeight: 800, color: '#334155' }}>Department &amp; Role</th>
+                    <th style={{ padding: '10px 14px', fontWeight: 800, color: '#334155' }}>Corporate Email</th>
+                    <th style={{ padding: '10px 14px', fontWeight: 800, color: '#334155' }}>Status</th>
+                    <th style={{ padding: '10px 14px', fontWeight: 800, color: '#334155', textAlign: 'center' }}>Profile Configuration</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedDirectoryMembers.map(member => (
+                    <tr key={member.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '10px 14px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            background: isAakashUser(member) ? '#ecfdf5' : '#eff6ff',
+                            color: isAakashUser(member) ? '#059669' : '#2563eb',
+                            fontWeight: 700,
+                            fontSize: '0.75rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            border: isAakashUser(member) ? '1px solid #a7f3d0' : '1px solid #bfdbfe',
+                            overflow: 'hidden'
+                          }}>
+                            {member.avatar?.startsWith('/') || member.avatar?.startsWith('http') ? (
+                              <img src={member.avatar} alt={member.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                              member.avatar || member.name.slice(0, 2).toUpperCase()
                             )}
                           </div>
-                          <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{member.designation}</div>
+                          <div>
+                            <div style={{ fontWeight: 700, color: '#0f172a' }}>
+                              {member.name}
+                              {isAakashUser(member) && (
+                                <span style={{ marginLeft: '6px', fontSize: '0.65rem', background: '#dcfce7', color: '#15803d', padding: '1px 5px', borderRadius: '4px', fontWeight: 800 }}>
+                                  AI &amp; IT OFFICER
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{member.designation}</div>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td style={{ padding: '10px 14px', color: '#475569', fontFamily: 'monospace', fontWeight: 600 }}>
-                      {member.employeeId || member.id}
-                    </td>
-                    <td style={{ padding: '10px 14px' }}>
-                      <div style={{ color: '#0f172a', fontWeight: 600 }}>{member.department}</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
-                        <span style={{
-                          fontSize: '0.65rem',
-                          fontWeight: 700,
-                          padding: '1px 6px',
-                          borderRadius: '4px',
-                          background: member.role === 'SUPER_ADMIN' ? '#fdf2f8' : member.role === 'ADMIN' ? '#fef3c7' : '#f1f5f9',
-                          color: member.role === 'SUPER_ADMIN' ? '#be185d' : member.role === 'ADMIN' ? '#b45309' : '#475569',
-                          border: '1px solid #cbd5e1'
-                        }}>
-                          {member.role}
-                        </span>
-                        <span style={{ fontSize: '0.68rem', color: '#475569', fontWeight: 600 }}>
-                          • Reporting Mgr: <strong style={{ color: '#0369a1' }}>{member.manager || 'Dr. Rekha Pareek'}</strong>
-                        </span>
-                      </div>
-                    </td>
-                    <td style={{ padding: '10px 14px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                        <Mail size={13} color="#2563eb" />
-                        <span style={{ fontWeight: 700, color: '#1d4ed8' }}>{member.email}</span>
-                      </div>
-                    </td>
-                    <td style={{ padding: '10px 14px' }}>
-                      <span style={{
-                        fontSize: '0.7rem',
-                        fontWeight: 700,
-                        padding: '2px 8px',
-                        borderRadius: '9999px',
-                        background: member.status === 'ACTIVE' ? '#dcfce7' : (member.status === 'ON_LEAVE' || (member.status as string) === 'ON LEAVE') ? '#fef3c7' : member.status === 'DEACTIVATED' ? '#fee2e2' : '#f1f5f9',
-                        color: member.status === 'ACTIVE' ? '#15803d' : (member.status === 'ON_LEAVE' || (member.status as string) === 'ON LEAVE') ? '#b45309' : member.status === 'DEACTIVATED' ? '#b91c1c' : '#475569'
-                      }}>
-                        {member.status === 'ON_LEAVE' ? 'ON LEAVE' : (member.status || 'ACTIVE')}
-                      </span>
-                    </td>
-                    <td style={{ padding: '10px 14px', textAlign: 'center' }}>
-                      <button
-                        type="button"
-                        className="btn-secondary"
-                        onClick={() => {
-                          setMemberToEditProfile(member);
-                          setEditMemberNameInput(member.name || '');
-                          setNewEmailInput(member.email || '');
-                          setEditMemberRoleInput(member.role || 'EMPLOYEE');
-                          setEditMemberEmpIdInput(member.employeeId || member.id || '');
-                          setEditMemberDeptInput(member.department || '');
-                          setEditMemberDesigInput(member.designation || '');
-                          setEditMemberManagerIdInput(resolveMemberManagerId(member));
-                          setEmailChangeReason('');
-                          setEmailUpdateError(null);
-                        }}
-                        style={{
-                          fontSize: '0.74rem',
-                          padding: '5px 10px',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '5px',
-                          color: '#0284c7',
-                          borderColor: '#bae6fd',
-                          background: '#f0f9ff',
-                          fontWeight: 700
-                        }}
-                        title={`Edit profile & credentials for ${member.name}`}
-                      >
-                        <Edit3 size={13} />
-                        Edit Profile
-                      </button>
-
-                      {/* Flowchart 23: Mark Employee on Leave / Return from Leave */}
-                      {member.status === 'ON_LEAVE' ? (
-                        <button
-                          type="button"
-                          className="btn-secondary"
-                          onClick={async () => {
-                            if (confirm(`Restore ${member.name} from leave to ACTIVE status now?`)) {
-                              await returnMemberFromLeave(member.id);
-                            }
-                          }}
-                          style={{
-                            fontSize: '0.74rem',
-                            padding: '5px 10px',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '5px',
-                            color: '#15803d',
-                            borderColor: '#86efac',
-                            background: '#f0fdf4',
+                      </td>
+                      <td style={{ padding: '10px 14px', color: '#475569', fontFamily: 'monospace', fontWeight: 600 }}>
+                        {member.employeeId || member.id}
+                      </td>
+                      <td style={{ padding: '10px 14px' }}>
+                        <div style={{ color: '#0f172a', fontWeight: 600 }}>{member.department}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
+                          <span style={{
+                            fontSize: '0.65rem',
                             fontWeight: 700,
-                            marginLeft: '6px'
-                          }}
-                          title={`Return ${member.name} from leave`}
-                        >
-                          Return to Active
-                        </button>
-                      ) : (
+                            padding: '1px 6px',
+                            borderRadius: '4px',
+                            background: member.role === 'SUPER_ADMIN' ? '#fdf2f8' : member.role === 'ADMIN' ? '#fef3c7' : '#f1f5f9',
+                            color: member.role === 'SUPER_ADMIN' ? '#be185d' : member.role === 'ADMIN' ? '#b45309' : '#475569',
+                            border: '1px solid #cbd5e1'
+                          }}>
+                            {member.role}
+                          </span>
+                          <span style={{ fontSize: '0.68rem', color: '#475569', fontWeight: 600 }}>
+                            • Reporting Mgr: <strong style={{ color: '#0369a1' }}>{member.manager || 'Dr. Rekha Pareek'}</strong>
+                          </span>
+                        </div>
+                      </td>
+                      <td style={{ padding: '10px 14px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <Mail size={13} color="#2563eb" />
+                          <span style={{ fontWeight: 700, color: '#1d4ed8' }}>{member.email}</span>
+                        </div>
+                      </td>
+                      <td style={{ padding: '10px 14px' }}>
+                        <span style={{
+                          fontSize: '0.7rem',
+                          fontWeight: 700,
+                          padding: '2px 8px',
+                          borderRadius: '9999px',
+                          background: member.status === 'ACTIVE' ? '#dcfce7' : (member.status === 'ON_LEAVE' || (member.status as string) === 'ON LEAVE') ? '#fef3c7' : member.status === 'DEACTIVATED' ? '#fee2e2' : '#f1f5f9',
+                          color: member.status === 'ACTIVE' ? '#15803d' : (member.status === 'ON_LEAVE' || (member.status as string) === 'ON LEAVE') ? '#b45309' : member.status === 'DEACTIVATED' ? '#b91c1c' : '#475569'
+                        }}>
+                          {member.status === 'ON_LEAVE' ? 'ON LEAVE' : (member.status || 'ACTIVE')}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 14px', textAlign: 'center' }}>
                         <button
                           type="button"
                           className="btn-secondary"
                           onClick={() => {
-                            setLeaveTargetMember(member);
-                            setLeaveModalStartDate(getTodayStr());
-                            const d = new Date();
-                            d.setDate(d.getDate() + 3);
-                            setLeaveModalEndDate(d.toISOString().split('T')[0]);
-                            setLeaveTaskAction('AUTO_EXTEND');
-                            setLeaveNotesInput('');
-                            setShowLeaveModal(true);
+                            setMemberToEditProfile(member);
+                            setEditMemberNameInput(member.name || '');
+                            setNewEmailInput(member.email || '');
+                            setEditMemberRoleInput(member.role || 'EMPLOYEE');
+                            setEditMemberEmpIdInput(member.employeeId || member.id || '');
+                            setEditMemberDeptInput(member.department || '');
+                            setEditMemberDesigInput(member.designation || '');
+                            setEditMemberManagerIdInput(resolveMemberManagerId(member));
+                            setEmailChangeReason('');
+                            setEmailUpdateError(null);
                           }}
                           style={{
                             fontSize: '0.74rem',
@@ -4772,22 +4716,79 @@ export const AdminHrPortal: React.FC = () => {
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '5px',
-                            color: '#b45309',
-                            borderColor: '#fde68a',
-                            background: '#fffbeb',
-                            fontWeight: 700,
-                            marginLeft: '6px'
+                            color: '#0284c7',
+                            borderColor: '#bae6fd',
+                            background: '#f0f9ff',
+                            fontWeight: 700
                           }}
-                          title={`Mark ${member.name} on leave with start & end date`}
+                          title={`Edit profile & credentials for ${member.name}`}
                         >
-                          Mark On Leave
+                          <Edit3 size={13} />
+                          Edit Profile
                         </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+
+                        {/* Flowchart 23: Mark Employee on Leave / Return from Leave */}
+                        {member.status === 'ON_LEAVE' ? (
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            onClick={async () => {
+                              if (confirm(`Restore ${member.name} from leave to ACTIVE status now?`)) {
+                                await returnMemberFromLeave(member.id);
+                              }
+                            }}
+                            style={{
+                              fontSize: '0.74rem',
+                              padding: '5px 10px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              color: '#15803d',
+                              borderColor: '#86efac',
+                              background: '#f0fdf4',
+                              fontWeight: 700,
+                              marginLeft: '6px'
+                            }}
+                            title={`Return ${member.name} from leave`}
+                          >
+                            Return to Active
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            onClick={() => {
+                              setLeaveTargetMember(member);
+                              setLeaveModalStartDate(getTodayStr());
+                              const d = new Date();
+                              d.setDate(d.getDate() + 3);
+                              setLeaveModalEndDate(d.toISOString().split('T')[0]);
+                              setLeaveTaskAction('AUTO_EXTEND');
+                              setLeaveNotesInput('');
+                              setShowLeaveModal(true);
+                            }}
+                            style={{
+                              fontSize: '0.74rem',
+                              padding: '5px 10px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              color: '#b45309',
+                              borderColor: '#fde68a',
+                              background: '#fffbeb',
+                              fontWeight: 700,
+                              marginLeft: '6px'
+                            }}
+                            title={`Mark ${member.name} on leave with start & end date`}
+                          >
+                            Mark On Leave
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
             {renderEnterprisePaginationBar({
               totalCount: totalDirectoryCount,
@@ -4930,18 +4931,18 @@ export const AdminHrPortal: React.FC = () => {
           <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}>
             <div style={{ overflowX: 'auto', width: '100%' }}>
               <table className="admin-oversight-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
-              <thead>
-                <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', textAlign: 'left' }}>
-                  <th style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#475569' }}>TIMESTAMP</th>
-                  <th style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#475569' }}>EVENT TYPE</th>
-                  <th style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#475569' }}>RECIPIENT</th>
-                  <th style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#475569' }}>SUBJECT / DELIVERABLE</th>
-                  <th style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#475569' }}>STATUS</th>
-                  <th style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#475569', textAlign: 'right' }}>ACTIONS</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedEmailLogs.map((log, idx) => {
+                <thead>
+                  <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', textAlign: 'left' }}>
+                    <th style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#475569' }}>TIMESTAMP</th>
+                    <th style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#475569' }}>EVENT TYPE</th>
+                    <th style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#475569' }}>RECIPIENT</th>
+                    <th style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#475569' }}>SUBJECT / DELIVERABLE</th>
+                    <th style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#475569' }}>STATUS</th>
+                    <th style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#475569', textAlign: 'right' }}>ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedEmailLogs.map((log, idx) => {
                     const logId = log._id || log.id || `log-${idx}`;
                     const isRetrying = retryingEmailId === logId;
                     return (
@@ -5041,19 +5042,19 @@ export const AdminHrPortal: React.FC = () => {
                     );
                   })}
 
-                {filteredEmailLogs.length === 0 && !isFetchingEmailLogs && (
-                  <tr>
-                    <td colSpan={6} style={{ padding: '2.5rem 1rem', textAlign: 'center', color: '#94a3b8' }}>
-                      <Mail size={32} style={{ margin: '0 auto 0.5rem auto', opacity: 0.5 }} />
-                      <div style={{ fontWeight: 600 }}>No email logs recorded yet.</div>
-                      <div style={{ fontSize: '0.75rem', marginTop: '2px' }}>
-                        Dispatches sent by the Notification Daemon will appear here in realtime.
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  {filteredEmailLogs.length === 0 && !isFetchingEmailLogs && (
+                    <tr>
+                      <td colSpan={6} style={{ padding: '2.5rem 1rem', textAlign: 'center', color: '#94a3b8' }}>
+                        <Mail size={32} style={{ margin: '0 auto 0.5rem auto', opacity: 0.5 }} />
+                        <div style={{ fontWeight: 600 }}>No email logs recorded yet.</div>
+                        <div style={{ fontSize: '0.75rem', marginTop: '2px' }}>
+                          Dispatches sent by the Notification Daemon will appear here in realtime.
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
             {renderEnterprisePaginationBar({
               totalCount: totalEmailLogsCount,
@@ -5438,7 +5439,7 @@ export const AdminHrPortal: React.FC = () => {
                 employeeId: verifyEmployeeId,
               });
             }} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-              
+
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '0.75rem' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.73rem', fontWeight: 700, color: '#334155', marginBottom: '3px' }}>
@@ -5649,7 +5650,7 @@ export const AdminHrPortal: React.FC = () => {
             <div className="stream-modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <div style={{ background: '#fef3c7', padding: '6px', borderRadius: '8px' }}>
-                  
+
                 </div>
                 <div>
                   <h3 style={{ fontSize: '1.02rem', fontWeight: 800, color: '#92400e', margin: 0 }}>

@@ -1257,27 +1257,6 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
               />
             </div>
 
-            {/* Due Time */}
-            <div>
-              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-                Target Execution Time
-              </label>
-              <input
-                type="text"
-                placeholder="05:00 PM"
-                value={dueTime}
-                onChange={(e) => setDueTime(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px 10px',
-                  fontSize: '0.84rem',
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
-                  outline: 'none'
-                }}
-              />
-            </div>
-
             {/* Priority */}
             <div>
               <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
