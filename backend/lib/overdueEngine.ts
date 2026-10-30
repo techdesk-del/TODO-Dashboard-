@@ -21,7 +21,7 @@ import connectDB from './db';
 import { TaskModel } from '@/models/Task';
 import { MemberModel } from '@/models/Member';
 import { AuditLogModel } from '@/models/AuditLog';
-import { getTodayStr } from './dateUtils';
+import { getTodayStr } from '@/shared/lib/dateUtils';
 import { sendOverdueAutoFlagEmail } from './email';
 import type { Task, TeamMember } from '@/types';
 

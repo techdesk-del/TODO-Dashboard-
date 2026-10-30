@@ -18,9 +18,9 @@ import {
   CalendarDays,
   Globe
 } from 'lucide-react';
-import { getTodayStr, getTomorrowStr, formatDateDisplay, formatDateDayMonth } from '@/lib/dateUtils';
-import { isCeoUser, isStrictCeo, canAccessWorkflows, canAccessAdminHr, canViewAuditTrail } from '@/lib/rosterData';
-import { computeMultiAssigneeStatus } from '@/lib/multiAssignee';
+import { getTodayStr, getTomorrowStr, formatDateDisplay, formatDateDayMonth } from '@/shared/lib/dateUtils';
+import { isCeoUser, isStrictCeo, canAccessWorkflows, canAccessAdminHr, canViewAuditTrail } from '@/shared/lib/rosterData';
+import { computeMultiAssigneeStatus } from '@/shared/lib/multiAssignee';
 import type { Task } from '@/types';
 
 export const Sidebar: React.FC = () => {

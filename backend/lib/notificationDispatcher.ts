@@ -22,7 +22,7 @@ import { EmailLogModel } from '@/models/EmailLog';
 import { AuditLogModel } from '@/models/AuditLog';
 import { MemberModel } from '@/models/Member';
 import { PurgedMemberModel } from '@/models/PurgedMember';
-import { findOfficialEmployeeByEmail } from './rosterData';
+import { findOfficialEmployeeByEmail } from '@/shared/lib/rosterData';
 import {
   sendTaskAssignedEmail,
   sendTaskEscalatedEmail,

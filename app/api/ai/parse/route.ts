@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { parseSpeechOrTextCommand } from '@/lib/aiParser';
+import { parseSpeechOrTextCommand } from '@/shared/lib/aiParser';
 
 export async function POST(request: Request) {
   try {

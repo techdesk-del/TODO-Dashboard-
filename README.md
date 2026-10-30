@@ -30,16 +30,22 @@ A modern, high-performance enterprise executive operating system and AI-powered 
 │   ├── generate-pdf.js             # Headless Edge PDF audit generator
 │   ├── nas-auto-update.sh          # Synology NAS automatic pull & container updater
 │   └── package-cpanel.js           # Production standalone packager for cPanel / PM2
-├── src/                            # Application Source Code
-│   ├── app/                        # Next.js App Router (pages, layout, API routes)
-│   │   └── api/                    # Enterprise REST APIs (admin, ai, audit, cron, tasks)
+├── app/                            # Next.js App Router (routing layer only — thin)
+│   ├── layout.tsx, page.tsx        # Root layout & entry page
+│   └── api/                        # REST route handlers → delegate to backend/
+├── frontend/                       # 🎨 FRONTEND (client-side UI)
 │   ├── components/                 # React 19 UI Components (Portals, Modals, Views)
-│   ├── context/                    # AppContext: Global enterprise state & dispatch
+│   ├── context/                    # AppContext: Global state & dispatch
 │   ├── hooks/                      # Custom hooks (e.g. useTaskDeadlines)
-│   ├── lib/                        # Core business engines (email, cron, retention, export)
-│   ├── models/                     # Mongoose Schemas (Task, User, AuditLog, Member)
-│   ├── styles/                     # Design tokens & responsive global styles
-│   └── types/                      # TypeScript definitions & data models
+│   ├── lib/                        # Browser-only utils (XLSX export, sound)
+│   └── styles/                     # Design tokens & responsive global styles
+├── backend/                        # ⚙️ BACKEND (server-side only)
+│   ├── lib/                        # Server engines (db, auth, email, cron, digest, overdue, retention)
+│   └── models/                     # Mongoose Schemas (Task, User, AuditLog, Member)
+├── shared/                         # 🔗 Isomorphic code used by both frontend & backend
+│   ├── lib/                        # Date utils, roster/RBAC, AI parser, multi-assignee logic
+│   └── types/                      # TypeScript definitions & data contracts
+├── instrumentation.ts              # Server boot hook (starts cron schedulers)
 ├── tests/                          # Automated Verification & Audit Test Suite
 │   └── audit/                      # Flowchart, retention, and responsive audit tests
 ├── Dockerfile                      # Multi-stage production container build

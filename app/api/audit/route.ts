@@ -7,8 +7,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import { AuditLogModel } from '@/models/AuditLog';
-import { INITIAL_AUDIT_LOGS } from '@/lib/mockData';
-import { canViewAuditTrail } from '@/lib/rosterData';
+import { INITIAL_AUDIT_LOGS } from '@/shared/lib/mockData';
+import { canViewAuditTrail } from '@/shared/lib/rosterData';
 
 async function seedAuditIfEmpty() {
   const count = await AuditLogModel.countDocuments();

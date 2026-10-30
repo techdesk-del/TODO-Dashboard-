@@ -2,8 +2,8 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
-import { isCeoUser, isStrictCeo } from '@/lib/rosterData';
-import { getTodayStr, formatDateDisplay, formatDateShort, formatCreationDate } from '@/lib/dateUtils';
+import { isCeoUser, isStrictCeo } from '@/shared/lib/rosterData';
+import { getTodayStr, formatDateDisplay, formatDateShort, formatCreationDate } from '@/shared/lib/dateUtils';
 import { Task, TeamMember } from '@/types';
 import { TaskCard } from '@/components/TaskCard';
 import {

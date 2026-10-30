@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import { SystemConfigModel } from '@/models/SystemConfig';
 import { AuditLogModel } from '@/models/AuditLog';
-import { INITIAL_SYSTEM_CONFIG } from '@/lib/mockData';
+import { INITIAL_SYSTEM_CONFIG } from '@/shared/lib/mockData';
 import type { SystemConfig } from '@/types';
 
 export const dynamic = 'force-dynamic';

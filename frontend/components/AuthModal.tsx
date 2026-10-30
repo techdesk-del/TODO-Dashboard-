@@ -26,7 +26,7 @@ import {
   AlertTriangle,
   RotateCcw
 } from 'lucide-react';
-import { OFFICIAL_ROSTER, isCeoUser } from '@/lib/rosterData';
+import { OFFICIAL_ROSTER, isCeoUser } from '@/shared/lib/rosterData';
 import { Role, TeamMember } from '@/types';
 
 interface AuthModalProps {

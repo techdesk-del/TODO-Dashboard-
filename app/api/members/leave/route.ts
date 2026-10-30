@@ -23,7 +23,7 @@ import { TaskModel } from '@/models/Task';
 import { AuditLogModel } from '@/models/AuditLog';
 import { dispatchNotificationFlow } from '@/lib/notificationDispatcher';
 import { broadcastMemberMutation, broadcastTaskMutation } from '@/lib/events';
-import { OFFICIAL_ROSTER } from '@/lib/rosterData';
+import { OFFICIAL_ROSTER } from '@/shared/lib/rosterData';
 import type { AffectedLeaveTaskItem, OtherActiveLeaveTaskItem } from '@/lib/email';
 
 function calculateInclusiveLeaveDays(startStr: string, endStr: string): number {

@@ -23,44 +23,41 @@
       }
     ],
     "paths": {
-      "@/*": [
-        "./src/*"
-      ],
       "@/frontend/*": [
-        "./src/frontend/*"
+        "./frontend/*"
       ],
       "@/backend/*": [
-        "./src/backend/*"
+        "./backend/*"
+      ],
+      "@/shared/*": [
+        "./shared/*"
       ],
       "@/components/*": [
-        "./src/frontend/components/*",
-        "./src/components/*"
+        "./frontend/components/*"
       ],
       "@/context/*": [
-        "./src/frontend/context/*",
-        "./src/context/*"
+        "./frontend/context/*"
       ],
       "@/hooks/*": [
-        "./src/frontend/hooks/*",
-        "./src/hooks/*"
+        "./frontend/hooks/*"
       ],
       "@/styles/*": [
-        "./src/frontend/styles/*",
-        "./src/styles/*"
+        "./frontend/styles/*"
       ],
       "@/models/*": [
-        "./src/backend/models/*",
-        "./src/models/*"
+        "./backend/models/*"
       ],
       "@/lib/*": [
-        "./src/backend/lib/*",
-        "./src/lib/*"
+        "./backend/lib/*"
       ],
       "@/types": [
-        "./src/types"
+        "./shared/types"
       ],
       "@/types/*": [
-        "./src/types/*"
+        "./shared/types/*"
+      ],
+      "@/*": [
+        "./*"
       ]
     }
   },
@@ -71,6 +68,9 @@
     ".next/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    ".next",
+    "tests",
+    "scripts"
   ]
 }

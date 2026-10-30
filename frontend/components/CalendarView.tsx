@@ -3,9 +3,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Task, TeamMember } from '@/types';
-import { isCeoUser, isStrictCeo, canAccessAdminHr } from '@/lib/rosterData';
-import { getCompanyHoliday, isSundayDate, HOLIDAY_METADATA } from '@/lib/holidayData';
-import { getTodayStr, formatDateDisplay, formatDateShort, formatCreationDate } from '@/lib/dateUtils';
+import { isCeoUser, isStrictCeo, canAccessAdminHr } from '@/shared/lib/rosterData';
+import { getCompanyHoliday, isSundayDate, HOLIDAY_METADATA } from '@/shared/lib/holidayData';
+import { getTodayStr, formatDateDisplay, formatDateShort, formatCreationDate } from '@/shared/lib/dateUtils';
 import { 
   ChevronLeft, 
   ChevronRight, 

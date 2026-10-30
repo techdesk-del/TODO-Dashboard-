@@ -13,7 +13,7 @@ import { MemberModel } from '@/models/Member';
 import { UserModel } from '@/models/User';
 import { TaskModel } from '@/models/Task';
 import { AuditLogModel } from '@/models/AuditLog';
-import { isCeoUser } from '@/lib/rosterData';
+import { isCeoUser } from '@/shared/lib/rosterData';
 import { sendOffboardingSummaryEmail, sendHandoverNotificationToManagerEmail } from '@/lib/email';
 import { broadcastMemberMutation, broadcastTaskMutation } from '@/lib/events';
 import type { TaskStatus, AssigneeInfo } from '@/types';

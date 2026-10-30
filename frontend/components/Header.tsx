@@ -24,8 +24,8 @@ import {
   User
 } from 'lucide-react';
 import { useTaskDeadlines } from '@/hooks/useTaskDeadlines';
-import { formatDateDisplay, formatDateShort, getTodayStr } from '@/lib/dateUtils';
-import { isCeoUser, isStrictCeo } from '@/lib/rosterData';
+import { formatDateDisplay, formatDateShort, getTodayStr } from '@/shared/lib/dateUtils';
+import { isCeoUser, isStrictCeo } from '@/shared/lib/rosterData';
 
 export const Header: React.FC = () => {
   const {

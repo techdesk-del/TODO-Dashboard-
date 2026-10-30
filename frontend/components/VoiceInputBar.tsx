@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
-import { parseSpeechOrTextCommand } from '@/lib/aiParser';
-import { soundEngine } from '@/lib/sound';
+import { parseSpeechOrTextCommand } from '@/shared/lib/aiParser';
+import { soundEngine } from '@/frontend/lib/sound';
 import { Mic, ArrowRight, X, Check } from 'lucide-react';
-import { isCeoUser, isStrictCeo } from '@/lib/rosterData';
+import { isCeoUser, isStrictCeo } from '@/shared/lib/rosterData';
 
 export const VoiceInputBar: React.FC = () => {
   const { addTask, members, activeMembers, currentUser } = useApp();

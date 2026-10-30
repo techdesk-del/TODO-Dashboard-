@@ -6,9 +6,9 @@ import { MemberModel } from '@/models/Member';
 import { UserModel } from '@/models/User';
 import { PurgedMemberModel } from '@/models/PurgedMember';
 import { hashPassword } from '@/lib/auth';
-import { OFFICIAL_ROSTER } from './rosterData';
+import { OFFICIAL_ROSTER } from '@/shared/lib/rosterData';
 
-export * from './rosterData';
+export * from '@/shared/lib/rosterData';
 
 let isRosterSyncInProgress = false;
 let hasSyncedOnce = false;

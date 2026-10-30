@@ -17,7 +17,7 @@ import {
   Maximize2,
   ExternalLink
 } from 'lucide-react';
-import { canAccessWorkflows } from '@/lib/rosterData';
+import { canAccessWorkflows } from '@/shared/lib/rosterData';
 
 export const WorkflowManualModal: React.FC = () => {
   const { currentUser } = useApp();

@@ -2,9 +2,9 @@
 
 import React, { useState, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
-import { isCeoUser, isStrictCeo } from '@/lib/rosterData';
+import { isCeoUser, isStrictCeo } from '@/shared/lib/rosterData';
 import { Task, TeamMember, TaskStatus } from '@/types';
-import { getTodayStr, formatDateDisplay, formatCreationDate, formatDueDate } from '@/lib/dateUtils';
+import { getTodayStr, formatDateDisplay, formatCreationDate, formatDueDate } from '@/shared/lib/dateUtils';
 import { 
   Users, 
   Layers, 

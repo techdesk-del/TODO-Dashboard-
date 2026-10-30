@@ -11,11 +11,11 @@ import { MemberModel } from '@/models/Member';
 import { PurgedMemberModel } from '@/models/PurgedMember';
 import { AuditLogModel } from '@/models/AuditLog';
 import { InAppNotificationModel } from '@/models/InAppNotification';
-import { INITIAL_TASKS, INITIAL_MEMBERS } from '@/lib/mockData';
+import { INITIAL_TASKS, INITIAL_MEMBERS } from '@/shared/lib/mockData';
 import { broadcastTaskMutation, isTaskDeleted, unmarkTaskDeleted, globalDeletedTaskIds } from '@/lib/events';
 import { sendTaskAssignmentEmail } from '@/lib/email';
-import { isStrictCeo, isCeoUser } from '@/lib/rosterData';
-import { computeMultiAssigneeStatus } from '@/lib/multiAssignee';
+import { isStrictCeo, isCeoUser } from '@/shared/lib/rosterData';
+import { computeMultiAssigneeStatus } from '@/shared/lib/multiAssignee';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;

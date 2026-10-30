@@ -2,10 +2,10 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { Task, TeamMember, AuditLogEntry, SystemConfig, Role, TaskStatus, InAppNotification } from '@/types';
-import { INITIAL_TASKS, INITIAL_MEMBERS, INITIAL_AUDIT_LOGS, INITIAL_SYSTEM_CONFIG } from '@/lib/mockData';
-import { getTodayStr } from '@/lib/dateUtils';
-import { isCeoUser, isStrictCeo, canAccessAdminHr, canAccessWorkflows, canViewAuditTrail } from '@/lib/rosterData';
-import { computeMultiAssigneeStatus } from '@/lib/multiAssignee';
+import { INITIAL_TASKS, INITIAL_MEMBERS, INITIAL_AUDIT_LOGS, INITIAL_SYSTEM_CONFIG } from '@/shared/lib/mockData';
+import { getTodayStr } from '@/shared/lib/dateUtils';
+import { isCeoUser, isStrictCeo, canAccessAdminHr, canAccessWorkflows, canViewAuditTrail } from '@/shared/lib/rosterData';
+import { computeMultiAssigneeStatus } from '@/shared/lib/multiAssignee';
 import * as XLSX from 'xlsx';
 
 export type DBStatus = 'connected' | 'connecting' | 'fallback';

@@ -10,9 +10,9 @@
 
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
-import { soundEngine } from '@/lib/sound';
-import { getTodayStr } from '@/lib/dateUtils';
-import { isCeoUser, isStrictCeo } from '@/lib/rosterData';
+import { soundEngine } from '@/frontend/lib/sound';
+import { getTodayStr } from '@/shared/lib/dateUtils';
+import { isCeoUser, isStrictCeo } from '@/shared/lib/rosterData';
 import { Task } from '@/types';
 
 export function useTaskDeadlines() {

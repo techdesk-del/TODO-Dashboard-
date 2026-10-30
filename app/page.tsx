@@ -17,8 +17,8 @@ import { MorningDigestPreviewModal } from '@/components/MorningDigestPreviewModa
 import { CreateTaskModal } from '@/components/CreateTaskModal';
 import { EnterpriseExportModal } from '@/components/EnterpriseExportModal';
 import { AuthModal } from '@/components/AuthModal';
-import { formatDateTitle, getTodayStr, getTomorrowStr, formatDateDayMonth } from '@/lib/dateUtils';
-import { isCeoUser, isStrictCeo, canAccessAdminHr, canAccessWorkflows, canViewAuditTrail } from '@/lib/rosterData';
+import { formatDateTitle, getTodayStr, getTomorrowStr, formatDateDayMonth } from '@/shared/lib/dateUtils';
+import { isCeoUser, isStrictCeo, canAccessAdminHr, canAccessWorkflows, canViewAuditTrail } from '@/shared/lib/rosterData';
 import { Check, Calendar as CalendarIcon, Sparkles, Globe, CalendarDays, AlertTriangle, RotateCcw, Plus } from 'lucide-react';
 
 export default function Home() {

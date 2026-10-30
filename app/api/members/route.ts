@@ -13,11 +13,11 @@ import { InvitationModel } from '@/models/Invitation';
 import { PurgedMemberModel } from '@/models/PurgedMember';
 import { AuditLogModel } from '@/models/AuditLog';
 import { hashPassword } from '@/lib/auth';
-import { INITIAL_MEMBERS } from '@/lib/mockData';
+import { INITIAL_MEMBERS } from '@/shared/lib/mockData';
 import { syncOfficialRosterToDB } from '@/lib/rosterSync';
 import { sendSetPasswordEmail } from '@/lib/email';
 import { broadcastMemberMutation, broadcastTaskMutation } from '@/lib/events';
-import { isCeoUser, OFFICIAL_ROSTER } from '@/lib/rosterData';
+import { isCeoUser, OFFICIAL_ROSTER } from '@/shared/lib/rosterData';
 
 async function seedMembersIfEmpty() {
   const count = await MemberModel.countDocuments();

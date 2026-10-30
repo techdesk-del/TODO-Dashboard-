@@ -18,7 +18,7 @@ import {
   ChevronsRight
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { canViewAuditTrail } from '@/lib/rosterData';
+import { canViewAuditTrail } from '@/shared/lib/rosterData';
 
 export const AuditTrailModal: React.FC = () => {
   const { 

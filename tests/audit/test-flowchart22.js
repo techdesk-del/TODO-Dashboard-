@@ -6,7 +6,7 @@
 const assert = require('assert');
 
 // 1. Test multiAssignee recalculation logic for Cancelled tasks
-const { computeMultiAssigneeStatus } = require('../src/lib/multiAssignee.ts');
+const { computeMultiAssigneeStatus } = require('../../shared/lib/multiAssignee.ts');
 
 console.log('Testing Flowchart 22 - Step 1: Testing multiAssignee computation for Cancelled tasks...');
 

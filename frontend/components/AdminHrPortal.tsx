@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useApp } from '@/context/AppContext';
-import { isCeoUser, isAakashUser, isStrictCeo } from '@/lib/rosterData';
+import { isCeoUser, isAakashUser, isStrictCeo } from '@/shared/lib/rosterData';
 import { TeamMember, Task, TaskStatus, Role } from '@/types';
 import { 
   UserPlus, 
@@ -48,9 +48,9 @@ import {
   ChevronsRight
 } from 'lucide-react';
 
-import { OFFICIAL_HOLIDAYS_2026_27, HOLIDAY_METADATA } from '@/lib/holidayData';
-import { generateMultiSheetExcelWorkbook, downloadWorkbook } from '@/lib/exportUtils';
-import { getTodayStr } from '@/lib/dateUtils';
+import { OFFICIAL_HOLIDAYS_2026_27, HOLIDAY_METADATA } from '@/shared/lib/holidayData';
+import { generateMultiSheetExcelWorkbook, downloadWorkbook } from '@/frontend/lib/exportUtils';
+import { getTodayStr } from '@/shared/lib/dateUtils';
 
 export const AdminHrPortal: React.FC = () => {
   const { members, tasks, updateTask, reopenTask, deleteTask, addMember, updateMember, deactivateMember, deleteMember, markMemberOnLeave, returnMemberFromLeave, currentUser, systemConfig, logAudit } = useApp();

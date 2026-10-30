@@ -3,8 +3,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useApp } from '@/context/AppContext';
 import { TaskPriority, TeamMember, AssigneeInfo } from '@/types';
-import { getTodayStr, getTomorrowStr } from '@/lib/dateUtils';
-import { isStrictCeo } from '@/lib/rosterData';
+import { getTodayStr, getTomorrowStr } from '@/shared/lib/dateUtils';
+import { isStrictCeo } from '@/shared/lib/rosterData';
 import {
   X,
   Mic,

@@ -2,8 +2,8 @@
 
 import React, { useState, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
-import { formatDateDisplay, getTodayStr } from '@/lib/dateUtils';
-import { isStrictCeo } from '@/lib/rosterData';
+import { formatDateDisplay, getTodayStr } from '@/shared/lib/dateUtils';
+import { isStrictCeo } from '@/shared/lib/rosterData';
 import { 
   Mail, 
   Clock, 

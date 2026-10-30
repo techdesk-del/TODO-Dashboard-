@@ -17,9 +17,9 @@ import { MemberModel } from '@/models/Member';
 import { AuditLogModel } from '@/models/AuditLog';
 import { SystemConfigModel } from '@/models/SystemConfig';
 import { sendMorningDigestEmail, sendAdminDigestSummaryEmail, ChronicDelayItem } from '@/lib/email';
-import { getTodayStr, formatDateDisplay } from '@/lib/dateUtils';
-import { isNonWorkingDay } from '@/lib/holidayData';
-import { OFFICIAL_ROSTER } from '@/lib/rosterData';
+import { getTodayStr, formatDateDisplay } from '@/shared/lib/dateUtils';
+import { isNonWorkingDay } from '@/shared/lib/holidayData';
+import { OFFICIAL_ROSTER } from '@/shared/lib/rosterData';
 import type { Task, Role } from '@/types';
 
 export interface DigestOptions {

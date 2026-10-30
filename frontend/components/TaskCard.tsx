@@ -3,9 +3,9 @@
 import React, { useState, useMemo } from 'react';
 import { Task, TaskPriority, TaskStatus, AssigneeInfo } from '@/types';
 import { useApp } from '@/context/AppContext';
-import { isCeoUser, isStrictCeo, canViewAuditTrail } from '@/lib/rosterData';
-import { getTodayStr, formatCreationDate, formatDueDate } from '@/lib/dateUtils';
-import { computeMultiAssigneeStatus } from '@/lib/multiAssignee';
+import { isCeoUser, isStrictCeo, canViewAuditTrail } from '@/shared/lib/rosterData';
+import { getTodayStr, formatCreationDate, formatDueDate } from '@/shared/lib/dateUtils';
+import { computeMultiAssigneeStatus } from '@/shared/lib/multiAssignee';
 import {
   Clock,
   User,

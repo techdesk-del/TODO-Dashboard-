@@ -25,11 +25,11 @@ const layoutPath = path.join(rootDir, 'src', 'app', 'layout.tsx');
 const layoutContent = fs.readFileSync(layoutPath, 'utf8');
 assert(
   layoutContent.includes('viewportFit: "cover"') || layoutContent.includes("viewportFit: 'cover'"),
-  'src/app/layout.tsx configures viewportFit: cover for iOS safe areas (notches/Dynamic Island)'
+  'app/layout.tsx configures viewportFit: cover for iOS safe areas (notches/Dynamic Island)'
 );
 assert(
   layoutContent.includes('width: "device-width"') || layoutContent.includes("width: 'device-width'"),
-  'src/app/layout.tsx sets device-width'
+  'app/layout.tsx sets device-width'
 );
 
 // 2. Check CSS Media Queries in globals.css

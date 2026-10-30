@@ -14,7 +14,7 @@
 
 import * as XLSX from 'xlsx';
 import type { Task, AuditLogEntry, TeamMember, Role } from '@/types';
-import { canViewAuditTrail } from '@/lib/rosterData';
+import { canViewAuditTrail } from '@/shared/lib/rosterData';
 
 export type ExportType = 'DAILY' | 'MONTHLY' | 'DATE_WISE' | 'WHOLE_TASKS' | 'USER_WISE';
 

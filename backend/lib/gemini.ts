@@ -8,8 +8,8 @@
  * local high-speed regex entity parser (<180ms).
  */
 
-import { parseSpeechOrTextCommand } from './aiParser';
-import { getTodayStr } from './dateUtils';
+import { parseSpeechOrTextCommand } from '@/shared/lib/aiParser';
+import { getTodayStr } from '@/shared/lib/dateUtils';
 import type { ParsedVoiceEntity } from '@/types';
 
 export async function extractTaskWithGemini(

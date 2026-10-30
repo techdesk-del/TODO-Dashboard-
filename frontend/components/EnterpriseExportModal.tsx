@@ -23,9 +23,9 @@ import {
   filterTasksByType, 
   generateMultiSheetExcelWorkbook, 
   downloadWorkbook 
-} from '@/lib/exportUtils';
-import { getTodayStr } from '@/lib/dateUtils';
-import { canViewAuditTrail } from '@/lib/rosterData';
+} from '@/frontend/lib/exportUtils';
+import { getTodayStr } from '@/shared/lib/dateUtils';
+import { canViewAuditTrail } from '@/shared/lib/rosterData';
 
 interface EnterpriseExportModalProps {
   isOpen: boolean;

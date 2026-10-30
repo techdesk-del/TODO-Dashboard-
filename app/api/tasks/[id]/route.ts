@@ -10,8 +10,8 @@ import { TaskModel } from '@/models/Task';
 import { AuditLogModel } from '@/models/AuditLog';
 import { broadcastTaskMutation, markTaskDeleted } from '@/lib/events';
 
-import { computeMultiAssigneeStatus } from '@/lib/multiAssignee';
-import { isStrictCeo, isCeoUser } from '@/lib/rosterData';
+import { computeMultiAssigneeStatus } from '@/shared/lib/multiAssignee';
+import { isStrictCeo, isCeoUser } from '@/shared/lib/rosterData';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
