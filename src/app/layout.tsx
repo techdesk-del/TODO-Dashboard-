@@ -8,10 +8,11 @@ export const metadata: Metadata = {
   description: "A voice-first, calendar-integrated deliverable management application built for high-performance teams and executive leadership.",
   icons: {
     icon: [
+      { url: "/favicon.ico", sizes: "any" },
       { url: "/favicon.png", type: "image/png" },
       { url: "/urbangaon-icon.png", type: "image/png" }
     ],
-    shortcut: "/favicon.png",
+    shortcut: "/favicon.ico",
     apple: "/urbangaon-icon.png"
   }
 };
