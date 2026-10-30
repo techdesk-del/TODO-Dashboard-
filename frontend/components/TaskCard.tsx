@@ -594,6 +594,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                     margin: 0,
                     padding: '2px 8px',
                     fontSize: '0.68rem',
+
+
                     fontWeight: 800,
                     background: '#fef3c7',
                     color: '#92400e',
@@ -734,7 +736,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
           </div>
         </div>
 
-            {/* Dropdown Container: Detailed actions, edit tools, assignees & banners */}
+        {/* Dropdown Container: Detailed actions, edit tools, assignees & banners */}
         {isExpanded && (
           <div
             className="task-dropdown-details"
@@ -893,561 +895,555 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                 boxSizing: 'border-box'
               }}
             >
-                {/* Primary Workflow Actions (Text + Icons) */}
-                <div className="task-actions-workflow">
-              {/* Quick Reschedule Overdue Task to Today */}
-              {isOverdue && (
+              {/* Primary Workflow Actions (Text + Icons) */}
+              <div className="task-actions-workflow">
+                {/* Quick Reschedule Overdue Task to Today */}
+                {isOverdue && (
+                  <button
+                    type="button"
+                    className="btn-secondary task-btn-overdue-today"
+                    onClick={() => {
+                      updateTask(task.id, { scheduledDate: todayStr, dueDate: todayStr }, `Rescheduled overdue deliverable to today (${todayStr})`);
+                    }}
+                    title="Reschedule this overdue task to today"
+                  >
+                    <CalendarIcon size={13} color="#b91c1c" />
+                    <span>Move to Today</span>
+                  </button>
+                )}
+
+                {/* Flowchart 21: Add / Edit Reason Button for overdue tasks */}
+                {isOverdue && (
+                  <button
+                    type="button"
+                    className="btn-secondary task-btn-delay-reason"
+                    onClick={() => {
+                      setDelayReasonInput(task.delayReason || task.pastDueReason || '');
+                      setShowDelayReasonModal(true);
+                    }}
+                    title={hasDelayReason ? `FC 21: Delay reason recorded: "${task.delayReason || task.pastDueReason}". Click to edit.` : 'FC 21: Overdue deliverable without reason — click to record justification.'}
+                  >
+                    <FileText size={13} color={hasDelayReason ? '#047857' : '#c2410c'} />
+                    <span>{hasDelayReason ? 'Edit Reason' : 'Add Reason'}</span>
+                  </button>
+                )}
+
+                {/* Edit Task Button */}
                 <button
                   type="button"
-                  className="btn-secondary task-btn-overdue-today"
-                  onClick={() => {
-                    updateTask(task.id, { scheduledDate: todayStr, dueDate: todayStr }, `Rescheduled overdue deliverable to today (${todayStr})`);
-                  }}
-                  title="Reschedule this overdue task to today"
+                  className="btn-secondary task-btn-edit"
+                  onClick={handleStartEdit}
+                  title="Edit Task Details"
                 >
-                  <CalendarIcon size={13} color="#b91c1c" />
-                  <span>Move to Today</span>
+                  <Edit3 size={13} color="#2563eb" />
+                  <span>Edit Task</span>
                 </button>
-              )}
 
-              {/* Flowchart 21: Add / Edit Reason Button for overdue tasks */}
-              {isOverdue && (
+                {/* Reschedule Date Button */}
                 <button
                   type="button"
-                  className="btn-secondary task-btn-delay-reason"
+                  className="btn-secondary"
                   onClick={() => {
-                    setDelayReasonInput(task.delayReason || task.pastDueReason || '');
-                    setShowDelayReasonModal(true);
+                    setRescheduleDateInput(task.scheduledDate);
+                    setShowRescheduleModal(true);
                   }}
-                  title={hasDelayReason ? `FC 21: Delay reason recorded: "${task.delayReason || task.pastDueReason}". Click to edit.` : 'FC 21: Overdue deliverable without reason — click to record justification.'}
+                  title="Reschedule Task Date"
                 >
-                  <FileText size={13} color={hasDelayReason ? '#047857' : '#c2410c'} />
-                  <span>{hasDelayReason ? 'Edit Reason' : 'Add Reason'}</span>
+                  <CalendarIcon size={13} color="#64748b" />
+                  <span>Reschedule</span>
                 </button>
-              )}
 
-              {/* Edit Task Button */}
-              <button
-                type="button"
-                className="btn-secondary task-btn-edit"
-                onClick={handleStartEdit}
-                title="Edit Task Details"
-              >
-                <Edit3 size={13} color="#2563eb" />
-                <span>Edit Task</span>
-              </button>
+                {/* Flowchart 22: Reassign Task */}
+                <button
+                  type="button"
+                  className="btn-secondary task-btn-reassign"
+                  onClick={() => {
+                    setReassignMode('REPLACE_ALL');
+                    setSelectedNewAssigneeIds([]);
+                    setSelectedRemoveAssigneeIds([]);
+                    setReassignReasonInput('');
+                    setShowReassignModal(true);
+                  }}
+                  title="Reassign Task"
+                >
+                  <UserPlus size={13} color="#2563eb" />
+                  <span>Reassign</span>
+                </button>
 
-              {/* Reschedule Date Button */}
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => {
-                  setRescheduleDateInput(task.scheduledDate);
-                  setShowRescheduleModal(true);
+                {/* Flowchart 22: Cancel Task with Mandatory Reason (Strictly Admin & CEO Only) */}
+                {canCancelOrDelete && task.status !== 'Cancelled' && task.status !== 'Done' && (
+                  <button
+                    type="button"
+                    className="btn-secondary task-btn-cancel"
+                    onClick={() => {
+                      setCancelReasonInput('');
+                      setShowCancelModal(true);
+                    }}
+                    title="Cancel Task with Mandatory Reason (Admin & CEO Only)"
+                  >
+                    <Ban size={13} color="#dc2626" />
+                    <span>Cancel</span>
+                  </button>
+                )}
+
+                {/* Flowchart 10: Reopen Completed Task with Justification */}
+                {isCompleted && (
+                  <button
+                    type="button"
+                    className="btn-secondary task-btn-reopen"
+                    onClick={() => {
+                      setShowReopenModal(true);
+                      setReopenReasonInput('');
+                    }}
+                    title="FC 10: Reopen Completed Task with Justification"
+                  >
+                    <RotateCcw size={13} color="#1e40af" />
+                    <span>Reopen</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Quick Utility Icon Actions (Hold, Escalate, Audit, Delete) */}
+              <div
+                className="task-actions-utility"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  flexShrink: 0,
+                  marginLeft: 'auto',
+                  boxSizing: 'border-box'
                 }}
-                title="Reschedule Task Date"
               >
-                <CalendarIcon size={13} color="#64748b" />
-                <span>Reschedule</span>
-              </button>
+                {!isCompleted && (
+                  <button
+                    type="button"
+                    className="btn-secondary task-icon-action-btn"
+                    onClick={() => setShowHoldModal(true)}
+                    title="FC 7: Put on Hold with mandatory reason"
+                  >
+                    <PauseCircle size={15} color="#d97706" />
+                    <span className="task-utility-label">Hold</span>
+                  </button>
+                )}
 
-              {/* Flowchart 22: Reassign Task */}
-              <button
-                type="button"
-                className="btn-secondary task-btn-reassign"
-                onClick={() => {
-                  setReassignMode('REPLACE_ALL');
-                  setSelectedNewAssigneeIds([]);
-                  setSelectedRemoveAssigneeIds([]);
-                  setReassignReasonInput('');
-                  setShowReassignModal(true);
-                }}
-                title="Reassign Task"
-              >
-                <UserPlus size={13} color="#2563eb" />
-                <span>Reassign</span>
-              </button>
+                {!isCompleted && (
+                  <button
+                    type="button"
+                    className="btn-secondary task-icon-action-btn"
+                    onClick={() => setShowEscalateModal(true)}
+                    title="FC 17: Escalate to Senior Leadership"
+                  >
+                    <AlertTriangle size={15} color="#dc2626" />
+                    <span className="task-utility-label">Escalate</span>
+                  </button>
+                )}
 
-              {/* Flowchart 22: Cancel Task with Mandatory Reason (Strictly Admin & CEO Only) */}
-              {canCancelOrDelete && task.status !== 'Cancelled' && task.status !== 'Done' && (
-                <button
-                  type="button"
-                  className="btn-secondary task-btn-cancel"
-                  onClick={() => {
-                    setCancelReasonInput('');
-                    setShowCancelModal(true);
-                  }}
-                  title="Cancel Task with Mandatory Reason (Admin & CEO Only)"
-                >
-                  <Ban size={13} color="#dc2626" />
-                  <span>Cancel</span>
-                </button>
-              )}
+                {/* Audit Trail Button (Strictly CEO Sir & Aakash Das ONLY) */}
+                {canViewAuditTrail(currentUser) && (
+                  <button
+                    type="button"
+                    className="btn-secondary task-icon-action-btn"
+                    onClick={() => setViewingAuditForTaskId(task.id)}
+                    title="FC 12: View Immutable Audit Trail"
+                  >
+                    <ShieldCheck size={15} color="#059669" />
+                    <span className="task-utility-label">Audit Trail</span>
+                  </button>
+                )}
 
-              {/* Flowchart 10: Reopen Completed Task with Justification */}
-              {isCompleted && (
-                <button
-                  type="button"
-                  className="btn-secondary task-btn-reopen"
-                  onClick={() => {
-                    setShowReopenModal(true);
-                    setReopenReasonInput('');
-                  }}
-                  title="FC 10: Reopen Completed Task with Justification"
-                >
-                  <RotateCcw size={13} color="#1e40af" />
-                  <span>Reopen</span>
-                </button>
-              )}
+                {/* Delete Deliverable (Strictly Admin & CEO Only) */}
+                {canCancelOrDelete && (
+                  <button
+                    type="button"
+                    className="btn-secondary task-icon-action-btn btn-delete-task"
+                    onClick={() => setShowDeleteModal(true)}
+                    title="Delete Deliverable (Admin & CEO Only)"
+                  >
+                    <Trash2 size={15} color="#dc2626" />
+                    <span className="task-utility-label">Delete</span>
+                  </button>
+                )}
+              </div>
             </div>
 
-            {/* Quick Utility Icon Actions (Hold, Escalate, Audit, Delete) */}
-            <div
-              className="task-actions-utility"
-              style={{
+            {/* Full-Width Meta Row (Date of Creation, Scheduled Date, Due Date, Time, Assignees, Priority, Live Progress) */}
+            <div className="task-meta-line" style={{ paddingLeft: 0, width: '100%', maxWidth: '100%', boxSizing: 'border-box', gap: '0.65rem' }}>
+              {/* 1. Date of Creation */}
+              <div
+                className="task-meta-item"
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  padding: '2px 8px',
+                  fontSize: '0.72rem',
+                  color: '#475569',
+                  fontWeight: 600,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px'
+                }}
+                title={`Created on: ${task.createdAt || 'Initial Task'}`}
+              >
+                <CalendarPlus size={12} color="#64748b" />
+                <span>Created: <strong style={{ color: '#1e293b' }}>{creationDateFormatted}</strong></span>
+              </div>
+
+              {/* 2. Due Date */}
+              <div
+                className="task-meta-item"
+                style={{
+                  background: isOverdue ? '#fff1f2' : (dueDateInfo.isToday ? '#eff6ff' : (dueDateInfo.isTomorrow ? '#f0fdf4' : '#f8fafc')),
+                  border: isOverdue ? '1px solid #fecdd3' : (dueDateInfo.isToday ? '1px solid #bfdbfe' : (dueDateInfo.isTomorrow ? '1px solid #bbf7d0' : '1px solid #e2e8f0')),
+                  borderRadius: '6px',
+                  padding: '2px 8px',
+                  fontSize: '0.72rem',
+                  color: isOverdue ? '#be123c' : (dueDateInfo.isToday ? '#1d4ed8' : (dueDateInfo.isTomorrow ? '#15803d' : '#1e293b')),
+                  fontWeight: 700,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px'
+                }}
+                title={`Due Date: ${task.dueDate || task.scheduledDate} ${task.time || ''}`}
+              >
+                <CalendarClock size={12} color={isOverdue ? '#e11d48' : (dueDateInfo.isToday ? '#2563eb' : (dueDateInfo.isTomorrow ? '#16a34a' : '#64748b'))} />
+                <span>Due: <strong>{dueDateInfo.formatted}</strong></span>
+              </div>
+
+              {task.project && (
+                <span style={{
+                  fontSize: '0.68rem',
+                  fontWeight: 700,
+                  padding: '2px 7px',
+                  borderRadius: '4px',
+                  background: '#f1f5f9',
+                  color: '#334155',
+                  border: '1px solid #e2e8f0',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  flexShrink: 0
+                }}>
+                  {task.project}
+                </span>
+              )}
+
+              <div className="task-meta-item" style={{ flex: '1 1 auto', minWidth: '220px' }}>
+                <User size={13} color="#64748b" />
+                <span>
+                  Assigned to:{' '}
+                  <strong>{task.assignees.map(a => `${a.name}${a.department ? ` (${a.department})` : ''}`).join(', ')}</strong>
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0, marginLeft: 'auto' }}>
+                <span className={getPriorityBadgeClass(task.priority)}>
+                  {task.priority} {task.priority !== 'URGENT' ? 'PRIORITY' : ''}
+                </span>
+              </div>
+            </div>
+
+            {/* Flowchart 22: Cancellation Rationale Banner */}
+            {task.cancellationReason && (
+              <div style={{
+                fontSize: '0.72rem',
+                color: '#991b1b',
+                background: '#fef2f2',
+                border: '1px solid #fecaca',
+                padding: '0.35rem 0.65rem',
+                borderRadius: '6px',
+                marginLeft: 0,
+                width: '100%',
+                maxWidth: '100%',
+                boxSizing: 'border-box',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.35rem',
-                flexShrink: 0,
-                marginLeft: 'auto',
+                justifyContent: 'space-between',
+                gap: '6px'
+              }}>
+                <span><strong>Cancellation Rationale:</strong> {task.cancellationReason}</span>
+                <span style={{ color: '#dc2626', fontSize: '0.68rem', fontWeight: 600, flexShrink: 0 }}>
+                  Excluded from Performance Reports
+                </span>
+              </div>
+            )}
+
+            {/* Optional Hold or Escalation Rationale Banner */}
+            {task.holdReason && (
+              <div style={{
+                fontSize: '0.72rem',
+                color: '#854d0e',
+                background: '#fefce8',
+                border: '1px solid #fef08a',
+                padding: '0.35rem 0.65rem',
+                borderRadius: '6px',
+                marginLeft: 0,
+                width: '100%',
+                maxWidth: '100%',
                 boxSizing: 'border-box'
-              }}
-            >
-              {!isCompleted && (
-                <button
-                  type="button"
-                  className="btn-secondary task-icon-action-btn"
-                  onClick={() => setShowHoldModal(true)}
-                  title="FC 7: Put on Hold with mandatory reason"
-                >
-                  <PauseCircle size={15} color="#d97706" />
-                  <span className="task-utility-label">Hold</span>
-                </button>
-              )}
-
-              {!isCompleted && (
-                <button
-                  type="button"
-                  className="btn-secondary task-icon-action-btn"
-                  onClick={() => setShowEscalateModal(true)}
-                  title="FC 17: Escalate to Senior Leadership"
-                >
-                  <AlertTriangle size={15} color="#dc2626" />
-                  <span className="task-utility-label">Escalate</span>
-                </button>
-              )}
-
-              {/* Audit Trail Button (Strictly CEO Sir & Aakash Das ONLY) */}
-              {canViewAuditTrail(currentUser) && (
-                <button
-                  type="button"
-                  className="btn-secondary task-icon-action-btn"
-                  onClick={() => setViewingAuditForTaskId(task.id)}
-                  title="FC 12: View Immutable Audit Trail"
-                >
-                  <ShieldCheck size={15} color="#059669" />
-                  <span className="task-utility-label">Audit Trail</span>
-                </button>
-              )}
-
-              {/* Delete Deliverable (Strictly Admin & CEO Only) */}
-              {canCancelOrDelete && (
-                <button
-                  type="button"
-                  className="btn-secondary task-icon-action-btn btn-delete-task"
-                  onClick={() => setShowDeleteModal(true)}
-                  title="Delete Deliverable (Admin & CEO Only)"
-                >
-                  <Trash2 size={15} color="#dc2626" />
-                  <span className="task-utility-label">Delete</span>
-                </button>
-              )}
-            </div>
-          </div>
-
-        {/* Full-Width Meta Row (Date of Creation, Scheduled Date, Due Date, Time, Assignees, Priority, Live Progress) */}
-        <div className="task-meta-line" style={{ paddingLeft: 0, width: '100%', maxWidth: '100%', boxSizing: 'border-box', gap: '0.65rem' }}>
-          {/* 1. Date of Creation */}
-          <div
-            className="task-meta-item"
-            style={{
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: '6px',
-              padding: '2px 8px',
-              fontSize: '0.72rem',
-              color: '#475569',
-              fontWeight: 600,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '5px'
-            }}
-            title={`Created on: ${task.createdAt || 'Initial Task'}`}
-          >
-            <CalendarPlus size={12} color="#64748b" />
-            <span>Created: <strong style={{ color: '#1e293b' }}>{creationDateFormatted}</strong></span>
-          </div>
-
-          {/* 2. Due Date */}
-          <div
-            className="task-meta-item"
-            style={{
-              background: isOverdue ? '#fff1f2' : (dueDateInfo.isToday ? '#eff6ff' : (dueDateInfo.isTomorrow ? '#f0fdf4' : '#f8fafc')),
-              border: isOverdue ? '1px solid #fecdd3' : (dueDateInfo.isToday ? '1px solid #bfdbfe' : (dueDateInfo.isTomorrow ? '1px solid #bbf7d0' : '1px solid #e2e8f0')),
-              borderRadius: '6px',
-              padding: '2px 8px',
-              fontSize: '0.72rem',
-              color: isOverdue ? '#be123c' : (dueDateInfo.isToday ? '#1d4ed8' : (dueDateInfo.isTomorrow ? '#15803d' : '#1e293b')),
-              fontWeight: 700,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '5px'
-            }}
-            title={`Due Date: ${task.dueDate || task.scheduledDate} ${task.time || ''}`}
-          >
-            <CalendarClock size={12} color={isOverdue ? '#e11d48' : (dueDateInfo.isToday ? '#2563eb' : (dueDateInfo.isTomorrow ? '#16a34a' : '#64748b'))} />
-            <span>Due: <strong>{dueDateInfo.formatted}</strong></span>
-          </div>
-
-          {task.project && (
-            <span style={{
-              fontSize: '0.68rem',
-              fontWeight: 700,
-              padding: '2px 7px',
-              borderRadius: '4px',
-              background: '#f1f5f9',
-              color: '#334155',
-              border: '1px solid #e2e8f0',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-              flexShrink: 0
-            }}>
-              {task.project}
-            </span>
-          )}
-
-          <div className="task-meta-item" style={{ flex: '1 1 auto', minWidth: '220px' }}>
-            <User size={13} color="#64748b" />
-            <span>
-              Assigned to:{' '}
-              <strong>{task.assignees.map(a => `${a.name}${a.department ? ` (${a.department})` : ''}`).join(', ')}</strong>
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0, marginLeft: 'auto' }}>
-            <span className={getPriorityBadgeClass(task.priority)}>
-              {task.priority} {task.priority !== 'URGENT' ? 'PRIORITY' : ''}
-            </span>
-
-            {typeof comp.progressPercent === 'number' && (
-              <span style={{ fontSize: '0.72rem', color: comp.progressPercent === 100 ? '#15803d' : '#2563eb', fontWeight: 700 }}>
-                ({comp.progressPercent}% Live Progress)
-              </span>
+              }}>
+                <strong>Hold Reason:</strong> {task.holdReason}
+              </div>
             )}
-          </div>
-        </div>
 
-        {/* Flowchart 22: Cancellation Rationale Banner */}
-        {task.cancellationReason && (
-          <div style={{
-            fontSize: '0.72rem',
-            color: '#991b1b',
-            background: '#fef2f2',
-            border: '1px solid #fecaca',
-            padding: '0.35rem 0.65rem',
-            borderRadius: '6px',
-            marginLeft: 0,
-            width: '100%',
-            maxWidth: '100%',
-            boxSizing: 'border-box',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '6px'
-          }}>
-            <span><strong>Cancellation Rationale:</strong> {task.cancellationReason}</span>
-            <span style={{ color: '#dc2626', fontSize: '0.68rem', fontWeight: 600, flexShrink: 0 }}>
-              Excluded from Performance Reports
-            </span>
-          </div>
-        )}
-
-        {/* Optional Hold or Escalation Rationale Banner */}
-        {task.holdReason && (
-          <div style={{
-            fontSize: '0.72rem',
-            color: '#854d0e',
-            background: '#fefce8',
-            border: '1px solid #fef08a',
-            padding: '0.35rem 0.65rem',
-            borderRadius: '6px',
-            marginLeft: 0,
-            width: '100%',
-            maxWidth: '100%',
-            boxSizing: 'border-box'
-          }}>
-            <strong>Hold Reason:</strong> {task.holdReason}
-          </div>
-        )}
-
-        {/* Flowchart 21: Delay Reason Display Banner */}
-        {task.delayReason && (
-          <div style={{
-            fontSize: '0.72rem',
-            color: '#9a3412',
-            background: '#fff7ed',
-            border: '1px solid #fed7aa',
-            padding: '0.35rem 0.65rem',
-            borderRadius: '6px',
-            marginLeft: 0,
-            width: '100%',
-            maxWidth: '100%',
-            boxSizing: 'border-box',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '6px'
-          }}>
-            <span><strong>FC 21 Delay Justification:</strong> {task.delayReason}</span>
-            {task.delayReasonSubmittedAt && (
-              <span style={{ color: '#c2410c', fontSize: '0.68rem', flexShrink: 0 }}>
-                Submitted: {new Date(task.delayReasonSubmittedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })} {new Date(task.delayReasonSubmittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Flowchart 3: Senior Escalation Interventions Banner & Actions */}
-        {task.status === 'Escalated' && (
-          <div style={{
-            background: '#fff1f2',
-            border: '1.5px solid #fecdd3',
-            borderRadius: '8px',
-            padding: '0.65rem 0.85rem',
-            marginLeft: 0,
-            width: '100%',
-            maxWidth: '100%',
-            boxSizing: 'border-box',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.45rem'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.4rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#991b1b', fontWeight: 800, fontSize: '0.78rem' }}>
-                <AlertTriangle size={14} color="#dc2626" />
-                <span>Escalated to {task.escalatedTo || 'Senior Leadership'}</span>
-                {task.autoEscalatedToManager && (
-                  <span style={{ background: '#dc2626', color: '#fff', fontSize: '0.65rem', padding: '1px 5px', borderRadius: '3px' }}>
-                    SLA Breached (&gt;24h)
+            {/* Flowchart 21: Delay Reason Display Banner */}
+            {task.delayReason && (
+              <div style={{
+                fontSize: '0.72rem',
+                color: '#9a3412',
+                background: '#fff7ed',
+                border: '1px solid #fed7aa',
+                padding: '0.35rem 0.65rem',
+                borderRadius: '6px',
+                marginLeft: 0,
+                width: '100%',
+                maxWidth: '100%',
+                boxSizing: 'border-box',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '6px'
+              }}>
+                <span><strong>FC 21 Delay Justification:</strong> {task.delayReason}</span>
+                {task.delayReasonSubmittedAt && (
+                  <span style={{ color: '#c2410c', fontSize: '0.68rem', flexShrink: 0 }}>
+                    Submitted: {new Date(task.delayReasonSubmittedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })} {new Date(task.delayReasonSubmittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 )}
               </div>
-              <span style={{ fontSize: '0.68rem', color: '#b91c1c' }}>
-                SLA Clock: 24h
-              </span>
-            </div>
-
-            {task.escalationReason && (
-              <div style={{ fontSize: '0.72rem', color: '#7f1d1d' }}>
-                <strong>Blocker Justification:</strong> "{task.escalationReason}"
-              </div>
             )}
 
-            {/* Senior Actions (Flowchart 3): Advise, Reassign, Resolve, Return */}
-            {(isCeo || currentUser.role === 'ADMIN' || currentUser.role === 'MANAGER' || (task.escalatedTo && task.escalatedTo.toLowerCase().includes(currentUser.name.toLowerCase()))) && (
-              <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginTop: '2px', borderTop: '1px solid #fecdd3', paddingTop: '4px' }}>
-                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#9a3412', alignSelf: 'center', marginRight: '4px' }}>
-                  Senior Action:
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setSeniorActionModal({ isOpen: true, action: 'advise', note: '', targetAssigneeId: activeMembers[0]?.id || '' })}
-                  style={{ fontSize: '0.68rem', fontWeight: 700, padding: '3px 8px', borderRadius: '4px', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', cursor: 'pointer' }}
-                >
-                  Advise
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSeniorActionModal({ isOpen: true, action: 'reassign', note: '', targetAssigneeId: activeMembers[0]?.id || '' })}
-                  style={{ fontSize: '0.68rem', fontWeight: 700, padding: '3px 8px', borderRadius: '4px', background: '#f8fafc', color: '#0f172a', border: '1px solid #cbd5e1', cursor: 'pointer' }}
-                >
-                  Reassign
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSeniorActionModal({ isOpen: true, action: 'resolve', note: '', targetAssigneeId: activeMembers[0]?.id || '' })}
-                  style={{ fontSize: '0.68rem', fontWeight: 700, padding: '3px 8px', borderRadius: '4px', background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', cursor: 'pointer' }}
-                >
-                  ✓ Resolve
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSeniorActionModal({ isOpen: true, action: 'return', note: '', targetAssigneeId: activeMembers[0]?.id || '' })}
-                  style={{ fontSize: '0.68rem', fontWeight: 700, padding: '3px 8px', borderRadius: '4px', background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa', cursor: 'pointer' }}
-                >
-                  Return
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Resolved or Advised Banners */}
-        {task.seniorAdvisoryComment && (
-          <div style={{ fontSize: '0.72rem', color: '#1d4ed8', background: '#eff6ff', border: '1px solid #bfdbfe', padding: '0.35rem 0.65rem', borderRadius: '6px', marginLeft: 0, width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
-            <strong>Senior Advisory Guidance:</strong> {task.seniorAdvisoryComment}
-          </div>
-        )}
-
-        {task.seniorReturnReason && (
-          <div style={{ fontSize: '0.72rem', color: '#c2410c', background: '#fff7ed', border: '1px solid #fed7aa', padding: '0.35rem 0.65rem', borderRadius: '6px', marginLeft: 0, width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
-            <strong>Returned by Senior:</strong> {task.seniorReturnReason}
-          </div>
-        )}
-
-        {task.seniorResolutionNote && (
-          <div style={{ fontSize: '0.72rem', color: '#047857', background: '#ecfdf5', border: '1px solid #a7f3d0', padding: '0.35rem 0.65rem', borderRadius: '6px', marginLeft: 0, width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
-            <strong>✓ Senior Resolution Note:</strong> {task.seniorResolutionNote}
-          </div>
-        )}
-
-        {/* Flowchart 8: Multi-Assignee Interactive Component Breakdown (Full Width) */}
-        {task.assignees && task.assignees.length > 0 && (
-          <div className="multi-assignee-breakdown-card">
-            <div className="multi-assignee-header">
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                 Multi-Assignee Breakdown ({task.assignees.length} {task.assignees.length === 1 ? 'member' : 'members'} • {comp.progressText}):
-              </span>
-              <span style={{ color: comp.progressPercent === 100 ? '#15803d' : '#2563eb', fontWeight: 800 }}>
-                {comp.progressPercent}% Completed
-              </span>
-            </div>
-
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))',
-              gap: '0.55rem',
-              width: '100%'
-            }}>
-              {task.assignees.map(a => {
-                const isMyAssignee = currentUser.id === a.id || currentUser.email?.toLowerCase() === a.email?.toLowerCase();
-                const canManageThisAssignee = isMyAssignee || isCeo || currentUser.role === 'ADMIN' || currentUser.role === 'MANAGER';
-                const isCreatorOrAdmin = isCeo || currentUser.role === 'ADMIN' || task.creator?.id === currentUser.id || task.creator?.email?.toLowerCase() === currentUser.email?.toLowerCase();
-
-                return (
-                  <div key={a.id} className="assignee-item-card">
-                    <div className="assignee-info-col" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0, flex: 1 }}>
-                      <span style={{
-                        width: '26px',
-                        height: '26px',
-                        borderRadius: '50%',
-                        background: a.status === 'Done' ? '#16a34a' : '#2563eb',
-                        color: '#ffffff',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '0.66rem',
-                        fontWeight: 700,
-                        flexShrink: 0,
-                        overflow: 'hidden'
-                      }}>
-                        {a.avatar?.startsWith('/') || a.avatar?.startsWith('http') ? (
-                          <img src={a.avatar} alt={a.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
-                        ) : (
-                          a.avatar || a.name.slice(0, 2).toUpperCase()
-                        )}
+            {/* Flowchart 3: Senior Escalation Interventions Banner & Actions */}
+            {task.status === 'Escalated' && (
+              <div style={{
+                background: '#fff1f2',
+                border: '1.5px solid #fecdd3',
+                borderRadius: '8px',
+                padding: '0.65rem 0.85rem',
+                marginLeft: 0,
+                width: '100%',
+                maxWidth: '100%',
+                boxSizing: 'border-box',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.45rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.4rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#991b1b', fontWeight: 800, fontSize: '0.78rem' }}>
+                    <AlertTriangle size={14} color="#dc2626" />
+                    <span>Escalated to {task.escalatedTo || 'Senior Leadership'}</span>
+                    {task.autoEscalatedToManager && (
+                      <span style={{ background: '#dc2626', color: '#fff', fontSize: '0.65rem', padding: '1px 5px', borderRadius: '3px' }}>
+                        SLA Breached (&gt;24h)
                       </span>
-                      <div style={{ minWidth: 0, flex: 1 }}>
-                        <div style={{ fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {a.name} {isMyAssignee ? ' (You)' : ''}
-                        </div>
-                        <div style={{ fontSize: '0.68rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {a.designation || a.department || 'Specialist'}
-                        </div>
-                      </div>
-                    </div>
+                    )}
+                  </div>
+                  <span style={{ fontSize: '0.68rem', color: '#b91c1c' }}>
+                    SLA Clock: 24h
+                  </span>
+                </div>
 
-                    <div className="assignee-actions-col" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0, marginLeft: 'auto' }}>
-                      {/* Assignee individual status updater (Flowchart 8 Step 5) */}
-                      {canManageThisAssignee ? (
-                        <select
-                          className="assignee-status-select"
-                          value={a.status || 'Not Started'}
-                          onChange={(e) => {
-                            const newStat = e.target.value as TaskStatus;
-                            if (newStat === 'Done') {
-                              confetti({ particleCount: 40, spread: 50, origin: { y: 0.7 } });
-                            }
-                            updateAssigneeStatus(task.id, a.id, newStat);
-                          }}
-                          style={{
-                            background: a.status === 'Done' ? '#f0fdf4' : a.status === 'On Hold' ? '#fefce8' : a.status === 'Escalated' ? '#fef2f2' : '#ffffff',
-                            color: a.status === 'Done' ? '#15803d' : a.status === 'On Hold' ? '#854d0e' : a.status === 'Escalated' ? '#b91c1c' : '#1e293b',
-                            borderColor: a.status === 'Done' ? '#86efac' : a.status === 'On Hold' ? '#fde047' : a.status === 'Escalated' ? '#fca5a5' : '#cbd5e1'
-                          }}
-                          title="Update individual assignee status"
-                        >
-                          <option value="Not Started">Not Started</option>
-                          <option value="In Progress">In Progress</option>
-                          <option value="Done">Done</option>
-                          <option value="On Hold">On Hold</option>
-                          <option value="Escalated">Escalated</option>
-                          <option value="Cancelled">Cancelled</option>
-                        </select>
-                      ) : (
-                        <span style={{
-                          fontSize: '0.7rem',
-                          fontWeight: 700,
-                          padding: '3px 8px',
-                          borderRadius: '4px',
-                          background: a.status === 'Done' ? '#dcfce7' : '#f1f5f9',
-                          color: a.status === 'Done' ? '#15803d' : '#475569'
-                        }}>
-                          {a.status || 'Not Started'}
-                        </span>
-                      )}
+                {task.escalationReason && (
+                  <div style={{ fontSize: '0.72rem', color: '#7f1d1d' }}>
+                    <strong>Blocker Justification:</strong> "{task.escalationReason}"
+                  </div>
+                )}
 
-                      {/* Flowchart 8 Step 12: Assignee left or resigned? Creator/Admin reassign or close */}
-                      {isCreatorOrAdmin && a.status !== 'Done' && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setManageAssigneeData({
-                              isOpen: true,
-                              assignee: a,
-                              action: 'reassign',
-                              newAssigneeId: activeMembers.find(m => m.id !== a.id && !task.assignees.some(other => other.id === m.id))?.id || activeMembers[0]?.id || '',
-                              notes: '',
-                            });
-                          }}
-                          style={{
-                            padding: '4px 8px',
-                            fontSize: '0.7rem',
-                            fontWeight: 700,
-                            minHeight: '30px',
-                            borderRadius: '6px',
-                            border: '1px solid #cbd5e1',
-                            background: '#f8fafc',
-                            color: '#475569',
-                            cursor: 'pointer',
+                {/* Senior Actions (Flowchart 3): Advise, Reassign, Resolve, Return */}
+                {(isCeo || currentUser.role === 'ADMIN' || currentUser.role === 'MANAGER' || (task.escalatedTo && task.escalatedTo.toLowerCase().includes(currentUser.name.toLowerCase()))) && (
+                  <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginTop: '2px', borderTop: '1px solid #fecdd3', paddingTop: '4px' }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#9a3412', alignSelf: 'center', marginRight: '4px' }}>
+                      Senior Action:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSeniorActionModal({ isOpen: true, action: 'advise', note: '', targetAssigneeId: activeMembers[0]?.id || '' })}
+                      style={{ fontSize: '0.68rem', fontWeight: 700, padding: '3px 8px', borderRadius: '4px', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', cursor: 'pointer' }}
+                    >
+                      Advise
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSeniorActionModal({ isOpen: true, action: 'reassign', note: '', targetAssigneeId: activeMembers[0]?.id || '' })}
+                      style={{ fontSize: '0.68rem', fontWeight: 700, padding: '3px 8px', borderRadius: '4px', background: '#f8fafc', color: '#0f172a', border: '1px solid #cbd5e1', cursor: 'pointer' }}
+                    >
+                      Reassign
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSeniorActionModal({ isOpen: true, action: 'resolve', note: '', targetAssigneeId: activeMembers[0]?.id || '' })}
+                      style={{ fontSize: '0.68rem', fontWeight: 700, padding: '3px 8px', borderRadius: '4px', background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', cursor: 'pointer' }}
+                    >
+                      ✓ Resolve
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSeniorActionModal({ isOpen: true, action: 'return', note: '', targetAssigneeId: activeMembers[0]?.id || '' })}
+                      style={{ fontSize: '0.68rem', fontWeight: 700, padding: '3px 8px', borderRadius: '4px', background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa', cursor: 'pointer' }}
+                    >
+                      Return
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Resolved or Advised Banners */}
+            {task.seniorAdvisoryComment && (
+              <div style={{ fontSize: '0.72rem', color: '#1d4ed8', background: '#eff6ff', border: '1px solid #bfdbfe', padding: '0.35rem 0.65rem', borderRadius: '6px', marginLeft: 0, width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+                <strong>Senior Advisory Guidance:</strong> {task.seniorAdvisoryComment}
+              </div>
+            )}
+
+            {task.seniorReturnReason && (
+              <div style={{ fontSize: '0.72rem', color: '#c2410c', background: '#fff7ed', border: '1px solid #fed7aa', padding: '0.35rem 0.65rem', borderRadius: '6px', marginLeft: 0, width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+                <strong>Returned by Senior:</strong> {task.seniorReturnReason}
+              </div>
+            )}
+
+            {task.seniorResolutionNote && (
+              <div style={{ fontSize: '0.72rem', color: '#047857', background: '#ecfdf5', border: '1px solid #a7f3d0', padding: '0.35rem 0.65rem', borderRadius: '6px', marginLeft: 0, width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+                <strong>✓ Senior Resolution Note:</strong> {task.seniorResolutionNote}
+              </div>
+            )}
+
+            {/* Flowchart 8: Multi-Assignee Interactive Component Breakdown (Full Width) */}
+            {task.assignees && task.assignees.length > 0 && (
+              <div className="multi-assignee-breakdown-card">
+                <div className="multi-assignee-header">
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    Multi-Assignee Breakdown ({task.assignees.length} {task.assignees.length === 1 ? 'member' : 'members'} • {comp.progressText}):
+                  </span>
+                  <span style={{ color: comp.progressPercent === 100 ? '#15803d' : '#2563eb', fontWeight: 800 }}>
+                    {comp.progressPercent}% Completed
+                  </span>
+                </div>
+
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))',
+                  gap: '0.55rem',
+                  width: '100%'
+                }}>
+                  {task.assignees.map(a => {
+                    const isMyAssignee = currentUser.id === a.id || currentUser.email?.toLowerCase() === a.email?.toLowerCase();
+                    const canManageThisAssignee = isMyAssignee || isCeo || currentUser.role === 'ADMIN' || currentUser.role === 'MANAGER';
+                    const isCreatorOrAdmin = isCeo || currentUser.role === 'ADMIN' || task.creator?.id === currentUser.id || task.creator?.email?.toLowerCase() === currentUser.email?.toLowerCase();
+
+                    return (
+                      <div key={a.id} className="assignee-item-card">
+                        <div className="assignee-info-col" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0, flex: 1 }}>
+                          <span style={{
+                            width: '26px',
+                            height: '26px',
+                            borderRadius: '50%',
+                            background: a.status === 'Done' ? '#16a34a' : '#2563eb',
+                            color: '#ffffff',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '3px',
-                            whiteSpace: 'nowrap'
-                          }}
-                          title="Assignee left or resigned? Reassign or close this component"
-                        >
-                          Shift/Close
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+                            justifyContent: 'center',
+                            fontSize: '0.66rem',
+                            fontWeight: 700,
+                            flexShrink: 0,
+                            overflow: 'hidden'
+                          }}>
+                            {a.avatar?.startsWith('/') || a.avatar?.startsWith('http') ? (
+                              <img src={a.avatar} alt={a.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                            ) : (
+                              a.avatar || a.name.slice(0, 2).toUpperCase()
+                            )}
+                          </span>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {a.name} {isMyAssignee ? ' (You)' : ''}
+                            </div>
+                            <div style={{ fontSize: '0.68rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {a.designation || a.department || 'Specialist'}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="assignee-actions-col" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0, marginLeft: 'auto' }}>
+                          {/* Assignee individual status updater (Flowchart 8 Step 5) */}
+                          {canManageThisAssignee ? (
+                            <select
+                              className="assignee-status-select"
+                              value={a.status || 'Not Started'}
+                              onChange={(e) => {
+                                const newStat = e.target.value as TaskStatus;
+                                if (newStat === 'Done') {
+                                  confetti({ particleCount: 40, spread: 50, origin: { y: 0.7 } });
+                                }
+                                updateAssigneeStatus(task.id, a.id, newStat);
+                              }}
+                              style={{
+                                background: a.status === 'Done' ? '#f0fdf4' : a.status === 'On Hold' ? '#fefce8' : a.status === 'Escalated' ? '#fef2f2' : '#ffffff',
+                                color: a.status === 'Done' ? '#15803d' : a.status === 'On Hold' ? '#854d0e' : a.status === 'Escalated' ? '#b91c1c' : '#1e293b',
+                                borderColor: a.status === 'Done' ? '#86efac' : a.status === 'On Hold' ? '#fde047' : a.status === 'Escalated' ? '#fca5a5' : '#cbd5e1'
+                              }}
+                              title="Update individual assignee status"
+                            >
+                              <option value="Not Started">Not Started</option>
+                              <option value="In Progress">In Progress</option>
+                              <option value="Done">Done</option>
+                              <option value="On Hold">On Hold</option>
+                              <option value="Escalated">Escalated</option>
+                              <option value="Cancelled">Cancelled</option>
+                            </select>
+                          ) : (
+                            <span style={{
+                              fontSize: '0.7rem',
+                              fontWeight: 700,
+                              padding: '3px 8px',
+                              borderRadius: '4px',
+                              background: a.status === 'Done' ? '#dcfce7' : '#f1f5f9',
+                              color: a.status === 'Done' ? '#15803d' : '#475569'
+                            }}>
+                              {a.status || 'Not Started'}
+                            </span>
+                          )}
+
+                          {/* Flowchart 8 Step 12: Assignee left or resigned? Creator/Admin reassign or close */}
+                          {isCreatorOrAdmin && a.status !== 'Done' && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setManageAssigneeData({
+                                  isOpen: true,
+                                  assignee: a,
+                                  action: 'reassign',
+                                  newAssigneeId: activeMembers.find(m => m.id !== a.id && !task.assignees.some(other => other.id === m.id))?.id || activeMembers[0]?.id || '',
+                                  notes: '',
+                                });
+                              }}
+                              style={{
+                                padding: '4px 8px',
+                                fontSize: '0.7rem',
+                                fontWeight: 700,
+                                minHeight: '30px',
+                                borderRadius: '6px',
+                                border: '1px solid #cbd5e1',
+                                background: '#f8fafc',
+                                color: '#475569',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                whiteSpace: 'nowrap'
+                              }}
+                              title="Assignee left or resigned? Reassign or close this component"
+                            >
+                              Shift/Close
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

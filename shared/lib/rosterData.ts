@@ -334,7 +334,7 @@ export function canAccessAdminHr(user?: { email?: string; department?: string; d
  */
 export function canViewAuditTrail(user?: { id?: string; email?: string; designation?: string; role?: string; name?: string } | null): boolean {
   if (!user) return false;
-  return isStrictCeo(user) || isAakashUser(user);
+  return isStrictCeo(user);
 }
 
 
