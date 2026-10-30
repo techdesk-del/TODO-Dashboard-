@@ -325,11 +325,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Preserve saved custom designation, name, department, role with official roster fallback
-    const memberRecord = await MemberModel.findOne({ $or: [{ id: user.id }, { email: emailRegex }, { email: cleanEmail }] }).lean();
-    const activeDesignation = user.designation || memberRecord?.designation || (officialEmp ? officialEmp.designation : 'Specialist');
-    const activeDepartment = user.department || memberRecord?.department || (officialEmp ? officialEmp.department : 'General Staff');
-    const activeName = user.name || memberRecord?.name || (officialEmp ? officialEmp.name : 'Team Member');
-    const activeRole = user.role || memberRecord?.role || (officialEmp ? officialEmp.role : 'EMPLOYEE');
+    const currentMemberDoc = await MemberModel.findOne({ $or: [{ id: user.id }, { email: emailRegex }, { email: cleanEmail }] }).lean();
+    const activeDesignation = user.designation || currentMemberDoc?.designation || (officialEmp ? officialEmp.designation : 'Specialist');
+    const activeDepartment = user.department || currentMemberDoc?.department || (officialEmp ? officialEmp.department : 'General Staff');
+    const activeName = user.name || currentMemberDoc?.name || (officialEmp ? officialEmp.name : 'Team Member');
+    const activeRole = user.role || currentMemberDoc?.role || (officialEmp ? officialEmp.role : 'EMPLOYEE');
 
     if (officialEmp && (user.role !== activeRole || user.designation !== activeDesignation || user.department !== activeDepartment)) {
       user.role = activeRole;
