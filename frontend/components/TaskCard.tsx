@@ -607,7 +607,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                   }}
                   title={task.ceoApprovalRequestedBy ? `Submitted by ${task.ceoApprovalRequestedBy} for CEO Final Approval` : 'Awaiting CEO Final Approval before completion'}
                 >
-                  <span>⏳ AWAITING CEO APPROVAL</span>
+                  <span> AWAITING CEO APPROVAL</span>
                 </span>
                 {isCeo && (
                   <>
