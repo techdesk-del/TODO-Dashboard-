@@ -2410,3 +2410,158 @@ export async function sendStaffReturnFromLeaveEmail(opts: SendStaffReturnFromLea
     return { success: false, error: err?.message || String(err) };
   }
 }
+
+
+export interface SendPasswordChangeConfirmationOptions {
+  toEmail: string;
+  toName: string;
+  role?: string;
+  changeType?: 'PASSWORD_RESET' | 'INITIAL_SET' | 'PROFILE_CHANGE';
+  ipAddress?: string;
+  deviceInfo?: string;
+}
+
+/**
+ * Dispatch Real-Time Corporate Password Change / Setup Confirmation Email
+ * Notifies employee immediately with synchronized details and security advice.
+ */
+export async function sendPasswordChangeConfirmationEmail(opts: SendPasswordChangeConfirmationOptions) {
+  let { transporter, isTestAccount } = await createEmailTransporter();
+  const from = process.env.SMTP_FROM || '"UrbanGaon Security Center" <techdesk@urbangaon.com>';
+  const logoAttachments = getEmailLogoAttachments();
+
+  const now = new Date();
+  const timeFormatted = now.toLocaleString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+
+  const isInitialSet = opts.changeType === 'INITIAL_SET';
+  const actionTitle = isInitialSet
+    ? 'Corporate Password Successfully Initialized & Activated'
+    : 'Corporate Account Password Successfully Changed';
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${actionTitle}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 24px 12px; }
+    .container { max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); }
+    .content { padding: 32px 28px; }
+    .success-badge { display: inline-flex; align-items: center; gap: 8px; background: #ecfdf5; border: 1px solid #a7f3d0; color: #047857; font-size: 13px; font-weight: 700; padding: 6px 14px; border-radius: 9999px; margin-bottom: 20px; }
+    .greeting { font-size: 17px; font-weight: 700; color: #0f172a; margin-bottom: 12px; }
+    .intro-text { font-size: 14px; color: #475569; line-height: 1.6; margin-bottom: 22px; }
+    .details-table { width: 100%; border-collapse: collapse; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; overflow: hidden; margin: 20px 0; }
+    .details-table td { padding: 12px 16px; font-size: 13px; border-bottom: 1px solid #f1f5f9; }
+    .details-table tr:last-child td { border-bottom: none; }
+    .label-col { font-weight: 600; color: #64748b; width: 40%; }
+    .val-col { font-weight: 700; color: #0f172a; }
+    .security-alert { background: #fef2f2; border-left: 4px solid #ef4444; border-radius: 6px; padding: 14px 16px; margin: 24px 0 18px; font-size: 13px; color: #991b1b; line-height: 1.5; }
+    .cta-box { text-align: center; margin: 24px 0 16px; }
+    .btn-access { display: inline-block; background: #2563eb; color: #ffffff !important; padding: 12px 28px; border-radius: 8px; font-weight: 700; font-size: 13px; text-decoration: none; box-shadow: 0 4px 12px rgba(37,99,235,0.25); }
+    .footer { background: #f8fafc; padding: 18px 24px; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    ${getEmailHeaderHtml('Identity & Access Management | Security Notification', PRODUCTION_WORKSPACE_URL)}
+    <div class="content">
+      <div class="success-badge">
+        <span>✓</span> ${isInitialSet ? 'Password Setup Confirmed' : 'Password Successfully Changed'}
+      </div>
+      <div class="greeting">
+        Hello ${opts.toName},
+      </div>
+      <div class="intro-text">
+        This is an official automated security confirmation that the corporate password for your <strong>UrbanGaon</strong> account has been ${isInitialSet ? 'successfully set and secured' : 'successfully modified and updated'} under enterprise security protocols.
+      </div>
+
+      <table class="details-table">
+        <tr>
+          <td class="label-col">Account Name</td>
+          <td class="val-col">${opts.toName}</td>
+        </tr>
+        <tr>
+          <td class="label-col">Corporate Email</td>
+          <td class="val-col">${opts.toEmail}</td>
+        </tr>
+        <tr>
+          <td class="label-col">Status</td>
+          <td class="val-col" style="color: #15803d;">● Active & Verified</td>
+        </tr>
+        <tr>
+          <td class="label-col">Timestamp (IST)</td>
+          <td class="val-col">${timeFormatted}</td>
+        </tr>
+        ${opts.ipAddress ? `
+        <tr>
+          <td class="label-col">Network Address</td>
+          <td class="val-col" style="font-family: monospace; font-size: 12px;">${opts.ipAddress}</td>
+        </tr>` : ''}
+      </table>
+
+      <div class="cta-box">
+        <a href="${PRODUCTION_WORKSPACE_URL}" class="btn-access" target="_blank">
+          Open UrbanGaon Workspace
+        </a>
+      </div>
+
+      <div class="security-alert">
+        <strong>⚠️ Did not authorize this change?</strong><br>
+        If you did not perform or authorize this password update, your account credentials may be compromised. Please immediately contact the IT & AI Operations desk at <a href="mailto:techdesk@urbangaon.com" style="color: #dc2626; font-weight: 700; text-decoration: underline;">techdesk@urbangaon.com</a> or notify your supervisor immediately to freeze the account.
+      </div>
+    </div>
+    <div class="footer">
+      UrbanGaon Corporate Platform | Identity & Access Security Center | Automated Enterprise Protocol
+    </div>
+  </div>
+</body>
+</html>
+  `;
+
+  let info;
+  try {
+    info = await transporter.sendMail({
+      from,
+      to: opts.toEmail,
+      subject: `🔒 Security Alert: UrbanGaon Corporate Password ${isInitialSet ? 'Set & Activated' : 'Changed'} (${opts.toName})`,
+      html,
+      attachments: logoAttachments,
+    });
+    console.log(`[PasswordChangeConfirmation] Email dispatched successfully to ${opts.toEmail}`);
+  } catch (sendErr) {
+    console.warn('[Live SMTP failed for PasswordChangeConfirmation, falling back to Ethereal]:', sendErr);
+    const testAccount = await nodemailer.createTestAccount();
+    const fallbackTransporter = nodemailer.createTransport({
+      host: 'smtp.ethereal.email',
+      port: 587,
+      secure: false,
+      auth: { user: testAccount.user, pass: testAccount.pass },
+      connectionTimeout: 8000,
+    });
+    isTestAccount = true;
+    info = await fallbackTransporter.sendMail({
+      from,
+      to: opts.toEmail,
+      subject: `🔒 Security Alert: UrbanGaon Corporate Password ${isInitialSet ? 'Set & Activated' : 'Changed'} (${opts.toName})`,
+      html,
+      attachments: logoAttachments,
+    });
+  }
+
+  return {
+    success: true,
+    messageId: info.messageId,
+    isTestAccount,
+    previewUrl: isTestAccount ? nodemailer.getTestMessageUrl(info) : null,
+  };
+}

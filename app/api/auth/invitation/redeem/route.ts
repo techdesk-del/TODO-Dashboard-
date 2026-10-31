@@ -10,6 +10,7 @@ import { UserModel } from '@/models/User';
 import { MemberModel } from '@/models/Member';
 import { AuditLogModel } from '@/models/AuditLog';
 import { hashPassword, signJwtToken } from '@/lib/auth';
+import { sendPasswordChangeConfirmationEmail } from '@/lib/email';
 
 export async function POST(req: NextRequest) {
   try {
@@ -125,6 +126,16 @@ export async function POST(req: NextRequest) {
     } catch (auditErr) {
       console.warn('[API] /api/auth/invitation/redeem AuditLog warning:', auditErr);
     }
+
+    // Dispatch real-time organized confirmation email for initial password set
+    sendPasswordChangeConfirmationEmail({
+      toEmail: cleanEmail,
+      toName: invitation.name,
+      role: invitation.role,
+      changeType: 'INITIAL_SET',
+      ipAddress: req.headers.get('x-forwarded-for') || '127.0.0.1',
+      deviceInfo: req.headers.get('user-agent') || 'UrbanGaon Web Client',
+    }).catch(err => console.warn('[InvitationRedeem Confirmation Email]', err));
 
     // Generate JWT token
     const token = signJwtToken({

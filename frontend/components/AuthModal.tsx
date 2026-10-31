@@ -26,7 +26,7 @@ import {
   AlertTriangle,
   RotateCcw
 } from 'lucide-react';
-import { OFFICIAL_ROSTER, isCeoUser } from '@/shared/lib/rosterData';
+import { OFFICIAL_ROSTER, isCeoUser, isStrictCeo } from '@/shared/lib/rosterData';
 import { Role, TeamMember } from '@/types';
 
 interface AuthModalProps {
@@ -2010,9 +2010,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                   }}>
                     <ShieldCheck size={17} color="#2563eb" style={{ flexShrink: 0, marginTop: '2px' }} />
                     <div>
-                      <div style={{ fontWeight: 800 }}>Role-Based Two-Step Verification</div>
+                      <div style={{ fontWeight: 800 }}>Corporate Two-Step Verification</div>
                       <div>
-                        Privileged access ({twoFactorRole || 'Admin / Super Admin'}) requires two-step verification. An official 6-digit OTP has been sent to <strong>{email}</strong> (or enter default test code <code>123456</code>). Under protocol, 1 retry is permitted upon error.
+                        {isStrictCeo({ email }) ? (
+                          <>CEO Executive Access: An official 6-digit OTP has been dispatched to <strong>{email}</strong> (or enter emergency bypass code <code>123456</code>). 1 retry permitted.</>
+                        ) : (
+                          <>Corporate Security Protocol: An official 6-digit verification code has been dispatched in real time to <strong>{email}</strong>. Please enter the OTP to authorize your session.</>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -2135,7 +2139,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                           letterSpacing: '2px',
                           background: 'transparent'
                         }}
-                        placeholder="123456"
+                        placeholder={isStrictCeo({ email }) ? "123456" : "Enter 6-digit code"}
                         value={twoFactorCode}
                         onChange={e => {
                           clearCloseTimer();

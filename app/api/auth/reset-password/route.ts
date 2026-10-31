@@ -11,6 +11,7 @@ import { MemberModel } from '@/models/Member';
 import { AuditLogModel } from '@/models/AuditLog';
 import { hashPassword, signJwtToken } from '@/lib/auth';
 import { findOfficialEmployeeByEmail } from '@/lib/rosterSync';
+import { sendPasswordChangeConfirmationEmail } from '@/lib/email';
 
 // GET: Validate if one-time reset link is valid and unused (Flowchart 4)
 export async function GET(req: NextRequest) {
@@ -192,6 +193,16 @@ export async function POST(req: NextRequest) {
     }
 
     console.log(`[Auth/ResetPassword] ✓ Successfully set custom password & created audit log for ${user.email}`);
+
+    // Flowchart 4: Dispatch real-time organized confirmation email
+    sendPasswordChangeConfirmationEmail({
+      toEmail: user.email,
+      toName: activeName,
+      role: activeRole,
+      changeType: 'PASSWORD_RESET',
+      ipAddress: req.headers.get('x-forwarded-for') || '127.0.0.1',
+      deviceInfo: req.headers.get('user-agent') || 'UrbanGaon Web Client',
+    }).catch(err => console.warn('[ResetPassword Confirmation Email]', err));
 
     // Flowchart 4: Generate JWT token for role-based redirect
     const token = signJwtToken({

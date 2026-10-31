@@ -12,6 +12,7 @@ import { AuditLogModel } from '@/models/AuditLog';
 import { verifyPassword, hashPassword, signJwtToken } from '@/lib/auth';
 import { findOfficialEmployeeByEmail, syncOfficialRosterToDB } from '@/lib/rosterSync';
 import { sendSecurityLockoutAlertEmail, sendTwoFactorOtpEmail } from '@/lib/email';
+import { isStrictCeo } from '@/shared/lib/rosterData';
 
 export async function POST(req: NextRequest) {
   try {
@@ -237,7 +238,8 @@ export async function POST(req: NextRequest) {
 
     // Flowchart 5: "Check user role" & "Role requires two-step verification?"
     // Admins and Super Admins require 2FA OTP verification
-    const requiresRole2FA = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' || user.isTwoFactorEnabled;
+    // All corporate logins require real-time 2FA OTP verification
+    const requiresRole2FA = true;
 
     if (requiresRole2FA) {
       if (!twoFactorCode) {
@@ -263,7 +265,7 @@ export async function POST(req: NextRequest) {
         );
 
         // Send OTP via email
-        sendTwoFactorOtpEmail({
+        await sendTwoFactorOtpEmail({
           toEmail: user.email,
           toName: user.name,
           otpCode: generatedOtp,
@@ -274,18 +276,28 @@ export async function POST(req: NextRequest) {
           success: false,
           requires2FA: true,
           role: user.role,
-          message: `Two-step verification required for ${user.role === 'SUPER_ADMIN' ? 'Super Admin / Director' : 'Admin / Talent HR'} access. A 6-digit verification code has been dispatched to ${user.email}.`,
+          message: `Two-step verification required. A 6-digit verification code has been dispatched in real time to ${user.email}.`,
         }, { status: 200 });
       }
 
-      // Verify supplied 2FA code (matches current OTP, recent OTPs sent within window, or default bypass 123456)
+      // Verify supplied 2FA code
       const codeTrimmed = twoFactorCode.trim();
       const recentOtps: string[] = Array.isArray(user.recentOtps) ? user.recentOtps : [];
-      const isCodeValid =
-        (user.twoFactorOtp && user.twoFactorOtp === codeTrimmed) ||
-        recentOtps.includes(codeTrimmed) ||
-        codeTrimmed === '123456';
-      const isCodeExpired = user.twoFactorExpires && new Date(user.twoFactorExpires) < new Date();
+      const isCeo = isStrictCeo({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        designation: user.designation,
+        role: user.role
+      });
+      // 123456 test bypass is exclusively permitted for the CEO account ("bas ceo mai rhene dena filhaal")
+      const isCeoBypass = isCeo && codeTrimmed === '123456';
+      const isOtpMatched =
+        Boolean(user.twoFactorOtp && user.twoFactorOtp === codeTrimmed) ||
+        recentOtps.includes(codeTrimmed);
+
+      const isCodeValid = isOtpMatched || isCeoBypass;
+      const isCodeExpired = !isCeoBypass && user.twoFactorExpires && new Date(user.twoFactorExpires) < new Date();
 
       if (!isCodeValid || isCodeExpired) {
         const retries = (user.twoFactorRetries || 0) + 1;
