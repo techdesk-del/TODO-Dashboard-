@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import { TaskModel } from '@/models/Task';
+import { getTodayStr } from '@/shared/lib/dateUtils';
 import { AuditLogModel } from '@/models/AuditLog';
 import { broadcastTaskMutation, markTaskDeleted } from '@/lib/events';
 
@@ -73,12 +74,16 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
       );
       body.pendingCeoApproval = false;
     }
-    if (body.scheduledDate) {
+    const effDl = (body.dueDate && typeof body.dueDate === 'string' && body.dueDate.trim().length > 0) 
+      ? body.dueDate.trim() 
+      : body.scheduledDate;
+    if (effDl) {
       if (!body.dueDate) {
-        body.dueDate = body.scheduledDate;
+        body.dueDate = effDl;
       }
-      const todayIso = new Date().toISOString().slice(0, 10);
-      if (body.scheduledDate >= todayIso) {
+      const todayIso = getTodayStr();
+      // If task deadline is today or in future (e.g. 6 Nov), it is strictly not overdue
+      if (effDl >= todayIso) {
         body.isOverdue = false;
         body.isPendingNoReason = false;
         body.overdueDays = 0;

@@ -20,6 +20,8 @@
 import connectDB from './db';
 import { TaskModel } from '@/models/Task';
 import { MemberModel } from '@/models/Member';
+import { SystemConfigModel } from '@/models/SystemConfig';
+import { isNonWorkingDay } from '@/shared/lib/holidayData';
 import { AuditLogModel } from '@/models/AuditLog';
 import { getTodayStr } from '@/shared/lib/dateUtils';
 import { sendOverdueAutoFlagEmail } from './email';
@@ -70,6 +72,24 @@ export async function runOverdueAndNoReasonEvaluation(options?: {
     const todayTime = new Date(todayStr).getTime();
     const nowIso = new Date().toISOString();
     const twentyFourHoursAgoIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    // Enforce configured working days schedule from MongoDB Atlas in real time
+    let configuredWorkingDays: string[] | undefined = undefined;
+    try {
+      const cfgDoc = await SystemConfigModel.findOne({ key: 'global_system_config' }).lean();
+      if (cfgDoc?.config?.workingDays && Array.isArray(cfgDoc.config.workingDays)) {
+        configuredWorkingDays = cfgDoc.config.workingDays;
+      }
+    } catch (cfgErr) {
+      console.warn('[Overdue Engine] Could not load system config from DB:', cfgErr);
+    }
+
+    const nonWorking = isNonWorkingDay(todayStr, configuredWorkingDays);
+    let effectiveSendNotifications = sendNotifications;
+    if (nonWorking.isNonWorking) {
+      console.log(`[Overdue Engine] Today is ${nonWorking.reason}. Automated email notifications strictly suppressed.`);
+      effectiveSendNotifications = false;
+    }
 
     // 1. Fetch tasks not Completed and not Cancelled (Flowchart 21 Step 2)
     const pendingTasks = await TaskModel.find({
@@ -143,7 +163,7 @@ export async function runOverdueAndNoReasonEvaluation(options?: {
       // Rate limit notifications to once every 24 hours per task to avoid spamming on hourly runs
       const lastNotified = task.overdueNotifiedAt ? new Date(task.overdueNotifiedAt).getTime() : 0;
       const hoursSinceNotification = (Date.now() - lastNotified) / (1000 * 60 * 60);
-      const shouldDispatchNotification = sendNotifications && (!task.overdueNotifiedAt || hoursSinceNotification >= 24);
+      const shouldDispatchNotification = effectiveSendNotifications && (!task.overdueNotifiedAt || hoursSinceNotification >= 24);
 
       // Resolve primary assignee details
       const primaryAssignee = task.assignees[0];

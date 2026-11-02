@@ -111,61 +111,75 @@ export function getCompanyHoliday(dateStr: string): CompanyHoliday | undefined {
 }
 
 /**
- * Checks if a given date string (YYYY-MM-DD) falls on a Sunday (Weekly Off).
+ * Returns the English name of the day of the week (e.g. 'Sunday', 'Monday') for a given YYYY-MM-DD.
+ * Evaluated strictly at UTC noon to avoid any server-time / local-time zone offsets.
  */
-export function isSundayDate(dateStr: string): boolean {
-  if (!dateStr) return false;
+export function getDayOfWeekName(dateStr: string): string {
+  if (!dateStr) return '';
   const [y, m, d] = dateStr.split('-').map(Number);
-  if (!y || !m || !d) return false;
-  const dateObj = new Date(y, m - 1, d);
-  return dateObj.getDay() === 0;
+  if (!y || !m || !d) return '';
+  const dateObj = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  return dayNames[dateObj.getUTCDay()];
 }
 
 /**
- * Comprehensive check for non-working days (Company Holiday or Sunday).
- * Returns suppression rationale for email dispatcher and cron daemon.
+ * Checks if a given date string (YYYY-MM-DD) falls on a Sunday (Weekly Off).
+ */
+export function isSundayDate(dateStr: string): boolean {
+  return getDayOfWeekName(dateStr) === 'Sunday';
+}
+
+/**
+ * Comprehensive check for non-working days (Company Holiday, Sunday, or Unticked Weekday).
+ * Strictly enforces real-time configuredWorkingDays schedule from System Configuration.
  */
 export function isNonWorkingDay(dateStr: string, workingDays?: string[]): {
   isNonWorking: boolean;
   reason?: string;
   holiday?: CompanyHoliday;
   isSunday: boolean;
+  dayName: string;
 } {
   const holiday = getCompanyHoliday(dateStr);
   const isSunday = isSundayDate(dateStr);
+  const dayName = getDayOfWeekName(dateStr);
 
   if (holiday) {
     return {
       isNonWorking: true,
       reason: `Company Holiday: ${holiday.name} (${holiday.displayDate})`,
       holiday,
-      isSunday
+      isSunday,
+      dayName
     };
   }
 
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const dateObj = new Date(y, m - 1, d);
-  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const dayName = dayNames[dateObj.getDay()];
-
+  // If workingDays is configured, check if today's day of the week is ticked
   if (workingDays && Array.isArray(workingDays) && workingDays.length > 0) {
-    if (!workingDays.includes(dayName)) {
+    const normalizedWorkingDays = workingDays.map(d => String(d).trim().toLowerCase());
+    const isWorking = normalizedWorkingDays.includes(dayName.toLowerCase());
+
+    if (!isWorking) {
       return {
         isNonWorking: true,
         reason: `${dayName} (Non-Working Day)`,
-        isSunday
+        isSunday,
+        dayName
       };
     }
   } else if (isSunday) {
     return {
       isNonWorking: true,
       reason: 'Sunday (Weekly Off)',
-      isSunday: true
+      isSunday: true,
+      dayName
     };
   }
 
   return {
     isNonWorking: false,
-    isSunday: false
+    isSunday: false,
+    dayName
   };
 }

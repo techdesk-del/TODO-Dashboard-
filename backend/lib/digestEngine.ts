@@ -179,27 +179,43 @@ export async function runMorningDigest(options: DigestOptions = {}): Promise<Dig
     }
 
     // Helper to determine task's effective deadline
-    const getDeadline = (t: any) => (t.dueDate && t.dueDate.trim().length > 0) ? t.dueDate.trim() : t.scheduledDate;
+    const getDeadline = (t: any): string => {
+      if (t.dueDate && typeof t.dueDate === 'string' && t.dueDate.trim().length > 0) {
+        return t.dueDate.trim();
+      }
+      if (t.scheduledDate && typeof t.scheduledDate === 'string' && t.scheduledDate.trim().length > 0) {
+        return t.scheduledDate.trim();
+      }
+      return '';
+    };
 
-    // Categorize into Overdue, Today, Upcoming based on real commitment deadline
+    // Strict Rule: Future tasks (deadline > todayStr e.g. 6 Nov) can NEVER be overdue
     const overdue = userTasks.filter(t => {
       const dl = getDeadline(t);
+      if (dl && dl > todayStr) return false;
       return t.isOverdue || Boolean(dl && dl < todayStr);
     });
 
+    // Only tasks due strictly TODAY
     const today = userTasks.filter(t => {
       const dl = getDeadline(t);
-      const isOver = t.isOverdue || Boolean(dl && dl < todayStr);
+      const isOver = (dl && dl < todayStr) || t.isOverdue;
       if (isOver) return false;
       return dl === todayStr;
     });
 
     const upcoming = userTasks.filter(t => {
       const dl = getDeadline(t);
-      const isOver = t.isOverdue || Boolean(dl && dl < todayStr);
-      if (isOver) return false;
       return Boolean(dl && dl > todayStr);
     });
+
+    // Zero-Spam / Real-Time Sync Policy:
+    // Only dispatch digest if employee has deliverables whose deadline has arrived (Due Today or Overdue).
+    // Tasks scheduled for future dates (e.g. 6 Nov) are strictly deferred until their actual deadline.
+    if (overdue.length === 0 && today.length === 0) {
+      console.log(`[DigestEngine] Skipping ${recipient.name} (${recipient.email}): Zero tasks due today or overdue. All commitments deferred to their respective future deadlines.`);
+      continue;
+    }
 
     // Track chronic delays (overdue >= 3 days)
     const todayTime = new Date(todayStr).getTime();

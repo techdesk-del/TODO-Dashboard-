@@ -201,21 +201,7 @@ export function generateDigestHtml(opts: SendDigestOptions): string {
           `).join('')
       }
 
-      <!-- Upcoming Tasks with direct link -->
-      <div class="section-title title-blue">Upcoming Deliverables This Week</div>
-      ${
-        upcomingTasks.length === 0
-          ? '<div class="empty-badge">No upcoming deliverables this week.</div>'
-          : upcomingTasks.map(t => `
-            <div class="task-card card-blue">
-              <div class="task-name">${t.title}</div>
-              <div class="task-meta">Target Deadline: ${t.dueDate || t.scheduledDate} | Priority: ${t.priority}</div>
-              <div style="margin-top: 4px;">
-                <a href="${appBase}/?taskId=${t.id}" class="task-link">Open Deliverable #${t.id}</a>
-              </div>
-            </div>
-          `).join('')
-      }
+
     </div>
     <div class="footer">
       Automated by UrbanGaon Dispatcher Engine | Corporate Delivery Compliance | Direct Task Links Activated

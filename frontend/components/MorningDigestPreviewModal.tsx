@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
 import { formatDateDisplay, getTodayStr } from '@/shared/lib/dateUtils';
+import { isNonWorkingDay } from '@/shared/lib/holidayData';
 import { isStrictCeo } from '@/shared/lib/rosterData';
 import { 
   Mail, 
@@ -70,6 +71,7 @@ export const MorningDigestPreviewModal: React.FC = () => {
   const overdueTasks = useMemo(() => {
     return userTasks.filter(t => {
       const dl = getDeadline(t);
+      if (dl && dl > todayStr) return false;
       return (t.isOverdue || Boolean(dl && dl < todayStr)) && t.status !== 'Done';
     });
   }, [userTasks, todayStr]);
@@ -98,7 +100,7 @@ export const MorningDigestPreviewModal: React.FC = () => {
 
     try {
       const payload: Record<string, any> = {
-        force: true,
+        force: false,
         actor: `${currentUser.name} (${currentUser.role})`
       };
 

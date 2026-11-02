@@ -1,3 +1,25 @@
+
+/**
+ * Parses user-configured schedule time (e.g. "05:11 P.M", "08:30 AM", "17:11") into 24-hr IST hours & minutes.
+ */
+export function parseScheduleTimeToIst(timeStr?: string): { hour: number; minute: number } {
+  if (!timeStr || typeof timeStr !== 'string') {
+    return { hour: 8, minute: 30 };
+  }
+  const clean = timeStr.trim().toUpperCase().replace(/\./g, '');
+  const isPm = clean.includes('PM');
+  const isAm = clean.includes('AM');
+  const digits = clean.replace(/[^0-9:]/g, '');
+  const parts = digits.split(':').map(Number);
+  let hour = parts[0] || 8;
+  const minute = parts[1] !== undefined ? parts[1] : 30;
+
+  if (isPm && hour < 12) hour += 12;
+  if (isAm && hour === 12) hour = 0;
+
+  return { hour, minute };
+}
+
 /**
  * lib/cron.ts — Automated Server-Side Background Schedulers
  *
@@ -12,6 +34,8 @@ import cron from 'node-cron';
 import connectDB from './db';
 import { TaskModel } from '@/models/Task';
 import { AuditLogModel } from '@/models/AuditLog';
+import { SystemConfigModel } from '@/models/SystemConfig';
+import { isNonWorkingDay } from '@/shared/lib/holidayData';
 import { getTodayStr } from '@/shared/lib/dateUtils';
 import { runOverdueAndNoReasonEvaluation } from './overdueEngine';
 import { executeDataRetention } from './retentionEngine';
@@ -208,11 +232,42 @@ export function initServerCron() {
       const minutes = istDate.getMinutes();
       const todayStr = getTodayStr();
 
-      // Check 08:30 AM IST for Morning Digest
-      if (hours === 8 && minutes === 30 && cache.lastDigestDate !== todayStr) {
+      // Fetch dynamic email schedule time & working days from MongoDB in real time
+      let cfgDoc: any = null;
+      try {
+        cfgDoc = await SystemConfigModel.findOne({ key: 'global_system_config' }).lean();
+      } catch (err) {
+        console.warn('[Cron Heartbeat] Failed to fetch system config:', err);
+      }
+
+      const configuredTime = cfgDoc?.config?.emailScheduleTime || '08:30 AM';
+      const configuredWorkingDays = cfgDoc?.config?.workingDays;
+      const { hour: targetHour, minute: targetMinute } = parseScheduleTimeToIst(configuredTime);
+
+      // Check configured daily dispatch time in Asia/Kolkata (IST)
+      if (hours === targetHour && minutes === targetMinute && cache.lastDigestDate !== todayStr) {
         cache.lastDigestDate = todayStr;
-        console.log('[Heartbeat 08:30 AM IST] Firing automated morning digest...');
-        await runMorningDigest({ force: false, actor: 'Heartbeat 08:30 AM Daemon' });
+        const nonWorking = isNonWorkingDay(todayStr, configuredWorkingDays);
+
+        if (nonWorking.isNonWorking) {
+          console.log(`[Heartbeat Cron] Daily digest suppressed at ${configuredTime} IST: Today is ${nonWorking.reason}`);
+          await AuditLogModel.create({
+            id: `audit-email-skip-${Date.now()}`,
+            timestamp: new Date().toISOString(),
+            actor: 'Automated Real-Time Digest Daemon',
+            actorRole: 'SUPER_ADMIN',
+            action: 'CONFIG_CHANGED',
+            fieldChanged: 'Daily Digest Suppressed (Non-Working Day)',
+            oldValue: 'Scheduled Email Dispatch',
+            newValue: `Auto-Suppressed: ${nonWorking.reason}`,
+            ipAddress: '127.0.0.1',
+            deviceInfo: 'Real-Time Schedule Daemon',
+            notes: `Zero emails dispatched to staff. Today is ${nonWorking.reason}. Unticked in Email Schedule Settings.`,
+          }).catch(() => {});
+        } else {
+          console.log(`[Heartbeat Cron] Firing automated daily digest at configured time (${configuredTime} IST)...`);
+          await runMorningDigest({ force: false, actor: `Automated Scheduled Cron (${configuredTime})` });
+        }
       }
 
       // Check 00:05 AM IST for Midnight Rollover

@@ -6,6 +6,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { initServerCron, executeNightlyRollover } from '@/lib/cron';
+import { SystemConfigModel } from '@/models/SystemConfig';
+import { isNonWorkingDay } from '@/shared/lib/holidayData';
+import { getTodayStr } from '@/shared/lib/dateUtils';
 import { runMorningDigest } from '@/lib/digestEngine';
 
 export const dynamic = 'force-dynamic';
@@ -40,12 +43,26 @@ export async function GET(req: NextRequest) {
     if (action === 'digest') {
       const origin = req.headers.get('origin') || process.env.NEXTAUTH_URL || 'https://todo.urbangaon.com';
 
-      // Auto-evaluate overdue deadlines and delay reasons before dispatching morning digests
+      // Check working days configuration in real time
+      let configuredWorkingDays: string[] | undefined = undefined;
+      try {
+        const cfgDoc = await SystemConfigModel.findOne({ key: 'global_system_config' }).lean();
+        if (cfgDoc?.config?.workingDays && Array.isArray(cfgDoc.config.workingDays)) {
+          configuredWorkingDays = cfgDoc.config.workingDays;
+        }
+      } catch (err) {
+        console.warn('[Vercel Cron] Could not load system config:', err);
+      }
+
+      const todayStr = getTodayStr();
+      const nonWorking = isNonWorkingDay(todayStr, configuredWorkingDays);
+
+      // Auto-evaluate overdue deadlines, only sending notifications on valid working days
       try {
         const { runOverdueAndNoReasonEvaluation } = await import('@/lib/overdueEngine');
         await runOverdueAndNoReasonEvaluation({
           thresholdDays: 3,
-          sendNotifications: true,
+          sendNotifications: !nonWorking.isNonWorking,
           baseUrl: origin,
         });
       } catch (e) {
