@@ -1,4 +1,5 @@
 'use client';
+import { computeMultiAssigneeStatus } from '@/shared/lib/multiAssignee';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
@@ -193,8 +194,17 @@ export const CalendarView: React.FC = () => {
   };
 
   const isOverdue = (task: Task): boolean => {
+    if (!task) return false;
+    const statusStr = String(task.status || '').trim().toLowerCase();
+    if (statusStr === 'done' || statusStr === 'completed' || statusStr === 'cancelled') {
+      return false;
+    }
+    const comp = computeMultiAssigneeStatus(task);
+    if (comp.status === 'Done' || comp.status === 'Cancelled') {
+      return false;
+    }
     const effectiveDl = (task.dueDate && task.dueDate.trim().length > 0) ? task.dueDate.trim() : task.scheduledDate;
-    return Boolean(task.isOverdue || (effectiveDl < todayStr && task.status !== 'Done' && task.status !== 'Cancelled'));
+    return Boolean(task.isOverdue || (effectiveDl < todayStr));
   };
 
   const getStatusColor = (status: string, taskOverdue: boolean) => {

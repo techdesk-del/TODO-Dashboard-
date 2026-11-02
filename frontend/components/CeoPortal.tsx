@@ -1,4 +1,5 @@
 'use client';
+import { computeMultiAssigneeStatus } from '@/shared/lib/multiAssignee';
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
@@ -1257,7 +1258,7 @@ export const CeoPortal: React.FC = () => {
                   {paginatedTasks.map((task, idx) => {
                     const globalIdx = startIndex + idx + 1;
                     const effectiveDl = (task.dueDate && task.dueDate.trim().length > 0) ? task.dueDate.trim() : task.scheduledDate;
-                    const isOverdue = (task.isOverdue || effectiveDl < todayStr) && task.status !== 'Done';
+                    const isOverdue = (task.isOverdue || effectiveDl < todayStr) && task.status !== 'Done' && task.status !== 'Cancelled' && computeMultiAssigneeStatus(task).status !== 'Done';
                     const isConfirmingDelete = deletingTaskId === task.id;
 
                     return (

@@ -924,7 +924,10 @@ export const Header: React.FC = () => {
                             onClick={() => {
                               const today = getTodayStr();
                               overdueTasks.forEach(t => {
-                                updateTask(t.id, { scheduledDate: today }, `Batch rescheduled to today (${today}) via Notification Center`);
+                                const now = new Date();
+                                const currentHour = now.getHours();
+                                const newTime = currentHour >= 17 ? '08:00 PM' : '06:00 PM';
+                                updateTask(t.id, { scheduledDate: today, dueDate: today, time: newTime, isOverdue: false, isPendingNoReason: false, overdueDays: 0 }, `Batch rescheduled to today (${today} ${newTime}) via Notification Center`);
                               });
                               setSelectedDate(today);
                               setActiveView('workspace');

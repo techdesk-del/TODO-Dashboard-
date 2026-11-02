@@ -104,8 +104,7 @@ export async function GET(req: NextRequest) {
             updatedAt: { $gt: lastTaskUpdatedAt },
           })
             .sort({ updatedAt: 1 })
-            .limit(25)
-            .select('id updatedAt status title')
+            .limit(50)
             .lean()
             .exec();
 
@@ -113,11 +112,17 @@ export async function GET(req: NextRequest) {
             if (changed.updatedAt && changed.updatedAt > lastTaskUpdatedAt) {
               lastTaskUpdatedAt = changed.updatedAt;
             }
+            const isNew = Boolean(
+              changed.createdAt &&
+              Math.abs(new Date(changed.updatedAt || '').getTime() - new Date(changed.createdAt).getTime()) < 3000
+            );
             send('task_mutation', {
-              action: 'UPDATED',
+              action: isNew ? 'CREATED' : 'UPDATED',
               taskId: changed.id,
               taskTitle: changed.title,
               status: changed.status,
+              task: changed,
+              updates: changed,
               timestamp: Date.now(),
               source: 'mongodb-changedetect',
             });

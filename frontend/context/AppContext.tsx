@@ -408,6 +408,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                   p.scheduledDate !== n.scheduledDate ||
                   p.dueDate !== n.dueDate ||
                   p.progressPercent !== n.progressPercent ||
+                  p.time !== n.time ||
+                  p.isOverdue !== n.isOverdue ||
+                  p.isPendingNoReason !== n.isPendingNoReason ||
+                  p.priority !== n.priority ||
                   Boolean(p.pendingCeoApproval) !== Boolean(n.pendingCeoApproval) ||
                   (p.assignees?.length || 0) !== (n.assignees?.length || 0)
                 ) {
@@ -626,32 +630,51 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const data = JSON.parse(e.data);
             console.log('[Realtime SSE] Cross-device mutation:', data.taskTitle || data.taskId, data.action);
 
-            if (data.action === 'CREATED' && data.task) {
-              setTasks(prev => {
-                if (prev.some(t => t.id === data.task.id)) {
-                  return prev.map(t => t.id === data.task.id ? { ...data.task, isJustAdded: t.isJustAdded } : t);
-                }
-                const updated = [...prev, data.task].sort((a, b) => {
-                  const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-                  const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-                  if (timeA !== timeB) return timeA - timeB;
-                  return a.id.localeCompare(b.id);
+            if (data.action === 'CREATED' && (data.task || data.taskId)) {
+              if (data.task) {
+                setTasks(prev => {
+                  if (prev.some(t => t.id === data.task.id)) {
+                    return prev.map(t => t.id === data.task.id ? { ...data.task, isJustAdded: t.isJustAdded } : t);
+                  }
+                  const updated = [...prev, data.task].sort((a, b) => {
+                    const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                    const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                    if (timeA !== timeB) return timeA - timeB;
+                    return a.id.localeCompare(b.id);
+                  });
+                  try {
+                    localStorage.setItem('urbangaon_tasks_v2', JSON.stringify(updated));
+                  } catch { }
+                  return updated;
                 });
-                try {
-                  localStorage.setItem('urbangaon_tasks_v2', JSON.stringify(updated));
-                } catch { }
-                return updated;
-              });
-              setBannerNotification({
-                message: `New deliverable "${data.taskTitle || data.task.title}" synced live across team`,
-                badge: 'Realtime Synced'
-              });
+                setBannerNotification({
+                  message: `New deliverable "${data.taskTitle || data.task.title}" synced live across team`,
+                  badge: 'Realtime Synced'
+                });
+              } else if (isMounted) {
+                refreshFromDB(true);
+              }
+              refreshNotifications();
               return;
             } else if (data.action === 'UPDATED' && data.taskId) {
+              const updatedData = data.task || data.updates;
               setTasks(prev => {
+                const exists = prev.some(t => t.id === data.taskId);
+                if (!exists && data.task) {
+                  const updated = [...prev, data.task].sort((a, b) => {
+                    const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                    const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                    if (timeA !== timeB) return timeA - timeB;
+                    return a.id.localeCompare(b.id);
+                  });
+                  try {
+                    localStorage.setItem('urbangaon_tasks_v2', JSON.stringify(updated));
+                  } catch { }
+                  return updated;
+                }
                 const updated = prev.map(t => {
                   if (t.id === data.taskId) {
-                    return data.task ? data.task : { ...t, ...data.updates };
+                    return updatedData ? { ...t, ...updatedData } : { ...t, status: data.status || t.status };
                   }
                   return t;
                 });
@@ -660,6 +683,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 } catch { }
                 return updated;
               });
+              if (isMounted) {
+                refreshNotifications();
+              }
               return;
             } else if (data.action === 'DELETED' && data.taskId) {
               deletedIdsRef.current.add(data.taskId);
@@ -674,12 +700,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 message: `Deliverable "${data.taskTitle || data.taskId}" was deleted across connected devices`,
                 badge: 'Realtime Synced'
               });
+              refreshNotifications();
               return;
             } else if (data.action === 'DELETED_ALL') {
               setTasks([]);
               try {
                 localStorage.removeItem('urbangaon_tasks_v2');
               } catch { }
+              refreshNotifications();
               return;
             }
           } catch { }
@@ -1230,7 +1258,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       effectiveUpdates.pendingCeoApproval = false;
     }
     // When deliverable is marked Done, it is 100% completed: clear overdue, pending, and approval flags
-    if (updates.status === 'Done') {
+    const isNowDone = updates.status === 'Done' ||
+      (effectiveUpdates.assignees && computeMultiAssigneeStatus({ ...currentTask, ...effectiveUpdates } as any).status === 'Done');
+    if (isNowDone) {
+      effectiveUpdates.status = 'Done';
       effectiveUpdates.isOverdue = false;
       effectiveUpdates.isPendingNoReason = false;
       effectiveUpdates.overdueDays = 0;
@@ -1604,7 +1635,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let stateChanged = false;
 
     const updatedTasks = tasks.map(t => {
-      if (t.status === 'Done' || t.status === 'Cancelled') {
+      const isDone = t.status === 'Done' || t.status === 'Cancelled' || computeMultiAssigneeStatus(t).status === 'Done';
+      if (isDone) {
+        if (t.isOverdue || t.isPendingNoReason || (t.overdueDays || 0) > 0) {
+          stateChanged = true;
+          return { ...t, isOverdue: false, isPendingNoReason: false, overdueDays: 0 };
+        }
         return t;
       }
 
@@ -3026,6 +3062,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: comp.status,
       progressPercent: comp.progressPercent,
     };
+
+    if (comp.status === 'Done') {
+      taskUpdates.isOverdue = false;
+      taskUpdates.isPendingNoReason = false;
+      taskUpdates.overdueDays = 0;
+      taskUpdates.pendingCeoApproval = false;
+    }
 
     if (status === 'Done' && !isCeo) {
       taskUpdates.pendingCeoApproval = true;

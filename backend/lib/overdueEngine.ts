@@ -24,6 +24,7 @@ import { SystemConfigModel } from '@/models/SystemConfig';
 import { isNonWorkingDay } from '@/shared/lib/holidayData';
 import { AuditLogModel } from '@/models/AuditLog';
 import { getTodayStr } from '@/shared/lib/dateUtils';
+import { computeMultiAssigneeStatus } from '@/shared/lib/multiAssignee';
 import { sendOverdueAutoFlagEmail } from './email';
 import type { Task, TeamMember } from '@/types';
 
@@ -91,6 +92,21 @@ export async function runOverdueAndNoReasonEvaluation(options?: {
       effectiveSendNotifications = false;
     }
 
+    // 0. Clean up any Done or Cancelled tasks that still carry overdue flags in MongoDB
+    await TaskModel.updateMany(
+      {
+        status: { $in: ['Done', 'Cancelled'] },
+        $or: [{ isOverdue: true }, { isPendingNoReason: true }, { overdueDays: { $gt: 0 } }]
+      },
+      {
+        $set: {
+          isOverdue: false,
+          isPendingNoReason: false,
+          overdueDays: 0
+        }
+      }
+    ).exec();
+
     // 1. Fetch tasks not Completed and not Cancelled (Flowchart 21 Step 2)
     const pendingTasks = await TaskModel.find({
       status: { $nin: ['Done', 'Cancelled'] },
@@ -113,6 +129,16 @@ export async function runOverdueAndNoReasonEvaluation(options?: {
     let notificationsDispatched = 0;
 
     for (const task of pendingTasks) {
+      // Flowchart 8 / multiAssignee check: if all completed, mark Done and clear flags
+      const comp = computeMultiAssigneeStatus(task as any);
+      if (comp.status === 'Done' || comp.status === 'Cancelled') {
+        task.status = comp.status;
+        task.isOverdue = false;
+        task.isPendingNoReason = false;
+        task.overdueDays = 0;
+        await task.save();
+        continue;
+      }
       const effectiveDeadline = (task.dueDate && task.dueDate.trim().length > 0) ? task.dueDate.trim() : task.scheduledDate;
       const isDuePassed = Boolean(effectiveDeadline && effectiveDeadline < todayStr);
 
