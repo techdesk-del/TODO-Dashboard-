@@ -87,12 +87,18 @@ export function filterTasksByType(
     }
     case 'MONTHLY': {
       const targetMonth = opts.selectedMonth || new Date().toISOString().slice(0, 7); // YYYY-MM
-      return tasks.filter(t => (t.scheduledDate || '').startsWith(targetMonth));
+      return tasks.filter(t => (t.scheduledDate || '').startsWith(targetMonth) || (t.dueDate || '').startsWith(targetMonth) || (t.createdAt || '').startsWith(targetMonth));
     }
     case 'DATE_WISE': {
       const start = opts.startDate || '1970-01-01';
       const end = opts.endDate || '2099-12-31';
-      return tasks.filter(t => t.scheduledDate >= start && t.scheduledDate <= end);
+      return tasks.filter(t => {
+        const schedMatch = t.scheduledDate && t.scheduledDate >= start && t.scheduledDate <= end;
+        const dueMatch = t.dueDate && t.dueDate >= start && t.dueDate <= end;
+        const createdDate = t.createdAt ? t.createdAt.slice(0, 10) : '';
+        const createdMatch = createdDate && createdDate >= start && createdDate <= end;
+        return Boolean(schedMatch || dueMatch || createdMatch);
+      });
     }
     case 'USER_WISE': {
       if (!opts.selectedUserId && !opts.selectedUserName) return tasks;

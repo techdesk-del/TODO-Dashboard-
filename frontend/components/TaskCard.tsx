@@ -522,8 +522,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
             <span
               className="task-title-text"
               style={{
-                textDecoration: isCompleted ? 'line-through' : 'none',
-                color: isCompleted ? '#94a3b8' : '#0f172a',
+                textDecoration: 'none',
+                color: isCompleted ? '#334155' : '#0f172a',
                 fontWeight: 700,
                 fontSize: '0.88rem',
                 lineHeight: 1.4,

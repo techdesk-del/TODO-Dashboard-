@@ -1,5 +1,7 @@
 'use client';
 
+import type { Task } from '@/types';
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Header } from '@/components/Header';
@@ -19,7 +21,8 @@ import { EnterpriseExportModal } from '@/components/EnterpriseExportModal';
 import { AuthModal } from '@/components/AuthModal';
 import { formatDateTitle, getTodayStr, getTomorrowStr, formatDateDayMonth, isTaskForDate } from '@/shared/lib/dateUtils';
 import { isCeoUser, isStrictCeo, canAccessAdminHr, canAccessWorkflows, canViewAuditTrail } from '@/shared/lib/rosterData';
-import { Check, Calendar as CalendarIcon, Sparkles, Globe, CalendarDays, AlertTriangle, RotateCcw, Plus } from 'lucide-react';
+import { Check, Calendar as CalendarIcon, Sparkles, Globe, CalendarDays, AlertTriangle, RotateCcw, Plus, Eye, EyeOff } from 'lucide-react';
+import { computeMultiAssigneeStatus } from '@/shared/lib/multiAssignee';
 
 export default function Home() {
   const {
@@ -47,6 +50,7 @@ export default function Home() {
 
   const [assigneeFilter, setAssigneeFilter] = useState<'all' | 'assigned_to_me' | 'assigned_by_me'>('all');
   const [ceoEmployeeFilter, setCeoEmployeeFilter] = useState<string>('ALL');
+  const [hideCompleted, setHideCompleted] = useState<boolean>(true);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -124,11 +128,26 @@ export default function Home() {
     return Boolean(t.isOverdue || (effectiveDeadline && effectiveDeadline < todayStr));
   });
   const dateTasks = partitionedTasks.filter(t => isTaskForDate(t, selectedDate));
+
+  const isDoneTask = (t: Task) => {
+    if (!t) return false;
+    if (t.status === 'Done') return true;
+    try {
+      return computeMultiAssigneeStatus(t).status === 'Done';
+    } catch {
+      return false;
+    }
+  };
+
+  const scopedList = viewScope === 'all' ? partitionedTasks : dateTasks;
+  const completedCount = scopedList.filter(isDoneTask).length;
+
   const displayTasks = useMemo(() => {
-    const list = viewScope === 'all' ? partitionedTasks : dateTasks;
+    const list = scopedList;
     const taskMap = new Map<string, typeof list[0]>();
     for (const t of list) {
       if (t && t.id && !taskMap.has(t.id)) {
+        if (hideCompleted && isDoneTask(t)) continue;
         taskMap.set(t.id, t);
       }
     }
@@ -138,7 +157,7 @@ export default function Home() {
       if (timeA !== timeB) return timeA - timeB;
       return a.id.localeCompare(b.id);
     });
-  }, [viewScope, partitionedTasks, dateTasks]);
+  }, [scopedList, hideCompleted]);
 
 
 
@@ -435,6 +454,32 @@ export default function Home() {
                     </button>
                   </div>
 
+                  {completedCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setHideCompleted(prev => !prev)}
+                      style={{
+                        padding: '5px 11px',
+                        fontSize: '0.74rem',
+                        fontWeight: 700,
+                        borderRadius: '6px',
+                        border: '1px solid #cbd5e1',
+                        background: hideCompleted ? '#ffffff' : '#eff6ff',
+                        color: hideCompleted ? '#64748b' : '#2563eb',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        cursor: 'pointer',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                        transition: 'all 0.15s ease'
+                      }}
+                      title={hideCompleted ? `Show ${completedCount} finished deliverable(s)` : 'Hide finished deliverables'}
+                    >
+                      {hideCompleted ? <Eye size={13} /> : <EyeOff size={13} />}
+                      <span>{hideCompleted ? `Show Completed (${completedCount})` : `Hide Completed (${completedCount})`}</span>
+                    </button>
+                  )}
+
                   {/* Flowchart 6: Add Task Button (Disabled & Hidden for CEO - Executive Monitor Mode) */}
                   {!isCeoMonitoring && (
                     <button
@@ -471,27 +516,66 @@ export default function Home() {
                 ))}
 
                 {displayTasks.length === 0 && (
-                  <div style={{
-                    background: '#ffffff',
-                    border: '1px dashed #cbd5e1',
-                    borderRadius: '10px',
-                    padding: '3rem 2rem',
-                    textAlign: 'center',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '0.75rem'
-                  }}>
-                    <CalendarIcon size={36} color="#94a3b8" />
-                    <div style={{ fontWeight: 700, fontSize: '1rem', color: '#1e293b' }}>
-                      No tasks scheduled for {formatDateTitle(selectedDate)}
+                  completedCount > 0 && hideCompleted ? (
+                    <div style={{
+                      background: '#ffffff',
+                      border: '1px dashed #cbd5e1',
+                      borderRadius: '10px',
+                      padding: '2.5rem 2rem',
+                      textAlign: 'center',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '0.75rem'
+                    }}>
+                      <Check size={36} color="#10b981" />
+                      <div style={{ fontWeight: 700, fontSize: '1rem', color: '#1e293b' }}>
+                        All {completedCount} deliverable(s) for this date are completed!
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: '#64748b', maxWidth: '420px' }}>
+                        Finished tasks are hidden from the active view. They remain fully available in Excel/CSV Export, or you can reveal them anytime.
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setHideCompleted(false)}
+                        style={{
+                          marginTop: '0.5rem',
+                          padding: '6px 14px',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          background: '#eff6ff',
+                          color: '#2563eb',
+                          border: '1px solid #bfdbfe',
+                          borderRadius: '6px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Show Completed Tasks ({completedCount})
+                      </button>
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: '#64748b', maxWidth: '400px' }}>
-                      {isCeoMonitoring
-                        ? 'Executive Monitoring Mode active: No deliverables found for this date across monitored employees.'
-                        : 'Use the voice microphone button below or type a conversational prompt to schedule deliverables instantaneously.'}
+                  ) : (
+                    <div style={{
+                      background: '#ffffff',
+                      border: '1px dashed #cbd5e1',
+                      borderRadius: '10px',
+                      padding: '3rem 2rem',
+                      textAlign: 'center',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '0.75rem'
+                    }}>
+                      <CalendarIcon size={36} color="#94a3b8" />
+                      <div style={{ fontWeight: 700, fontSize: '1rem', color: '#1e293b' }}>
+                        No tasks scheduled for {formatDateTitle(selectedDate)}
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: '#64748b', maxWidth: '400px' }}>
+                        {isCeoMonitoring
+                          ? 'Executive Monitoring Mode active: No deliverables found for this date across monitored employees.'
+                          : 'Use the voice microphone button below or type a conversational prompt to schedule deliverables instantaneously.'}
+                      </div>
                     </div>
-                  </div>
+                  )
                 )}
               </div>
 
