@@ -292,8 +292,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
         name: m.name,
         email: m.email,
         role: m.role || 'EMPLOYEE',
-        department: isCeoDept ? 'Founder & CEO' : (m.department || 'General'),
-        designation: (cleanId === 'mem-1' || cleanEmail === 'ceo@urbangaon.com') ? 'Founder & CEO' : (m.designation || 'Specialist'),
+        department: isCeoDept ? 'Founder' : (m.department || 'General'),
+        designation: (cleanId === 'mem-1' || cleanEmail === 'ceo@urbangaon.com') ? 'Founder' : (m.designation || 'Specialist'),
         avatar: (m.avatar && !m.avatar.includes('.png') && !m.avatar.includes('urbangaon-employee-emblem'))
           ? m.avatar
           : (m.name?.trim().split(/\s+/).length >= 2
@@ -660,7 +660,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
           newValue: `${userObj.name} (${userObj.role})`,
           actor: userObj.name,
           actorRole: userObj.role,
-          notes: `Successful login verified under corporate security protocol. Role routed to ${isCeoUser(userObj) || userObj.role === 'SUPER_ADMIN' ? 'Super Admin Dashboard (CEO Portal)' :
+          notes: `Successful login verified under corporate security protocol. Role routed to ${isCeoUser(userObj) || userObj.role === 'SUPER_ADMIN' ? 'Super Admin Dashboard (Founder Portal)' :
             userObj.role === 'ADMIN' ? 'Admin / Talent HR Dashboard' :
               userObj.role === 'MANAGER' ? 'Manager Dashboard (My Team View)' : 'Employee Workspace'
             }.`
@@ -2013,7 +2013,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                       <div style={{ fontWeight: 800 }}>Corporate Two-Step Verification</div>
                       <div>
                         {isStrictCeo({ email }) ? (
-                          <>CEO Executive Access: An official 6-digit OTP has been dispatched to <strong>{email}</strong> (or enter emergency bypass code <code>123456</code>). 1 retry permitted.</>
+                          <>Founder Executive Access: An official 6-digit OTP has been dispatched to <strong>{email}</strong> (or enter emergency bypass code <code>123456</code>). 1 retry permitted.</>
                         ) : (
                           <>Corporate Security Protocol: An official 6-digit verification code has been dispatched in real time to <strong>{email}</strong>. Please enter the OTP to authorize your session.</>
                         )}

@@ -146,13 +146,13 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
   const [holdReasonInput, setHoldReasonInput] = useState('');
   const [showEscalateModal, setShowEscalateModal] = useState(false);
   const [escalateReasonInput, setEscalateReasonInput] = useState('');
-  const [escalateTargetLeader, setEscalateTargetLeader] = useState('Mr. Sukh Sagar Singh Bhati (CEO)');
+  const [escalateTargetLeader, setEscalateTargetLeader] = useState('Mr. Sukh Sagar Singh Bhati (Founder)');
   const [showDelayReasonModal, setShowDelayReasonModal] = useState(false);
   const [delayReasonInput, setDelayReasonInput] = useState('');
 
   // Escalation Target Leaders: Strictly CEO Mr. Sukh Sagar Singh Bhati and Talent Team members
   const escalationLeaders = useMemo(() => {
-    const list: string[] = ['Mr. Sukh Sagar Singh Bhati (CEO)'];
+    const list: string[] = ['Mr. Sukh Sagar Singh Bhati (Founder)'];
 
     // Add active Talent team members dynamically from roster/members
     const talentMembers = activeMembers.filter(m =>
@@ -190,7 +190,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
         origin: { y: 0.7 }
       });
       if (isCeo) {
-        approveTaskByCeo(task.id, 'Approved & Completed directly by CEO Mr. Sukh Sagar Singh Bhati');
+        approveTaskByCeo(task.id, 'Approved & Completed directly by Founder Mr. Sukh Sagar Singh Bhati');
       } else {
         const myAssignee = task.assignees.find(a => a.id === currentUser.id || a.email?.toLowerCase() === currentUser.email?.toLowerCase());
         completeTask(task.id, myAssignee?.id);
@@ -421,7 +421,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
               className="btn-secondary btn-delete-task"
               onClick={() => setShowDeleteModal(true)}
               style={{ color: '#dc2626', borderColor: '#fca5a5' }}
-              title="Delete this deliverable (CEO Sukh Sagar ji only)"
+              title="Delete this deliverable (Founder Sukh Sagar ji only)"
             >
               <Trash2 size={13} color="#dc2626" />
               Delete
@@ -605,9 +605,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                     alignItems: 'center',
                     gap: '4px'
                   }}
-                  title={task.ceoApprovalRequestedBy ? `Submitted by ${task.ceoApprovalRequestedBy} for CEO Final Approval` : 'Awaiting CEO Final Approval before completion'}
+                  title={task.ceoApprovalRequestedBy ? `Submitted by ${task.ceoApprovalRequestedBy} for Founder Final Approval` : 'Awaiting Founder Final Approval before completion'}
                 >
-                  <span> AWAITING CEO APPROVAL</span>
+                  <span> AWAITING FOUNDER APPROVAL</span>
                 </span>
                 {isCeo && (
                   <>
@@ -615,7 +615,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        const note = prompt(`Optional CEO approval note for "${task.title}":`, 'Final approval granted. Deliverable completed per standards.');
+                        const note = prompt(`Optional Founder approval note for "${task.title}":`, 'Final approval granted. Deliverable completed per standards.');
                         if (note === null) return;
                         confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
                         approveTaskByCeo(task.id, note.trim());
@@ -635,7 +635,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                         whiteSpace: 'nowrap',
                         boxShadow: '0 1px 3px rgba(21, 128, 61, 0.2)'
                       }}
-                      title="Grant CEO Final Approval to mark this deliverable Completed (Done)"
+                      title="Grant Founder Final Approval to mark this deliverable Completed (Done)"
                     >
                       <Check size={13} />
                       <span>Approve & Complete (Done)</span>
@@ -749,7 +749,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
               gap: '0.65rem'
             }}
           >
-            {/* CEO Final Approval Governance Banner */}
+            {/* Founder Final Approval Governance Banner */}
             {isAwaitingCeo && (
               <div
                 style={{
@@ -783,7 +783,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                   </div>
                   <div>
                     <div style={{ fontWeight: 800, fontSize: '0.8125rem', color: '#92400e' }}>
-                      Pending Final Approval from CEO Mr. Sukh Sagar Singh Bhati
+                      Pending Final Approval from Founder Mr. Sukh Sagar Singh Bhati
                     </div>
                     <div style={{ fontSize: '0.72rem', color: '#b45309', marginTop: '1px' }}>
                       {task.ceoApprovalRequestedBy ? `Submitted by ${task.ceoApprovalRequestedBy} • ` : ''}Executive approval required prior to marking deliverable completed.
@@ -797,7 +797,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        const note = prompt('Optional CEO endorsement / approval note:', 'Final approval granted. Deliverable completed per standards.');
+                        const note = prompt('Optional Founder endorsement / approval note:', 'Final approval granted. Deliverable completed per standards.');
                         if (note === null) return;
                         confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
                         approveTaskByCeo(task.id, note.trim());
@@ -816,7 +816,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                         gap: '4px',
                         boxShadow: '0 2px 4px rgba(21, 128, 61, 0.2)'
                       }}
-                      title="Grant CEO Final Approval to mark this deliverable Completed (Done)"
+                      title="Grant Founder Final Approval to mark this deliverable Completed (Done)"
                     >
                       <Check size={13} />
                       <span>Approve & Complete (Done)</span>
@@ -825,7 +825,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        const reason = prompt('Enter CEO feedback / revision instructions for staff:');
+                        const reason = prompt('Enter Founder feedback / revision instructions for staff:');
                         if (!reason || !reason.trim()) return;
                         rejectTaskByCeo(task.id, reason.trim());
                       }}
@@ -850,7 +850,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                   </div>
                 ) : (
                   <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#92400e', background: '#fef08a', padding: '3px 8px', borderRadius: '4px', border: '1px solid #fde047' }}>
-                    Routed to CEO Desk for Final Sign-Off
+                    Routed to Founder Desk for Final Sign-Off
                   </span>
                 )}
               </div>
@@ -872,7 +872,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                   fontWeight: 600
                 }}
               >
-                <span>✓ Final Approval granted by {task.ceoApprovedBy || 'Mr. Sukh Sagar Singh Bhati (CEO)'}</span>
+                <span>✓ Final Approval granted by {task.ceoApprovedBy || 'Mr. Sukh Sagar Singh Bhati (Founder)'}</span>
               </div>
             )}
 
@@ -979,7 +979,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                       setCancelReasonInput('');
                       setShowCancelModal(true);
                     }}
-                    title="Cancel Task with Mandatory Reason (Admin & CEO Only)"
+                    title="Cancel Task with Mandatory Reason (Admin & Founder Only)"
                   >
                     <Ban size={13} color="#dc2626" />
                     <span>Cancel</span>
@@ -1058,7 +1058,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                     type="button"
                     className="btn-secondary task-icon-action-btn btn-delete-task"
                     onClick={() => setShowDeleteModal(true)}
-                    title="Delete Deliverable (Admin & CEO Only)"
+                    title="Delete Deliverable (Admin & Founder Only)"
                   >
                     <Trash2 size={15} color="#dc2626" />
                     <span className="task-utility-label">Delete</span>
@@ -1539,12 +1539,12 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                   onChange={e => setEscalateTargetLeader(e.target.value)}
                 >
                   <optgroup label="Executive Leadership">
-                    <option value="Mr. Sukh Sagar Singh Bhati (CEO)">
-                      Mr. Sukh Sagar Singh Bhati (CEO)
+                    <option value="Mr. Sukh Sagar Singh Bhati (Founder)">
+                      Mr. Sukh Sagar Singh Bhati (Founder)
                     </option>
                   </optgroup>
                   <optgroup label="Talent & People Operations">
-                    {escalationLeaders.filter(l => l !== 'Mr. Sukh Sagar Singh Bhati (CEO)').map(leader => (
+                    {escalationLeaders.filter(l => l !== 'Mr. Sukh Sagar Singh Bhati (Founder)').map(leader => (
                       <option key={leader} value={leader}>{leader}</option>
                     ))}
                   </optgroup>
@@ -1762,7 +1762,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                 disabled={isDeleting}
                 onClick={async () => {
                   if (!canCancelOrDelete) {
-                    alert("Access Restricted: Only Admin, Super Admin, and CEO have permission to permanently delete deliverables.");
+                    alert("Access Restricted: Only Admin, Super Admin, and Founder have permission to permanently delete deliverables.");
                     setShowDeleteModal(false);
                     return;
                   }
@@ -1773,7 +1773,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                 }}
               >
                 <Trash2 size={13} />
-                {isDeleting ? 'Deleting...' : 'Yes, Delete Task (CEO)'}
+                {isDeleting ? 'Deleting...' : 'Yes, Delete Task (Founder)'}
               </button>
             </div>
           </div>

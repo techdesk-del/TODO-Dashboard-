@@ -24,8 +24,8 @@ export const OFFICIAL_ROSTER: OfficialEmployeeConfig[] = [
     email: 'ceo@urbangaon.com',
     aliases: ['sukhsagar.bhati@urbangaon.com', 'sukhsagar@urbangaon.com', 'ceo@urbangaon.com'],
     role: 'SUPER_ADMIN',
-    department: 'Founder & CEO',
-    designation: 'Founder & CEO',
+    department: 'Founder',
+    designation: 'Founder',
     avatar: 'MS',
     totalTasks: 0,
     completedTasks: 0,
@@ -271,7 +271,7 @@ export function isStrictCeo(user?: { id?: string; email?: string; designation?: 
   if (name.includes('sukh sagar') || name.includes('sukhsagar')) {
     return true;
   }
-  if (designation === 'CEO' || designation === 'CHIEF EXECUTIVE OFFICER (CEO)' || designation === 'CHIEF EXECUTIVE OFFICER') {
+  if (designation === 'FOUNDER' || designation === 'CEO' || designation === 'CHIEF EXECUTIVE OFFICER (CEO)' || designation === 'CHIEF EXECUTIVE OFFICER') {
     return true;
   }
   return false;

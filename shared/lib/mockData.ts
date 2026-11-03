@@ -96,7 +96,7 @@ export const INITIAL_TASKS: Task[] = [
         designation: 'Accounts & Finance Lead',
         avatar: 'PR',
         status: 'Queued',
-        remarks: 'Reconciliation of ledger entries pending final CEO endorsement.'
+        remarks: 'Reconciliation of ledger entries pending final Founder endorsement.'
       }
     ],
     creator: {
@@ -294,7 +294,7 @@ export const INITIAL_TASKS: Task[] = [
         designation: 'Talent Management & Development Lead',
         avatar: 'SY',
         status: 'In Progress',
-        remarks: 'Modules 1 through 3 prepared; appraisal rubric aligned with CEO expectations.'
+        remarks: 'Modules 1 through 3 prepared; appraisal rubric aligned with Founder expectations.'
       }
     ],
     creator: {
@@ -359,7 +359,7 @@ export const INITIAL_TASKS: Task[] = [
         avatar: 'YT',
         status: 'Done',
         completedAt: '2026-09-15T09:50:00Z',
-        remarks: 'Revenue milestones aligned with CEO directives and Q3 enterprise budget.'
+        remarks: 'Revenue milestones aligned with Founder directives and Q3 enterprise budget.'
       }
     ],
     creator: {

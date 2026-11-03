@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
     if (userEmail && !canViewAuditTrail({ email: userEmail })) {
       return NextResponse.json({
         success: false,
-        error: 'Access Denied: Audit trail is strictly restricted to Executive Leadership (CEO & System Administrator).',
+        error: 'Access Denied: Audit trail is strictly restricted to Executive Leadership (Founder & System Administrator).',
         data: [],
         count: 0
       }, { status: 403 });

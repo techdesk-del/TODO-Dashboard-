@@ -82,8 +82,8 @@ export async function syncOfficialRosterToDB(): Promise<void> {
         // Legacy cleanup only for mem-1 / ceo
         if (emp.id === 'mem-1' || empEmailClean === 'ceo@urbangaon.com') {
           if (existingMember.department === 'Leadership & CEO Desk' || existingMember.department === 'Leadership & CEO') {
-            missingFields.department = 'Founder & CEO';
-            missingFields.designation = 'Founder & CEO';
+            missingFields.department = 'Founder';
+            missingFields.designation = 'Founder';
           }
         }
 

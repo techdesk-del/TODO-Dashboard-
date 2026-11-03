@@ -137,8 +137,8 @@ export const Sidebar: React.FC = () => {
   const handleCeoAccessClick = () => {
     if (!isCeo) {
       setBannerNotification({
-        message: `Access Denied: The Executive CEO Portal is strictly restricted to Mr. Sukh Sagar Singh Bhati (CEO). You are currently logged in as ${currentUser.name} (${currentUser.designation}).`,
-        badge: "CEO Only"
+        message: `Access Denied: The Executive CEO Portal is strictly restricted to Mr. Sukh Sagar Singh Bhati (Founder). You are currently logged in as ${currentUser.name} (${currentUser.designation}).`,
+        badge: "Founder Only"
       });
       return;
     }
@@ -149,7 +149,7 @@ export const Sidebar: React.FC = () => {
 
   const handleClearData = async () => {
     if (!isCeo) {
-      alert("Access Restricted: Only CEO Mr. Sukh Sagar Singh Bhati can clear company deliverables.");
+      alert("Access Restricted: Only Founder Mr. Sukh Sagar Singh Bhati can clear company deliverables.");
       return;
     }
     const isConfirmed = confirm(
@@ -175,7 +175,7 @@ export const Sidebar: React.FC = () => {
         className={`app-sidebar ${isMobileNavOpen ? 'mobile-open' : ''}`}
         style={{ paddingTop: 0, marginTop: 0 }}
       >
-        {/* CEO Access Portal Card - Gated strictly for CEO */}
+        {/* Founder Access Portal Card - Gated strictly for CEO */}
         {isCeo && (
           <div 
             className="ceo-access-card"
@@ -192,16 +192,16 @@ export const Sidebar: React.FC = () => {
               boxShadow: activeView === 'ceo_portal' ? '0 0 15px rgba(217, 119, 6, 0.45)' : '0 2px 5px rgba(217, 119, 6, 0.08)',
               cursor: 'pointer',
             }}
-            title="Click to open CEO Executive Command Center"
+            title="Click to open Founder Executive Command Center"
           >
             <div className="ceo-title-group">
               
               <span className="ceo-title-text">
-                CEO Access
+                Founder Access
               </span>
             </div>
             <span className="ceo-view-badge">
-              CEO View
+              Founder View
             </span>
           </div>
         )}
@@ -495,13 +495,13 @@ export const Sidebar: React.FC = () => {
           )}
 
 
-          {/* Clear All Data Button (Strictly CEO Mr. Sukh Sagar Singh Bhati Only) */}
+          {/* Clear All Data Button (Strictly Founder Mr. Sukh Sagar Singh Bhati Only) */}
           {isCeo && (
             <button
               className="btn-secondary"
               style={{ width: '100%', justifyContent: 'center', fontSize: '0.72rem', color: '#dc2626', borderColor: '#fca5a5', background: '#fef2f2', gap: '6px' }}
               onClick={handleClearData}
-              title="Clear all tasks from MongoDB to start with fresh data (CEO Sukh Sagar ji Only)"
+              title="Clear all tasks from MongoDB to start with fresh data (Founder Sukh Sagar ji Only)"
             >
               <Trash2 size={13} color="#dc2626" />
               <span>Clear All Data ({tasks.length})</span>

@@ -1794,7 +1794,7 @@ export async function sendOverdueAutoFlagEmail(opts: SendOverdueAutoFlagOptions)
       </div>
     </div>
     <div class="footer">
-      UrbanGaon Task Register | Automated Governance Engine | Mr. Sukh Sagar Singh (CEO)
+      UrbanGaon Task Register | Automated Governance Engine | Mr. Sukh Sagar Singh (Founder)
     </div>
   </div>
 </body>

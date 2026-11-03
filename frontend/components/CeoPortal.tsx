@@ -131,7 +131,7 @@ export const CeoPortal: React.FC = () => {
     if (!task) return;
     if (task.status === 'Review' || task.pendingCeoApproval) {
       confetti({ particleCount: 70, spread: 80, origin: { y: 0.6 } });
-      approveTaskByCeo(taskId, 'CEO Approved and marked Complete.');
+      approveTaskByCeo(taskId, 'Founder Approved and marked Complete.');
     } else {
       confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
       completeTask(taskId);
@@ -139,7 +139,7 @@ export const CeoPortal: React.FC = () => {
   };
 
   const handleQuickSetInProgress = (taskId: string) => {
-    updateTask(taskId, { status: 'In Progress', progressPercent: 50 }, 'Status set to In Progress by CEO');
+    updateTask(taskId, { status: 'In Progress', progressPercent: 50 }, 'Status set to In Progress by Founder');
   };
 
   const handleQuickPutOnHold = (taskId: string) => {
@@ -150,7 +150,7 @@ export const CeoPortal: React.FC = () => {
 
   const handleQuickRescheduleToday = (taskId: string) => {
     const t = tasks.find(item => item.id === taskId);
-    updateTask(taskId, { scheduledDate: todayStr, dueDate: todayStr }, `Rescheduled overdue deliverable to today (${todayStr}) by CEO`);
+    updateTask(taskId, { scheduledDate: todayStr, dueDate: todayStr }, `Rescheduled overdue deliverable to today (${todayStr}) by Founder`);
     setBannerNotification({
       message: `Deliverable "${t?.title || 'Task'}" rescheduled to Today (${todayStr})`,
       badge: '✓ Rescheduled Live'
@@ -184,10 +184,10 @@ export const CeoPortal: React.FC = () => {
   };
 
   const handleQuickAddNote = (taskId: string, currentNotes?: string) => {
-    const noteDirective = prompt('Enter CEO note / executive instruction:');
+    const noteDirective = prompt('Enter Founder note / executive instruction:');
     if (!noteDirective || !noteDirective.trim()) return;
-    const combinedNotes = currentNotes ? `${currentNotes}\n[CEO Directive]: ${noteDirective.trim()}` : `[CEO Directive]: ${noteDirective.trim()}`;
-    updateTask(taskId, { notes: combinedNotes }, `CEO added directive note: "${noteDirective.trim()}"`);
+    const combinedNotes = currentNotes ? `${currentNotes}\n[Founder Directive]: ${noteDirective.trim()}` : `[Founder Directive]: ${noteDirective.trim()}`;
+    updateTask(taskId, { notes: combinedNotes }, `Founder added directive note: "${noteDirective.trim()}"`);
   };
 
   // Filter tasks based on member, search, status, and department
@@ -326,7 +326,7 @@ export const CeoPortal: React.FC = () => {
       setInspectingTask(null);
     }
     setBannerNotification({
-      message: 'Deliverable permanently removed from corporate ledger by CEO authorization.',
+      message: 'Deliverable permanently removed from corporate ledger by Founder authorization.',
       badge: 'GOVERNANCE AUDIT'
     });
   };
@@ -1479,7 +1479,7 @@ export const CeoPortal: React.FC = () => {
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    const note = prompt(`Enter optional CEO approval note for "${task.title}":`, 'Final approval granted. Deliverable verified and marked Completed.');
+                                    const note = prompt(`Enter optional Founder approval note for "${task.title}":`, 'Final approval granted. Deliverable verified and marked Completed.');
                                     if (note === null) return;
                                     confetti({ particleCount: 70, spread: 80, origin: { y: 0.6 } });
                                     approveTaskByCeo(task.id, note.trim());
@@ -1685,7 +1685,7 @@ export const CeoPortal: React.FC = () => {
                                       cursor: 'pointer',
                                       transition: 'all 0.12s ease'
                                     }}
-                                    title="CEO Action: Permanently remove deliverable"
+                                    title="Founder Action: Permanently remove deliverable"
                                   >
                                     <Trash2 size={12} color="#dc2626" />
                                   </button>
@@ -2184,7 +2184,7 @@ export const CeoPortal: React.FC = () => {
                   <div style={{ minWidth: '220px', flex: 1 }}>
                     <div style={{ fontWeight: 800, fontSize: '0.82rem', color: '#92400e', display: 'flex', alignItems: 'center', gap: '5px' }}>
                       <span>⏳</span>
-                      <span>Pending CEO Final Sign-Off</span>
+                      <span>Pending Founder Final Sign-Off</span>
                     </div>
                     <div style={{ fontSize: '0.72rem', color: '#b45309', marginTop: '2px' }}>
                       {inspectingTask.ceoApprovalRequestedBy ? `Submitted by ${inspectingTask.ceoApprovalRequestedBy} • ` : ''}
@@ -2196,7 +2196,7 @@ export const CeoPortal: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => {
-                        const note = prompt(`Enter optional CEO approval endorsement for "${inspectingTask.title}":`, 'Final approval granted. Deliverable verified and marked Completed.');
+                        const note = prompt(`Enter optional Founder approval endorsement for "${inspectingTask.title}":`, 'Final approval granted. Deliverable verified and marked Completed.');
                         if (note === null) return;
                         confetti({ particleCount: 70, spread: 80, origin: { y: 0.6 } });
                         approveTaskByCeo(inspectingTask.id, note.trim());
@@ -2536,7 +2536,7 @@ export const CeoPortal: React.FC = () => {
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
                   <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    CEO Quick Actions & Governance
+                    Founder Quick Actions & Governance
                   </span>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
@@ -2746,7 +2746,7 @@ export const CeoPortal: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => {
-                          const confirmMsg = `CEO Authorization: Permanently remove deliverable "${inspectingTask.title}" from company ledger?`;
+                          const confirmMsg = `Founder Authorization: Permanently remove deliverable "${inspectingTask.title}" from company ledger?`;
                           if (window.confirm(confirmMsg)) {
                             const id = inspectingTask.id;
                             handleExecuteDelete(id);
@@ -2860,7 +2860,7 @@ export const CeoPortal: React.FC = () => {
                 updateTask(
                   ceoRescheduleModal.task.id,
                   { scheduledDate: ceoRescheduleModal.dateInput, dueDate: ceoRescheduleModal.dateInput },
-                  `Rescheduled deliverable to ${ceoRescheduleModal.dateInput} by CEO`
+                  `Rescheduled deliverable to ${ceoRescheduleModal.dateInput} by Founder`
                 );
                 setBannerNotification({
                   message: `Deliverable "${ceoRescheduleModal.task.title}" rescheduled to ${ceoRescheduleModal.dateInput}`,

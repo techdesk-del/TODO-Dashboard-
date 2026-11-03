@@ -58,9 +58,9 @@ export const WorkflowManualModal: React.FC = () => {
     { num: 23, name: 'Leave and Holiday Handling Flow', phase: 'Phase 5: System Automation', role: 'Automated System Routine', outcome: 'Reminders paused during employee leaves; tasks due on holidays handled intelligently.' },
     { num: 24, name: 'Config Versioning and Rollback Flow', phase: 'Phase 5: System Automation', role: 'Super Admin / Director', outcome: 'Configuration modifications tracked as versioned baselines with instantaneous rollback readiness.' },
     { num: 25, name: 'Data Retention and Archive Flow', phase: 'Phase 5: System Automation', role: 'Automated System Routine', outcome: 'Historical data transferred to secure archives; active database maintained at maximum speed.' },
-    { num: 26, name: 'Complete System Overview – Master Flow', phase: 'Phase 7: Management Overview', role: 'Senior Management / Directors / CEO', outcome: 'Unified single-page architectural overview connecting all roles, workflows, and automated routines.' },
+    { num: 26, name: 'Complete System Overview – Master Flow', phase: 'Phase 7: Management Overview', role: 'Senior Management / Directors / Founder', outcome: 'Unified single-page architectural overview connecting all roles, workflows, and automated routines.' },
     { num: 27, name: 'System Trigger Map (Event Cascade)', phase: 'Phase 7: Management Overview', role: 'System Architecture & Automation', outcome: 'Complete event-driven matrix mapping operational triggers to corresponding downstream actions.' },
-    { num: 28, name: 'The Index Chart (Complete System Reference)', phase: 'Phase 7: Management Overview', role: 'Senior Management / Directors / CEO', outcome: 'Master architectural index roadmap grouping all 28 corporate procedures into 7 structured phases.' }
+    { num: 28, name: 'The Index Chart (Complete System Reference)', phase: 'Phase 7: Management Overview', role: 'Senior Management / Directors / Founder', outcome: 'Master architectural index roadmap grouping all 28 corporate procedures into 7 structured phases.' }
   ], []);
 
   // Phase color mapper
@@ -76,7 +76,7 @@ export const WorkflowManualModal: React.FC = () => {
 
   // Role style mapper
   const getRoleStyle = (role: string) => {
-    if (role.includes('CEO') || role.includes('Director') || role.includes('Super Admin')) {
+    if (role.includes('Founder') || role.includes('CEO') || role.includes('Director') || role.includes('Super Admin')) {
       return { bg: '#fef3c7', text: '#92400e', border: '#fde68a' };
     }
     if (role.includes('Admin') || role.includes('Talent')) {

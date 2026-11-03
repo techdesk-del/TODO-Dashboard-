@@ -448,7 +448,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
     setServerError(null);
 
     if (isStrictCeo(currentUser)) {
-      setServerError('CEO account is restricted to deliverable monitoring & governance. Task creation is disabled.');
+      setServerError('Founder account is restricted to deliverable monitoring & governance. Task creation is disabled.');
       return;
     }
 

@@ -148,7 +148,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: 'CEO executive account is reserved for deliverable monitoring & governance. Direct task creation is disabled for this role.',
+          error: 'Founder executive account is reserved for deliverable monitoring & governance. Direct task creation is disabled for this role.',
         },
         { status: 403 }
       );
@@ -446,7 +446,7 @@ export async function PATCH(req: NextRequest) {
 
     // Authorization: Only Admin, Super Admin, and CEO can cancel tasks
     if (body.status === 'Cancelled' && existingTask.status !== 'Cancelled' && !isCallerAdminOrCeo) {
-      return NextResponse.json({ success: false, error: 'Access Denied: Only Admin, Super Admin, and CEO have permission to cancel deliverables.' }, { status: 403 });
+      return NextResponse.json({ success: false, error: 'Access Denied: Only Admin, Super Admin, and Founder have permission to cancel deliverables.' }, { status: 403 });
     }
 
     // Executive Governance Rule: Final Approval to Sukh Sagar Sir before completing any deliverable
@@ -466,7 +466,7 @@ export async function PATCH(req: NextRequest) {
         body.isPendingNoReason = false;
         body.overdueDays = 0;
         if (!body.ceoApprovedAt) body.ceoApprovedAt = new Date().toISOString();
-        if (!body.ceoApprovedBy) body.ceoApprovedBy = callerName || 'Mr. Sukh Sagar Singh Bhati (CEO)';
+        if (!body.ceoApprovedBy) body.ceoApprovedBy = callerName || 'Mr. Sukh Sagar Singh Bhati (Founder)';
         if (body.assignees && Array.isArray(body.assignees)) {
           body.assignees = body.assignees.map((a: any) => ({
             ...a,
@@ -535,7 +535,7 @@ export async function DELETE(req: NextRequest) {
       actorRole: callerRole,
       ipAddress: req.headers.get('x-forwarded-for') || '127.0.0.1',
       deviceInfo: req.headers.get('user-agent') || 'System Engine',
-      notes: `Cleared ${result.deletedCount} tasks from MongoDB Atlas by CEO Mr. Sukh Sagar Singh Bhati`,
+      notes: `Cleared ${result.deletedCount} tasks from MongoDB Atlas by Founder Mr. Sukh Sagar Singh Bhati`,
     }).catch(() => {});
 
     // Broadcast mutation to instantly notify all devices in real-time

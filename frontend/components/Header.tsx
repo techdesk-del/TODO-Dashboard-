@@ -220,7 +220,7 @@ export const Header: React.FC = () => {
 
   const handleClearData = async () => {
     if (!isCeo) {
-      alert("Access Restricted: Only CEO Mr. Sukh Sagar Singh Bhati can clear company deliverables.");
+      alert("Access Restricted: Only Founder Mr. Sukh Sagar Singh Bhati can clear company deliverables.");
       return;
     }
     const isConfirmed = confirm(
@@ -657,7 +657,7 @@ export const Header: React.FC = () => {
                       </span>
                     </div>
                     <div style={{ fontSize: '0.7rem', color: '#991b1b', marginTop: '2px', lineHeight: 1.3 }}>
-                      Clear company tasks to test with fresh data (CEO only)
+                      Clear company tasks to test with fresh data (Founder only)
                     </div>
                   </div>
                 </button>
@@ -1578,7 +1578,7 @@ export const Header: React.FC = () => {
                   <option value="Quality Assurance Specialist" />
                   <option value="Business Analyst" />
                   <option value="Executive Director" />
-                  <option value="Founder & CEO" />
+                  <option value="Founder" />
                 </datalist>
               </div>
             </div>

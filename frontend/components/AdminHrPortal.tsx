@@ -1416,7 +1416,7 @@ export const AdminHrPortal: React.FC = () => {
       return;
     }
     if (isCeoUser(departingMember)) {
-      setDeactivationError('Executive Command Protection: CEO Mr. Sukh Sagar Singh Bhati cannot be deactivated under corporate governance.');
+      setDeactivationError('Executive Command Protection: Founder Mr. Sukh Sagar Singh Bhati cannot be deactivated under corporate governance.');
       return;
     }
     if (!successorMember) {
@@ -2077,11 +2077,11 @@ export const AdminHrPortal: React.FC = () => {
                                 className="btn-secondary btn-delete-task"
                                 style={{ padding: '0.28rem 0.45rem', fontSize: '0.7rem', color: '#dc2626', borderColor: '#fca5a5' }}
                                 onClick={() => {
-                                  if (window.confirm(`CEO Action: Are you sure you want to permanently delete "${t.title}"?`)) {
+                                  if (window.confirm(`Founder Action: Are you sure you want to permanently delete "${t.title}"?`)) {
                                     deleteTask(t.id);
                                   }
                                 }}
-                                title="Delete Deliverable (CEO Only)"
+                                title="Delete Deliverable (Founder Only)"
                               >
                                 <Trash2 size={11} color="#dc2626" />
                               </button>
@@ -4484,7 +4484,7 @@ export const AdminHrPortal: React.FC = () => {
                 Mr. Sukh Sagar Singh
               </div>
               <div style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: 600 }}>
-                Founder / CEO (UrbanGaon)
+                Founder (UrbanGaon)
               </div>
             </div>
           </div>
@@ -5275,7 +5275,7 @@ export const AdminHrPortal: React.FC = () => {
                     ))}
                 </select>
                 <div style={{ fontSize: '0.69rem', color: '#0369a1', marginTop: '4px', lineHeight: 1.35 }}>
-                  When this employee is marked On Leave, official leave alert emails are strictly dispatched to this <strong>Reporting Manager</strong>, <strong>Founder &amp; CEO</strong>, and <strong>Admin Operations</strong>.
+                  When this employee is marked On Leave, official leave alert emails are strictly dispatched to this <strong>Reporting Manager</strong>, <strong>Founder</strong>, and <strong>Admin Operations</strong>.
                 </div>
               </div>
 
@@ -5681,7 +5681,7 @@ export const AdminHrPortal: React.FC = () => {
               </div>
 
               <div style={{ fontSize: '0.74rem', color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '6px', padding: '0.55rem 0.75rem', marginBottom: '0.85rem', lineHeight: 1.45 }}>
-                <strong>Leave Handling Protocol:</strong> When marked on leave, the system pauses automated morning reminders for this employee, attaches the on-leave badge to their active deliverables, and dispatches official leave alert emails strictly to their <strong>Reporting Manager ({leaveTargetMember.manager || 'Dr. Rekha Pareek'})</strong>, <strong>Founder &amp; CEO</strong>, and <strong>Admin Operations</strong>.
+                <strong>Leave Handling Protocol:</strong> When marked on leave, the system pauses automated morning reminders for this employee, attaches the on-leave badge to their active deliverables, and dispatches official leave alert emails strictly to their <strong>Reporting Manager ({leaveTargetMember.manager || 'Dr. Rekha Pareek'})</strong>, <strong>Founder</strong>, and <strong>Admin Operations</strong>.
               </div>
 
               <form onSubmit={async (e) => {

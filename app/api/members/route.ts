@@ -54,11 +54,11 @@ export async function GET() {
       .filter(m => !purgedIds.has(m.id) && !purgedEmails.has(m.email?.toLowerCase().trim()))
       .map(m => {
         const isCeoDept = m.id === 'mem-1' || m.email?.toLowerCase().trim() === 'ceo@urbangaon.com' || m.department === 'Leadership & CEO Desk' || m.department === 'Leadership & CEO';
-        const nextDept = isCeoDept ? 'Founder & CEO' : m.department;
-        const nextDesig = (m.id === 'mem-1' || m.email?.toLowerCase().trim() === 'ceo@urbangaon.com') ? 'Founder & CEO' : m.designation;
-        if (isCeoDept && (m.department !== 'Founder & CEO' || m.designation !== 'Founder & CEO')) {
-          MemberModel.updateOne({ _id: m._id }, { $set: { department: 'Founder & CEO', designation: 'Founder & CEO' } }).catch(() => {});
-          UserModel.updateMany({ email: m.email?.toLowerCase().trim() }, { $set: { department: 'Founder & CEO', designation: 'Founder & CEO' } }).catch(() => {});
+        const nextDept = isCeoDept ? 'Founder' : m.department;
+        const nextDesig = (m.id === 'mem-1' || m.email?.toLowerCase().trim() === 'ceo@urbangaon.com') ? 'Founder' : m.designation;
+        if (isCeoDept && (m.department !== 'Founder' || m.designation !== 'Founder')) {
+          MemberModel.updateOne({ _id: m._id }, { $set: { department: 'Founder', designation: 'Founder' } }).catch(() => {});
+          UserModel.updateMany({ email: m.email?.toLowerCase().trim() }, { $set: { department: 'Founder', designation: 'Founder' } }).catch(() => {});
         }
         if (!m.avatar || m.avatar.includes('.png') || m.avatar.includes('urbangaon-employee-emblem')) {
           const initials = sanitizeInitials(m.name);
@@ -648,7 +648,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     if (isCeoUser({ id: memberEmpId, email: memberEmail, name: memberName })) {
-      return NextResponse.json({ success: false, error: 'Executive Command Protection: CEO account cannot be deleted' }, { status: 403 });
+      return NextResponse.json({ success: false, error: 'Executive Command Protection: Founder account cannot be deleted' }, { status: 403 });
     }
 
     // 1. Permanently register in PurgedMemberModel tombstone collection

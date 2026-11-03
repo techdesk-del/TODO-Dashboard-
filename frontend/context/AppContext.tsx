@@ -163,7 +163,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const setViewingAuditForTaskId = useCallback((taskId: string | null) => {
     if (taskId && !canViewAuditTrail(currentUser)) {
       setBannerNotification({
-        message: 'Security Restriction: Audit Trail is strictly reserved for Executive Leadership (CEO & System Administrator).',
+        message: 'Security Restriction: Audit Trail is strictly reserved for Executive Leadership (Founder & System Administrator).',
         badge: 'Access Restricted'
       });
       return;
@@ -178,7 +178,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const setIsCreateTaskModalOpen = useCallback((open: boolean) => {
     if (open && isStrictCeo(currentUser)) {
       setBannerNotification({
-        message: 'Executive Monitoring Mode: CEO role oversees all staff deliverables across the company. Direct task creation is disabled for this role.',
+        message: 'Executive Monitoring Mode: Founder role oversees all staff deliverables across the company. Direct task creation is disabled for this role.',
         badge: 'Executive Monitor'
       });
       return;
@@ -283,8 +283,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             .filter((m: TeamMember) => m && !pIdSet.has(m.id) && !pEmailSet.has(m.email?.toLowerCase().trim()))
             .map((m: TeamMember) => {
               const isCeoEntry = isStrictCeo(m) || m.department === 'Leadership & CEO Desk' || m.department === 'Leadership & CEO';
-              const normalizedDept = isCeoEntry ? 'Founder & CEO' : m.department;
-              const normalizedDesig = isStrictCeo(m) ? 'Founder & CEO' : m.designation;
+              const normalizedDept = isCeoEntry ? 'Founder' : m.department;
+              const normalizedDesig = isStrictCeo(m) ? 'Founder' : m.designation;
               if (!m.avatar || m.avatar.includes('.png') || m.avatar.includes('urbangaon-employee-emblem')) {
                 return { ...m, department: normalizedDept, designation: normalizedDesig, avatar: sanitizeInitials(m.name) };
               }
@@ -1076,7 +1076,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const switchRole = (newRole: Role) => {
     if (newRole === 'SUPER_ADMIN' && !isCeoUser(currentUser)) {
-      alert("Access Restricted: Super Admin privileges are reserved for Executive Leadership (CEO & Aakash Das).");
+      alert("Access Restricted: Super Admin privileges are reserved for Executive Leadership (Founder & Aakash Das).");
       return;
     }
     const matched = members.find(m => m.role === newRole) || {
@@ -1098,7 +1098,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (isStrictCeo(currentUser)) {
       console.warn('[Security / Role Guard] CEO account is dedicated to deliverable monitoring & governance. Task creation is disabled.');
       setBannerNotification({
-        message: 'Executive Monitoring Mode: CEO role oversees all staff deliverables across the company. Direct task creation is disabled for this role.',
+        message: 'Executive Monitoring Mode: Founder role oversees all staff deliverables across the company. Direct task creation is disabled for this role.',
         badge: 'Executive Monitor'
       });
       return {} as Task;
@@ -2148,7 +2148,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Security check: CEO cannot be deactivated
     const departing = members.find(m => m.id === departingId || m.name === departingId || m.email.toLowerCase() === departingId.toLowerCase());
     if (departing && isCeoUser(departing)) {
-      throw new Error("Executive Command Protection: CEO Mr. Sukh Sagar Singh Bhati cannot be deactivated.");
+      throw new Error("Executive Command Protection: Founder Mr. Sukh Sagar Singh Bhati cannot be deactivated.");
     }
     if (departingId === successorId) {
       throw new Error("Validation Error: Successor cannot be the same departing employee.");
@@ -2292,7 +2292,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteMember = async (memberId: string): Promise<{ success: boolean; message: string }> => {
     const target = members.find(m => m.id === memberId || m.name === memberId || m.email.toLowerCase() === memberId.toLowerCase());
     if (target && isCeoUser(target)) {
-      throw new Error("Executive Command Protection: CEO Mr. Sukh Sagar Singh Bhati cannot be deleted.");
+      throw new Error("Executive Command Protection: Founder Mr. Sukh Sagar Singh Bhati cannot be deleted.");
     }
 
     const targetEmpId = target?.id || memberId;
@@ -2442,7 +2442,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const clearAllTasks = async () => {
     if (!isCeoUser(currentUser)) {
-      alert("Access Restricted: Only Executive Leadership (CEO & Aakash Das) has permission to wipe company deliverables.");
+      alert("Access Restricted: Only Executive Leadership (Founder & Aakash Das) has permission to wipe company deliverables.");
       return;
     }
 
@@ -2479,7 +2479,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       fieldChanged: 'Task Ledger Wipe',
       oldValue: 'Prior deliverables',
       newValue: '0 Tasks (Clean Slate)',
-      notes: `All deliverables cleared by CEO Mr. Sukh Sagar Singh Bhati`
+      notes: `All deliverables cleared by Founder Mr. Sukh Sagar Singh Bhati`
     });
 
     setBannerNotification({
@@ -2515,7 +2515,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const cancelTask = async (taskId: string, reason: string) => {
     const canCancel = isCeoUser(currentUser) || currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN';
     if (!canCancel) {
-      alert('Access Restricted: Only Admin, Super Admin, and CEO have permission to cancel deliverables.');
+      alert('Access Restricted: Only Admin, Super Admin, and Founder have permission to cancel deliverables.');
       return;
     }
 
@@ -2751,7 +2751,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteTask = async (taskId: string) => {
     const canDelete = isCeoUser(currentUser) || currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN';
     if (!canDelete) {
-      alert("Access Restricted: Only Admin, Super Admin, and CEO have permission to permanently delete deliverables.");
+      alert("Access Restricted: Only Admin, Super Admin, and Founder have permission to permanently delete deliverables.");
       return;
     }
 
@@ -2797,7 +2797,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       fieldChanged: 'Task Deleted',
       oldValue: targetTask?.title || taskId,
       newValue: 'Permanently Deleted from Ledger',
-      notes: `Deliverable permanently deleted by CEO Mr. Sukh Sagar Singh Bhati`
+      notes: `Deliverable permanently deleted by Founder Mr. Sukh Sagar Singh Bhati`
     });
 
     setBannerNotification({
@@ -2820,7 +2820,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           return {
             ...a,
             status: 'Review' as TaskStatus,
-            remarks: a.remarks ? `${a.remarks} • Submitted for CEO Final Approval by ${currentUser.name}` : `Submitted for CEO Final Approval by ${currentUser.name}`,
+            remarks: a.remarks ? `${a.remarks} • Submitted for Founder Final Approval by ${currentUser.name}` : `Submitted for Founder Final Approval by ${currentUser.name}`,
           };
         }
         return a;
@@ -2833,21 +2833,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         pendingCeoApproval: true,
         ceoApprovalRequestedAt: new Date().toISOString(),
         ceoApprovalRequestedBy: currentUser.name,
-      }, `Deliverable submitted by ${currentUser.name}. Dispatched to CEO Mr. Sukh Sagar Singh Bhati for Final Approval before completion.`);
+      }, `Deliverable submitted by ${currentUser.name}. Dispatched to Founder Mr. Sukh Sagar Singh Bhati for Final Approval before completion.`);
 
       logAudit({
         taskId,
         taskTitle: task.title,
         action: 'APPROVAL',
-        fieldChanged: 'Task Submitted for CEO Final Approval',
+        fieldChanged: 'Task Submitted for Founder Final Approval',
         oldValue: task.status,
         newValue: 'Review (Pending CEO Final Approval)',
-        notes: `Deliverable submitted by ${currentUser.name}. Awaiting Final Approval from CEO Mr. Sukh Sagar Singh Bhati before marking Done.`
+        notes: `Deliverable submitted by ${currentUser.name}. Awaiting Final Approval from Founder Mr. Sukh Sagar Singh Bhati before marking Done.`
       });
 
       setBannerNotification({
-        message: `Deliverable submitted! Dispatched to CEO Mr. Sukh Sagar Singh Bhati for Final Approval before completion.`,
-        badge: '⏳ Sent for CEO Approval'
+        message: `Deliverable submitted! Dispatched to Founder Mr. Sukh Sagar Singh Bhati for Final Approval before completion.`,
+        badge: '⏳ Sent for Founder Approval'
       });
 
       // Send instant real-time notification to Sukh Sagar Sir
@@ -2896,7 +2896,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       overdueDays: 0,
       ceoApprovedAt: new Date().toISOString(),
       ceoApprovedBy: currentUser.name,
-    }, 'Deliverable granted Final Approval and marked Completed by CEO Mr. Sukh Sagar Singh Bhati');
+    }, 'Deliverable granted Final Approval and marked Completed by Founder Mr. Sukh Sagar Singh Bhati');
 
     logAudit({
       taskId,
@@ -2905,12 +2905,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       fieldChanged: 'CEO Final Approval & Completion',
       oldValue: task.status,
       newValue: 'Done (100% Completed)',
-      notes: `Granted Final Approval by CEO Mr. Sukh Sagar Singh Bhati.`
+      notes: `Granted Final Approval by Founder Mr. Sukh Sagar Singh Bhati.`
     });
 
     setBannerNotification({
       message: `✓ Deliverable '${task.title}' granted Final Approval and marked Done!`,
-      badge: '✓ CEO Approved'
+      badge: '✓ Founder Approved'
     });
   };
 
@@ -2922,7 +2922,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...a,
       status: 'Done' as TaskStatus,
       completedAt: a.completedAt || new Date().toISOString(),
-      remarks: approvalNote ? `${a.remarks ? `${a.remarks} • ` : ''}CEO Approved: ${approvalNote}` : a.remarks
+      remarks: approvalNote ? `${a.remarks ? `${a.remarks} • ` : ''}Founder Approved: ${approvalNote}` : a.remarks
     }));
 
     updateTask(taskId, {
@@ -2934,23 +2934,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       overdueDays: 0,
       ceoApprovedAt: new Date().toISOString(),
       ceoApprovedBy: currentUser.name || 'Mr. Sukh Sagar Singh Bhati',
-      notes: approvalNote ? `${task.notes ? `${task.notes}\n` : ''}[CEO Final Approval]: ${approvalNote}` : task.notes,
+      notes: approvalNote ? `${task.notes ? `${task.notes}\n` : ''}[Founder Final Approval]: ${approvalNote}` : task.notes,
       assignees: updatedAssignees,
-    }, approvalNote ? `CEO Final Approval Granted: "${approvalNote}"` : 'CEO Final Approval Granted. Deliverable marked Completed.');
+    }, approvalNote ? `Founder Final Approval Granted: "${approvalNote}"` : 'Founder Final Approval Granted. Deliverable marked Completed.');
 
     logAudit({
       taskId,
       taskTitle: task.title,
       action: 'APPROVAL',
-      fieldChanged: 'CEO Final Approval Granted',
+      fieldChanged: 'Founder Final Approval Granted',
       oldValue: task.status,
       newValue: 'Done (100% Completed)',
-      notes: `CEO Mr. Sukh Sagar Singh Bhati granted Final Approval for deliverable completion.${approvalNote ? ` Notes: "${approvalNote}"` : ''}`
+      notes: `Founder Mr. Sukh Sagar Singh Bhati granted Final Approval for deliverable completion.${approvalNote ? ` Notes: "${approvalNote}"` : ''}`
     });
 
     setBannerNotification({
       message: `✓ Final Approval granted for "${task.title}". Deliverable marked Completed!`,
-      badge: '✓ CEO Approved'
+      badge: '✓ Founder Approved'
     });
 
     // Notify all assignees that CEO has granted Final Approval
@@ -2961,13 +2961,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         body: JSON.stringify({
           eventType: 'REASON_STATUS_CHANGED',
           recipients: task.assignees.map(a => ({ email: a.email, name: a.name })),
-          title: `Deliverable Approved by CEO: "${task.title}"`,
+          title: `Deliverable Approved by Founder: "${task.title}"`,
           message: `Mr. Sukh Sagar Singh Bhati has granted Final Approval. Your deliverable is officially Completed (Done)! ${approvalNote ? `Remarks: "${approvalNote}"` : ''}`,
           taskId,
           taskTitle: task.title,
           metadata: {
             decision: 'APPROVED',
-            reviewerName: 'Mr. Sukh Sagar Singh Bhati (CEO)',
+            reviewerName: 'Mr. Sukh Sagar Singh Bhati (Founder)',
             notes: approvalNote || 'Final Approval Granted',
           }
         })
@@ -2982,7 +2982,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const updatedAssignees = task.assignees.map(a => ({
       ...a,
       status: 'In Progress' as TaskStatus,
-      remarks: `CEO Feedback: ${rejectionReason}`
+      remarks: `Founder Feedback: ${rejectionReason}`
     }));
 
     updateTask(taskId, {
@@ -2992,16 +2992,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ceoRejectionReason: rejectionReason,
       seniorReturnReason: rejectionReason,
       assignees: updatedAssignees,
-    }, `Returned by CEO for Revision: "${rejectionReason}"`);
+    }, `Returned by Founder for Revision: "${rejectionReason}"`);
 
     logAudit({
       taskId,
       taskTitle: task.title,
       action: 'REJECTED',
-      fieldChanged: 'CEO Requested Revision on Deliverable',
+      fieldChanged: 'Founder Requested Revision on Deliverable',
       oldValue: task.status,
       newValue: 'In Progress (Returned for Revision)',
-      notes: `CEO Mr. Sukh Sagar Singh Bhati requested revisions before completion: "${rejectionReason}".`
+      notes: `Founder Mr. Sukh Sagar Singh Bhati requested revisions before completion: "${rejectionReason}".`
     });
 
     setBannerNotification({
@@ -3017,13 +3017,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         body: JSON.stringify({
           eventType: 'REASON_STATUS_CHANGED',
           recipients: task.assignees.map(a => ({ email: a.email, name: a.name })),
-          title: `Revision Requested by CEO: "${task.title}"`,
-          message: `CEO Mr. Sukh Sagar Singh Bhati returned your deliverable with feedback: "${rejectionReason}". Please update and resubmit.`,
+          title: `Revision Requested by Founder: "${task.title}"`,
+          message: `Founder Mr. Sukh Sagar Singh Bhati returned your deliverable with feedback: "${rejectionReason}". Please update and resubmit.`,
           taskId,
           taskTitle: task.title,
           metadata: {
             decision: 'REJECTED',
-            reviewerName: 'Mr. Sukh Sagar Singh Bhati (CEO)',
+            reviewerName: 'Mr. Sukh Sagar Singh Bhati (Founder)',
             notes: rejectionReason,
           }
         })
@@ -3086,7 +3086,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       fieldChanged: `Assignee Status: ${targetAssignee?.name || assigneeId}`,
       oldValue: targetAssignee?.status || 'Unknown',
       newValue: `${effectiveStatus} (Overall Task Status: ${comp.status} - ${comp.progressText})`,
-      notes: remarks || `Status updated under Multi-Assignee lifecycle.${(status === 'Done' && !isCeo) ? ' Rerouted to CEO Final Approval queue.' : ''}`
+      notes: remarks || `Status updated under Multi-Assignee lifecycle.${(status === 'Done' && !isCeo) ? ' Rerouted to Founder Final Approval queue.' : ''}`
     });
   };
 
