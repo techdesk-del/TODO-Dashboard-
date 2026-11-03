@@ -195,3 +195,50 @@ export const formatDueDate = (scheduledDate?: string, time?: string, dueDate?: s
   };
 };
 
+/**
+ * Determines whether a deliverable belongs to a given target date (YYYY-MM-DD).
+ * Matches across:
+ * 1. scheduledDate (currently scheduled date)
+ * 2. dueDate (target deadline / commitment date)
+ * 3. createdAt (date the deliverable was created / set)
+ */
+export const isTaskForDate = (
+  task?: { scheduledDate?: string; dueDate?: string; createdAt?: string } | null,
+  targetDate?: string | null
+): boolean => {
+  if (!task || !targetDate) return false;
+  const target = targetDate.trim();
+  if (!target) return false;
+
+  if (task.scheduledDate && task.scheduledDate.trim() === target) return true;
+  if (task.dueDate && task.dueDate.trim() === target) return true;
+  if (task.createdAt && task.createdAt.slice(0, 10) === target) return true;
+
+  return false;
+};
+
+/**
+ * Returns all distinct calendar dates (YYYY-MM-DD) associated with a deliverable
+ * (scheduled date, due date, creation date).
+ */
+export const getTaskDates = (
+  task?: { scheduledDate?: string; dueDate?: string; createdAt?: string } | null
+): string[] => {
+  if (!task) return [];
+  const set = new Set<string>();
+  if (task.scheduledDate && /^\d{4}-\d{2}-\d{2}$/.test(task.scheduledDate.trim())) {
+    set.add(task.scheduledDate.trim());
+  }
+  if (task.dueDate && /^\d{4}-\d{2}-\d{2}$/.test(task.dueDate.trim())) {
+    set.add(task.dueDate.trim());
+  }
+  if (task.createdAt) {
+    const createdDate = task.createdAt.slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(createdDate)) {
+      set.add(createdDate);
+    }
+  }
+  return Array.from(set);
+};
+
+

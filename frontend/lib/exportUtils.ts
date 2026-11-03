@@ -15,6 +15,7 @@
 import * as XLSX from 'xlsx';
 import type { Task, AuditLogEntry, TeamMember, Role } from '@/types';
 import { canViewAuditTrail } from '@/shared/lib/rosterData';
+import { isTaskForDate } from '@/shared/lib/dateUtils';
 
 export type ExportType = 'DAILY' | 'MONTHLY' | 'DATE_WISE' | 'WHOLE_TASKS' | 'USER_WISE';
 
@@ -82,7 +83,7 @@ export function filterTasksByType(
   switch (opts.exportType) {
     case 'DAILY': {
       const target = opts.selectedDate || new Date().toISOString().split('T')[0];
-      return tasks.filter(t => t.scheduledDate === target);
+      return tasks.filter(t => isTaskForDate(t, target));
     }
     case 'MONTHLY': {
       const targetMonth = opts.selectedMonth || new Date().toISOString().slice(0, 7); // YYYY-MM

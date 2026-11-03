@@ -66,7 +66,13 @@ export async function GET(req: NextRequest) {
 
     // Build query dynamically
     const query: Record<string, unknown> = {};
-    if (date)       query['scheduledDate'] = date;
+    if (date) {
+      query['$or'] = [
+        { scheduledDate: date },
+        { dueDate: date },
+        { createdAt: { $regex: `^${date}` } }
+      ];
+    }
     if (assigneeId) query['assignees.id']  = assigneeId;
     if (status)     query['status']        = status;
 

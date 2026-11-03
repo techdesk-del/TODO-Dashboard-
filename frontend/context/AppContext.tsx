@@ -1110,6 +1110,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       title: newTaskData.title || 'New Untitled Task',
       description: newTaskData.description || '',
       scheduledDate: createdDate,
+      dueDate: newTaskData.dueDate || createdDate,
       time: newTaskData.time || '09:00 AM',
       priority: newTaskData.priority || 'NORMAL',
       status: newTaskData.status || 'Not Started',

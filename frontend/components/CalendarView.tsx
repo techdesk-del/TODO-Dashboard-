@@ -6,7 +6,7 @@ import { useApp } from '@/context/AppContext';
 import { Task, TeamMember } from '@/types';
 import { isCeoUser, isStrictCeo, canAccessAdminHr } from '@/shared/lib/rosterData';
 import { getCompanyHoliday, isSundayDate, HOLIDAY_METADATA } from '@/shared/lib/holidayData';
-import { getTodayStr, formatDateDisplay, formatDateShort, formatCreationDate } from '@/shared/lib/dateUtils';
+import { getTodayStr, formatDateDisplay, formatDateShort, formatCreationDate, isTaskForDate } from '@/shared/lib/dateUtils';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -190,7 +190,7 @@ export const CalendarView: React.FC = () => {
 
   // Tasks mapped by date
   const getTasksForDate = (dateStr: string) => {
-    return calendarTasks.filter(t => t.scheduledDate === dateStr);
+    return calendarTasks.filter(t => isTaskForDate(t, dateStr));
   };
 
   const isOverdue = (task: Task): boolean => {

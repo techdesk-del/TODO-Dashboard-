@@ -18,7 +18,7 @@ import {
   CalendarDays,
   Globe
 } from 'lucide-react';
-import { getTodayStr, getTomorrowStr, formatDateDisplay, formatDateDayMonth } from '@/shared/lib/dateUtils';
+import { getTodayStr, getTomorrowStr, formatDateDisplay, formatDateDayMonth, isTaskForDate, getTaskDates } from '@/shared/lib/dateUtils';
 import { isCeoUser, isStrictCeo, canAccessWorkflows, canAccessAdminHr, canViewAuditTrail } from '@/shared/lib/rosterData';
 import { computeMultiAssigneeStatus } from '@/shared/lib/multiAssignee';
 import type { Task } from '@/types';
@@ -92,20 +92,28 @@ export const Sidebar: React.FC = () => {
 
   // Filter tasks for today & tomorrow & overdue (Completed deliverables excluded from overdue)
   const isDoneTask = (t: Task) => t.status === 'Done' || computeMultiAssigneeStatus(t).status === 'Done';
-  const todayCount = isMounted ? userVisibleTasks.filter(t => t.scheduledDate === todayStr).length : 0;
-  const tomorrowCount = isMounted ? userVisibleTasks.filter(t => t.scheduledDate === tomorrowStr).length : 0;
-  const overdueCount = isMounted ? userVisibleTasks.filter(t => t.scheduledDate < todayStr && !isDoneTask(t)).length : 0;
+  const todayCount = isMounted ? userVisibleTasks.filter(t => isTaskForDate(t, todayStr)).length : 0;
+  const tomorrowCount = isMounted ? userVisibleTasks.filter(t => isTaskForDate(t, tomorrowStr)).length : 0;
+  const overdueCount = isMounted ? userVisibleTasks.filter(t => {
+    if (isDoneTask(t)) return false;
+    const effectiveDeadline = (t.dueDate && t.dueDate.trim().length > 0) ? t.dueDate.trim() : t.scheduledDate;
+    return Boolean(t.isOverdue || (effectiveDeadline && effectiveDeadline < todayStr));
+  }).length : 0;
 
   const currentYearMonthStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
   const daysWithTasks: Set<number> = isMounted
     ? new Set(
         userVisibleTasks
-          .map(t => {
-            const parts = t.scheduledDate.split('-');
-            if (parts[0] === String(currentYear) && parts[1] === String(currentMonth + 1).padStart(2, '0')) {
-              return parseInt(parts[2], 10);
-            }
-            return null;
+          .flatMap(t => {
+            return getTaskDates(t)
+              .map(d => {
+                const parts = d.split('-');
+                if (parts[0] === String(currentYear) && parts[1] === String(currentMonth + 1).padStart(2, '0')) {
+                  return parseInt(parts[2], 10);
+                }
+                return null;
+              })
+              .filter((d): d is number => d !== null);
           })
           .filter((d): d is number => d !== null)
       )

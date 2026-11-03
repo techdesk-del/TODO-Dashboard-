@@ -467,6 +467,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ onClose }) => 
       description: description.trim(),
       inputMethod,
       scheduledDate: dueDate,
+      dueDate: dueDate,
       time: dueTime,
       priority,
       status: 'Not Started', // Flowchart 6: Set initial status to Not Started

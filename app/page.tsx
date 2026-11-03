@@ -17,7 +17,7 @@ import { MorningDigestPreviewModal } from '@/components/MorningDigestPreviewModa
 import { CreateTaskModal } from '@/components/CreateTaskModal';
 import { EnterpriseExportModal } from '@/components/EnterpriseExportModal';
 import { AuthModal } from '@/components/AuthModal';
-import { formatDateTitle, getTodayStr, getTomorrowStr, formatDateDayMonth } from '@/shared/lib/dateUtils';
+import { formatDateTitle, getTodayStr, getTomorrowStr, formatDateDayMonth, isTaskForDate } from '@/shared/lib/dateUtils';
 import { isCeoUser, isStrictCeo, canAccessAdminHr, canAccessWorkflows, canViewAuditTrail } from '@/shared/lib/rosterData';
 import { Check, Calendar as CalendarIcon, Sparkles, Globe, CalendarDays, AlertTriangle, RotateCcw, Plus } from 'lucide-react';
 
@@ -118,8 +118,12 @@ export default function Home() {
   const partitionedTasks = visibleTasks;
 
   const todayStr = getTodayStr();
-  const overdueTasks = partitionedTasks.filter(t => t.scheduledDate < todayStr && t.status !== 'Done' && t.status !== 'Cancelled');
-  const dateTasks = partitionedTasks.filter(t => t.scheduledDate === selectedDate);
+  const overdueTasks = partitionedTasks.filter(t => {
+    if (t.status === 'Done' || t.status === 'Cancelled') return false;
+    const effectiveDeadline = (t.dueDate && t.dueDate.trim().length > 0) ? t.dueDate.trim() : t.scheduledDate;
+    return Boolean(t.isOverdue || (effectiveDeadline && effectiveDeadline < todayStr));
+  });
+  const dateTasks = partitionedTasks.filter(t => isTaskForDate(t, selectedDate));
   const displayTasks = useMemo(() => {
     const list = viewScope === 'all' ? partitionedTasks : dateTasks;
     const taskMap = new Map<string, typeof list[0]>();
