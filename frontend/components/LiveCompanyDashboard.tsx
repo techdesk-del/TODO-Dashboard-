@@ -23,7 +23,9 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
-  ChevronsRight
+  ChevronsRight,
+  LayoutList,
+  Table as TableIcon
 } from 'lucide-react';
 
 export const LiveCompanyDashboard: React.FC = () => {
@@ -45,6 +47,21 @@ export const LiveCompanyDashboard: React.FC = () => {
   // Enterprise Pagination States (SDE-3 / CEO Level)
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
+
+  // Responsive Screen Detection & Mobile View Switcher
+  const [mobileViewMode, setMobileViewMode] = useState<'cards' | 'table'>('cards');
+  const [isMobileScreen, setIsMobileScreen] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (typeof window !== 'undefined') {
+        setIsMobileScreen(window.innerWidth < 768);
+      }
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Auto-reset to page 1 whenever any filter or search query changes
   useEffect(() => {
@@ -183,20 +200,10 @@ export const LiveCompanyDashboard: React.FC = () => {
   };
 
   return (
-    <div style={{ width: '100%', maxWidth: '100%', padding: 'clamp(0.75rem, 2.5vw, 1.75rem)', boxSizing: 'border-box' }}>
+    <div className="company-dashboard-container">
       
       {/* Top Hero / Banner */}
-      <div style={{
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
-        borderRadius: '16px',
-        padding: 'clamp(1.2rem, 3vw, 2rem)',
-        color: '#ffffff',
-        marginBottom: '1.5rem',
-        boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.25)',
-        border: '1px solid #334155',
-        position: 'relative',
-        overflow: 'hidden'
-      }}>
+      <div className="company-hero-banner">
         {/* Decorative background glow */}
         <div style={{
           position: 'absolute',
@@ -231,6 +238,7 @@ export const LiveCompanyDashboard: React.FC = () => {
               <button
                 type="button"
                 onClick={handleOpenLogin}
+                className="company-hero-btn"
                 style={{
                   background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
                   color: '#ffffff',
@@ -279,14 +287,7 @@ export const LiveCompanyDashboard: React.FC = () => {
         </div>
 
         {/* 4 Summary Stat Cards */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-          gap: '0.75rem',
-          marginTop: '1.25rem',
-          paddingTop: '1.25rem',
-          borderTop: '1px solid rgba(255, 255, 255, 0.1)'
-        }}>
+        <div className="company-stats-grid">
           <div style={{ background: 'rgba(255, 255, 255, 0.05)', padding: '10px 14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)' }}>
             <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase' }}>Total Tasks</div>
             <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f8fafc', marginTop: '2px' }}>{metrics.total}</div>
@@ -306,20 +307,8 @@ export const LiveCompanyDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Control Bar: Search + Department + Status Filters */}
-      <div style={{
-        background: '#ffffff',
-        borderRadius: '12px',
-        padding: '0.85rem 1rem',
-        border: '1px solid #e2e8f0',
-        marginBottom: '1rem',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '0.75rem',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
-      }}>
+      {/* Control Bar: Search + Department + Status Filters + View Mode Switcher */}
+      <div className="company-control-bar">
         {/* Search Input */}
         <div style={{
           display: 'flex',
@@ -402,35 +391,257 @@ export const LiveCompanyDashboard: React.FC = () => {
             </select>
           </div>
 
-          <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <span>Total: <strong style={{ color: '#0f172a' }}>{totalItems}</strong> task(s)</span>
             {totalPages > 1 && (
               <span style={{ background: '#f1f5f9', padding: '2px 8px', borderRadius: '4px', color: '#475569' }}>
                 Page <strong>{safeCurrentPage}</strong> of <strong>{totalPages}</strong>
               </span>
             )}
+
+            {/* Mobile View Mode Switcher */}
+            {isMobileScreen && (
+              <div style={{ display: 'inline-flex', background: '#f1f5f9', padding: '2px', borderRadius: '6px', marginLeft: 'auto' }}>
+                <button
+                  type="button"
+                  onClick={() => setMobileViewMode('cards')}
+                  style={{
+                    padding: '3px 8px',
+                    borderRadius: '5px',
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    border: 'none',
+                    background: mobileViewMode === 'cards' ? '#ffffff' : 'transparent',
+                    color: mobileViewMode === 'cards' ? '#2563eb' : '#64748b',
+                    cursor: 'pointer',
+                    boxShadow: mobileViewMode === 'cards' ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                  title="Card View for mobile"
+                >
+                  <LayoutList size={12} />
+                  <span>Cards</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileViewMode('table')}
+                  style={{
+                    padding: '3px 8px',
+                    borderRadius: '5px',
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    border: 'none',
+                    background: mobileViewMode === 'table' ? '#ffffff' : 'transparent',
+                    color: mobileViewMode === 'table' ? '#2563eb' : '#64748b',
+                    cursor: 'pointer',
+                    boxShadow: mobileViewMode === 'table' ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                  title="Table View with horizontal scroll"
+                >
+                  <TableIcon size={12} />
+                  <span>Table</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Main Enterprise Real-Time Table */}
-      <div style={{
-        background: '#ffffff',
-        borderRadius: '14px',
-        border: '1px solid #e2e8f0',
-        overflow: 'hidden',
-        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05)'
-      }}>
-        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-          <table style={{
-            width: '100%',
-            borderCollapse: 'collapse',
-            textAlign: 'left',
-            minWidth: '880px',
-            fontSize: '0.84rem'
-          }}>
-            <thead>
-              <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #e2e8f0' }}>
+      {/* Main Enterprise Real-Time Deliverables Display */}
+      <div className="company-table-wrapper">
+        {/* Mobile View: High-Performance Touch Cards (if on mobile screen and cards mode selected) */}
+        {isMobileScreen && mobileViewMode === 'cards' ? (
+          <div className="company-mobile-cards-grid">
+            {paginatedTasks.length === 0 ? (
+              <div style={{ padding: '3.5rem 1.5rem', textAlign: 'center', color: '#64748b' }}>
+                <AlertTriangle size={32} color="#94a3b8" style={{ margin: '0 auto 8px' }} />
+                <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#1e293b' }}>No matching tasks found</div>
+                <div style={{ fontSize: '0.78rem' }}>Try clearing your search query or department/status filter.</div>
+              </div>
+            ) : (
+              paginatedTasks.map((task, idx) => {
+                const globalIdx = startIndex + idx;
+                const comp = computeMultiAssigneeStatus(task);
+                const effectiveStatus = comp.status || task.status;
+                const isCompleted = effectiveStatus === 'Done';
+                const effectiveDl = (task.dueDate && task.dueDate.trim().length > 0) ? task.dueDate.trim() : task.scheduledDate;
+                const isOverdue = !isCompleted && Boolean(task.isOverdue || (effectiveDl && effectiveDl < todayStr));
+
+                return (
+                  <div key={task.id} className="company-mobile-card">
+                    {/* Top Row: S.No badge, Department, Status Pill & Priority */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '26px',
+                          height: '26px',
+                          borderRadius: '6px',
+                          background: '#f1f5f9',
+                          fontSize: '0.72rem',
+                          fontWeight: 800,
+                          color: '#334155'
+                        }}>
+                          #{globalIdx + 1}
+                        </span>
+                        <span style={{
+                          padding: '2px 8px',
+                          borderRadius: '6px',
+                          fontSize: '0.7rem',
+                          fontWeight: 700,
+                          background: '#eff6ff',
+                          color: '#1d4ed8',
+                          border: '1px solid #bfdbfe'
+                        }}>
+                          {task.department || 'General'}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px',
+                          padding: '2px 7px',
+                          borderRadius: '4px',
+                          fontSize: '0.68rem',
+                          fontWeight: 700,
+                          background: isCompleted ? '#ecfdf5' : isOverdue ? '#fff1f2' : effectiveStatus === 'In Progress' ? '#eff6ff' : '#f8fafc',
+                          color: isCompleted ? '#059669' : isOverdue ? '#e11d48' : effectiveStatus === 'In Progress' ? '#2563eb' : '#64748b',
+                          border: isCompleted ? '1px solid #a7f3d0' : isOverdue ? '1px solid #fecdd3' : effectiveStatus === 'In Progress' ? '1px solid #bfdbfe' : '1px solid #e2e8f0'
+                        }}>
+                          {isCompleted && <Check size={10} strokeWidth={3} />}
+                          {effectiveStatus}
+                        </span>
+
+                        <span style={{
+                          padding: '2px 5px',
+                          borderRadius: '4px',
+                          fontSize: '0.62rem',
+                          fontWeight: 800,
+                          background: task.priority === 'URGENT' ? '#fef2f2' : task.priority === 'HIGH' ? '#fffbeb' : '#f8fafc',
+                          color: task.priority === 'URGENT' ? '#dc2626' : task.priority === 'HIGH' ? '#d97706' : '#64748b',
+                          border: task.priority === 'URGENT' ? '1px solid #fecaca' : task.priority === 'HIGH' ? '1px solid #fde68a' : '1px solid #e2e8f0'
+                        }}>
+                          {task.priority || 'NORMAL'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Middle Row: Todo Tasks Title */}
+                    <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#0f172a', lineHeight: 1.4 }}>
+                      {task.title}
+                    </div>
+
+                    {/* Employee Row */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingTop: '4px', borderTop: '1px solid #f1f5f9' }}>
+                      <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>Employee:</span>
+                      {task.assignees && task.assignees.length > 0 ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                          {task.assignees.map((assignee, aIdx) => (
+                            <div key={`${assignee.id || aIdx}-${assignee.name}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <span style={{
+                                width: '20px',
+                                height: '20px',
+                                borderRadius: '50%',
+                                background: '#e0e7ff',
+                                color: '#3730a3',
+                                fontSize: '0.62rem',
+                                fontWeight: 800,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}>
+                                {assignee.avatar || (assignee.name ? assignee.name.slice(0, 2).toUpperCase() : 'EM')}
+                              </span>
+                              <span style={{ fontWeight: 700, color: '#1e293b', fontSize: '0.78rem' }}>
+                                {assignee.name || 'Unnamed'}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <span style={{
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            background: '#f1f5f9',
+                            color: '#475569',
+                            fontSize: '0.62rem',
+                            fontWeight: 800,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}>
+                            {task.creator?.name ? task.creator.name.slice(0, 2).toUpperCase() : 'UG'}
+                          </span>
+                          <span style={{ fontWeight: 700, color: '#334155', fontSize: '0.78rem' }}>
+                            {task.creator?.name || 'All Company'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Bottom Row: Created Date and Due Date chips */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '6px',
+                      flexWrap: 'wrap',
+                      background: '#f8fafc',
+                      padding: '6px 10px',
+                      borderRadius: '8px',
+                      fontSize: '0.72rem'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#64748b', fontWeight: 600 }}>
+                        <Calendar size={12} color="#64748b" />
+                        <span>Created: <strong style={{ color: '#334155' }}>{formatCleanDate(task.createdAt)}</strong></span>
+                      </div>
+
+                      <div style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontWeight: 700,
+                        color: isOverdue ? '#be123c' : isCompleted ? '#166534' : '#1e293b'
+                      }}>
+                        <Clock size={12} color={isOverdue ? '#e11d48' : isCompleted ? '#16a34a' : '#64748b'} />
+                        <span>Due: {formatCleanDate(effectiveDl)}</span>
+                        {isOverdue && <span style={{ color: '#e11d48', fontSize: '0.65rem', fontWeight: 800 }}>(Overdue)</span>}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        ) : (
+          /* Desktop / Tablet Table View (or when user toggles Table mode on mobile) */
+          <div>
+            {isMobileScreen && (
+              <div style={{ padding: '6px 12px', background: '#eff6ff', borderBottom: '1px solid #bfdbfe', fontSize: '0.72rem', color: '#1d4ed8', textAlign: 'center', fontWeight: 600 }}>
+                👈 Swipe horizontally to view all columns 👉
+              </div>
+            )}
+            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+              <table style={{
+                width: '100%',
+                borderCollapse: 'collapse',
+                textAlign: 'left',
+                minWidth: '820px',
+                fontSize: '0.84rem'
+              }}>
+                <thead style={{ position: 'sticky', top: 0, zIndex: 2 }}>
+                  <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #e2e8f0' }}>
                 <th style={{ padding: '12px 14px', width: '60px', fontWeight: 800, color: '#475569', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   S.No
                 </th>
@@ -651,22 +862,15 @@ export const LiveCompanyDashboard: React.FC = () => {
                 })
               )}
             </tbody>
-          </table>
-        </div>
+              </table>
+            </div>
+          </div>
+        )}
 
-        {/* Enterprise SDE-3 / CEO Pagination Footer Bar */}
-        <div style={{
-          padding: '0.85rem 1.25rem',
-          background: '#ffffff',
-          borderTop: '1px solid #e2e8f0',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '0.75rem'
-        }}>
+        {/* Enterprise SDE-3 / CEO Responsive Pagination Footer Bar */}
+        <div className="company-pagination-footer">
           {/* Left: Range and total counter + Rows Per Page */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
             <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
               {totalItems === 0 ? (
                 'Showing 0 of 0 deliverables'
@@ -679,7 +883,7 @@ export const LiveCompanyDashboard: React.FC = () => {
 
             {/* Rows Per Page Selector */}
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Rows per page:</span>
+              <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Rows:</span>
               <select
                 value={pageSize}
                 onChange={(e) => {
@@ -688,7 +892,7 @@ export const LiveCompanyDashboard: React.FC = () => {
                 }}
                 style={{
                   fontSize: '0.75rem',
-                  padding: '4px 8px',
+                  padding: '3px 8px',
                   borderRadius: '6px',
                   border: '1px solid #cbd5e1',
                   background: '#ffffff',
@@ -707,7 +911,7 @@ export const LiveCompanyDashboard: React.FC = () => {
           </div>
 
           {/* Right: Page Navigation Controls */}
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap', justifyContent: 'center' }}>
             {/* First Page */}
             <button
               type="button"
@@ -754,40 +958,46 @@ export const LiveCompanyDashboard: React.FC = () => {
               <ChevronLeft size={14} />
             </button>
 
-            {/* Page Number Pills */}
-            {getPaginationItems(safeCurrentPage, totalPages).map((item, pIdx) => {
-              if (item === '...') {
+            {/* Page Number Pills (Compact on Mobile, Full Sliding Window on Desktop) */}
+            {isMobileScreen ? (
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#1e293b', padding: '0 8px', whiteSpace: 'nowrap' }}>
+                Page {safeCurrentPage} of {totalPages}
+              </span>
+            ) : (
+              getPaginationItems(safeCurrentPage, totalPages).map((item, pIdx) => {
+                if (item === '...') {
+                  return (
+                    <span key={`dots-${pIdx}`} style={{ padding: '0 4px', color: '#94a3b8', fontSize: '0.8rem', userSelect: 'none' }}>
+                      …
+                    </span>
+                  );
+                }
+                const isSelected = item === safeCurrentPage;
                 return (
-                  <span key={`dots-${pIdx}`} style={{ padding: '0 4px', color: '#94a3b8', fontSize: '0.8rem', userSelect: 'none' }}>
-                    …
-                  </span>
+                  <button
+                    key={`page-${item}`}
+                    type="button"
+                    onClick={() => setCurrentPage(item as number)}
+                    style={{
+                      minWidth: '32px',
+                      height: '32px',
+                      padding: '0 6px',
+                      borderRadius: '6px',
+                      border: isSelected ? '1px solid #2563eb' : '1px solid #e2e8f0',
+                      background: isSelected ? '#2563eb' : '#ffffff',
+                      color: isSelected ? '#ffffff' : '#334155',
+                      fontSize: '0.78rem',
+                      fontWeight: isSelected ? 800 : 600,
+                      cursor: 'pointer',
+                      boxShadow: isSelected ? '0 1px 3px rgba(37, 99, 235, 0.3)' : 'none',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    {item}
+                  </button>
                 );
-              }
-              const isSelected = item === safeCurrentPage;
-              return (
-                <button
-                  key={`page-${item}`}
-                  type="button"
-                  onClick={() => setCurrentPage(item as number)}
-                  style={{
-                    minWidth: '32px',
-                    height: '32px',
-                    padding: '0 6px',
-                    borderRadius: '6px',
-                    border: isSelected ? '1px solid #2563eb' : '1px solid #e2e8f0',
-                    background: isSelected ? '#2563eb' : '#ffffff',
-                    color: isSelected ? '#ffffff' : '#334155',
-                    fontSize: '0.78rem',
-                    fontWeight: isSelected ? 800 : 600,
-                    cursor: 'pointer',
-                    boxShadow: isSelected ? '0 1px 3px rgba(37, 99, 235, 0.3)' : 'none',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  {item}
-                </button>
-              );
-            })}
+              })
+            )}
 
             {/* Next Page */}
             <button
