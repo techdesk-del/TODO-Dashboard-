@@ -356,6 +356,14 @@ export const Sidebar: React.FC = () => {
         {/* Primary Navigation Links */}
         <nav className="sidebar-nav-links">
           <button
+            className={`nav-link-item ${activeView === 'company_dashboard' ? 'active' : ''}`}
+            onClick={() => { setActiveView('company_dashboard'); closeSidebar(); }}
+          >
+            <Layers size={16} />
+            <span>Live Company Tasks</span>
+          </button>
+
+          <button
             className={`nav-link-item ${activeView === 'workspace' ? 'active' : ''}`}
             onClick={() => { setActiveView('workspace'); closeSidebar(); }}
           >

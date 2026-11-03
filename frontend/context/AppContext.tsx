@@ -38,8 +38,8 @@ interface AppContextType {
   setSelectedDate: (date: string) => void;
   viewScope: 'selected' | 'all';
   setViewScope: (scope: 'selected' | 'all') => void;
-  activeView: 'workspace' | 'calendar' | 'ceo_portal' | 'admin_hr' | 'team_view' | 'audit_trail' | 'system_config' | 'workflow_manual';
-  setActiveView: (view: 'workspace' | 'calendar' | 'ceo_portal' | 'admin_hr' | 'team_view' | 'audit_trail' | 'system_config' | 'workflow_manual') => void;
+  activeView: 'workspace' | 'calendar' | 'ceo_portal' | 'admin_hr' | 'team_view' | 'audit_trail' | 'system_config' | 'workflow_manual' | 'company_dashboard';
+  setActiveView: (view: 'workspace' | 'calendar' | 'ceo_portal' | 'admin_hr' | 'team_view' | 'audit_trail' | 'system_config' | 'workflow_manual' | 'company_dashboard') => void;
   selectedMemberFilter: string | null;
   setSelectedMemberFilter: (memberName: string | null) => void;
   bannerNotification: { message: string; badge: string } | null;
@@ -132,7 +132,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<TeamMember>(GUEST_USER);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(true);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [authModalInitialMode, setAuthModalInitialMode] = useState<'CHOOSER' | 'INVITATION_INPUT' | 'REQUEST_ACCESS' | 'LOGIN'>('LOGIN');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [purgedMemberIds, setPurgedMemberIds] = useState<string[]>([]);
@@ -152,7 +152,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [selectedDate, setSelectedDate] = useState<string>(getTodayStr());
   const [viewScope, setViewScope] = useState<'selected' | 'all'>('all');
-  const [activeView, setActiveView] = useState<'workspace' | 'calendar' | 'ceo_portal' | 'admin_hr' | 'team_view' | 'audit_trail' | 'system_config' | 'workflow_manual'>('workspace');
+  const [activeView, setActiveView] = useState<'workspace' | 'calendar' | 'ceo_portal' | 'admin_hr' | 'team_view' | 'audit_trail' | 'system_config' | 'workflow_manual' | 'company_dashboard'>('workspace');
   const [selectedMemberFilter, setSelectedMemberFilter] = useState<string | null>(null);
   const [bannerNotification, setBannerNotification] = useState<{ message: string; badge: string } | null>(null);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
@@ -525,14 +525,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const sessionActive = typeof window !== 'undefined' ? sessionStorage.getItem('urbangaon_session_active') : null;
       if (!sessionActive) {
-        // Fresh visit or new tab: require login! Do NOT default to Super Admin
+        // Fresh visit or new tab: Land on public company dashboard without blocking auth modal
         try {
           localStorage.removeItem('urbangaon_auth_user_v2');
           sessionStorage.removeItem('urbangaon_auth_user_v2');
         } catch { }
         setCurrentUser(GUEST_USER);
         setAuthModalInitialMode('LOGIN');
-        setIsAuthModalOpen(true);
+        setIsAuthModalOpen(false);
       } else {
         const savedUserStr = sessionStorage.getItem('urbangaon_auth_user_v2') || localStorage.getItem('urbangaon_auth_user_v2');
         if (savedUserStr) {
@@ -543,19 +543,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           } else {
             setCurrentUser(GUEST_USER);
             setAuthModalInitialMode('LOGIN');
-            setIsAuthModalOpen(true);
+            setIsAuthModalOpen(false);
           }
         } else {
           setCurrentUser(GUEST_USER);
           setAuthModalInitialMode('LOGIN');
-          setIsAuthModalOpen(true);
+          setIsAuthModalOpen(false);
         }
       }
     } catch (e) {
       console.warn('[AppContext] auth restore failed', e);
       setCurrentUser(GUEST_USER);
       setAuthModalInitialMode('LOGIN');
-      setIsAuthModalOpen(true);
+      setIsAuthModalOpen(false);
     }
 
     // Initial load from MongoDB
@@ -2497,7 +2497,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentUser(GUEST_USER);
     setActiveView('workspace');
     setAuthModalInitialMode('LOGIN');
-    setIsAuthModalOpen(true);
+    setIsAuthModalOpen(false);
     logAudit({
       action: 'LOGIN',
       fieldChanged: 'Auth Session / Logout',

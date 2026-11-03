@@ -19,9 +19,10 @@ import { MorningDigestPreviewModal } from '@/components/MorningDigestPreviewModa
 import { CreateTaskModal } from '@/components/CreateTaskModal';
 import { EnterpriseExportModal } from '@/components/EnterpriseExportModal';
 import { AuthModal } from '@/components/AuthModal';
+import { LiveCompanyDashboard } from '@/components/LiveCompanyDashboard';
 import { formatDateTitle, getTodayStr, getTomorrowStr, formatDateDayMonth, isTaskForDate } from '@/shared/lib/dateUtils';
 import { isCeoUser, isStrictCeo, canAccessAdminHr, canAccessWorkflows, canViewAuditTrail } from '@/shared/lib/rosterData';
-import { Check, Calendar as CalendarIcon, Sparkles, Globe, CalendarDays, AlertTriangle, RotateCcw, Plus, Eye, EyeOff } from 'lucide-react';
+import { Check, Calendar as CalendarIcon, Sparkles, Globe, CalendarDays, AlertTriangle, RotateCcw, Plus, Eye, EyeOff, Layers } from 'lucide-react';
 import { computeMultiAssigneeStatus } from '@/shared/lib/multiAssignee';
 
 export default function Home() {
@@ -57,6 +58,7 @@ export default function Home() {
     setIsMounted(true);
   }, []);
 
+  const isGuest = !isMounted || currentUser.id === 'guest';
   const isCeo = isMounted && isCeoUser(currentUser);
   const isStrictCeoUser = isMounted && isStrictCeo(currentUser);
   const isCeoMonitoring = isStrictCeoUser;
@@ -167,12 +169,16 @@ export default function Home() {
       <Header />
 
       <div className="app-body">
-        {/* Left Sidebar with Calendar & CEO access */}
-        <Sidebar />
+        {/* Left Sidebar with Calendar & CEO access (Hidden before sign-in) */}
+        {!isGuest && <Sidebar />}
 
         {/* Main Workspace Area */}
-        <main className="main-workspace">
-          {effectiveView === 'workspace' && (
+        <main className="main-workspace" style={isGuest ? { width: '100%', maxWidth: '100%', padding: '0 clamp(0.5rem, 2vw, 1.5rem)', margin: '0 auto' } : undefined}>
+          {(isGuest || effectiveView === 'company_dashboard') && (
+            <LiveCompanyDashboard />
+          )}
+
+          {!isGuest && effectiveView === 'workspace' && (
             <>
               {/* Slide 4: Real-Time Synced Notification Banner */}
               {bannerNotification && (
@@ -454,6 +460,31 @@ export default function Home() {
                     </button>
                   </div>
 
+                  <button
+                    type="button"
+                    onClick={() => setActiveView('company_dashboard')}
+                    style={{
+                      padding: '5px 11px',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      whiteSpace: 'nowrap',
+                      background: '#ffffff',
+                      color: '#2563eb',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                      transition: 'all 0.15s ease'
+                    }}
+                    title="View Company-Wide Live Deliverables Table across all staff"
+                  >
+                    <Layers size={13} />
+                    <span>Company Table</span>
+                  </button>
+
                   {completedCount > 0 && (
                     <button
                       type="button"
@@ -584,13 +615,13 @@ export default function Home() {
             </>
           )}
 
-          {effectiveView === 'calendar' && <CalendarView />}
-          {effectiveView === 'ceo_portal' && isCeo && <CeoPortal />}
-          {effectiveView === 'admin_hr' && canAccessAdmin && <AdminHrPortal />}
-          {effectiveView === 'team_view' && canAccessManager && <ManagerTeamView />}
-          {effectiveView === 'audit_trail' && canAccessAudit && <AuditTrailModal />}
-          {effectiveView === 'system_config' && canAccessAdmin && <SystemConfigModal />}
-          {effectiveView === 'workflow_manual' && canViewWorkflows && <WorkflowManualModal />}
+          {!isGuest && effectiveView === 'calendar' && <CalendarView />}
+          {!isGuest && effectiveView === 'ceo_portal' && isCeo && <CeoPortal />}
+          {!isGuest && effectiveView === 'admin_hr' && canAccessAdmin && <AdminHrPortal />}
+          {!isGuest && effectiveView === 'team_view' && canAccessManager && <ManagerTeamView />}
+          {!isGuest && effectiveView === 'audit_trail' && canAccessAudit && <AuditTrailModal />}
+          {!isGuest && effectiveView === 'system_config' && canAccessAdmin && <SystemConfigModal />}
+          {!isGuest && effectiveView === 'workflow_manual' && canViewWorkflows && <WorkflowManualModal />}
         </main>
       </div>
 

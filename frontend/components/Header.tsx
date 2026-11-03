@@ -240,6 +240,7 @@ export const Header: React.FC = () => {
       {/* Left Sidebar-Aligned Brand Panel */}
       <div className="header-brand-panel">
         {/* Mobile Hamburger */}
+        {!isGuest && (
         <button
           className="mobile-menu-btn"
           onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
@@ -250,6 +251,7 @@ export const Header: React.FC = () => {
             ? <XIcon size={18} color="#334155" />
             : <Menu size={18} color="#334155" />}
         </button>
+        )}
 
         <div
           className="logo-container"
@@ -278,7 +280,35 @@ export const Header: React.FC = () => {
 
       {/* Right: Meta actions + user */}
       <div className="header-meta-group">
-        {/* Dynamic Synchronized Date Badge */}
+        {isGuest ? (
+          <button
+            type="button"
+            onClick={() => { setAuthModalInitialMode('LOGIN'); setIsAuthModalOpen(true); }}
+            className="btn-primary"
+            style={{
+              padding: '7px 18px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '0.84rem',
+              fontWeight: 800,
+              background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+              color: '#ffffff',
+              borderRadius: '8px',
+              border: 'none',
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(37,99,235,0.35)',
+              whiteSpace: 'nowrap',
+              letterSpacing: '0.01em'
+            }}
+            title="Sign In with Corporate Email & Password"
+          >
+            <LogIn size={15} strokeWidth={2.5} />
+            <span>Sign In</span>
+          </button>
+        ) : (
+          <>
+            {/* Dynamic Synchronized Date Badge */}
         <button
           type="button"
           onClick={() => {
@@ -1029,43 +1059,23 @@ export const Header: React.FC = () => {
             </div>
           );
         })()}
-        {/* Explicit Sign In / Log In Button */}
-        {isGuest ? (
-          <button
-            onClick={() => { setAuthModalInitialMode('LOGIN'); setIsAuthModalOpen(true); }}
-            className="btn-primary"
-            style={{
-              padding: 'clamp(0.3rem,1.5vw,0.38rem) clamp(0.6rem,2vw,0.85rem)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '5px',
-              fontSize: '0.75rem',
-              background: '#2563eb'
-            }}
-            title="Sign In with Corporate Email & Password"
-          >
-            <LogIn size={14} />
-            <span className="nav-btn-text-full">Sign In</span>
-            <span className="nav-btn-text-compact">Sign In</span>
-          </button>
-        ) : (
-          <button
-            onClick={logoutUser}
-            className="btn-secondary header-logout-btn"
-            style={{
-              padding: 'clamp(0.28rem,1.5vw,0.35rem) clamp(0.4rem,2vw,0.65rem)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              color: '#64748b'
-            }}
-            title="Sign Out of current user session"
-          >
-            <LogOut size={13} />
-            <span className="nav-btn-text-full">Log Out</span>
-            <span className="nav-btn-text-compact">Log Out</span>
-          </button>
-        )}
+        {/* Log Out Button for signed in users */}
+        <button
+          onClick={logoutUser}
+          className="btn-secondary header-logout-btn"
+          style={{
+            padding: 'clamp(0.28rem,1.5vw,0.35rem) clamp(0.4rem,2vw,0.65rem)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            color: '#64748b'
+          }}
+          title="Sign Out of current user session"
+        >
+          <LogOut size={13} />
+          <span className="nav-btn-text-full">Log Out</span>
+          <span className="nav-btn-text-compact">Log Out</span>
+        </button>
 
         {/* User Profile & Role Switcher */}
         <div ref={roleMenuRef} style={{ position: 'relative', flexShrink: 0 }}>
@@ -1278,6 +1288,8 @@ export const Header: React.FC = () => {
             </div>
           )}
         </div>
+        </>
+        )}
       </div>
     </div>
 
