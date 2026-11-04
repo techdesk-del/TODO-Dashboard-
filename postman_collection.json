@@ -1,0 +1,679 @@
+{
+  "info": {
+    "name": "UrbanGaon AI Todo Platform API",
+    "_postman_id": "urbangaon-todo-api-v2-collection",
+    "description": "Complete Postman Collection for all backend APIs in UrbanGaon AI Todo Platform.\nIncludes Authentication, Tasks, Members, Audit Logs, System Config, AI Extraction, Notifications, and Cron engines.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "testTaskId",
+      "value": "task-1",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication & Session",
+      "item": [
+        {
+          "name": "POST Login (Sign In)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ceo@urbangaon.com\",\n  \"password\": \"admin\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Authenticates employee / Founder. Returns JWT token in response and sets 'urbangaon_auth_token' cookie."
+          }
+        },
+        {
+          "name": "GET Current User (/api/auth/me)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Validates current session token and returns logged-in user profile."
+          }
+        },
+        {
+          "name": "POST Logout (/api/auth/me)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Clears session auth cookie."
+          }
+        },
+        {
+          "name": "POST Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ceo@urbangaon.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/forgot-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "forgot-password"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Tasks & Deliverables",
+      "item": [
+        {
+          "name": "GET All Tasks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tasks"
+              ]
+            },
+            "description": "Fetches all corporate deliverables from MongoDB Atlas."
+          }
+        },
+        {
+          "name": "GET Tasks Filtered by Date",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks?date=2026-11-04",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tasks"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2026-11-04"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST Create New Task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Postman Verification Deliverable\",\n  \"scheduledDate\": \"2026-11-05\",\n  \"time\": \"05:00 PM\",\n  \"priority\": \"HIGH\",\n  \"department\": \"Engineering\",\n  \"project\": \"Postman Testing Suite\",\n  \"location\": \"Jaipur Headquarters\",\n  \"assignees\": [\n    {\n      \"id\": \"mem-2\",\n      \"name\": \"Ravindra Singh\",\n      \"email\": \"ravindra@urbangaon.com\",\n      \"department\": \"Procurement & Materials\",\n      \"status\": \"Not Started\"\n    }\n  ],\n  \"creator\": {\n    \"id\": \"mem-ops-admin\",\n    \"name\": \"Operations Admin\",\n    \"email\": \"ops@urbangaon.com\",\n    \"role\": \"ADMIN\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tasks"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PATCH Update Task by ID",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"In Progress\",\n  \"progressPercent\": 50,\n  \"remarks\": \"Working on deliverable through Postman\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{testTaskId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tasks",
+                "{{testTaskId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE Task (Soft Cancel)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Cancelled deliverable via Postman testing\",\n  \"actor\": \"Founder Mr. Sukh Sagar\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{testTaskId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tasks",
+                "{{testTaskId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST Evaluate Overdue Tasks",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"thresholdDays\": 3,\n  \"sendNotifications\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/evaluate-overdue",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tasks",
+                "evaluate-overdue"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Team Members & Roster",
+      "item": [
+        {
+          "name": "GET All Members",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST Add Member",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Test Employee\",\n  \"email\": \"postman.tester@urbangaon.com\",\n  \"department\": \"Engineering\",\n  \"designation\": \"API QA Specialist\",\n  \"phone\": \"+91 9876543210\",\n  \"role\": \"EMPLOYEE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST Deactivate Member",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"memberId\": \"mem-test\",\n  \"reason\": \"Employee offboarding via Postman\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members/deactivate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members",
+                "deactivate"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Audit Trail & Governance",
+      "item": [
+        {
+          "name": "GET Audit Logs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-user-email",
+                "value": "ceo@urbangaon.com"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/audit?limit=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "audit"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST Create Audit Log Entry",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"STATUS_CHANGE\",\n  \"actor\": \"Mr. Sukh Sagar\",\n  \"actorRole\": \"FOUNDER\",\n  \"taskId\": \"task-1\",\n  \"taskTitle\": \"Executive Review\",\n  \"fieldChanged\": \"Status\",\n  \"oldValue\": \"In Progress\",\n  \"newValue\": \"Done\",\n  \"notes\": \"Audit log created via Postman test\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/audit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "audit"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. System Configuration",
+      "item": [
+        {
+          "name": "GET System Config",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/system-config",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "system-config"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST Update System Config",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"config\": {\n    \"workingDays\": [\n      \"Monday\",\n      \"Tuesday\",\n      \"Wednesday\",\n      \"Thursday\",\n      \"Friday\",\n      \"Saturday\"\n    ]\n  },\n  \"actor\": \"Mr. Sukh Sagar\",\n  \"actorRole\": \"FOUNDER\",\n  \"notes\": \"Updated working schedule via Postman\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/system-config",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "system-config"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. AI & Natural Language Parser",
+      "item": [
+        {
+          "name": "POST AI Parse Voice/Text Task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prompt\": \"Assign urgent task to Ravindra Singh for buying cement by tomorrow 5 PM for Jaipur site\",\n  \"currentUser\": {\n    \"name\": \"Mr. Sukh Sagar\",\n    \"role\": \"FOUNDER\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/parse",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ai",
+                "parse"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST Gemini AI Entity Extraction",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prompt\": \"Schedule a high priority team meeting with engineering on Friday at 3 PM about server migration\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/gemini",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ai",
+                "gemini"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Notifications & Email Dispatch",
+      "item": [
+        {
+          "name": "GET In-App Notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-user-email",
+                "value": "ceo@urbangaon.com"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST Dispatch Real-Time Notification",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventType\": \"TASK_ASSIGNED\",\n  \"recipients\": [\n    {\n      \"email\": \"ceo@urbangaon.com\",\n      \"name\": \"Mr. Sukh Sagar\"\n    }\n  ],\n  \"title\": \"Postman Test Notification\",\n  \"message\": \"This is a direct test of the notification dispatcher endpoint.\",\n  \"taskId\": \"task-1\",\n  \"taskTitle\": \"Test Task\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/dispatch",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                "dispatch"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Email Dispatch Logs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/email-logs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                "email-logs"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Cron & Data Retention",
+      "item": [
+        {
+          "name": "GET Cron Check Overdue",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cron?action=overdue",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cron"
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "overdue"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Cron Run Morning Digest",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cron?action=digest",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cron"
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "digest"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Execute Data Retention & Archival",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/retention?taskRetentionDays=365",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "retention"
+              ],
+              "query": [
+                {
+                  "key": "taskRetentionDays",
+                  "value": "365"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

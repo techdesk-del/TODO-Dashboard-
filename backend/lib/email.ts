@@ -117,9 +117,40 @@ export async function createEmailTransporter(): Promise<{ transporter: Transport
   return { transporter, isTestAccount: true };
 }
 
+/**
+ * Dynamic Time-based Greeting synchronized to Indian Standard Time (Asia/Kolkata)
+ * - 04:00 AM - 11:59 AM: Good morning
+ * - 12:00 PM - 04:59 PM: Good afternoon
+ * - 05:00 PM onwards:    Good evening
+ */
+export function getTimeBasedGreeting(): string {
+  try {
+    const istString = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+    const hour = new Date(istString).getHours();
+    if (hour >= 4 && hour < 12) {
+      return 'Good morning';
+    } else if (hour >= 12 && hour < 17) {
+      return 'Good afternoon';
+    } else {
+      return 'Good evening';
+    }
+  } catch {
+    const hour = new Date().getHours();
+    if (hour >= 4 && hour < 12) return 'Good morning';
+    if (hour >= 12 && hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
+}
+
 export function generateDigestHtml(opts: SendDigestOptions): string {
   const { toName, overdueTasks, todayTasks, upcomingTasks, dateString, baseUrl } = opts;
   const appBase = getAppBaseUrl(baseUrl);
+  const greeting = getTimeBasedGreeting();
+  const digestTitle = greeting === 'Good evening'
+    ? 'Evening Executive Operational Summary'
+    : greeting === 'Good afternoon'
+      ? 'Afternoon Executive Operational Briefing'
+      : 'Daily Executive Operational Digest';
 
   return `
 <!DOCTYPE html>
@@ -149,22 +180,21 @@ export function generateDigestHtml(opts: SendDigestOptions): string {
 </head>
 <body>
   <div class="container">
-    ${getEmailHeaderHtml(`Daily Executive Operational Digest | ${dateString}`, appBase)}
+    ${getEmailHeaderHtml(`${digestTitle} | ${dateString}`, appBase)}
     <div class="content">
       <div class="greeting">
-        Good morning <strong>${toName}</strong>,<br>
+        ${greeting} <strong>${toName}</strong>,<br>
         Here is your targeted commitment ledger for today. Synchronized with zero spam.
       </div>
 
       <!-- Flowchart D: Overdue Deliverables with direct links & reason requests -->
       <div class="section-title title-red">Overdue Deliverables (Requires Immediate Resolution)</div>
-      ${
-        overdueTasks.length === 0
-          ? '<div class="empty-badge">Zero overdue deliverables. Excellent punctuality!</div>'
-          : overdueTasks.map(t => {
-            const hasReason = Boolean(t.delayReason || t.pastDueReason || t.holdReason || t.escalationReason);
-            const activeReason = t.delayReason || t.pastDueReason || t.holdReason || t.escalationReason;
-            return `
+      ${overdueTasks.length === 0
+      ? '<div class="empty-badge">Zero overdue deliverables. Excellent punctuality!</div>'
+      : overdueTasks.map(t => {
+        const hasReason = Boolean(t.delayReason || t.pastDueReason || t.holdReason || t.escalationReason);
+        const activeReason = t.delayReason || t.pastDueReason || t.holdReason || t.escalationReason;
+        return `
             <div class="task-card card-red">
               <div class="task-name">${t.title}</div>
               <div class="task-meta">Deadline was: ${t.dueDate || t.scheduledDate} (Overdue) | Priority: ${t.priority} | Department: ${t.department}</div>
@@ -182,15 +212,14 @@ export function generateDigestHtml(opts: SendDigestOptions): string {
               `}
             </div>
             `;
-          }).join('')
-      }
+      }).join('')
+    }
 
       <!-- Today Tasks with direct link -->
       <div class="section-title title-amber">Deliverables Due Today</div>
-      ${
-        todayTasks.length === 0
-          ? '<div class="empty-badge">No deliverables scheduled for today.</div>'
-          : todayTasks.map(t => `
+      ${todayTasks.length === 0
+      ? '<div class="empty-badge">No deliverables scheduled for today.</div>'
+      : todayTasks.map(t => `
             <div class="task-card card-amber">
               <div class="task-name">${t.title}</div>
               <div class="task-meta">Priority: ${t.priority} | Department: ${t.department}</div>
@@ -199,7 +228,7 @@ export function generateDigestHtml(opts: SendDigestOptions): string {
               </div>
             </div>
           `).join('')
-      }
+    }
 
 
     </div>
@@ -218,12 +247,19 @@ export async function sendMorningDigestEmail(opts: SendDigestOptions) {
   const from = process.env.SMTP_FROM || '"UrbanGaon Dispatcher" <alerts@urbangaon.com>';
   const logoAttachments = getEmailLogoAttachments();
 
+  const greeting = getTimeBasedGreeting();
+  const subjectPrefix = greeting === 'Good evening'
+    ? 'Evening Operational Summary'
+    : greeting === 'Good afternoon'
+      ? 'Afternoon Operational Briefing'
+      : 'Daily Operational Focus';
+
   let info;
   try {
     info = await transporter.sendMail({
       from,
       to: opts.toEmail,
-      subject: `Daily Operational Focus: ${opts.dateString} - ${opts.toName}`,
+      subject: `${subjectPrefix}: ${opts.dateString} - ${opts.toName}`,
       html,
       attachments: logoAttachments,
     });
@@ -241,7 +277,7 @@ export async function sendMorningDigestEmail(opts: SendDigestOptions) {
     info = await fallbackTransporter.sendMail({
       from,
       to: opts.toEmail,
-      subject: `Daily Operational Focus: ${opts.dateString} - ${opts.toName}`,
+      subject: `${subjectPrefix}: ${opts.dateString} - ${opts.toName}`,
       html,
       attachments: logoAttachments,
     });
@@ -388,7 +424,7 @@ export async function sendAdminDigestSummaryEmail(opts: SendAdminDigestSummaryOp
       ` : ''}
     </div>
     <div class="footer">
-      UrbanGaon Dispatcher Engine | Corporate Governance by Mr. Sukh Sagar Singh
+      UrbanGaon Dispatcher Engine | Corporate Governance by Mr. Sukh Sagar
     </div>
   </div>
 </body>
@@ -570,8 +606,8 @@ export function generateWelcomeEmailHtml(opts: SendWelcomeEmailOptions): string 
     role === 'ADMIN'
       ? 'Admin / Talent HR'
       : role === 'MANAGER'
-      ? 'Reporting Manager'
-      : 'Employee / Staff';
+        ? 'Reporting Manager'
+        : 'Employee / Staff';
 
   return `
 <!DOCTYPE html>
@@ -1325,7 +1361,7 @@ export async function sendTaskAssignmentEmail(opts: SendTaskAssignmentOptions) {
             deliveredAt: new Date().toISOString(),
             createdAt: new Date().toISOString(),
           });
-        } catch {}
+        } catch { }
       } catch (sendErr: any) {
         console.warn(`[Task Assignment Email] [FAIL] Failed sending to ${recipient.email}:`, sendErr.message || sendErr);
         // Record failure in EmailLogModel
@@ -1344,7 +1380,7 @@ export async function sendTaskAssignmentEmail(opts: SendTaskAssignmentOptions) {
             addedToAdminSummary: true,
             createdAt: new Date().toISOString(),
           });
-        } catch {}
+        } catch { }
       }
     }
 
@@ -1728,8 +1764,8 @@ export async function sendOverdueAutoFlagEmail(opts: SendOverdueAutoFlagOptions)
     const statusBadge = opts.isEscalated
       ? '<span style="background: #fee2e2; color: #b91c1c; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 12px; border: 1px solid #fca5a5;">AUTO-ESCALATED TO MANAGER</span>'
       : opts.hasReason
-      ? '<span style="background: #fff7ed; color: #c2410c; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 12px; border: 1px solid #fed7aa;">OVERDUE (REASON RECORDED)</span>'
-      : '<span style="background: #fef2f2; color: #dc2626; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 12px; border: 1px solid #fecaca;">PENDING NO REASON (ACTION REQUIRED)</span>';
+        ? '<span style="background: #fff7ed; color: #c2410c; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 12px; border: 1px solid #fed7aa;">OVERDUE (REASON RECORDED)</span>'
+        : '<span style="background: #fef2f2; color: #dc2626; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 12px; border: 1px solid #fecaca;">PENDING NO REASON (ACTION REQUIRED)</span>';
 
     const html = `
 <!DOCTYPE html>
@@ -1807,8 +1843,8 @@ export async function sendOverdueAutoFlagEmail(opts: SendOverdueAutoFlagOptions)
     const subject = opts.isEscalated
       ? `[ESCALATION] Overdue Deliverable #${opts.taskId}: "${opts.taskTitle}" (${opts.daysOverdue}d overdue)`
       : opts.hasReason
-      ? `[Overdue - Reason Logged] Deliverable #${opts.taskId}: "${opts.taskTitle}"`
-      : `[Action Required: No Reason] Overdue Deliverable #${opts.taskId}: "${opts.taskTitle}"`;
+        ? `[Overdue - Reason Logged] Deliverable #${opts.taskId}: "${opts.taskTitle}"`
+        : `[Action Required: No Reason] Overdue Deliverable #${opts.taskId}: "${opts.taskTitle}"`;
 
     const info = await transporter.sendMail({
       from,
@@ -1966,7 +2002,7 @@ export async function sendTaskCancelledEmail(opts: SendTaskCancelledOptions) {
         deliveredAt: new Date().toISOString(),
         createdAt: new Date().toISOString(),
       });
-    } catch {}
+    } catch { }
 
     return { success: true };
   } catch (err) {
@@ -2240,9 +2276,9 @@ export async function sendStaffLeaveAlertEmail(opts: SendStaffLeaveAlertOptions)
           &#10003; Zero active deliverables had deadlines falling within ${opts.leaveStartDate} to ${opts.leaveEndDate}. No deadline adjustments were required.
         </div>
       ` : opts.affectedTasks.map(t => {
-        const taskUrl = `${appBase}/?taskId=${encodeURIComponent(t.id)}`;
-        const isFlagged = opts.taskDueAction === 'FLAG_ADMIN';
-        return `
+      const taskUrl = `${appBase}/?taskId=${encodeURIComponent(t.id)}`;
+      const isFlagged = opts.taskDueAction === 'FLAG_ADMIN';
+      return `
         <div class="task-item ${isFlagged ? 'task-item-flagged' : ''}">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
             <span style="font-size: 14px; font-weight: 800; color: #0f172a;">#${t.id} &mdash; ${t.title}</span>
@@ -2265,15 +2301,15 @@ export async function sendStaffLeaveAlertEmail(opts: SendStaffLeaveAlertOptions)
           </div>
         </div>
         `;
-      }).join('')}
+    }).join('')}
 
       ${otherTasks.length > 0 ? `
         <div style="font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #475569; margin: 22px 0 10px 0;">
           Other Active Deliverables Assigned to ${opts.employeeName} (${otherTasks.length})
         </div>
         ${otherTasks.slice(0, 10).map(t => {
-          const taskUrl = `${appBase}/?taskId=${encodeURIComponent(t.id)}`;
-          return `
+      const taskUrl = `${appBase}/?taskId=${encodeURIComponent(t.id)}`;
+      return `
           <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 14px; margin-bottom: 8px; font-size: 12px;">
             <div style="font-weight: 800; color: #0f172a; font-size: 13px;">#${t.id} &mdash; ${t.title}</div>
             <div style="color: #64748b; margin-top: 3px;">
@@ -2284,7 +2320,7 @@ export async function sendStaffLeaveAlertEmail(opts: SendStaffLeaveAlertOptions)
             </div>
           </div>
           `;
-        }).join('')}
+    }).join('')}
       ` : ''}
 
       <div class="cta-container">

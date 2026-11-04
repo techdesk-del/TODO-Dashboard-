@@ -16,7 +16,7 @@ import { TaskModel } from '@/models/Task';
 import { MemberModel } from '@/models/Member';
 import { AuditLogModel } from '@/models/AuditLog';
 import { SystemConfigModel } from '@/models/SystemConfig';
-import { sendMorningDigestEmail, sendAdminDigestSummaryEmail, ChronicDelayItem } from '@/lib/email';
+import { sendMorningDigestEmail, sendAdminDigestSummaryEmail, ChronicDelayItem, getTimeBasedGreeting } from '@/lib/email';
 import { getTodayStr, formatDateDisplay } from '@/shared/lib/dateUtils';
 import { isNonWorkingDay } from '@/shared/lib/holidayData';
 import { OFFICIAL_ROSTER } from '@/shared/lib/rosterData';
@@ -87,7 +87,7 @@ export async function runMorningDigest(options: DigestOptions = {}): Promise<Dig
       ipAddress: '127.0.0.1',
       deviceInfo: 'Holiday Policy Engine',
       notes: `Zero emails dispatched to staff. Today is ${nonWorking.reason}.`,
-    }).catch(() => {});
+    }).catch(() => { });
 
     return {
       success: true,
@@ -166,7 +166,7 @@ export async function runMorningDigest(options: DigestOptions = {}): Promise<Dig
 
     // Match tasks where recipient is assignee
     const userTasks = allPendingTasks.filter(t =>
-      t.assignees?.some(a => 
+      t.assignees?.some(a =>
         (a.email && a.email.toLowerCase().trim() === cleanEmail) ||
         (a.name && a.name.toLowerCase().trim() === cleanName) ||
         (a.id && recipient.id && a.id === recipient.id)
@@ -268,13 +268,16 @@ export async function runMorningDigest(options: DigestOptions = {}): Promise<Dig
         ...sendResult,
       });
 
+      const currentGreeting = getTimeBasedGreeting();
+      const digestLabel = currentGreeting === 'Good evening' ? 'Evening Email Digest' : currentGreeting === 'Good afternoon' ? 'Afternoon Email Digest' : 'Morning Email Digest';
+
       await AuditLogModel.create({
         id: `audit-digest-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
         timestamp: new Date().toISOString(),
-        actor: options.actor || 'Automated 08:30 AM Digest Engine',
+        actor: options.actor || (currentGreeting === 'Good evening' ? 'Automated Evening Digest Engine' : 'Automated 08:30 AM Digest Engine'),
         actorRole: options.actorRole || 'SUPER_ADMIN',
         action: 'CONFIG_CHANGED',
-        fieldChanged: 'Morning Email Digest Dispatched',
+        fieldChanged: `${digestLabel} Dispatched`,
         oldValue: 'Pending Digest',
         newValue: `Sent to ${recipient.email} (Overdue: ${overdue.length}, Today: ${today.length}, Upcoming: ${upcoming.length})`,
         ipAddress: '127.0.0.1',
@@ -282,7 +285,7 @@ export async function runMorningDigest(options: DigestOptions = {}): Promise<Dig
         notes: sendResult?.isTestAccount
           ? `Dispatched via Ethereal test inbox: ${sendResult.previewUrl || 'preview ready'}`
           : `Delivered live via corporate Gmail SMTP to ${recipient.email}`,
-      }).catch(() => {});
+      }).catch(() => { });
     } else {
       failedDeliveries.push({
         email: recipient.email,
@@ -302,7 +305,7 @@ export async function runMorningDigest(options: DigestOptions = {}): Promise<Dig
         ipAddress: '127.0.0.1',
         deviceInfo: 'Node.js SMTP Transporter',
         notes: `Delivery attempts failed for ${recipient.email}: ${lastError}.`,
-      }).catch(() => {});
+      }).catch(() => { });
     }
   }
 
@@ -333,11 +336,14 @@ export async function runMorningDigest(options: DigestOptions = {}): Promise<Dig
         ipAddress: '127.0.0.1',
         deviceInfo: 'Node.js SMTP Transporter',
         notes: `Admin summary delivered. Copied ${adminSummaryResult?.managerCcCount || 0} reporting managers on chronic delays.`,
-      }).catch(() => {});
+      }).catch(() => { });
     } catch (adminErr) {
       console.warn('[Admin Digest Summary Warning]', adminErr);
     }
   }
+
+  const finalGreeting = getTimeBasedGreeting();
+  const digestPeriod = finalGreeting === 'Good evening' ? 'evening' : finalGreeting === 'Good afternoon' ? 'afternoon' : 'morning';
 
   return {
     success: true,
@@ -348,6 +354,6 @@ export async function runMorningDigest(options: DigestOptions = {}): Promise<Dig
     failedDeliveries,
     chronicDelays,
     adminSummary: adminSummaryResult,
-    message: `Dispatched morning digest to ${successfulResults.length} staff member(s). Failures: ${failedDeliveries.length}, Chronic delays: ${chronicDelays.length}.`,
+    message: `Dispatched ${digestPeriod} digest to ${successfulResults.length} staff member(s). Failures: ${failedDeliveries.length}, Chronic delays: ${chronicDelays.length}.`,
   };
 }

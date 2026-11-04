@@ -5,34 +5,34 @@ import { useApp } from '@/context/AppContext';
 import { formatDateDisplay, getTodayStr } from '@/shared/lib/dateUtils';
 import { isNonWorkingDay } from '@/shared/lib/holidayData';
 import { isStrictCeo } from '@/shared/lib/rosterData';
-import { 
-  Mail, 
-  Clock, 
-  AlertCircle, 
-  Calendar as CalendarIcon, 
-  X, 
-  Check, 
-  Send, 
-  Users, 
+import {
+  Mail,
+  Clock,
+  AlertCircle,
+  Calendar as CalendarIcon,
+  X,
+  Check,
+  Send,
+  Users,
   RotateCcw,
   Sparkles,
   ExternalLink
 } from 'lucide-react';
 
 export const MorningDigestPreviewModal: React.FC = () => {
-  const { 
-    showMorningDigestModal, 
-    setShowMorningDigestModal, 
-    currentUser, 
-    tasks, 
+  const {
+    showMorningDigestModal,
+    setShowMorningDigestModal,
+    currentUser,
+    tasks,
     selectedDate,
     setBannerNotification
   } = useApp();
 
   const [isSending, setIsSending] = useState(false);
-  const [sendResult, setSendResult] = useState<{ 
-    success: boolean; 
-    message: string; 
+  const [sendResult, setSendResult] = useState<{
+    success: boolean;
+    message: string;
     previewUrl?: string | null;
     count?: number;
     failedDeliveries?: any[];
@@ -43,6 +43,21 @@ export const MorningDigestPreviewModal: React.FC = () => {
   const isCeo = isStrictCeo(currentUser);
   const todayStr = getTodayStr();
   const displayDate = formatDateDisplay(todayStr);
+
+  const timeGreeting = useMemo(() => {
+    try {
+      const istString = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+      const hour = new Date(istString).getHours();
+      if (hour >= 4 && hour < 12) return 'Good morning';
+      if (hour >= 12 && hour < 17) return 'Good afternoon';
+      return 'Good evening';
+    } catch {
+      const hour = new Date().getHours();
+      if (hour >= 4 && hour < 12) return 'Good morning';
+      if (hour >= 12 && hour < 17) return 'Good afternoon';
+      return 'Good evening';
+    }
+  }, []);
 
   // Active uncancelled tasks
   const uncancelledTasks = useMemo(() => {
@@ -57,8 +72,8 @@ export const MorningDigestPreviewModal: React.FC = () => {
     if (previewMode === 'ALL_STAFF' || (isCeo && previewMode === 'PERSONAL')) {
       return uncancelledTasks;
     }
-    return uncancelledTasks.filter(t => 
-      t.assignees?.some(a => 
+    return uncancelledTasks.filter(t =>
+      t.assignees?.some(a =>
         (a.email && a.email.toLowerCase().trim() === currentCleanEmail) ||
         (a.name && a.name.toLowerCase().trim().includes(currentCleanName)) ||
         a.id === currentUser.id
@@ -140,7 +155,7 @@ export const MorningDigestPreviewModal: React.FC = () => {
       });
 
       setBannerNotification({
-        message: dispatchAll 
+        message: dispatchAll
           ? `Morning Email Digest dispatched to ${count} staff member(s) via SMTP.`
           : `Morning Email Digest dispatched to ${currentUser.email}.`,
         badge: '08:30 AM DIGEST SENT'
@@ -159,9 +174,9 @@ export const MorningDigestPreviewModal: React.FC = () => {
 
   return (
     <div className="stream-overlay" onClick={() => setShowMorningDigestModal(false)}>
-      <div 
-        className="stream-modal-card" 
-        style={{ maxWidth: '680px', width: '92%', borderRadius: '14px', padding: '1.25rem' }} 
+      <div
+        className="stream-modal-card"
+        style={{ maxWidth: '680px', width: '92%', borderRadius: '14px', padding: '1.25rem' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Modal Header */}
@@ -180,9 +195,9 @@ export const MorningDigestPreviewModal: React.FC = () => {
             </div>
           </div>
 
-          <button 
+          <button
             type="button"
-            className="calendar-nav-btn" 
+            className="calendar-nav-btn"
             onClick={() => setShowMorningDigestModal(false)}
             style={{ width: '28px', height: '28px' }}
           >
@@ -258,7 +273,7 @@ export const MorningDigestPreviewModal: React.FC = () => {
         }}>
           <div><strong>From:</strong> UrbanGaon Executive Dispatcher &lt;techdesk@urbangaon.com&gt;</div>
           <div><strong>To:</strong> {previewMode === 'ALL_STAFF' ? 'All Active Employees with Pending Deliverables' : `${currentUser.name} <${currentUser.email}>`}</div>
-          <div><strong>Subject:</strong> Daily Operational Focus: {displayDate} — {currentUser.name}</div>
+          <div><strong>Subject:</strong> {timeGreeting === 'Good evening' ? 'Evening Operational Summary' : timeGreeting === 'Good afternoon' ? 'Afternoon Operational Briefing' : 'Daily Operational Focus'}: {displayDate} — {currentUser.name}</div>
           <div><strong>Automated Cron Time:</strong> 08:30 AM IST Daily (Verified via Corporate Gmail SMTP)</div>
         </div>
 
@@ -272,7 +287,7 @@ export const MorningDigestPreviewModal: React.FC = () => {
           paddingRight: '4px'
         }}>
           <p style={{ margin: 0, fontSize: '0.8rem', color: '#334155', lineHeight: 1.4 }}>
-            Good morning <strong>{currentUser.name}</strong>, here is the targeted commitment briefing for <strong>{displayDate}</strong>. 
+            {timeGreeting} <strong>{currentUser.name}</strong>, here is the targeted commitment briefing for <strong>{displayDate}</strong>.
             All deliverables are isolated strictly to active assignments with zero spam.
           </p>
 
@@ -465,9 +480,9 @@ export const MorningDigestPreviewModal: React.FC = () => {
               <span>{isSending ? 'Dispatching Live via SMTP...' : 'Dispatch Live to All Staff'}</span>
             </button>
 
-            <button 
+            <button
               type="button"
-              className="btn-secondary" 
+              className="btn-secondary"
               onClick={() => setShowMorningDigestModal(false)}
               style={{ fontSize: '0.75rem' }}
             >

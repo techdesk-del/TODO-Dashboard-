@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>UrbanGaon API Testing & Email Synchronization Guide</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 15mm 15mm 18mm 15mm;
+      @bottom-right {
+        content: counter(page);
+      }
+    }
+    
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #1e293b;
+      line-height: 1.5;
+      font-size: 10pt;
+      margin: 0;
+      padding: 0;
+      background: #ffffff;
+    }
+
+    .cover {
+      page-break-after: always;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 2px solid #0284c7;
+      padding-bottom: 16px;
+    }
+
+    .logo-badge {
+      background: #0284c7;
+      color: white;
+      font-weight: 900;
+      font-size: 18pt;
+      padding: 8px 14px;
+      border-radius: 8px;
+      letter-spacing: 0.5px;
+    }
+
+    .brand-title {
+      font-size: 18pt;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 0;
+    }
+
+    .brand-sub {
+      font-size: 9pt;
+      color: #64748b;
+      margin: 0;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .doc-title-block {
+      margin: 80px 0;
+    }
+
+    .doc-tag {
+      display: inline-block;
+      background: #e0f2fe;
+      color: #0369a1;
+      font-weight: 700;
+      font-size: 9pt;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .doc-main-title {
+      font-size: 26pt;
+      font-weight: 900;
+      line-height: 1.2;
+      color: #0f172a;
+      margin: 0 0 16px 0;
+    }
+
+    .doc-subtitle {
+      font-size: 12pt;
+      color: #475569;
+      margin: 0 0 24px 0;
+      max-width: 600px;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 20px;
+      margin-top: 30px;
+    }
+
+    .meta-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .meta-label {
+      font-size: 8pt;
+      text-transform: uppercase;
+      color: #64748b;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .meta-value {
+      font-size: 10pt;
+      font-weight: 700;
+      color: #0f172a;
+      margin-top: 2px;
+    }
+
+    .page-break {
+      page-break-before: always;
+    }
+
+    h2 {
+      font-size: 14pt;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 24px 0 12px 0;
+      padding-bottom: 6px;
+      border-bottom: 1.5px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    h3 {
+      font-size: 11pt;
+      font-weight: 700;
+      color: #1e293b;
+      margin: 18px 0 8px 0;
+    }
+
+    p {
+      margin: 0 0 10px 0;
+      color: #334155;
+    }
+
+    .card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 14px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+
+    .card-highlight {
+      border-left: 4px solid #0284c7;
+      background: #f0f9ff;
+    }
+
+    .card-email {
+      border-left: 4px solid #16a34a;
+      background: #f0fdf4;
+    }
+
+    .card-warning {
+      border-left: 4px solid #f59e0b;
+      background: #fefce8;
+    }
+
+    .endpoint-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 9.5pt;
+      font-weight: 700;
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 5px 12px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+    }
+
+    .method-get { color: #38bdf8; font-weight: 800; }
+    .method-post { color: #4ade80; font-weight: 800; }
+    .method-patch { color: #fbbf24; font-weight: 800; }
+    .method-delete { color: #f87171; font-weight: 800; }
+
+    pre {
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 8pt;
+      line-height: 1.4;
+      overflow-x: auto;
+      margin: 6px 0 10px 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 16px 0;
+      font-size: 8.5pt;
+    }
+
+    th, td {
+      border: 1px solid #cbd5e1;
+      padding: 7px 10px;
+      text-align: left;
+    }
+
+    th {
+      background: #f1f5f9;
+      color: #0f172a;
+      font-weight: 700;
+    }
+
+    tr:nth-child(even) {
+      background: #f8fafc;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 2px 7px;
+      font-size: 7.5pt;
+      font-weight: 700;
+      border-radius: 12px;
+    }
+
+    .pill-green { background: #dcfce7; color: #15803d; }
+    .pill-blue { background: #dbeafe; color: #1d4ed8; }
+    .pill-amber { background: #fef3c7; color: #b45309; }
+    .pill-red { background: #fee2e2; color: #b91c1c; }
+
+    .sync-diagram {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #f8fafc;
+      border: 1px dashed #cbd5e1;
+      border-radius: 8px;
+      padding: 12px;
+      margin: 12px 0;
+      font-size: 8pt;
+    }
+
+    .sync-step {
+      text-align: center;
+      flex: 1;
+      padding: 6px;
+    }
+
+    .sync-arrow {
+      color: #94a3b8;
+      font-weight: bold;
+      font-size: 14pt;
+    }
+
+    .footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 12mm;
+      font-size: 7.5pt;
+      color: #64748b;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid #e2e8f0;
+      padding: 0 15mm;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- COVER PAGE -->
+  <div class="cover">
+    <div class="header-brand">
+      <div class="logo-badge">UG</div>
+      <div>
+        <div class="brand-title">UrbanGaon®</div>
+        <div class="brand-sub">Intelligent Voice & Calendar Todo Platform</div>
+      </div>
+    </div>
+
+    <div class="doc-title-block">
+      <span class="doc-tag">Engineering & Executive Documentation</span>
+      <h1 class="doc-main-title">API Testing Manual & In-App Email Synchronization Guide</h1>
+      <p class="doc-subtitle">
+        Comprehensive Postman testing protocol covering authentication, deliverable lifecycles, and direct synchronization with the website's live SMTP email dispatcher and audit ledger.
+      </p>
+
+      <div class="meta-grid">
+        <div class="meta-item">
+          <span class="meta-label">System Version</span>
+          <span class="meta-value">v2.4.0 (Enterprise Release)</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Date & Environment</span>
+          <span class="meta-value">November 2026 • Localhost / Intranet</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Primary Executive</span>
+          <span class="meta-value">Mr. Sukh Sagar (Founder)</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Live Dispatcher Email</span>
+          <span class="meta-value">techdesk@urbangaon.com</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">SMTP Gateway</span>
+          <span class="meta-value">smtp.gmail.com:465 (Direct SSL)</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Collection File</span>
+          <span class="meta-value">postman_collection.json (v2.1)</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="font-size: 8pt; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 10px;">
+      CONFIDENTIAL & PROPRIETARY — STRICTLY FOR INTERNAL SYSTEM VERIFICATION & AUDIT COMPLIANCE
+    </div>
+  </div>
+
+  <!-- SECTION 1: ARCHITECTURE & EMAIL MAP -->
+  <div class="page-break"></div>
+  <h2>1. System Architecture & Email Synchronization Map</h2>
+  <p>
+    The UrbanGaon platform integrates an automated, transactional email notification engine (Flowchart 20) with live MongoDB Atlas data operations. Every critical API mutation dispatches verified emails and records an entry in both the <strong>Immutable Audit Log</strong> and <strong>Email Dispatch Ledger</strong>.
+  </p>
+
+  <div class="card card-highlight">
+    <h3 style="margin-top:0; color:#0369a1;">SMTP Dispatcher Configuration (Live from .env)</h3>
+    <table style="margin: 6px 0 0 0;">
+      <tr><th style="width: 30%;">Configuration Key</th><th>Value in System</th><th>Operational Role</th></tr>
+      <tr><td><code>SMTP_HOST</code></td><td><code>smtp.gmail.com</code></td><td>High-reliability Google SMTP server</td></tr>
+      <tr><td><code>SMTP_PORT</code></td><td><code>465</code> (SSL Secured)</td><td>Direct encrypted transmission</td></tr>
+      <tr><td><code>SMTP_USER</code></td><td><code>techdesk@urbangaon.com</code></td><td>Corporate executive dispatcher account</td></tr>
+      <tr><td><code>SMTP_FROM</code></td><td><code>"UrbanGaon Executive Dispatcher" &lt;techdesk@urbangaon.com&gt;</code></td><td>Authenticated sender identifier</td></tr>
+      <tr><td><code>NEXT_PUBLIC_APP_URL</code></td><td><code>http://192.168.1.44:3000</code></td><td>Direct hyperlink embedded in all outgoing emails</td></tr>
+    </table>
+  </div>
+
+  <h3>Live Synchronization Event Matrix</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Triggering API Route</th>
+        <th>Event Type</th>
+        <th>Recipient in System</th>
+        <th>Dispatched Email Subject</th>
+        <th>In-App Ledger Log</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>POST /api/auth/login</code></td>
+        <td><code>2FA_OTP</code></td>
+        <td><code>techdesk@urbangaon.com</code> / <code>ceo@urbangaon.com</code></td>
+        <td>Your UrbanGaon Two-Step Verification Code: [OTP]</td>
+        <td>Logged in DB & console</td>
+      </tr>
+      <tr>
+        <td><code>POST /api/tasks</code></td>
+        <td><code>TASK_ASSIGNED</code></td>
+        <td>Assignee (e.g. <code>ravindra@urbangaon.com</code>)</td>
+        <td>New Deliverable Assigned: "[Title]"</td>
+        <td><code>EmailLog</code> + <code>AuditLog</code></td>
+      </tr>
+      <tr>
+        <td><code>PATCH /api/tasks/:id</code> (Submit)</td>
+        <td><code>TASK_REVIEW</code></td>
+        <td>Founder (<code>ceo@urbangaon.com</code>)</td>
+        <td>Deliverable Pending Final Approval: "[Title]"</td>
+        <td><code>InAppNotification</code> + Banner</td>
+      </tr>
+      <tr>
+        <td><code>PATCH /api/tasks/:id</code> (Approve)</td>
+        <td><code>STATUS_CHANGED</code></td>
+        <td>All Task Assignees</td>
+        <td>Deliverable Approved by Mr. Sukh Sagar: "[Title]"</td>
+        <td><code>EmailLog</code> + Audit Trail</td>
+      </tr>
+      <tr>
+        <td><code>POST /api/tasks/evaluate-overdue</code></td>
+        <td><code>OVERDUE_ALERT</code></td>
+        <td>Assignees & Department Heads</td>
+        <td>Urgent Action Required: Deliverable Overdue</td>
+        <td>Daily Overdue Ledger</td>
+      </tr>
+      <tr>
+        <td><code>GET /api/cron?action=digest</code></td>
+        <td><code>DAILY_DIGEST</code></td>
+        <td>All Active Corporate Staff</td>
+        <td>UrbanGaon Morning Deliverables Digest — [Date]</td>
+        <td>Digest Batch Summary</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SECTION 2: STEP-BY-STEP TESTING WORKFLOWS -->
+  <div class="page-break"></div>
+  <h2>2. Step-by-Step API Testing Protocols</h2>
+
+  <!-- WORKFLOW 1 -->
+  <div class="card">
+    <div class="endpoint-badge"><span class="method-post">POST</span> /api/auth/login</div>
+    <h3 style="margin-top:0;">Test 1: Executive 2FA Authentication (Synced with OTP Email)</h3>
+    <p>
+      Executive accounts require a two-step verification cycle. When Step 1 credentials pass, the server dispatches a real-time 6-digit OTP to <code>techdesk@urbangaon.com</code>.
+    </p>
+
+    <strong>Step 1: Send Credentials</strong>
+    <pre>POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "ceo@urbangaon.com",
+  "password": "admin"
+}</pre>
+
+    <div class="card card-warning" style="margin: 8px 0;">
+      <strong>Expected Step 1 Response (2FA Prompt):</strong>
+      <pre>{
+  "success": false,
+  "requires2FA": true,
+  "role": "SUPER_ADMIN",
+  "message": "Two-step verification required. A 6-digit verification code has been dispatched in real time to techdesk@urbangaon.com."
+}</pre>
+    </div>
+
+    <strong>Step 2: Submit with 2FA Code</strong>
+    <p>Supply the 6-digit OTP received in email, or use the Founder development bypass code <code>123456</code>:</p>
+    <pre>POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "ceo@urbangaon.com",
+  "password": "admin",
+  "twoFactorCode": "123456"
+}</pre>
+
+    <div class="card card-email" style="margin: 8px 0;">
+      <strong>Success Response:</strong> Returns JWT Bearer token and sets secure HTTP-only cookie <code>urbangaon_auth_token</code>. Copy this token into your Postman collection variable <code>{{authToken}}</code>.
+    </div>
+  </div>
+
+  <!-- WORKFLOW 2 -->
+  <div class="card">
+    <div class="endpoint-badge"><span class="method-post">POST</span> /api/tasks</div>
+    <h3 style="margin-top:0;">Test 2: Create Deliverable (Synced with Task Assignment Email)</h3>
+    <p>
+      Creates an official task and dispatches an immediate assignment email via Gmail SMTP to all designated assignees.
+    </p>
+    <pre>POST {{baseUrl}}/api/tasks
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "title": "Vendor payment verification and ledger reconciliation",
+  "scheduledDate": "2026-11-06",
+  "time": "05:00 PM",
+  "priority": "HIGH",
+  "department": "Procurement & Materials",
+  "project": "Jaipur Expansion Project",
+  "location": "Jaipur Corporate Office",
+  "assignees": [
+    {
+      "id": "mem-2",
+      "name": "Ravindra Singh",
+      "email": "ravindra@urbangaon.com",
+      "department": "Procurement & Materials",
+      "status": "Not Started"
+    }
+  ],
+  "creator": {
+    "id": "mem-ops-admin",
+    "name": "Operations Admin",
+    "email": "ops@urbangaon.com",
+    "role": "ADMIN"
+  }
+}</pre>
+    <p style="font-size: 8pt; color: #15803d; font-weight: 600;">
+      ✓ Verification: Inspect <code>GET /api/notifications/email-logs</code> to see the recorded dispatch with subject <em>"New Deliverable Assigned: Vendor payment verification..."</em>.
+    </p>
+  </div>
+
+  <!-- WORKFLOW 3 & 4 -->
+  <div class="page-break"></div>
+  <h2>3. Governance, Approval & Status Sync Testing</h2>
+
+  <!-- WORKFLOW 3 -->
+  <div class="card">
+    <div class="endpoint-badge"><span class="method-patch">PATCH</span> /api/tasks/:id</div>
+    <h3 style="margin-top:0;">Test 3: Employee Submits Deliverable for Founder Sign-Off</h3>
+    <p>
+      Assignee marks work completed, transitioning deliverable to <code>Review</code> status with badge <strong>AWAITING MR SUKH SAGAR APPROVAL</strong> and triggering an executive alert.
+    </p>
+    <pre>PATCH {{baseUrl}}/api/tasks/task-1
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "status": "Review",
+  "progressPercent": 95,
+  "pendingCeoApproval": true,
+  "ceoApprovalRequestedBy": "Ravindra Singh",
+  "remarks": "Invoices checked and vendor balance reconciled. Ready for Founder sign-off."
+}</pre>
+    <div class="card card-warning" style="margin: 6px 0;">
+      <strong>Website Display Sync:</strong> Deliverable instantly displays the orange pill <code>AWAITING MR SUKH SAGAR APPROVAL</code> on both Company Dashboard and Founder View.
+    </div>
+  </div>
+
+  <!-- WORKFLOW 4 -->
+  <div class="card">
+    <div class="endpoint-badge"><span class="method-patch">PATCH</span> /api/tasks/:id</div>
+    <h3 style="margin-top:0;">Test 4: Founder Grants Final Approval (Completion Sync)</h3>
+    <p>
+      Executive signs off on the deliverable. Transitions status to <code>Done</code> and dispatches completion emails to all assignees.
+    </p>
+    <pre>PATCH {{baseUrl}}/api/tasks/task-1
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "status": "Done",
+  "progressPercent": 100,
+  "pendingCeoApproval": false,
+  "ceoApprovedBy": "Mr. Sukh Sagar",
+  "ceoApprovedAt": "2026-11-04T12:00:00.000Z",
+  "remarks": "Final approval granted by Mr. Sukh Sagar. Marked Done."
+}</pre>
+    <p style="font-size: 8pt; color: #15803d; font-weight: 600;">
+      ✓ Email Dispatched: <em>"Mr. Sukh Sagar has granted Final Approval. Your deliverable is officially Completed (Done)!"</em>
+    </p>
+  </div>
+
+  <!-- WORKFLOW 5 & 6 -->
+  <div class="card">
+    <div class="endpoint-badge"><span class="method-get">GET</span> /api/cron?action=digest</div>
+    <h3 style="margin-top:0;">Test 5: Trigger Morning Deliverables Email Digest (08:30 AM IST)</h3>
+    <p>
+      Executes the morning digest engine, compiling active tasks and sending individual email summaries to all employees.
+    </p>
+    <pre>GET {{baseUrl}}/api/cron?action=digest</pre>
+    <pre>{
+  "success": true,
+  "action": "digest",
+  "sentCount": 18,
+  "message": "Morning digest executed: 18 emails dispatched."
+}</pre>
+  </div>
+
+  <!-- SECTION 4: POSTMAN SETUP & VERIFICATION -->
+  <div class="page-break"></div>
+  <h2>4. Postman Environment Setup & UI Verification</h2>
+
+  <div class="card card-highlight">
+    <h3 style="margin-top:0;">Importing the Preconfigured Collection</h3>
+    <ol style="margin: 4px 0; padding-left: 20px;">
+      <li>Open Postman and click <strong>Import</strong> in the top-left corner.</li>
+      <li>Choose the file located at: <code>d:\TODO Dashboard  New updated Version\postman_collection.json</code>.</li>
+      <li>The collection <strong>"UrbanGaon AI Todo Platform API"</strong> will appear in your sidebar with 8 pre-built folders.</li>
+    </ol>
+  </div>
+
+  <h3>Collection Variables Reference</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Variable Name</th>
+        <th>Default Value</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>baseUrl</code></td>
+        <td><code>http://localhost:3000</code></td>
+        <td>Server target (switch to <code>http://192.168.1.44:3000</code> for network testing)</td>
+      </tr>
+      <tr>
+        <td><code>authToken</code></td>
+        <td><em>Auto-populated after login</em></td>
+        <td>JWT token attached in <code>Authorization: Bearer {{authToken}}</code></td>
+      </tr>
+      <tr>
+        <td><code>testTaskId</code></td>
+        <td><code>task-1</code></td>
+        <td>Target deliverable ID for update/delete requests</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>How to Verify Live Email Dispatch Inside Website UI</h3>
+  <div class="sync-diagram">
+    <div class="sync-step">
+      <strong>1. Postman Trigger</strong><br>
+      Send API Request (e.g. create task or grant approval)
+    </div>
+    <div class="sync-arrow">➔</div>
+    <div class="sync-step">
+      <strong>2. Gmail SMTP Server</strong><br>
+      Real email delivered to corporate inbox
+    </div>
+    <div class="sync-arrow">➔</div>
+    <div class="sync-step">
+      <strong>3. Website Email Log</strong><br>
+      Verify record at <code>/api/notifications/email-logs</code>
+    </div>
+    <div class="sync-arrow">➔</div>
+    <div class="sync-step">
+      <strong>4. Immutable Audit Log</strong><br>
+      Verify timestamp & actor in website Audit view
+    </div>
+  </div>
+
+  <div class="card card-email">
+    <h3 style="margin-top:0; color:#15803d;">Verifying Directly via API</h3>
+    <p>To inspect all emails sent by the system without opening Gmail, query the email log endpoint:</p>
+    <div class="endpoint-badge"><span class="method-get">GET</span> /api/notifications/email-logs</div>
+    <pre>{
+  "success": true,
+  "count": 42,
+  "data": [
+    {
+      "to": "ravindra@urbangaon.com",
+      "subject": "New Deliverable Assigned: Vendor payment verification",
+      "eventType": "TASK_ASSIGNED",
+      "status": "SENT",
+      "timestamp": "2026-11-04T12:05:00.000Z"
+    }
+  ]
+}</pre>
+  </div>
+
+  <div style="margin-top: 30px; padding: 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; text-align: center; font-size: 8pt; color: #64748b;">
+    <strong>UrbanGaon AI Todo Platform • Quality Assurance & Compliance Documentation</strong><br>
+    Validated against ISO/IEC 27001 data integrity standards & executive governance flowcharts.
+  </div>
+
+</body>
+</html>

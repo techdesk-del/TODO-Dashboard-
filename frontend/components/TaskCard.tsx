@@ -470,6 +470,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
 
   // Standard Task Card (Slide 4)
   return (
+
+
+
     <>
       <div className={`task-card ${isActuallyJustAdded ? 'just-added' : ''} ${isOverdue ? 'task-card-overdue' : ''}`}>
         {/* Top Header Row: Single-line view showing Task Title, Scheduled Date, Due Date, Status, and Dropdown toggle */}
@@ -489,6 +492,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
             width: '100%',
             padding: '2px 0'
           }}
+
+
           title={isExpanded ? 'Click to collapse options' : 'Click to expand options & edit details'}
         >
           {/* Left: Checkbox, Sequence, Title, Just Added */}
@@ -501,6 +506,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
               flex: '1 1 240px',
               minWidth: 'min(240px, 100%)'
             }}
+
+
           >
             <input
               type="checkbox"
@@ -518,6 +525,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
               </span>
             )}
 
+
+
             {/* Task Name / Title */}
             <span
               className="task-title-text"
@@ -530,6 +539,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                 minWidth: 0,
                 flex: '1 1 auto'
               }}
+
               title={task.title}
             >
               {task.title}
@@ -539,6 +549,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
               <span className="just-added-badge" style={{ flexShrink: 0 }}>JUST ADDED</span>
             )}
           </div>
+
 
           {/* Right: Dates, Status Pill, Dropdown Toggle */}
           <div
@@ -552,6 +563,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
               maxWidth: '100%'
             }}
           >
+
             {/* Target Deadline / Due Date */}
             <span
               style={{
@@ -567,6 +579,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                 gap: '4px',
                 whiteSpace: 'nowrap'
               }}
+
+
               title={`Target Deadline: ${task.dueDate || task.scheduledDate} ${task.time || ''}`}
             >
               <CalendarClock size={12} color={isOverdue ? '#e11d48' : (dueDateInfo.isToday ? '#2563eb' : (dueDateInfo.isTomorrow ? '#16a34a' : '#64748b'))} />
@@ -635,6 +649,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                         whiteSpace: 'nowrap',
                         boxShadow: '0 1px 3px rgba(21, 128, 61, 0.2)'
                       }}
+
                       title="Grant Founder Final Approval to mark this deliverable Completed (Done)"
                     >
                       <Check size={13} />
