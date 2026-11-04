@@ -91,7 +91,7 @@ export function computeMultiAssigneeStatus(task: {
       progressPercent: completedCount > 0 ? progressPercent : 95,
       completedCount,
       totalCount,
-      progressText: `${completedCount} of ${totalCount} submitted (Awaiting CEO Final Approval)`,
+      progressText: `${completedCount} of ${totalCount} submitted (Awaiting Mr. Sukh Sagar Approval)`,
     };
   }
 

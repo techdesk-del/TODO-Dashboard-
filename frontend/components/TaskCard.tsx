@@ -146,13 +146,13 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
   const [holdReasonInput, setHoldReasonInput] = useState('');
   const [showEscalateModal, setShowEscalateModal] = useState(false);
   const [escalateReasonInput, setEscalateReasonInput] = useState('');
-  const [escalateTargetLeader, setEscalateTargetLeader] = useState('Mr. Sukh Sagar Singh Bhati (Founder)');
+  const [escalateTargetLeader, setEscalateTargetLeader] = useState('Mr. Sukh Sagar');
   const [showDelayReasonModal, setShowDelayReasonModal] = useState(false);
   const [delayReasonInput, setDelayReasonInput] = useState('');
 
   // Escalation Target Leaders: Strictly CEO Mr. Sukh Sagar Singh Bhati and Talent Team members
   const escalationLeaders = useMemo(() => {
-    const list: string[] = ['Mr. Sukh Sagar Singh Bhati (Founder)'];
+    const list: string[] = ['Mr. Sukh Sagar'];
 
     // Add active Talent team members dynamically from roster/members
     const talentMembers = activeMembers.filter(m =>
@@ -190,7 +190,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
         origin: { y: 0.7 }
       });
       if (isCeo) {
-        approveTaskByCeo(task.id, 'Approved & Completed directly by Founder Mr. Sukh Sagar Singh Bhati');
+        approveTaskByCeo(task.id, 'Approved & Completed directly by Mr. Sukh Sagar');
       } else {
         const myAssignee = task.assignees.find(a => a.id === currentUser.id || a.email?.toLowerCase() === currentUser.email?.toLowerCase());
         completeTask(task.id, myAssignee?.id);
@@ -605,9 +605,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                     alignItems: 'center',
                     gap: '4px'
                   }}
-                  title={task.ceoApprovalRequestedBy ? `Submitted by ${task.ceoApprovalRequestedBy} for Founder Final Approval` : 'Awaiting Founder Final Approval before completion'}
+                  title={task.ceoApprovalRequestedBy ? `Submitted by ${task.ceoApprovalRequestedBy} for Mr. Sukh Sagar Approval` : 'Awaiting Mr. Sukh Sagar Approval before completion'}
                 >
-                  <span> AWAITING FOUNDER APPROVAL</span>
+                  <span> AWAITING MR SUKH SAGAR APPROVAL</span>
                 </span>
                 {isCeo && (
                   <>
@@ -783,7 +783,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                   </div>
                   <div>
                     <div style={{ fontWeight: 800, fontSize: '0.8125rem', color: '#92400e' }}>
-                      Pending Final Approval from Founder Mr. Sukh Sagar Singh Bhati
+                      Pending Final Approval from Mr. Sukh Sagar
                     </div>
                     <div style={{ fontSize: '0.72rem', color: '#b45309', marginTop: '1px' }}>
                       {task.ceoApprovalRequestedBy ? `Submitted by ${task.ceoApprovalRequestedBy} • ` : ''}Executive approval required prior to marking deliverable completed.
@@ -872,7 +872,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                   fontWeight: 600
                 }}
               >
-                <span>✓ Final Approval granted by {task.ceoApprovedBy || 'Mr. Sukh Sagar Singh Bhati (Founder)'}</span>
+                <span>✓ Final Approval granted by {task.ceoApprovedBy || 'Mr. Sukh Sagar'}</span>
               </div>
             )}
 
@@ -1539,12 +1539,12 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                   onChange={e => setEscalateTargetLeader(e.target.value)}
                 >
                   <optgroup label="Executive Leadership">
-                    <option value="Mr. Sukh Sagar Singh Bhati (Founder)">
-                      Mr. Sukh Sagar Singh Bhati (Founder)
+                    <option value="Mr. Sukh Sagar">
+                      Mr. Sukh Sagar
                     </option>
                   </optgroup>
                   <optgroup label="Talent & People Operations">
-                    {escalationLeaders.filter(l => l !== 'Mr. Sukh Sagar Singh Bhati (Founder)').map(leader => (
+                    {escalationLeaders.filter(l => l !== 'Mr. Sukh Sagar').map(leader => (
                       <option key={leader} value={leader}>{leader}</option>
                     ))}
                   </optgroup>

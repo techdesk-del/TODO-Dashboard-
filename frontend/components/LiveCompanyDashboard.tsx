@@ -883,7 +883,7 @@ export const LiveCompanyDashboard: React.FC = () => {
 
             {/* Rows Per Page Selector */}
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Rows:</span>
+              <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Rows per page:</span>
               <select
                 value={pageSize}
                 onChange={(e) => {

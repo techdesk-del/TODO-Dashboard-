@@ -22,7 +22,7 @@ import { AuthModal } from '@/components/AuthModal';
 import { LiveCompanyDashboard } from '@/components/LiveCompanyDashboard';
 import { formatDateTitle, getTodayStr, getTomorrowStr, formatDateDayMonth, isTaskForDate } from '@/shared/lib/dateUtils';
 import { isCeoUser, isStrictCeo, canAccessAdminHr, canAccessWorkflows, canViewAuditTrail } from '@/shared/lib/rosterData';
-import { Check, Calendar as CalendarIcon, Sparkles, Globe, CalendarDays, AlertTriangle, RotateCcw, Plus, Eye, EyeOff, Layers } from 'lucide-react';
+import { Check, Calendar as CalendarIcon, Sparkles, Globe, CalendarDays, AlertTriangle, RotateCcw, Plus, Eye, EyeOff, Layers, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { computeMultiAssigneeStatus } from '@/shared/lib/multiAssignee';
 
 export default function Home() {
@@ -53,6 +53,15 @@ export default function Home() {
   const [ceoEmployeeFilter, setCeoEmployeeFilter] = useState<string>('ALL');
   const [hideCompleted, setHideCompleted] = useState<boolean>(true);
   const [isMounted, setIsMounted] = useState(false);
+
+  // Enterprise Pagination States (SDE-3 / CEO Level)
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
+
+  // Auto-reset to page 1 whenever filters, scope, or date changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [viewScope, selectedDate, ceoEmployeeFilter, assigneeFilter, hideCompleted, pageSize]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -160,6 +169,43 @@ export default function Home() {
       return a.id.localeCompare(b.id);
     });
   }, [scopedList, hideCompleted]);
+
+  // Enterprise SDE-3 / CEO Pagination Calculations
+  const totalTasksCount = displayTasks.length;
+  const totalPages = Math.max(1, Math.ceil(totalTasksCount / pageSize));
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const startIndex = (safeCurrentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalTasksCount);
+
+  const paginatedTasks = useMemo(() => {
+    return displayTasks.slice(startIndex, endIndex);
+  }, [displayTasks, startIndex, endIndex]);
+
+  // Sliding window pagination helper (CEO / Enterprise standard)
+  const getPaginationItems = (current: number, total: number): (number | '...')[] => {
+    if (total <= 7) {
+      return Array.from({ length: total }, (_, i) => i + 1);
+    }
+    const items: (number | '...')[] = [];
+    if (current <= 4) {
+      for (let i = 1; i <= 5; i++) items.push(i);
+      items.push('...');
+      items.push(total);
+    } else if (current >= total - 3) {
+      items.push(1);
+      items.push('...');
+      for (let i = total - 4; i <= total; i++) items.push(i);
+    } else {
+      items.push(1);
+      items.push('...');
+      items.push(current - 1);
+      items.push(current);
+      items.push(current + 1);
+      items.push('...');
+      items.push(total);
+    }
+    return items;
+  };
 
 
 
@@ -319,11 +365,11 @@ export default function Home() {
                   <div className="workspace-date-sub">
                     {isCeo
                       ? (viewScope === 'all'
-                        ? `Worldwide Real-Time Ledger • ${visibleTasks.length} Total Deliverables Across All Employees`
-                        : `Filtered from Calendar • ${dateTasks.length} Tasks Scheduled for this Date`)
+                        ? `Worldwide Real-Time Ledger • ${visibleTasks.length} Total Deliverables Across All Employees${totalPages > 1 ? ` • Page ${safeCurrentPage} of ${totalPages}` : ''}`
+                        : `Filtered from Calendar • ${dateTasks.length} Tasks Scheduled for this Date${totalPages > 1 ? ` • Page ${safeCurrentPage} of ${totalPages}` : ''}`)
                       : (viewScope === 'all'
-                        ? `Private Employee Workspace • Only displaying tasks created by or assigned to ${currentUser.name}`
-                        : `Private Schedule • ${dateTasks.length} of your tasks scheduled for this date`)}
+                        ? `Private Employee Workspace • Only displaying tasks created by or assigned to ${currentUser.name}${totalPages > 1 ? ` • Page ${safeCurrentPage} of ${totalPages}` : ''}`
+                        : `Private Schedule • ${dateTasks.length} of your tasks scheduled for this date${totalPages > 1 ? ` • Page ${safeCurrentPage} of ${totalPages}` : ''}`)}
                   </div>
                 </div>
 
@@ -542,9 +588,10 @@ export default function Home() {
 
               {/* Task Cards List (Slide 4, 7, 8) */}
               <div className="task-cards-list">
-                {displayTasks.map((task, idx) => (
-                  <TaskCard key={`${task.id}-${idx}`} task={task} index={idx + 1} />
-                ))}
+                {paginatedTasks.map((task, idx) => {
+                  const globalIdx = startIndex + idx + 1;
+                  return <TaskCard key={`${task.id}-${globalIdx}`} task={task} index={globalIdx} />;
+                })}
 
                 {displayTasks.length === 0 && (
                   completedCount > 0 && hideCompleted ? (
@@ -609,6 +656,191 @@ export default function Home() {
                   )
                 )}
               </div>
+
+              {/* Enterprise SDE-3 / CEO Pagination Control Bar */}
+              {totalTasksCount > 0 && (
+                <div style={{
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  padding: '0.85rem 1.25rem',
+                  marginTop: '0.75rem',
+                  marginBottom: '1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '0.75rem',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+                }}>
+                  {/* Left: Range and total counter + Rows Per Page */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                      Showing <strong style={{ color: '#0f172a' }}>{startIndex + 1}</strong>–<strong style={{ color: '#0f172a' }}>{endIndex}</strong> of <strong style={{ color: '#0f172a' }}>{totalTasksCount}</strong> deliverables
+                    </span>
+
+                    {/* Rows Per Page Selector */}
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Rows per page:</span>
+                      <select
+                        value={pageSize}
+                        onChange={(e) => {
+                          setPageSize(Number(e.target.value));
+                          setCurrentPage(1);
+                        }}
+                        style={{
+                          fontSize: '0.75rem',
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          border: '1px solid #cbd5e1',
+                          background: '#ffffff',
+                          color: '#0f172a',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          outline: 'none'
+                        }}
+                      >
+                        <option value={10}>10</option>
+                        <option value={25}>25</option>
+                        <option value={50}>50</option>
+                        <option value={100}>100</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Right: Page Navigation Controls */}
+                  {totalPages > 1 && (
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                      {/* First Page */}
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage(1)}
+                        disabled={safeCurrentPage === 1}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '6px',
+                          border: '1px solid #e2e8f0',
+                          background: safeCurrentPage === 1 ? '#f8fafc' : '#ffffff',
+                          color: safeCurrentPage === 1 ? '#cbd5e1' : '#334155',
+                          cursor: safeCurrentPage === 1 ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                        title="First Page"
+                      >
+                        <ChevronsLeft size={14} />
+                      </button>
+
+                      {/* Previous Page */}
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={safeCurrentPage === 1}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '6px',
+                          border: '1px solid #e2e8f0',
+                          background: safeCurrentPage === 1 ? '#f8fafc' : '#ffffff',
+                          color: safeCurrentPage === 1 ? '#cbd5e1' : '#334155',
+                          cursor: safeCurrentPage === 1 ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                        title="Previous Page"
+                      >
+                        <ChevronLeft size={14} />
+                      </button>
+
+                      {/* Page Number Pills */}
+                      {getPaginationItems(safeCurrentPage, totalPages).map((item, pIdx) => {
+                        if (item === '...') {
+                          return (
+                            <span key={`dots-${pIdx}`} style={{ padding: '0 4px', color: '#94a3b8', fontSize: '0.8rem', userSelect: 'none' }}>
+                              …
+                            </span>
+                          );
+                        }
+                        const isSelected = item === safeCurrentPage;
+                        return (
+                          <button
+                            key={`page-${item}`}
+                            type="button"
+                            onClick={() => setCurrentPage(item as number)}
+                            style={{
+                              minWidth: '32px',
+                              height: '32px',
+                              padding: '0 6px',
+                              borderRadius: '6px',
+                              border: isSelected ? '1px solid #2563eb' : '1px solid #e2e8f0',
+                              background: isSelected ? '#2563eb' : '#ffffff',
+                              color: isSelected ? '#ffffff' : '#334155',
+                              fontSize: '0.78rem',
+                              fontWeight: isSelected ? 800 : 600,
+                              cursor: 'pointer',
+                              boxShadow: isSelected ? '0 1px 3px rgba(37, 99, 235, 0.3)' : 'none',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            {item}
+                          </button>
+                        );
+                      })}
+
+                      {/* Next Page */}
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={safeCurrentPage === totalPages}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '6px',
+                          border: '1px solid #e2e8f0',
+                          background: safeCurrentPage === totalPages ? '#f8fafc' : '#ffffff',
+                          color: safeCurrentPage === totalPages ? '#cbd5e1' : '#334155',
+                          cursor: safeCurrentPage === totalPages ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                        title="Next Page"
+                      >
+                        <ChevronRight size={14} />
+                      </button>
+
+                      {/* Last Page */}
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage(totalPages)}
+                        disabled={safeCurrentPage === totalPages}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '6px',
+                          border: '1px solid #e2e8f0',
+                          background: safeCurrentPage === totalPages ? '#f8fafc' : '#ffffff',
+                          color: safeCurrentPage === totalPages ? '#cbd5e1' : '#334155',
+                          cursor: safeCurrentPage === totalPages ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                        title="Last Page"
+                      >
+                        <ChevronsRight size={14} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Dual-Mode Task Composer (Slide 4, 5, 6) - Hidden for CEO */}
               {!isCeoMonitoring && <VoiceInputBar />}

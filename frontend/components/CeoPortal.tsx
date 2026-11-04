@@ -2188,7 +2188,7 @@ export const CeoPortal: React.FC = () => {
                     </div>
                     <div style={{ fontSize: '0.72rem', color: '#b45309', marginTop: '2px' }}>
                       {inspectingTask.ceoApprovalRequestedBy ? `Submitted by ${inspectingTask.ceoApprovalRequestedBy} • ` : ''}
-                      Deliverable completed by staff. Executive approval from Mr. Sukh Sagar Singh Bhati required.
+                      Deliverable completed by staff. Executive approval from Mr. Sukh Sagar required.
                     </div>
                   </div>
 

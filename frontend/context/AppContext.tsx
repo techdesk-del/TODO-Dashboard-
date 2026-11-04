@@ -2797,7 +2797,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       fieldChanged: 'Task Deleted',
       oldValue: targetTask?.title || taskId,
       newValue: 'Permanently Deleted from Ledger',
-      notes: `Deliverable permanently deleted by Founder Mr. Sukh Sagar Singh Bhati`
+      notes: `Deliverable permanently deleted by Mr. Sukh Sagar`
     });
 
     setBannerNotification({
@@ -2833,21 +2833,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         pendingCeoApproval: true,
         ceoApprovalRequestedAt: new Date().toISOString(),
         ceoApprovalRequestedBy: currentUser.name,
-      }, `Deliverable submitted by ${currentUser.name}. Dispatched to Founder Mr. Sukh Sagar Singh Bhati for Final Approval before completion.`);
+      }, `Deliverable submitted by ${currentUser.name}. Dispatched to Mr. Sukh Sagar for Final Approval before completion.`);
 
       logAudit({
         taskId,
         taskTitle: task.title,
         action: 'APPROVAL',
-        fieldChanged: 'Task Submitted for Founder Final Approval',
+        fieldChanged: 'Task Submitted for Final Approval',
         oldValue: task.status,
-        newValue: 'Review (Pending CEO Final Approval)',
-        notes: `Deliverable submitted by ${currentUser.name}. Awaiting Final Approval from Founder Mr. Sukh Sagar Singh Bhati before marking Done.`
+        newValue: 'Review (Pending Final Approval)',
+        notes: `Deliverable submitted by ${currentUser.name}. Awaiting Final Approval from Mr. Sukh Sagar before marking Done.`
       });
 
       setBannerNotification({
-        message: `Deliverable submitted! Dispatched to Founder Mr. Sukh Sagar Singh Bhati for Final Approval before completion.`,
-        badge: '⏳ Sent for Founder Approval'
+        message: `Deliverable submitted! Dispatched to Mr. Sukh Sagar for Final Approval before completion.`,
+        badge: '⏳ Sent for Approval'
       });
 
       // Send instant real-time notification to Sukh Sagar Sir
@@ -2856,7 +2856,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           eventType: 'TASK_ASSIGNED',
-          recipients: [{ email: 'ceo@urbangaon.com', name: 'Mr. Sukh Sagar Singh Bhati' }],
+          recipients: [{ email: 'ceo@urbangaon.com', name: 'Mr. Sukh Sagar' }],
           title: `Deliverable Pending Final Approval: "${task.title}"`,
           message: `${currentUser.name} has submitted deliverable "${task.title}" for your Final Approval before completion.`,
           taskId: task.id,
@@ -2896,16 +2896,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       overdueDays: 0,
       ceoApprovedAt: new Date().toISOString(),
       ceoApprovedBy: currentUser.name,
-    }, 'Deliverable granted Final Approval and marked Completed by Founder Mr. Sukh Sagar Singh Bhati');
+    }, 'Deliverable granted Final Approval and marked Completed by Mr. Sukh Sagar');
 
     logAudit({
       taskId,
       taskTitle: task.title,
       action: 'STATUS_CHANGE',
-      fieldChanged: 'CEO Final Approval & Completion',
+      fieldChanged: 'Final Approval & Completion',
       oldValue: task.status,
       newValue: 'Done (100% Completed)',
-      notes: `Granted Final Approval by Founder Mr. Sukh Sagar Singh Bhati.`
+      notes: `Granted Final Approval by Mr. Sukh Sagar.`
     });
 
     setBannerNotification({
@@ -2945,7 +2945,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       fieldChanged: 'Founder Final Approval Granted',
       oldValue: task.status,
       newValue: 'Done (100% Completed)',
-      notes: `Founder Mr. Sukh Sagar Singh Bhati granted Final Approval for deliverable completion.${approvalNote ? ` Notes: "${approvalNote}"` : ''}`
+      notes: `Mr. Sukh Sagar granted Final Approval for deliverable completion.${approvalNote ? ` Notes: "${approvalNote}"` : ''}`
     });
 
     setBannerNotification({
@@ -2962,12 +2962,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           eventType: 'REASON_STATUS_CHANGED',
           recipients: task.assignees.map(a => ({ email: a.email, name: a.name })),
           title: `Deliverable Approved by Founder: "${task.title}"`,
-          message: `Mr. Sukh Sagar Singh Bhati has granted Final Approval. Your deliverable is officially Completed (Done)! ${approvalNote ? `Remarks: "${approvalNote}"` : ''}`,
+          message: `Mr. Sukh Sagar has granted Final Approval. Your deliverable is officially Completed (Done)! ${approvalNote ? `Remarks: "${approvalNote}"` : ''}`,
           taskId,
           taskTitle: task.title,
           metadata: {
             decision: 'APPROVED',
-            reviewerName: 'Mr. Sukh Sagar Singh Bhati (Founder)',
+            reviewerName: 'Mr. Sukh Sagar',
             notes: approvalNote || 'Final Approval Granted',
           }
         })
@@ -3001,7 +3001,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       fieldChanged: 'Founder Requested Revision on Deliverable',
       oldValue: task.status,
       newValue: 'In Progress (Returned for Revision)',
-      notes: `Founder Mr. Sukh Sagar Singh Bhati requested revisions before completion: "${rejectionReason}".`
+      notes: `Mr. Sukh Sagar requested revisions before completion: "${rejectionReason}".`
     });
 
     setBannerNotification({
@@ -3018,12 +3018,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           eventType: 'REASON_STATUS_CHANGED',
           recipients: task.assignees.map(a => ({ email: a.email, name: a.name })),
           title: `Revision Requested by Founder: "${task.title}"`,
-          message: `Founder Mr. Sukh Sagar Singh Bhati returned your deliverable with feedback: "${rejectionReason}". Please update and resubmit.`,
+          message: `Mr. Sukh Sagar returned your deliverable with feedback: "${rejectionReason}". Please update and resubmit.`,
           taskId,
           taskTitle: task.title,
           metadata: {
             decision: 'REJECTED',
-            reviewerName: 'Mr. Sukh Sagar Singh Bhati (Founder)',
+            reviewerName: 'Mr. Sukh Sagar',
             notes: rejectionReason,
           }
         })
