@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { Task, TeamMember, AuditLogEntry, SystemConfig, Role, TaskStatus, InAppNotification } from '@/types';
 import { INITIAL_TASKS, INITIAL_MEMBERS, INITIAL_AUDIT_LOGS, INITIAL_SYSTEM_CONFIG } from '@/shared/lib/mockData';
 import { getTodayStr } from '@/shared/lib/dateUtils';
-import { isCeoUser, isStrictCeo, canAccessAdminHr, canAccessWorkflows, canViewAuditTrail } from '@/shared/lib/rosterData';
+import { isCeoUser, isStrictCeo, canAccessAdminHr, canAccessWorkflows, canViewAuditTrail, getCanonicalDepartment, getCanonicalProject } from '@/shared/lib/rosterData';
 import { computeMultiAssigneeStatus } from '@/shared/lib/multiAssignee';
 import * as XLSX from 'xlsx';
 
@@ -1105,6 +1105,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const createdDate = newTaskData.scheduledDate || selectedDate;
+    const firstAssignee = newTaskData.assignees?.[0];
+    const targetMember = firstAssignee || currentUser;
+    const resolvedDept = getCanonicalDepartment(newTaskData.department || targetMember);
+    const resolvedProject = (newTaskData.project && newTaskData.project !== 'General Operations')
+      ? newTaskData.project
+      : getCanonicalProject(resolvedDept);
+
     const task: Task = {
       id: newTaskData.id || `task-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       title: newTaskData.title || 'New Untitled Task',
@@ -1116,8 +1123,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: newTaskData.status || 'Not Started',
       progressPercent: 0,
       isJustAdded: true,
-      department: newTaskData.department || currentUser.department,
-      project: newTaskData.project || 'General Operations',
+      department: resolvedDept,
+      project: resolvedProject,
       location: newTaskData.location || 'Jaipur',
       notes: newTaskData.notes || '',
       pastDueReason: newTaskData.pastDueReason || '',
@@ -1125,6 +1132,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       assignees: (newTaskData.assignees && newTaskData.assignees.length > 0)
         ? newTaskData.assignees.map(a => ({
           ...a,
+          department: a.department ? getCanonicalDepartment(a.department) : resolvedDept,
           status: a.status || 'Not Started',
         }))
         : [
@@ -1132,7 +1140,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             id: currentUser.id,
             name: currentUser.name,
             email: currentUser.email,
-            department: currentUser.department,
+            department: resolvedDept,
             designation: currentUser.designation,
             avatar: currentUser.avatar,
             status: 'Not Started',
@@ -1239,6 +1247,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Flowchart 21: If reason is recorded, clear pendingNoReason auto-flag (Keep Overdue flag only)
     if (updates.delayReason && updates.delayReason.trim().length > 0) {
       effectiveUpdates.isPendingNoReason = false;
+    }
+
+    // Role-based Department & Project real-time synchronization
+    if (updates.department) {
+      effectiveUpdates.department = getCanonicalDepartment(updates.department);
+      if (!updates.project || updates.project === 'General Operations') {
+        effectiveUpdates.project = getCanonicalProject(effectiveUpdates.department);
+      }
+    } else if (updates.assignees && updates.assignees.length > 0) {
+      const canonicalFromAssignee = getCanonicalDepartment(updates.assignees[0]);
+      if (canonicalFromAssignee && canonicalFromAssignee !== 'General Operations') {
+        effectiveUpdates.department = canonicalFromAssignee;
+        if (!updates.project || updates.project === 'General Operations') {
+          effectiveUpdates.project = getCanonicalProject(canonicalFromAssignee);
+        }
+      }
     }
     // If deliverable is rescheduled, keep dueDate in sync if not explicitly provided, and clear overdue flags if >= today
     if (updates.scheduledDate) {

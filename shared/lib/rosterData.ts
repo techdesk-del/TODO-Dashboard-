@@ -337,5 +337,227 @@ export function canViewAuditTrail(user?: { id?: string; email?: string; designat
   return isStrictCeo(user);
 }
 
+/**
+ * Canonical Master Departments recognized across the entire UrbanGaon enterprise system.
+ */
+export const CANONICAL_DEPARTMENTS = [
+  'Civil',
+  'Sales',
+  'AI & IT',
+  'Talent',
+  'Purchase',
+  'Legal',
+  'Accounts',
+  'Front Desk'
+] as const;
+
+export type CanonicalDepartment = typeof CANONICAL_DEPARTMENTS[number];
+
+/**
+ * Enterprise deterministic department resolver:
+ * Analyzes any team member object, user object, email, id, role, or raw department string
+ * and maps it in real time to the official Master Department.
+ */
+export function getCanonicalDepartment(
+  input?: { department?: string; designation?: string; role?: string; email?: string; id?: string; name?: string } | string | null
+): string {
+  if (!input) return 'General Operations';
+
+  let rawDept = '';
+  let rawDesig = '';
+  let rawEmail = '';
+  let rawId = '';
+  let rawRole = '';
+
+  if (typeof input === 'string') {
+    rawDept = input.toLowerCase().trim();
+  } else {
+    rawDept = (input.department || '').toLowerCase().trim();
+    rawDesig = (input.designation || '').toLowerCase().trim();
+    rawEmail = (input.email || '').toLowerCase().trim();
+    rawId = (input.id || '').trim();
+    rawRole = (input.role || '').toUpperCase().trim();
+  }
+
+  // 1. Legal & Land Documentation (Legal Team, Counsel, Compliance, Contracts, Shyamsunder Varma)
+  if (
+    rawDept.includes('legal') ||
+    rawDept.includes('law') ||
+    rawDept.includes('compliance') ||
+    rawDept.includes('contract') ||
+    rawDesig.includes('legal') ||
+    rawDesig.includes('counsel') ||
+    rawDesig.includes('compliance') ||
+    rawEmail.includes('legal') ||
+    rawEmail.includes('shyamsunder') ||
+    rawId === 'UG00010' ||
+    rawId === 'mem-5'
+  ) {
+    return 'Legal';
+  }
+
+  // 2. AI & IT Operations (Software, Systems, Cloud, Tech, Developers, Aakash Das)
+  if (
+    rawDept.includes('ai') ||
+    rawDept.includes('tech') ||
+    rawDept.includes('software') ||
+    rawDept.includes('developer') ||
+    rawDept.includes('engineer') ||
+    rawDept.includes('it') ||
+    rawDesig.includes('ai') ||
+    rawDesig.includes('tech') ||
+    rawDesig.includes('developer') ||
+    rawDesig.includes('software') ||
+    rawDesig.includes('engineer') ||
+    rawEmail.includes('techdesk') ||
+    rawEmail.includes('aakash') ||
+    rawId === 'mem-12'
+  ) {
+    return 'AI & IT';
+  }
+
+  // 3. Purchase & Procurement (Purchase, Procurement, Vendor Management, Utkarsh, Ravindra)
+  if (
+    rawDept.includes('purchase') ||
+    rawDept.includes('procure') ||
+    rawDept.includes('vendor') ||
+    rawDept.includes('supply') ||
+    rawDesig.includes('purchase') ||
+    rawDesig.includes('procurement') ||
+    rawEmail.includes('purchase') ||
+    rawEmail.includes('utkarsh') ||
+    rawEmail.includes('ravindra') ||
+    rawId === 'mem-7' ||
+    rawId === 'EMP 2026'
+  ) {
+    return 'Purchase';
+  }
+
+  // 4. Talent & HR Operations (Talent Team, HR, Hiring, Rekha, Sharmila, Satya)
+  if (
+    rawDept.includes('talent') ||
+    rawDept.includes('hr') ||
+    rawDept.includes('people') ||
+    rawDesig.includes('talent') ||
+    rawDesig.includes('hr') ||
+    rawEmail.includes('talent') ||
+    rawEmail.includes('rekha') ||
+    rawEmail.includes('sharmila') ||
+    rawEmail.includes('satya') ||
+    rawId === 'mem-9' ||
+    rawId === 'mem-10' ||
+    rawId === 'mem-11'
+  ) {
+    return 'Talent';
+  }
+
+  // 5. Sales & Business Acquisition (Sales, BD, Growth, Client Outreach, Yudhister, Sanjay)
+  if (
+    rawDept.includes('sale') ||
+    rawDept.includes('client') ||
+    rawDept.includes('market') ||
+    rawDept.includes('growth') ||
+    rawDesig.includes('sale') ||
+    rawEmail.includes('sales') ||
+    rawEmail.includes('yudhister') ||
+    rawEmail.includes('sanjay') ||
+    rawId === 'mem-2'
+  ) {
+    return 'Sales';
+  }
+
+  // 6. Civil & Site Infrastructure (Civil, Construction, Site, Architecture, Ayaz, Vishvendra)
+  if (
+    rawDept.includes('civil') ||
+    rawDept.includes('site') ||
+    rawDept.includes('const') ||
+    rawDept.includes('infra') ||
+    rawDesig.includes('civil') ||
+    rawEmail.includes('civil') ||
+    rawEmail.includes('ayaz') ||
+    rawEmail.includes('vishvendra') ||
+    rawId === 'mem-4' ||
+    rawId === 'usr-1791978627510-808'
+  ) {
+    return 'Civil';
+  }
+
+  // 7. Accounts & Finance (Accounts, Finance, Tax, Billing, Audit, Pratap)
+  if (
+    rawDept.includes('account') ||
+    rawDept.includes('finance') ||
+    rawDept.includes('tax') ||
+    rawDept.includes('audit') ||
+    rawDept.includes('billing') ||
+    rawDesig.includes('account') ||
+    rawEmail.includes('account') ||
+    rawEmail.includes('pratap') ||
+    rawId === 'mem-6'
+  ) {
+    return 'Accounts';
+  }
+
+  // 8. Front Desk (Reception, Visitor, Front Desk Specialist, Kanchan)
+  if (
+    rawDept.includes('front') ||
+    rawDept.includes('desk') ||
+    rawDept.includes('reception') ||
+    rawDesig.includes('front') ||
+    rawDesig.includes('reception') ||
+    rawEmail.includes('frontdesk') ||
+    rawEmail.includes('kanchan') ||
+    rawId === 'mem-8'
+  ) {
+    return 'Front Desk';
+  }
+
+  // CEO / Founder Fallback
+  if (
+    rawDept.includes('founder') ||
+    rawDesig.includes('founder') ||
+    rawEmail.includes('ceo') ||
+    rawEmail.includes('sukhsagar') ||
+    rawId === 'mem-1'
+  ) {
+    return 'Founder';
+  }
+
+  // Exact Match Fallback
+  const exact = CANONICAL_DEPARTMENTS.find(d => d.toLowerCase() === rawDept);
+  if (exact) return exact;
+
+  return typeof input === 'string' && input.trim() ? input.trim() : 'General Operations';
+}
+
+/**
+ * Resolves the canonical project corresponding to a department or employee role.
+ */
+export function getCanonicalProject(departmentOrUser?: any): string {
+  const dept = getCanonicalDepartment(departmentOrUser);
+  switch (dept) {
+    case 'Legal':
+      return 'Legal & Land Documentation';
+    case 'AI & IT':
+      return 'IT & Digital Systems';
+    case 'Purchase':
+      return 'Procurement & Materials';
+    case 'Talent':
+      return 'HR & Talent Operations';
+    case 'Sales':
+      return 'Sales & Client Acquisition';
+    case 'Civil':
+      return 'Site Development & Civil';
+    case 'Accounts':
+      return 'Finance & Accounts';
+    case 'Front Desk':
+      return 'Front Desk';
+    case 'Founder':
+      return 'General Operations';
+    default:
+      return 'General Operations';
+  }
+}
+
+
 
 

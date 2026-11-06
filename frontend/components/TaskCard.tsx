@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { Task, TaskPriority, TaskStatus, AssigneeInfo } from '@/types';
 import { useApp } from '@/context/AppContext';
-import { isCeoUser, isStrictCeo, canViewAuditTrail } from '@/shared/lib/rosterData';
+import { isCeoUser, isStrictCeo, canViewAuditTrail, getCanonicalDepartment, getCanonicalProject, CANONICAL_DEPARTMENTS } from '@/shared/lib/rosterData';
 import { getTodayStr, formatCreationDate, formatDueDate } from '@/shared/lib/dateUtils';
 import { computeMultiAssigneeStatus } from '@/shared/lib/multiAssignee';
 import {
@@ -124,7 +124,13 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
   const [editedTime, setEditedTime] = useState(task.time);
   const [editedAssigneeId, setEditedAssigneeId] = useState(task.assignees[0]?.id || activeMembers[0]?.id || members[0]?.id || '');
   const [editedPriority, setEditedPriority] = useState<TaskPriority>(task.priority);
-  const [editedDepartment, setEditedDepartment] = useState(task.department || 'AI & IT');
+  const [editedDepartment, setEditedDepartment] = useState(() => {
+    const matched = activeMembers.find(m => m.id === (task.assignees[0]?.id)) ||
+      members.find(m => m.id === (task.assignees[0]?.id)) ||
+      task.assignees[0] ||
+      currentUser;
+    return getCanonicalDepartment(task.department || matched);
+  });
   const [editedLocation, setEditedLocation] = useState('Jaipur');
   const [editedRemarks, setEditedRemarks] = useState(task.assignees[0]?.remarks || '');
 
@@ -135,7 +141,12 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
     setEditedTime(task.time);
     setEditedAssigneeId(task.assignees[0]?.id || activeMembers[0]?.id || members[0]?.id || '');
     setEditedPriority(task.priority);
-    setEditedDepartment(task.department || 'Product & Tech');
+    const matched = activeMembers.find(m => m.id === (task.assignees[0]?.id || activeMembers[0]?.id || members[0]?.id)) ||
+      members.find(m => m.id === (task.assignees[0]?.id || activeMembers[0]?.id || members[0]?.id)) ||
+      task.assignees[0] ||
+      currentUser;
+    const resolvedDept = getCanonicalDepartment(task.department || matched);
+    setEditedDepartment(resolvedDept);
     setEditedLocation('Jaipur');
     setEditedRemarks(task.assignees[0]?.remarks || '');
     setIsInlineEditing(true);
@@ -212,13 +223,15 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
   const handleSaveInline = () => {
     // Assigned to feature: strictly exclusive to CEO Mr. Sukh Sagar Singh Bhati
     const selectedMember = activeMembers.find(m => m.id === editedAssigneeId) || activeMembers[0] || members.find(m => !isStrictCeo(m)) || members[0];
+    const canonicalDept = getCanonicalDepartment(editedDepartment || selectedMember);
+    const canonicalProj = getCanonicalProject(canonicalDept);
     const updatedAssignees = isCeo
       ? [
         {
           id: selectedMember.id,
           name: selectedMember.name,
           email: selectedMember.email,
-          department: editedDepartment,
+          department: canonicalDept,
           designation: selectedMember.designation,
           avatar: selectedMember.avatar,
           status: task.status,
@@ -227,7 +240,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
       ]
       : task.assignees.map(a => ({
         ...a,
-        department: editedDepartment,
+        department: canonicalDept,
         remarks: editedRemarks || a.remarks,
       }));
 
@@ -237,7 +250,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
       dueDate: editedDueDate,
       time: editedTime,
       priority: editedPriority,
-      department: editedDepartment,
+      department: canonicalDept,
+      project: canonicalProj,
       location: 'Jaipur',
       assignees: updatedAssignees,
     }, `Inline task edit: title updated to "${editedTitle}", scheduled: ${editedScheduledDate}, due: ${editedDueDate}, time: ${editedTime}`);
@@ -349,7 +363,14 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
               <select
                 className="form-select"
                 value={editedAssigneeId}
-                onChange={(e) => setEditedAssigneeId(e.target.value)}
+                onChange={(e) => {
+                  const newId = e.target.value;
+                  setEditedAssigneeId(newId);
+                  const mem = activeMembers.find(m => m.id === newId) || members.find(m => m.id === newId);
+                  if (mem) {
+                    setEditedDepartment(getCanonicalDepartment(mem));
+                  }
+                }}
               >
                 {activeMembers.map(m => (
                   <option key={m.id} value={m.id}>
@@ -380,9 +401,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
               value={editedDepartment}
               onChange={(e) => setEditedDepartment(e.target.value)}
             >
-              {(systemConfig?.masterLists?.departments || ['Civil', 'Sales', 'AI & IT', 'Talent', 'Purchase', 'Legal', 'Accounts', 'Front Desk']).map(d => (
-                <option key={d} value={d}>{d}</option>
-              ))}
+                {
+                  Array.from(new Set([...(systemConfig?.masterLists?.departments || CANONICAL_DEPARTMENTS), editedDepartment].filter(Boolean))).map(d => (
+                    <option key={d} value={d}>{d}</option>
+                  ))
+                }
             </select>
           </div>
 
@@ -1140,7 +1163,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                   gap: '4px',
                   flexShrink: 0
                 }}>
-                  {task.project}
+                  {((task.project && task.project !== 'General Operations') ? task.project : getCanonicalProject(task.department || task.assignees[0] || currentUser))}
                 </span>
               )}
 
@@ -1730,6 +1753,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
               </p>
 
               <div style={{
+
                 background: '#f8fafc',
                 border: '1px solid #e2e8f0',
                 borderRadius: '8px',

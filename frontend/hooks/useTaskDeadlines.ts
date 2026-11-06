@@ -199,7 +199,7 @@ export function useTaskDeadlines() {
         // Play chime alert
         try {
           soundEngine.playUrgentDeadlineChime();
-        } catch {}
+        } catch { }
 
         // Desktop Web Notification
         if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
@@ -217,13 +217,15 @@ export function useTaskDeadlines() {
       }
 
       // 2. Individual Due-Soon Task alerts
+
+
       dueSoonTasks.forEach(task => {
         if (notifiedTasksRef.current.has(task.id)) return;
         notifiedTasksRef.current.add(task.id);
 
         try {
           soundEngine.playUrgentDeadlineChime();
-        } catch {}
+        } catch { }
 
         if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
           new Notification(`Task Due Soon: ${task.title}`, {

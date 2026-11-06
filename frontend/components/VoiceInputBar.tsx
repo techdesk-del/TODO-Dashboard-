@@ -3,7 +3,7 @@ import { useApp } from '@/context/AppContext';
 import { parseSpeechOrTextCommand } from '@/shared/lib/aiParser';
 import { soundEngine } from '@/frontend/lib/sound';
 import { Mic, ArrowRight, X, Check } from 'lucide-react';
-import { isCeoUser, isStrictCeo } from '@/shared/lib/rosterData';
+import { isCeoUser, isStrictCeo, getCanonicalDepartment, getCanonicalProject } from '@/shared/lib/rosterData';
 
 export const VoiceInputBar: React.FC = () => {
   const { addTask, members, activeMembers, currentUser } = useApp();
@@ -61,7 +61,7 @@ export const VoiceInputBar: React.FC = () => {
     if (recognitionRef.current) {
       try {
         recognitionRef.current.start();
-      } catch (err) {}
+      } catch (err) { }
     }
   };
 
@@ -82,6 +82,8 @@ export const VoiceInputBar: React.FC = () => {
       ? activeMembers.find(m => m.name.toLowerCase().includes(parsed.assigneeName.toLowerCase()))
       : null;
     const targetMember = explicitlyMatched || currentUser;
+    const resolvedDept = getCanonicalDepartment(targetMember);
+    const resolvedProject = getCanonicalProject(resolvedDept);
 
     addTask({
       title: parsed.title,
@@ -91,13 +93,14 @@ export const VoiceInputBar: React.FC = () => {
       status: 'In Progress',
       progressPercent: 50,
       isJustAdded: true,
-      department: targetMember.department,
+      department: resolvedDept,
+      project: resolvedProject,
       assignees: [
         {
           id: targetMember.id,
           name: targetMember.name,
           email: targetMember.email,
-          department: targetMember.department,
+          department: resolvedDept,
           designation: targetMember.designation,
           avatar: targetMember.avatar,
           status: 'In Progress'
@@ -124,6 +127,8 @@ export const VoiceInputBar: React.FC = () => {
       ? activeMembers.find(m => m.name.toLowerCase().includes(parsed.assigneeName.toLowerCase()))
       : null;
     const targetMember = explicitlyMatched || currentUser;
+    const resolvedDept = getCanonicalDepartment(targetMember);
+    const resolvedProject = getCanonicalProject(resolvedDept);
 
     addTask({
       title: parsed.title,
@@ -133,13 +138,14 @@ export const VoiceInputBar: React.FC = () => {
       status: 'In Progress',
       progressPercent: 50,
       isJustAdded: true,
-      department: targetMember.department,
+      department: resolvedDept,
+      project: resolvedProject,
       assignees: [
         {
           id: targetMember.id,
           name: targetMember.name,
           email: targetMember.email,
-          department: targetMember.department,
+          department: resolvedDept,
           designation: targetMember.designation,
           avatar: targetMember.avatar,
           status: 'In Progress'
@@ -157,7 +163,7 @@ export const VoiceInputBar: React.FC = () => {
     setIsListening(false);
     setCurrentTranscription('');
     if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch (e) {}
+      try { recognitionRef.current.stop(); } catch (e) { }
     }
   };
 
@@ -260,7 +266,7 @@ export const VoiceInputBar: React.FC = () => {
                     setShowStreamModal(false);
                     setIsListening(false);
                     if (recognitionRef.current) {
-                      try { recognitionRef.current.stop(); } catch (e) {}
+                      try { recognitionRef.current.stop(); } catch (e) { }
                     }
                   }}
                   style={{ flex: '0 0 auto', minWidth: '80px', justifyContent: 'center' }}
