@@ -8,11 +8,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import { AccessRequestModel } from '@/models/AccessRequest';
 import { UserModel } from '@/models/User';
+import { checkRateLimit } from '@/lib/rateLimiter';
+import { requireAuth, sanitizeInput } from '@/lib/security';
 
 export async function POST(req: NextRequest) {
   try {
+    const rateLimitError = checkRateLimit(req, {
+      windowMs: 10 * 60 * 1000,
+      maxRequests: 5,
+      prefix: 'access_req'
+    });
+    if (rateLimitError) return rateLimitError;
+
     await connectDB();
-    const body = await req.json().catch(() => ({}));
+    const rawBody = await req.json().catch(() => ({}));
+    const body = sanitizeInput(rawBody);
     const { name, email, phone, department, designation, reason } = body;
 
     if (!name || !email || !department || !designation) {
@@ -69,8 +79,11 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const authCheck = requireAuth(req, ['SUPER_ADMIN', 'ADMIN']);
+    if ('errorResponse' in authCheck) return authCheck.errorResponse;
+
     await connectDB();
     const requests = await AccessRequestModel.find({ status: 'PENDING' })
       .sort({ appliedAt: -1 })
@@ -100,9 +113,14 @@ export async function GET() {
  */
 export async function PATCH(req: NextRequest) {
   try {
+    const authCheck = requireAuth(req, ['SUPER_ADMIN', 'ADMIN']);
+    if ('errorResponse' in authCheck) return authCheck.errorResponse;
+    const authUser = authCheck.user;
+
     await connectDB();
     const searchParams = req.nextUrl.searchParams;
-    const body = await req.json().catch(() => ({}));
+    const rawBody = await req.json().catch(() => ({}));
+    const body = sanitizeInput(rawBody);
     const id = body.id || searchParams.get('id');
 
     if (!id) {

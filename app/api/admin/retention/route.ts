@@ -13,9 +13,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { executeDataRetention } from '@/lib/retentionEngine';
+import { requireAuth, sanitizeInput } from '@/lib/security';
 
 export async function GET(req: NextRequest) {
   try {
+    const authCheck = requireAuth(req, ['SUPER_ADMIN', 'ADMIN']);
+    if ('errorResponse' in authCheck) return authCheck.errorResponse;
+
     const { searchParams } = new URL(req.url);
     const taskRetentionDays = searchParams.get('taskRetentionDays')
       ? parseInt(searchParams.get('taskRetentionDays')!, 10)
@@ -55,10 +59,15 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    let body: any = {};
+    const authCheck = requireAuth(req, ['SUPER_ADMIN', 'ADMIN']);
+    if ('errorResponse' in authCheck) return authCheck.errorResponse;
+    const authUser = authCheck.user;
+
+    let rawBody: any = {};
     try {
-      body = await req.json();
+      rawBody = await req.json();
     } catch {}
+    const body = sanitizeInput(rawBody);
 
     const taskRetentionDays = typeof body.taskRetentionDays === 'number' ? body.taskRetentionDays : 365;
     const auditRetentionDays = typeof body.auditRetentionDays === 'number' ? body.auditRetentionDays : 730;
@@ -70,8 +79,8 @@ export async function POST(req: NextRequest) {
       auditRetentionDays,
       emailRetentionDays,
       inactiveRetentionDays,
-      actor: body.actor || 'Super Admin Manual Trigger (Data Retention Engine)',
-      actorRole: body.actorRole || 'SUPER_ADMIN'
+      actor: authUser.name,
+      actorRole: authUser.role
     });
 
     return NextResponse.json({

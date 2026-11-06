@@ -13,14 +13,24 @@ import { verifyPassword, hashPassword, signJwtToken } from '@/lib/auth';
 import { findOfficialEmployeeByEmail, syncOfficialRosterToDB } from '@/lib/rosterSync';
 import { sendSecurityLockoutAlertEmail, sendTwoFactorOtpEmail } from '@/lib/email';
 import { isStrictCeo } from '@/shared/lib/rosterData';
+import { checkRateLimit } from '@/lib/rateLimiter';
+import { sanitizeInput, withSecurityHeaders } from '@/lib/security';
 
 export async function POST(req: NextRequest) {
   try {
+    const rateLimitError = checkRateLimit(req, {
+      windowMs: 60 * 1000,
+      maxRequests: 10,
+      prefix: 'auth_login'
+    });
+    if (rateLimitError) return rateLimitError;
+
     await connectDB();
     // Keep roster in sync with MongoDB Atlas
     syncOfficialRosterToDB().catch(() => { });
 
-    const body = await req.json();
+    const rawBody = await req.json().catch(() => ({}));
+    const body = sanitizeInput(rawBody);
     const { email, password, twoFactorCode } = body;
 
     if (!email || !password) {

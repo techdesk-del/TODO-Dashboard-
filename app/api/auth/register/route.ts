@@ -9,12 +9,27 @@ import { UserModel } from '@/models/User';
 import { MemberModel } from '@/models/Member';
 import { hashPassword, signJwtToken } from '@/lib/auth';
 import { sendWelcomeCredentialsEmail } from '@/lib/email';
+import { checkRateLimit } from '@/lib/rateLimiter';
+import { getAuthenticatedUser, sanitizeInput } from '@/lib/security';
 
 export async function POST(req: NextRequest) {
   try {
+    const rateLimitError = checkRateLimit(req, {
+      windowMs: 15 * 60 * 1000,
+      maxRequests: 5,
+      prefix: 'auth_register'
+    });
+    if (rateLimitError) return rateLimitError;
+
     await connectDB();
-    const body = await req.json();
-    const { name, email, password, role, department, designation } = body;
+    const rawBody = await req.json().catch(() => ({}));
+    const body = sanitizeInput(rawBody);
+    const { name, email, password, department, designation } = body;
+
+    // SDE-3 Security Guard: Public registration can NEVER self-grant administrative privileges
+    const authCaller = getAuthenticatedUser(req);
+    const canAssignElevatedRole = authCaller && authCaller.role === 'SUPER_ADMIN';
+    const userRole = (canAssignElevatedRole && body.role) ? body.role : 'EMPLOYEE';
 
     if (!name || !email || !password) {
       return NextResponse.json(
@@ -33,7 +48,6 @@ export async function POST(req: NextRequest) {
 
     const passwordHash = await hashPassword(password);
     const userId = `usr-${Date.now()}`;
-    const userRole = role || 'EMPLOYEE';
     const userDept = department || 'General';
     const userDesig = designation || 'Staff Member';
 

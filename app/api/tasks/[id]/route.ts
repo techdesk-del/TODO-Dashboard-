@@ -13,6 +13,7 @@ import { broadcastTaskMutation, markTaskDeleted } from '@/lib/events';
 
 import { computeMultiAssigneeStatus } from '@/shared/lib/multiAssignee';
 import { isStrictCeo, isCeoUser } from '@/shared/lib/rosterData';
+import { getAuthenticatedUser, sanitizeInput } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -26,7 +27,8 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     const rawParams = ctx?.params;
     const resolvedParams = rawParams instanceof Promise ? await rawParams : (rawParams || {});
     const id = resolvedParams.id;
-    const body = await req.json().catch(() => ({}));
+    const rawBody = await req.json().catch(() => ({}));
+    const body = sanitizeInput(rawBody);
 
     if (!id) {
       return NextResponse.json({ success: false, error: 'Task ID is required' }, { status: 400 });
@@ -269,9 +271,10 @@ export async function DELETE(req: NextRequest, ctx: RouteContext) {
 
     const taskTitle = (deletedOrUpdated as { title?: string }).title || id;
 
-    const callerEmail = req.headers.get('x-user-email') || 'ceo@urbangaon.com';
-    const callerName = req.headers.get('x-user-name') || 'Mr. Sukh Sagar Singh Bhati';
-    const callerRole = (req.headers.get('x-user-role') as 'SUPER_ADMIN' | 'ADMIN' | 'MANAGER' | 'EMPLOYEE') || 'SUPER_ADMIN';
+    const authenticatedUser = getAuthenticatedUser(req);
+    const callerEmail = authenticatedUser?.email || req.headers.get('x-user-email') || 'ceo@urbangaon.com';
+    const callerName = authenticatedUser?.name || req.headers.get('x-user-name') || 'Mr. Sukh Sagar';
+    const callerRole = authenticatedUser?.role || (req.headers.get('x-user-role') as 'SUPER_ADMIN' | 'ADMIN' | 'MANAGER' | 'EMPLOYEE') || 'SUPER_ADMIN';
 
     // Persist server-side audit entry so cross-device sync catches the deletion across serverless instances
     await AuditLogModel.create({
@@ -287,7 +290,7 @@ export async function DELETE(req: NextRequest, ctx: RouteContext) {
       actorRole: callerRole,
       ipAddress: req.headers.get('x-forwarded-for') || '127.0.0.1',
       deviceInfo: req.headers.get('user-agent') || 'Browser Device',
-      notes: soft ? 'Task soft-deleted' : `Task permanently deleted by CEO ${callerName}`,
+      notes: soft ? 'Task soft-deleted' : `Task permanently deleted by ${callerName}`,
     }).catch(err => console.error('[API/tasks DELETE audit log error]', err));
 
     // Broadcast instant real-time deletion to all connected devices worldwide

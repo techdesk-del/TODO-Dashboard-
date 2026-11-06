@@ -6,9 +6,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import { EmailLogModel } from '@/models/EmailLog';
+import { requireAuth } from '@/lib/security';
 
 export async function GET(req: NextRequest) {
   try {
+    const authCheck = requireAuth(req, ['SUPER_ADMIN', 'ADMIN']);
+    if ('errorResponse' in authCheck) return authCheck.errorResponse;
+
     await connectDB();
     const { searchParams } = new URL(req.url);
     const failuresOnly = searchParams.get('failuresOnly') === 'true';

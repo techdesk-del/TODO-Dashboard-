@@ -17,6 +17,7 @@ import { broadcastTaskMutation, isTaskDeleted, unmarkTaskDeleted, globalDeletedT
 import { sendTaskAssignmentEmail } from '@/lib/email';
 import { isStrictCeo, isCeoUser } from '@/shared/lib/rosterData';
 import { computeMultiAssigneeStatus } from '@/shared/lib/multiAssignee';
+import { getAuthenticatedUser, sanitizeInput } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -141,10 +142,12 @@ export async function POST(req: NextRequest) {
     await connectDB();
     await seedIfEmpty();
 
-    const body = await req.json();
+    const authUser = getAuthenticatedUser(req);
+    const rawBody = await req.json().catch(() => ({}));
+    const body = sanitizeInput(rawBody);
 
-    // Executive role guard: CEO role is restricted to deliverable monitoring & governance
-    if (body.creator && isStrictCeo(body.creator)) {
+    // If caller is authenticated as Founder, prevent direct task creation per governance
+    if (authUser?.isFounder) {
       return NextResponse.json(
         {
           success: false,

@@ -9,6 +9,7 @@ import connectDB from '@/lib/db';
 import { AuditLogModel } from '@/models/AuditLog';
 import { INITIAL_AUDIT_LOGS } from '@/shared/lib/mockData';
 import { canViewAuditTrail } from '@/shared/lib/rosterData';
+import { getAuthenticatedUser, sanitizeInput } from '@/lib/security';
 
 async function seedAuditIfEmpty() {
   const count = await AuditLogModel.countDocuments();
@@ -21,27 +22,29 @@ async function seedAuditIfEmpty() {
 
 export async function GET(req: NextRequest) {
   try {
-    await connectDB();
-    await seedAuditIfEmpty();
-
-    const { searchParams } = new URL(req.url);
-    const userEmail = req.headers.get('x-user-email') || searchParams.get('userEmail') || searchParams.get('email');
-    if (userEmail && !canViewAuditTrail({ email: userEmail })) {
+    const user = getAuthenticatedUser(req);
+    // Strictly verify caller authentication & authorization via JWT session
+    const isAllowed = user && (user.isFounder || canViewAuditTrail({ email: user.email, role: user.role }));
+    if (!isAllowed) {
       return NextResponse.json({
         success: false,
-        error: 'Access Denied: Audit trail is strictly restricted to Executive Leadership (Founder & System Administrator).',
+        error: 'Access Denied: Audit trail is strictly restricted to Executive Leadership (Founder & System Administrator). Valid session token required.',
         data: [],
         count: 0
       }, { status: 403 });
     }
 
+    await connectDB();
+    await seedAuditIfEmpty();
+
+    const { searchParams } = new URL(req.url);
     const taskId = searchParams.get('taskId');
     const actor = searchParams.get('actor');
-    const limit = parseInt(searchParams.get('limit') || '1000', 10);
+    const limit = Math.min(1000, Math.max(1, parseInt(searchParams.get('limit') || '1000', 10)));
 
     const query: Record<string, unknown> = {};
-    if (taskId) query['taskId'] = taskId;
-    if (actor) query['actor'] = actor;
+    if (taskId && typeof taskId === 'string') query['taskId'] = String(taskId).replace(/[${}]/g, '');
+    if (actor && typeof actor === 'string') query['actor'] = String(actor).replace(/[${}]/g, '');
 
     const logs = await AuditLogModel
       .find(query)

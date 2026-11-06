@@ -17,11 +17,17 @@ import { isCeoUser } from '@/shared/lib/rosterData';
 import { sendOffboardingSummaryEmail, sendHandoverNotificationToManagerEmail } from '@/lib/email';
 import { broadcastMemberMutation, broadcastTaskMutation } from '@/lib/events';
 import type { TaskStatus, AssigneeInfo } from '@/types';
+import { requireAuth, sanitizeInput } from '@/lib/security';
 
 export async function POST(req: NextRequest) {
   try {
     await connectDB();
-    const body = await req.json();
+    const authCheck = requireAuth(req, ['SUPER_ADMIN', 'ADMIN']);
+    if ('errorResponse' in authCheck) return authCheck.errorResponse;
+    const authUser = authCheck.user;
+
+    const rawBody = await req.json().catch(() => ({}));
+    const body = sanitizeInput(rawBody);
     const {
       departingMemberId,
       successorMemberId,
@@ -31,8 +37,8 @@ export async function POST(req: NextRequest) {
       effectiveDate,
       leaveStartDate,
       leaveEndDate,
-      actor = 'Super Admin',
-      actorRole = 'SUPER_ADMIN'
+      actor = authUser.name,
+      actorRole = authUser.role
     } = body;
 
     if (!departingMemberId || !successorMemberId) {
@@ -90,7 +96,7 @@ export async function POST(req: NextRequest) {
 
     // 1. Reassign all active tasks in MongoDB Atlas
     const activeStatuses: TaskStatus[] = ['In Progress', 'Queued', 'On Hold', 'Escalated', 'Review'];
-    
+
     // Find all tasks where departing member is in assignees
     const tasksToReassign = await TaskModel.find({
       status: { $in: activeStatuses },
@@ -180,12 +186,12 @@ export async function POST(req: NextRequest) {
     if (leaveEndDate) userUpdates.leaveEndDate = leaveEndDate;
 
     await UserModel.updateMany(
-      { 
+      {
         $or: [
-          { id: departingMember.id }, 
+          { id: departingMember.id },
           { email: departingMember.email.toLowerCase() },
           { name: departingMember.name }
-        ] 
+        ]
       },
       { $set: userUpdates }
     );

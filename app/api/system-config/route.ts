@@ -10,6 +10,7 @@ import connectDB from '@/lib/db';
 import { SystemConfigModel } from '@/models/SystemConfig';
 import { AuditLogModel } from '@/models/AuditLog';
 import { INITIAL_SYSTEM_CONFIG } from '@/shared/lib/mockData';
+import { requireAuth, sanitizeInput } from '@/lib/security';
 import type { SystemConfig } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -44,9 +45,16 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const authCheck = requireAuth(req, ['SUPER_ADMIN', 'ADMIN']);
+    if ('errorResponse' in authCheck) return authCheck.errorResponse;
+    const actorUser = authCheck.user;
+
     await connectDB();
-    const body = await req.json();
-    const { config, actor, actorRole, notes } = body;
+    const rawBody = await req.json().catch(() => ({}));
+    const body = sanitizeInput(rawBody);
+    const { config, notes } = body;
+    const actor = actorUser.name;
+    const actorRole = actorUser.role;
 
     if (!config) {
       return NextResponse.json({ success: false, error: 'Config payload is required' }, { status: 400 });

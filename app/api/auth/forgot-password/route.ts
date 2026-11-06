@@ -10,14 +10,24 @@ import { MemberModel } from '@/models/Member';
 import { hashPassword } from '@/lib/auth';
 import { findOfficialEmployeeByEmail, syncOfficialRosterToDB } from '@/lib/rosterSync';
 import { sendPasswordResetEmail } from '@/lib/email';
+import { checkRateLimit } from '@/lib/rateLimiter';
+import { sanitizeInput } from '@/lib/security';
 
 export async function POST(req: NextRequest) {
   try {
+    const rateLimitError = checkRateLimit(req, {
+      windowMs: 10 * 60 * 1000, // 10 minutes
+      maxRequests: 5,           // 5 requests per 10 mins
+      prefix: 'auth_forgot'
+    });
+    if (rateLimitError) return rateLimitError;
+
     await connectDB();
     // Ensure roster is initialized
     syncOfficialRosterToDB().catch(() => {});
 
-    const body = await req.json();
+    const rawBody = await req.json().catch(() => ({}));
+    const body = sanitizeInput(rawBody);
     const { email } = body;
 
     if (!email || typeof email !== 'string') {

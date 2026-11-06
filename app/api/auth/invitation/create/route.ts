@@ -7,12 +7,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import connectDB from '@/lib/db';
 import { InvitationModel } from '@/models/Invitation';
+import { requireAuth, sanitizeInput } from '@/lib/security';
 
 export async function POST(req: NextRequest) {
   try {
+    const authCheck = requireAuth(req, ['SUPER_ADMIN', 'ADMIN']);
+    if ('errorResponse' in authCheck) return authCheck.errorResponse;
+    const actorUser = authCheck.user;
+
     await connectDB();
-    const body = await req.json().catch(() => ({}));
-    const { email, name, role, department, designation, invitedBy } = body;
+    const rawBody = await req.json().catch(() => ({}));
+    const body = sanitizeInput(rawBody);
+    const { email, name, role, department, designation } = body;
+    const invitedBy = body.invitedBy || actorUser.name;
 
     if (!email || !name) {
       return NextResponse.json(

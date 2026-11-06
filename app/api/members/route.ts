@@ -18,6 +18,7 @@ import { syncOfficialRosterToDB } from '@/lib/rosterSync';
 import { sendSetPasswordEmail } from '@/lib/email';
 import { broadcastMemberMutation, broadcastTaskMutation } from '@/lib/events';
 import { isCeoUser, OFFICIAL_ROSTER } from '@/shared/lib/rosterData';
+import { requireAuth, getAuthenticatedUser, sanitizeInput } from '@/lib/security';
 
 async function seedMembersIfEmpty() {
   const count = await MemberModel.countDocuments();
@@ -84,8 +85,13 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const authCheck = requireAuth(req, ['SUPER_ADMIN', 'ADMIN']);
+    if ('errorResponse' in authCheck) return authCheck.errorResponse;
+    const authUser = authCheck.user;
+
     await connectDB();
-    const body = await req.json();
+    const rawBody = await req.json().catch(() => ({}));
+    const body = sanitizeInput(rawBody);
 
     const {
       name,
@@ -101,8 +107,8 @@ export async function POST(req: NextRequest) {
       managerEmail,
       status = 'Pending First Login',
       allowReactivate = false,
-      actor = 'Admin / Talent HR',
-      actorRole = 'ADMIN',
+      actor = authUser.name,
+      actorRole = authUser.role,
     } = body;
 
     if (!name || !email) {
@@ -310,8 +316,14 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
+    const authCheck = requireAuth(req, ['SUPER_ADMIN', 'ADMIN']);
+    if ('errorResponse' in authCheck) return authCheck.errorResponse;
+    const authUser = authCheck.user;
+
     await connectDB();
-    const body = await req.json();
+    const rawBody = await req.json().catch(() => ({}));
+    const body = sanitizeInput(rawBody);
+
     const {
       id,
       targetMemberId,
@@ -331,8 +343,8 @@ export async function PATCH(req: NextRequest) {
       manager,
       managerEmail,
       reason,
-      actor = 'Admin / Talent HR',
-      actorRole = 'ADMIN',
+      actor = authUser.name,
+      actorRole = authUser.role,
       updateTaskAssignees = true,
     } = body;
 
@@ -608,10 +620,15 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    const authCheck = requireAuth(req, ['SUPER_ADMIN', 'ADMIN']);
+    if ('errorResponse' in authCheck) return authCheck.errorResponse;
+    const authUser = authCheck.user;
+
     await connectDB();
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id') || searchParams.get('memberId');
-    const body = await req.json().catch(() => ({}));
+    const rawBody = await req.json().catch(() => ({}));
+    const body = sanitizeInput(rawBody);
     const targetId = (id || body.id || body.memberId || '').trim();
     const targetEmail = (searchParams.get('email') || body.email || '').trim().toLowerCase();
 
