@@ -289,11 +289,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
       const isCeoDept = cleanId === 'mem-1' || cleanEmail === 'ceo@urbangaon.com' || m.department === 'Leadership & CEO Desk' || m.department === 'Leadership & CEO';
       list.push({
         id: cleanId,
-        name: m.name,
-        email: m.email,
-        role: m.role || 'EMPLOYEE',
-        department: isCeoDept ? 'Founder' : (m.department || 'General'),
-        designation: (cleanId === 'mem-1' || cleanEmail === 'ceo@urbangaon.com') ? 'Founder' : (m.designation || 'Specialist'),
+        name: (cleanId === 'mem-1' || cleanEmail === 'ceo@urbangaon.com') ? 'Mr. Sukh Sagar' : (officialMatch ? officialMatch.name : m.name),
+        email: officialMatch ? officialMatch.email : m.email,
+        role: m.role || (officialMatch ? officialMatch.role : 'EMPLOYEE'),
+        department: isCeoDept ? 'Founder' : (officialMatch ? officialMatch.department : (m.department || 'General')),
+        designation: (cleanId === 'mem-1' || cleanEmail === 'ceo@urbangaon.com') ? 'Founder' : (officialMatch ? officialMatch.designation : (m.designation || 'Specialist')),
         avatar: (m.avatar && !m.avatar.includes('.png') && !m.avatar.includes('urbangaon-employee-emblem'))
           ? m.avatar
           : (m.name?.trim().split(/\s+/).length >= 2

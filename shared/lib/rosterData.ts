@@ -353,6 +353,7 @@ export const CANONICAL_DEPARTMENTS = [
 
 export type CanonicalDepartment = typeof CANONICAL_DEPARTMENTS[number];
 
+
 /**
  * Enterprise deterministic department resolver:
  * Analyzes any team member object, user object, email, id, role, or raw department string
@@ -451,6 +452,9 @@ export function getCanonicalDepartment(
     return 'Talent';
   }
 
+
+
+
   // 5. Sales & Business Acquisition (Sales, BD, Growth, Client Outreach, Yudhister, Sanjay)
   if (
     rawDept.includes('sale') ||
@@ -465,6 +469,8 @@ export function getCanonicalDepartment(
   ) {
     return 'Sales';
   }
+
+
 
   // 6. Civil & Site Infrastructure (Civil, Construction, Site, Architecture, Ayaz, Vishvendra)
   if (

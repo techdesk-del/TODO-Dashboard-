@@ -61,16 +61,16 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - HOSTNAME=0.0.0.0
-      # Points to the local internal MongoDB container
-      - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME:-urbangaon_admin}:${MONGO_PASSWORD:-urbangaon_secure_2026}@mongodb:27017/${MONGO_INITDB_DATABASE:-urbangaon_todo}?authSource=admin
-      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      - JWT_SECRET=${JWT_SECRET:-urbangaon_nas_jwt_secret_key_2026_ds925}
-      - SMTP_HOST=${SMTP_HOST:-}
+      # Real-time Cloud MongoDB Atlas Cluster (Shared live database across all servers & clients)
+      - MONGODB_URI=${MONGODB_URI:-mongodb+srv://techdesk_db_user:aakash@cluster0.vgpa6s7.mongodb.net/urbangaon_todo?retryWrites=true&w=majority&appName=Cluster0}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - JWT_SECRET=${JWT_SECRET:-urbangaon_executive_jwt_super_key_2026_9e7f8d6c5b4a3a2b1c0d}
+      - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
       - SMTP_PORT=${SMTP_PORT:-465}
       - SMTP_SECURE=${SMTP_SECURE:-true}
-      - SMTP_USER=${SMTP_USER:-}
-      - SMTP_PASS=${SMTP_PASS:-}
-      - SMTP_FROM=${SMTP_FROM:-"UrbanGaon Executive Dispatcher" <alerts@urbangaon.com>}
+      - SMTP_USER=${SMTP_USER:-techdesk@urbangaon.com}
+      - SMTP_PASS=${SMTP_PASS}
+      - SMTP_FROM=${SMTP_FROM:-"UrbanGaon Executive Dispatcher" <techdesk@urbangaon.com>}
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:3050}
 
     deploy:

@@ -57,17 +57,25 @@ export async function GET() {
         const isCeoDept = m.id === 'mem-1' || m.email?.toLowerCase().trim() === 'ceo@urbangaon.com' || m.department === 'Leadership & CEO Desk' || m.department === 'Leadership & CEO';
         const nextDept = isCeoDept ? 'Founder' : m.department;
         const nextDesig = (m.id === 'mem-1' || m.email?.toLowerCase().trim() === 'ceo@urbangaon.com') ? 'Founder' : m.designation;
-        if (isCeoDept && (m.department !== 'Founder' || m.designation !== 'Founder')) {
-          MemberModel.updateOne({ _id: m._id }, { $set: { department: 'Founder', designation: 'Founder' } }).catch(() => {});
-          UserModel.updateMany({ email: m.email?.toLowerCase().trim() }, { $set: { department: 'Founder', designation: 'Founder' } }).catch(() => {});
+        const nextName = (m.id === 'mem-1' || m.email?.toLowerCase().trim() === 'ceo@urbangaon.com') ? 'Mr. Sukh Sagar' : m.name;
+        const isMem12 = m.id === 'mem-12' || m.email?.toLowerCase().trim() === 'aakash.das@urbangaon.com';
+        const nextEmail = isMem12 ? 'techdesk@urbangaon.com' : m.email;
+
+        if (isCeoDept && (m.department !== 'Founder' || m.designation !== 'Founder' || m.name !== 'Mr. Sukh Sagar')) {
+          MemberModel.updateOne({ _id: m._id }, { $set: { department: 'Founder', designation: 'Founder', name: 'Mr. Sukh Sagar' } }).catch(() => {});
+          UserModel.updateMany({ id: 'mem-1' }, { $set: { department: 'Founder', designation: 'Founder', name: 'Mr. Sukh Sagar' } }).catch(() => {});
+        }
+        if (isMem12 && m.email !== 'techdesk@urbangaon.com') {
+          MemberModel.updateOne({ _id: m._id }, { $set: { email: 'techdesk@urbangaon.com' } }).catch(() => {});
+          UserModel.updateMany({ id: 'mem-12' }, { $set: { email: 'techdesk@urbangaon.com' } }).catch(() => {});
         }
         if (!m.avatar || m.avatar.includes('.png') || m.avatar.includes('urbangaon-employee-emblem')) {
-          const initials = sanitizeInitials(m.name);
+          const initials = sanitizeInitials(nextName);
           MemberModel.updateOne({ _id: m._id }, { $set: { avatar: initials } }).catch(() => {});
-          UserModel.updateMany({ email: m.email?.toLowerCase().trim() }, { $set: { avatar: initials } }).catch(() => {});
-          return { ...m, department: nextDept, designation: nextDesig, avatar: initials };
+          UserModel.updateMany({ email: nextEmail?.toLowerCase().trim() }, { $set: { avatar: initials } }).catch(() => {});
+          return { ...m, name: nextName, email: nextEmail, department: nextDept, designation: nextDesig, avatar: initials };
         }
-        return { ...m, department: nextDept, designation: nextDesig };
+        return { ...m, name: nextName, email: nextEmail, department: nextDept, designation: nextDesig };
       });
 
     return NextResponse.json({

@@ -4,7 +4,12 @@
 # Triggered via: Synology DSM Task Scheduler (every 2-5 minutes)
 # ============================================================
 
-PROJECT_DIR="/volume1/docker/urbangaon-todo"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -d "/volume1/docker/urbangaon-todo" ]; then
+  PROJECT_DIR="/volume1/docker/urbangaon-todo"
+else
+  PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+fi
 LOG_FILE="$PROJECT_DIR/deploy.log"
 LOCK_FILE="/tmp/nas_auto_update.lock"
 BRANCH="main"

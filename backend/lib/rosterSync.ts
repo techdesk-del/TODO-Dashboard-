@@ -81,10 +81,18 @@ export async function syncOfficialRosterToDB(): Promise<void> {
 
         // Legacy cleanup only for mem-1 / ceo
         if (emp.id === 'mem-1' || empEmailClean === 'ceo@urbangaon.com') {
-          if (existingMember.department === 'Leadership & CEO Desk' || existingMember.department === 'Leadership & CEO') {
+          if (existingMember.department === 'Leadership & CEO Desk' || existingMember.department === 'Leadership & CEO' || existingMember.department !== 'Founder') {
             missingFields.department = 'Founder';
             missingFields.designation = 'Founder';
           }
+          if (existingMember.name !== 'Mr. Sukh Sagar') {
+            missingFields.name = 'Mr. Sukh Sagar';
+          }
+        }
+
+        // Canonical email sync for Aakash Das (mem-12) to techdesk@urbangaon.com
+        if (emp.id === 'mem-12' && existingMember.email !== 'techdesk@urbangaon.com') {
+          missingFields.email = 'techdesk@urbangaon.com';
         }
 
         if (Object.keys(missingFields).length > 0) {
@@ -128,6 +136,13 @@ export async function syncOfficialRosterToDB(): Promise<void> {
         }
         if (!existingUser.designation && (existingMember?.designation || emp.designation)) {
           missingUserFields.designation = existingMember?.designation || emp.designation;
+        }
+        if (emp.id === 'mem-12' && existingUser.email !== 'techdesk@urbangaon.com') {
+          missingUserFields.email = 'techdesk@urbangaon.com';
+        }
+        if (emp.id === 'mem-1') {
+          if (existingUser.name !== 'Mr. Sukh Sagar') missingUserFields.name = 'Mr. Sukh Sagar';
+          if (existingUser.department !== 'Founder') missingUserFields.department = 'Founder';
         }
         if (Object.keys(missingUserFields).length > 0) {
           await UserModel.updateOne({ _id: existingUser._id }, { $set: missingUserFields });
