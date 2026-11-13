@@ -59,9 +59,9 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const shouldSeed = searchParams.get('seed') === 'true';
     await seedIfEmpty(shouldSeed);
-    const date       = searchParams.get('date');       // YYYY-MM-DD
+    const date = searchParams.get('date');       // YYYY-MM-DD
     const assigneeId = searchParams.get('assigneeId'); // member drilldown
-    const status     = searchParams.get('status');     // filter by status
+    const status = searchParams.get('status');     // filter by status
     const assignedTo = searchParams.get('assignedTo'); // Flowchart 6 "Assigned to" filter
     const assignedBy = searchParams.get('assignedBy'); // Flowchart 6 "Assigned by" filter
 
@@ -74,8 +74,8 @@ export async function GET(req: NextRequest) {
         { createdAt: { $regex: `^${date}` } }
       ];
     }
-    if (assigneeId) query['assignees.id']  = assigneeId;
-    if (status)     query['status']        = status;
+    if (assigneeId) query['assignees.id'] = assigneeId;
+    if (status) query['status'] = status;
 
     if (assignedTo) {
       query['assignees'] = {
@@ -110,16 +110,16 @@ export async function GET(req: NextRequest) {
     }));
 
     // Asynchronous background sanitization of legacy records in MongoDB
-    TaskModel.updateMany({ isJustAdded: true }, { $set: { isJustAdded: false } }).catch(() => {});
+    TaskModel.updateMany({ isJustAdded: true }, { $set: { isJustAdded: false } }).catch(() => { });
 
     return NextResponse.json({
-      success:  true,
-      data:     validTasks,
+      success: true,
+      data: validTasks,
       meta: {
-        count:    tasks.length,
+        count: tasks.length,
         latencyMs: Date.now() - t0,
         database: 'MongoDB Atlas',
-        cached:   false,
+        cached: false,
       },
     }, {
       headers: {
@@ -270,6 +270,7 @@ export async function POST(req: NextRequest) {
       notes: `Task created. Initial Status: ${savedTask.status}. Project: ${savedTask.project}, Dept: ${savedTask.department}, Location: ${savedTask.location}${savedTask.pastDueReason ? `. Past due justification: ${savedTask.pastDueReason}` : ''}`,
     }).catch(err => console.error('[API/tasks POST AuditLog]', err));
 
+
     // Deduplicate assignees by email
     const seenAssigneeEmails = new Set<string>();
     const uniqueAssignees: Array<{ name: string; email: string }> = [];
@@ -329,8 +330,8 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({
-      success:  true,
-      data:     savedTask,
+      success: true,
+      data: savedTask,
       latencyMs: Date.now() - t0,
     }, { status: 201 });
   } catch (err: unknown) {
@@ -393,8 +394,8 @@ export async function PATCH(req: NextRequest) {
       );
       body.pendingCeoApproval = false;
     }
-    const effDl = (body.dueDate && typeof body.dueDate === 'string' && body.dueDate.trim().length > 0) 
-      ? body.dueDate.trim() 
+    const effDl = (body.dueDate && typeof body.dueDate === 'string' && body.dueDate.trim().length > 0)
+      ? body.dueDate.trim()
       : body.scheduledDate;
     if (effDl) {
       if (!body.dueDate) {
@@ -539,7 +540,7 @@ export async function DELETE(req: NextRequest) {
       ipAddress: req.headers.get('x-forwarded-for') || '127.0.0.1',
       deviceInfo: req.headers.get('user-agent') || 'System Engine',
       notes: `Cleared ${result.deletedCount} tasks from MongoDB Atlas by Founder Mr. Sukh Sagar Singh Bhati`,
-    }).catch(() => {});
+    }).catch(() => { });
 
     // Broadcast mutation to instantly notify all devices in real-time
     broadcastTaskMutation({ action: 'DELETED_ALL', taskId: 'all', taskTitle: 'All Deliverables' });

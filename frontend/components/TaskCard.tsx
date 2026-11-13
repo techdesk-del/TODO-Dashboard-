@@ -401,11 +401,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
               value={editedDepartment}
               onChange={(e) => setEditedDepartment(e.target.value)}
             >
-                {
-                  Array.from(new Set([...(systemConfig?.masterLists?.departments || CANONICAL_DEPARTMENTS), editedDepartment].filter(Boolean))).map(d => (
-                    <option key={d} value={d}>{d}</option>
-                  ))
-                }
+              {
+                Array.from(new Set([...(systemConfig?.masterLists?.departments || CANONICAL_DEPARTMENTS), editedDepartment].filter(Boolean))).map(d => (
+                  <option key={d} value={d}>{d}</option>
+                ))
+              }
             </select>
           </div>
 
@@ -642,7 +642,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                     alignItems: 'center',
                     gap: '4px'
                   }}
-                  title={task.ceoApprovalRequestedBy ? `Submitted by ${task.ceoApprovalRequestedBy} for Mr. Sukh Sagar Sir Approval` : 'Awaiting Mr. Sukh Sagar Sir Approval before completion'}
+                  title={task.ceoApprovalRequestedBy ? `Submitted by ${task.ceoApprovalRequestedBy} for Mr. Sukh Sagar Sir Approval` : 'Awaiting Mr. Sukh Sagar Sir Approval'}
                 >
                   <span> AWAITING MR SUKH SAGAR SIR APPROVAL</span>
                 </span>
@@ -821,7 +821,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                   </div>
                   <div>
                     <div style={{ fontWeight: 800, fontSize: '0.8125rem', color: '#92400e' }}>
-                      Pending Final Approval from Mr. Sukh Sagar
+                      Pending Final Approval from Mr. Sukh Sagar Sir
                     </div>
                     <div style={{ fontSize: '0.72rem', color: '#b45309', marginTop: '1px' }}>
                       {task.ceoApprovalRequestedBy ? `Submitted by ${task.ceoApprovalRequestedBy} • ` : ''}Executive approval required prior to marking deliverable completed.
