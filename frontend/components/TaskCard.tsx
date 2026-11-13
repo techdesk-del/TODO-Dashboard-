@@ -642,9 +642,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                     alignItems: 'center',
                     gap: '4px'
                   }}
-                  title={task.ceoApprovalRequestedBy ? `Submitted by ${task.ceoApprovalRequestedBy} for Mr. Sukh Sagar Approval` : 'Awaiting Mr. Sukh Sagar Approval before completion'}
+                  title={task.ceoApprovalRequestedBy ? `Submitted by ${task.ceoApprovalRequestedBy} for Mr. Sukh Sagar Sir Approval` : 'Awaiting Mr. Sukh Sagar Sir Approval before completion'}
                 >
-                  <span> AWAITING MR SUKH SAGAR APPROVAL</span>
+                  <span> AWAITING MR SUKH SAGAR SIR APPROVAL</span>
                 </span>
                 {isCeo && (
                   <>
