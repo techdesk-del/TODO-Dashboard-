@@ -642,9 +642,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                     alignItems: 'center',
                     gap: '4px'
                   }}
-                  title={task.ceoApprovalRequestedBy ? `Submitted by ${task.ceoApprovalRequestedBy} for Mr. Sukh Sagar Sir Approval` : 'Awaiting Mr. Sukh Sagar Sir Approval'}
+                  title={task.ceoApprovalRequestedBy ? `Submitted by ${task.ceoApprovalRequestedBy} for Mr. Sukh Sagar Sir Approval` : 'Awaiting Sukh Sagar Sir Approval'}
                 >
-                  <span> AWAITING MR SUKH SAGAR SIR APPROVAL</span>
+                  <span> AWAITING SUKH SAGAR SIR APPROVAL</span>
                 </span>
                 {isCeo && (
                   <>
@@ -821,7 +821,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
                   </div>
                   <div>
                     <div style={{ fontWeight: 800, fontSize: '0.8125rem', color: '#92400e' }}>
-                      Pending Final Approval from Mr. Sukh Sagar Sir
+                      Pending Final Approval from Sukh Sagar Sir
                     </div>
                     <div style={{ fontSize: '0.72rem', color: '#b45309', marginTop: '1px' }}>
                       {task.ceoApprovalRequestedBy ? `Submitted by ${task.ceoApprovalRequestedBy} • ` : ''}Executive approval required prior to marking deliverable completed.
