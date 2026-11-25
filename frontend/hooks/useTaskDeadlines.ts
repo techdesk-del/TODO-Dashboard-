@@ -47,6 +47,8 @@ export function isTaskDoneForUser(task: Task, currentUser?: TeamMember | null): 
     return isTaskDone(task);
   }
 
+
+
   const cleanEmail = (currentUser.email || '').toLowerCase().trim();
   const cleanName = (currentUser.name || '').toLowerCase().trim();
   const userId = currentUser.id || '';

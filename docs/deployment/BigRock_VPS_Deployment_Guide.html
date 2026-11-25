@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>UrbanGaon AI TODO — BigRock VPS Production Deployment Runbook (SDE-3)</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 14mm 14mm 16mm 14mm;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Inter, -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+      color: #0f172a;
+      background: #ffffff;
+      margin: 0;
+      padding: 0;
+      font-size: 9.5pt;
+      line-height: 1.48;
+    }
+    .header {
+      background: linear-gradient(135deg, #1e1b4b 0%, #2563eb 100%);
+      color: #ffffff;
+      padding: 20px 22px;
+      border-radius: 10px;
+      margin-bottom: 16px;
+    }
+    .header-tag {
+      display: inline-block;
+      background: rgba(255,255,255,0.16);
+      color: #fef3c7;
+      font-size: 8pt;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      padding: 3px 9px;
+      border-radius: 999px;
+      margin-bottom: 8px;
+    }
+    .header h1 {
+      margin: 0 0 6px 0;
+      font-size: 17pt;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+    }
+    .header p {
+      margin: 0;
+      font-size: 9.2pt;
+      color: #dbeafe;
+    }
+    .meta-grid {
+      display: table;
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 8px 0;
+      margin: 0 -8px 14px -8px;
+    }
+    .meta-card {
+      display: table-cell;
+      width: 25%;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 8px 10px;
+    }
+    .meta-label {
+      font-size: 7.2pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #64748b;
+      letter-spacing: 0.4px;
+    }
+    .meta-val {
+      font-size: 9.2pt;
+      font-weight: 800;
+      color: #0f172a;
+      margin-top: 2px;
+    }
+    .callout {
+      background: #fef3c7;
+      border: 1px solid #fcd34d;
+      border-left: 4px solid #d97706;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 14px;
+      page-break-inside: avoid;
+    }
+    .callout-title {
+      font-weight: 800;
+      color: #92400e;
+      font-size: 9.2pt;
+      margin-bottom: 3px;
+    }
+    .step {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 11px 14px;
+      margin-bottom: 11px;
+      page-break-inside: avoid;
+    }
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .step-badge {
+      display: inline-block;
+      background: #2563eb;
+      color: #ffffff;
+      font-size: 8pt;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 999px;
+      margin-right: 6px;
+    }
+    .step h2 {
+      display: inline;
+      font-size: 11pt;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 0;
+    }
+    p { margin: 4px 0 6px 0; color: #334155; }
+    ul, ol { margin: 4px 0 6px 18px; padding: 0; color: #334155; }
+    li { margin-bottom: 3px; }
+    code {
+      font-family: Consolas, 'Courier New', monospace;
+      font-size: 8.4pt;
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 1px 4px;
+      border-radius: 4px;
+    }
+    pre {
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: Consolas, 'Courier New', monospace;
+      font-size: 8pt;
+      line-height: 1.42;
+      padding: 9px 11px;
+      border-radius: 7px;
+      overflow-x: auto;
+      margin: 6px 0;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+      font-size: inherit;
+    }
+    .checklist-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 6px;
+      font-size: 8.6pt;
+    }
+    .checklist-table th, .checklist-table td {
+      border: 1px solid #e2e8f0;
+      padding: 6px 8px;
+      text-align: left;
+    }
+    .checklist-table th {
+      background: #f1f5f9;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .footer {
+      margin-top: 14px;
+      text-align: center;
+      font-size: 7.8pt;
+      color: #64748b;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="header-tag">SDE-3 Production Deployment Runbook • v2.4.0</div>
+    <h1>UrbanGaon AI TODO Platform — BigRock VPS Deployment Guide</h1>
+    <p>Target Server: <strong>server.urbangaon.com</strong> • BigRock VPS Linux KVM (NVMe 4, India) • cPanel Admin Cloud + Dedicated IP</p>
+  </div>
+
+  <div class="meta-grid">
+    <div class="meta-card">
+      <div class="meta-label">Runtime Stack</div>
+      <div class="meta-val">Next.js 15 Standalone</div>
+    </div>
+    <div class="meta-card">
+      <div class="meta-label">Process Manager</div>
+      <div class="meta-val">PM2 + systemd</div>
+    </div>
+    <div class="meta-card">
+      <div class="meta-label">Reverse Proxy</div>
+      <div class="meta-val">cPanel Apache + AutoSSL</div>
+    </div>
+    <div class="meta-card">
+      <div class="meta-label">Realtime + DB</div>
+      <div class="meta-val">SSE + MongoDB Atlas</div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <div class="callout-title">Architecture Decision — Why PM2 + Reverse Proxy (Not cPanel Phusion Passenger)</div>
+    Do <strong>not</strong> use cPanel's built-in "Setup Node.js App" (Phusion Passenger) for this platform. Passenger buffers and terminates long-lived Server-Sent Events (<code>/api/realtime</code>) and conflicts with Next.js 15 standalone builds. Run Next.js on <code>127.0.0.1:3000</code> under <strong>PM2 + systemd</strong> (survives crashes and VPS reboots) and proxy HTTPS traffic through cPanel Apache with SSE packet flushing enabled.
+  </div>
+
+  <div class="step">
+    <div class="step-header">
+      <span class="step-badge">STEP 0</span>
+      <h2>Wait for Provisioning &amp; Collect Credentials</h2>
+    </div>
+    <p>Confirm BigRock has completed provisioning <strong>cPanel Admin Cloud</strong> and your <strong>Dedicated IP</strong> for <code>server.urbangaon.com</code> (Order ID: 127300308). Record:</p>
+    <ul>
+      <li><strong>Dedicated IPv4 Address</strong> (referred to below as <code>&lt;VPS_IP&gt;</code>)</li>
+      <li><strong>Root SSH credentials</strong> and <strong>WHM URL</strong> (<code>https://&lt;VPS_IP&gt;:2087</code>)</li>
+    </ul>
+  </div>
+
+  <div class="step">
+    <div class="step-header">
+      <span class="step-badge">STEP 1</span>
+      <h2>DNS Records &amp; MongoDB Atlas IP Whitelisting</h2>
+    </div>
+    <ol>
+      <li><strong>BigRock DNS Management (<code>urbangaon.com</code>):</strong>
+        <ul>
+          <li>Add <strong>A Record</strong>: <code>todo.urbangaon.com</code> &rarr; <code>&lt;VPS_IP&gt;</code> (TTL <code>300</code>)</li>
+          <li>Add <strong>SPF TXT Record</strong> (BigRock + Gmail SMTP):<br />
+            <code>v=spf1 +a +mx include:_spf.google.com include:eig.spf.a.cloudfilter.net ~all</code>
+          </li>
+        </ul>
+      </li>
+      <li><strong>MongoDB Atlas &rarr; Network Access:</strong> Whitelist your static IP <code>&lt;VPS_IP&gt;/32</code> (avoid leaving <code>0.0.0.0/0</code> open in production).</li>
+    </ol>
+  </div>
+
+  <div class="step">
+    <div class="step-header">
+      <span class="step-badge">STEP 2</span>
+      <h2>Create cPanel Account &amp; Enable AutoSSL (HTTPS)</h2>
+    </div>
+    <ol>
+      <li>Sign into <strong>WHM</strong> (<code>https://&lt;VPS_IP&gt;:2087</code>) &rarr; <strong>Create a New Account</strong>: Domain <code>todo.urbangaon.com</code>, Username <code>ugtodo</code>.</li>
+      <li>Open <strong>WHM &rarr; Manage AutoSSL</strong> and run AutoSSL for <code>ugtodo</code> so <code>https://todo.urbangaon.com</code> receives a valid Let's Encrypt / Sectigo TLS certificate.</li>
+    </ol>
+  </div>
+
+  <div class="step">
+    <div class="step-header">
+      <span class="step-badge">STEP 3</span>
+      <h2>Install Node.js 20 LTS &amp; PM2 via SSH</h2>
+    </div>
+    <pre><code>ssh root@&lt;VPS_IP&gt;
+
+# AlmaLinux / Rocky / CentOS (standard on BigRock cPanel KVM)
+curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
+dnf install -y nodejs git
+npm install -g pm2
+node -v &amp;&amp; pm2 -v</code></pre>
+  </div>
+
+  <div class="step">
+    <div class="step-header">
+      <span class="step-badge">STEP 4</span>
+      <h2>Deploy &amp; Build Next.js Standalone Bundle</h2>
+    </div>
+    <p><strong>Option A (Recommended — Git):</strong></p>
+    <pre><code>mkdir -p /var/www/urbangaon-todo &amp;&amp; cd /var/www/urbangaon-todo
+git clone &lt;YOUR_GIT_REPO_URL&gt; .
+nano .env   # Paste production variables from Step 5
+
+npm ci
+npm run build
+
+# Copy static assets &amp; env into Next.js standalone output
+cp -r public .next/standalone/public
+cp -r .next/static .next/standalone/.next/static
+cp .env .next/standalone/.env</code></pre>
+    <p><strong>Option B (Pre-built ZIP from Windows):</strong> Run <code>npm run build &amp;&amp; npm run package:cpanel</code> locally to generate <code>urbangaon-cpanel-ready.zip</code>, upload via <code>scp</code> to <code>/var/www/urbangaon-todo/</code>, and unzip.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-header">
+      <span class="step-badge">STEP 5</span>
+      <h2>Configure Production <code>.env</code> (Permissions <code>chmod 600</code>)</h2>
+    </div>
+    <pre><code>NODE_ENV=production
+PORT=3000
+HOSTNAME=127.0.0.1
+
+NEXT_PUBLIC_APP_URL=https://todo.urbangaon.com
+MONGODB_URI=mongodb+srv://&lt;user&gt;:&lt;password&gt;@cluster0.vgpa6s7.mongodb.net/urbangaon_todo?retryWrites=true&amp;w=majority&amp;appName=Cluster0
+JWT_SECRET=&lt;64-char-random-hex-secret&gt;
+GEMINI_API_KEY=&lt;your-google-gemini-api-key&gt;
+
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=465
+SMTP_SECURE=true
+SMTP_USER=techdesk@urbangaon.com
+SMTP_PASS=&lt;your-16-char-gmail-app-password&gt;
+SMTP_FROM="UrbanGaon Executive Dispatcher" &lt;techdesk@urbangaon.com&gt;</code></pre>
+  </div>
+
+  <div class="step">
+    <div class="step-header">
+      <span class="step-badge">STEP 6</span>
+      <h2>Start &amp; Persist App with PM2 + systemd</h2>
+    </div>
+    <p>Create <code>/var/www/urbangaon-todo/ecosystem.config.js</code>:</p>
+    <pre><code>module.exports = {
+  apps: [{
+    name: 'urbangaon-todo',
+    cwd: '/var/www/urbangaon-todo/.next/standalone',
+    script: 'server.js',
+    instances: 1, // Single instance keeps in-memory SSE EventEmitter coherent
+    exec_mode: 'fork',
+    max_memory_restart: '900M',
+    env: { NODE_ENV: 'production', PORT: 3000, HOSTNAME: '127.0.0.1' },
+  }],
+};</code></pre>
+    <pre><code>pm2 start /var/www/urbangaon-todo/ecosystem.config.js
+pm2 save
+pm2 startup systemd   # Execute the exact systemd command PM2 outputs</code></pre>
+  </div>
+
+  <div class="step">
+    <div class="step-header">
+      <span class="step-badge">STEP 7</span>
+      <h2>Configure cPanel Apache Reverse Proxy (SSE Real-Time Enabled)</h2>
+    </div>
+    <p>Never edit <code>httpd.conf</code> directly. Use cPanel's userdata include path:</p>
+    <pre><code>mkdir -p /etc/apache2/conf.d/userdata/ssl/2_4/ugtodo/todo.urbangaon.com
+cat &lt;&lt;'EOF' &gt; /etc/apache2/conf.d/userdata/ssl/2_4/ugtodo/todo.urbangaon.com/nextjs.conf
+ProxyPreserveHost On
+ProxyRequests Off
+
+# Critical: Disable buffering for Real-Time SSE (/api/realtime)
+ProxyPass /api/realtime http://127.0.0.1:3000/api/realtime flushpackets=on retry=0 timeout=60
+ProxyPassReverse /api/realtime http://127.0.0.1:3000/api/realtime
+
+ProxyPass / http://127.0.0.1:3000/
+ProxyPassReverse / http://127.0.0.1:3000/
+RequestHeader set X-Forwarded-Proto "https"
+EOF
+
+# Force HTTP -&gt; HTTPS redirect
+mkdir -p /etc/apache2/conf.d/userdata/std/2_4/ugtodo/todo.urbangaon.com
+cat &lt;&lt;'EOF' &gt; /etc/apache2/conf.d/userdata/std/2_4/ugtodo/todo.urbangaon.com/redirect.conf
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+EOF
+
+/usr/local/cpanel/scripts/rebuildhttpdconf
+/usr/local/cpanel/scripts/restartsrv_httpd</code></pre>
+  </div>
+
+  <div class="step">
+    <div class="step-header">
+      <span class="step-badge">STEP 8</span>
+      <h2>Schedule Automated Cron Jobs (Morning Digest &amp; Nightly Rollover)</h2>
+    </div>
+    <p>Run <code>crontab -e</code> as root (UTC schedule matching IST 08:30 AM and 00:05 AM):</p>
+    <pre><code>0 3 * * * curl -fsS "http://127.0.0.1:3000/api/cron?action=digest" &gt;/dev/null 2&gt;&amp;1
+35 18 * * * curl -fsS "http://127.0.0.1:3000/api/cron?action=rollover" &gt;/dev/null 2&gt;&amp;1</code></pre>
+  </div>
+
+  <div class="step">
+    <div class="step-header">
+      <span class="step-badge">STEP 9</span>
+      <h2>Production Verification &amp; Flutter Mobile App Sync</h2>
+    </div>
+    <table class="checklist-table">
+      <thead>
+        <tr>
+          <th>Check</th>
+          <th>Command / Action</th>
+          <th>Expected Result</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Local Next.js Health</td>
+          <td><code>curl -I http://127.0.0.1:3000</code></td>
+          <td><code>HTTP/1.1 200 OK</code></td>
+        </tr>
+        <tr>
+          <td>Public HTTPS + SSL</td>
+          <td><code>curl -I https://todo.urbangaon.com</code></td>
+          <td><code>HTTP/2 200</code> with valid TLS cert</td>
+        </tr>
+        <tr>
+          <td>Real-Time SSE Stream</td>
+          <td><code>curl -N https://todo.urbangaon.com/api/realtime</code></td>
+          <td>Immediate <code>event: connected</code> + 1s heartbeats</td>
+        </tr>
+        <tr>
+          <td>PM2 Reboot Survival</td>
+          <td><code>pm2 status</code></td>
+          <td><code>urbangaon-todo</code> status <code>online</code></td>
+        </tr>
+        <tr>
+          <td>Flutter Android APK</td>
+          <td>Open <code>UrbanGaon_TODO_v2.4.0.apk</code> &rarr; Backend Sync Server</td>
+          <td>Set <code>https://todo.urbangaon.com</code> &rarr; Test &amp; Save</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="footer">
+    UrbanGaon Properties Pvt. Ltd. • Enterprise AI TODO Platform (v2.4.0) • BigRock VPS Linux KVM Production Deployment Runbook
+  </div>
+
+</body>
+</html>

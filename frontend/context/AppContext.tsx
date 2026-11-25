@@ -996,6 +996,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [auditLogs, currentUser]);
 
   // ── Audit logs sync strictly for CEO Sir & Aakash Das
+
+  
   useEffect(() => {
     if (canViewAuditTrail(currentUser)) {
       const emailParam = encodeURIComponent(currentUser.email || '');

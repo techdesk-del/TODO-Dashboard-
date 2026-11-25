@@ -19,6 +19,7 @@ import { MorningDigestPreviewModal } from '@/components/MorningDigestPreviewModa
 import { CreateTaskModal } from '@/components/CreateTaskModal';
 import { EnterpriseExportModal } from '@/components/EnterpriseExportModal';
 import { AuthModal } from '@/components/AuthModal';
+import { EmployeeLoginGate } from '@/components/EmployeeLoginGate';
 import { LiveCompanyDashboard } from '@/components/LiveCompanyDashboard';
 import { formatDateTitle, getTodayStr, getTomorrowStr, formatDateDayMonth, isTaskForDate } from '@/shared/lib/dateUtils';
 import { isCeoUser, isStrictCeo, canAccessAdminHr, canAccessWorkflows, canViewAuditTrail } from '@/shared/lib/rosterData';
@@ -208,6 +209,19 @@ export default function Home() {
   };
 
 
+
+  if (isGuest) {
+    return (
+      <>
+        <EmployeeLoginGate />
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          initialMode={authModalInitialMode}
+        />
+      </>
+    );
+  }
 
   return (
     <div className="app-layout">

@@ -12,7 +12,7 @@ import { AuditLogModel } from '@/models/AuditLog';
 import { verifyPassword, hashPassword, signJwtToken } from '@/lib/auth';
 import { findOfficialEmployeeByEmail, syncOfficialRosterToDB } from '@/lib/rosterSync';
 import { sendSecurityLockoutAlertEmail, sendTwoFactorOtpEmail } from '@/lib/email';
-import { isStrictCeo } from '@/shared/lib/rosterData';
+import { isStrictCeo, OFFICIAL_ROSTER } from '@/shared/lib/rosterData';
 import { checkRateLimit } from '@/lib/rateLimiter';
 import { sanitizeInput, withSecurityHeaders } from '@/lib/security';
 
@@ -31,16 +31,44 @@ export async function POST(req: NextRequest) {
 
     const rawBody = await req.json().catch(() => ({}));
     const body = sanitizeInput(rawBody);
-    const { email, password, twoFactorCode } = body;
+    const { email, employeeId, identifier, password, twoFactorCode } = body;
 
-    if (!email || !password) {
+    const rawIdentifier = String(identifier || employeeId || email || '').trim();
+    if (!rawIdentifier || !password) {
       return NextResponse.json(
-        { success: false, error: 'Email and password are required' },
+        { success: false, error: 'Employee ID / Email and password are required' },
         { status: 400 }
       );
     }
 
-    const cleanEmail = String(email).trim().toLowerCase();
+    // Resolve Employee ID (e.g. UG00010, mem-12) or Corporate Email to canonical email
+    let cleanEmail = rawIdentifier.toLowerCase();
+    if (!rawIdentifier.includes('@')) {
+      const idRegex = new RegExp(`^${rawIdentifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+      const matchedMember = await MemberModel.findOne({
+        $or: [{ employeeId: idRegex }, { id: idRegex }],
+      }).lean().exec();
+      if (matchedMember?.email) {
+        cleanEmail = matchedMember.email.toLowerCase().trim();
+      } else {
+        const matchedUser = await UserModel.findOne({ id: idRegex }).lean().exec();
+        if (matchedUser?.email) {
+          cleanEmail = matchedUser.email.toLowerCase().trim();
+        } else {
+          const matchedRoster = OFFICIAL_ROSTER.find(
+            (e) => e.id.toLowerCase() === rawIdentifier.toLowerCase()
+          );
+          if (matchedRoster?.email) {
+            cleanEmail = matchedRoster.email.toLowerCase().trim();
+          } else {
+            return NextResponse.json(
+              { success: false, error: `Invalid credentials. Employee ID "${rawIdentifier}" not found in corporate directory.` },
+              { status: 401 }
+            );
+          }
+        }
+      }
+    }
     const emailRegex = new RegExp(`^${cleanEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
     const officialEmp = findOfficialEmployeeByEmail(cleanEmail);
 
