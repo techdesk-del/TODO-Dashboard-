@@ -204,9 +204,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Verify Password: allow universal default '123' or 'password123' for all employees, or hashed match
+    // Verify Password: once an employee sets a custom password, enforce their MongoDB bcrypt hash strictly
     let isMatch = false;
-    if (password === '123' || password === 'password123') {
+    if (!user.hasCustomPassword && (password === '123' || password === 'password123')) {
       isMatch = true;
       user.passwordHash = await hashPassword(password);
     } else {

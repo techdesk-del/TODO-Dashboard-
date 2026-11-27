@@ -11,6 +11,7 @@ import { MemberModel } from '@/models/Member';
 import { AuditLogModel } from '@/models/AuditLog';
 import { hashPassword, signJwtToken } from '@/lib/auth';
 import { findOfficialEmployeeByEmail } from '@/lib/rosterSync';
+import { OFFICIAL_ROSTER } from '@/shared/lib/rosterData';
 import { sendPasswordChangeConfirmationEmail } from '@/lib/email';
 
 // GET: Validate if one-time reset link is valid and unused (Flowchart 4)
@@ -81,11 +82,12 @@ export async function POST(req: NextRequest) {
     await connectDB();
 
     const body = await req.json();
-    const { email, code, newPassword } = body;
+    const { email, employeeId, identifier, code, newPassword } = body;
 
-    if (!email || !code || !newPassword) {
+    const rawIdentifier = String(identifier || employeeId || email || '').trim();
+    if (!rawIdentifier || !code || !newPassword) {
       return NextResponse.json(
-        { success: false, error: 'Email, verification code/link, and new password are required.', offerResend: true },
+        { success: false, error: 'Employee ID / Email, verification code, and new password are required.', offerResend: true },
         { status: 400 }
       );
     }
@@ -98,7 +100,28 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const cleanEmail = String(email).trim().toLowerCase();
+    let cleanEmail = rawIdentifier.toLowerCase();
+    if (!rawIdentifier.includes('@')) {
+      const idRegex = new RegExp(`^${rawIdentifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+      const matchedMember = await MemberModel.findOne({
+        $or: [{ employeeId: idRegex }, { id: idRegex }],
+      }).lean().exec();
+      if (matchedMember?.email) {
+        cleanEmail = matchedMember.email.toLowerCase().trim();
+      } else {
+        const matchedUser = await UserModel.findOne({ id: idRegex }).lean().exec();
+        if (matchedUser?.email) {
+          cleanEmail = matchedUser.email.toLowerCase().trim();
+        } else {
+          const matchedRoster = OFFICIAL_ROSTER.find(
+            (e) => e.id.toLowerCase() === rawIdentifier.toLowerCase()
+          );
+          if (matchedRoster?.email) {
+            cleanEmail = matchedRoster.email.toLowerCase().trim();
+          }
+        }
+      }
+    }
     const cleanCode = String(code).trim();
     const officialEmp = findOfficialEmployeeByEmail(cleanEmail);
 

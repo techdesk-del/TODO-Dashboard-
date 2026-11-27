@@ -9,6 +9,7 @@ import { UserModel } from '@/models/User';
 import { MemberModel } from '@/models/Member';
 import { hashPassword } from '@/lib/auth';
 import { findOfficialEmployeeByEmail, syncOfficialRosterToDB } from '@/lib/rosterSync';
+import { OFFICIAL_ROSTER } from '@/shared/lib/rosterData';
 import { sendPasswordResetEmail } from '@/lib/email';
 import { checkRateLimit } from '@/lib/rateLimiter';
 import { sanitizeInput } from '@/lib/security';
@@ -28,16 +29,43 @@ export async function POST(req: NextRequest) {
 
     const rawBody = await req.json().catch(() => ({}));
     const body = sanitizeInput(rawBody);
-    const { email } = body;
+    const { email, employeeId, identifier } = body;
 
-    if (!email || typeof email !== 'string') {
+    const rawIdentifier = String(identifier || employeeId || email || '').trim();
+    if (!rawIdentifier) {
       return NextResponse.json(
-        { success: false, error: 'Corporate email is required.' },
+        { success: false, error: 'Employee ID or corporate email is required.' },
         { status: 400 }
       );
     }
 
-    const cleanEmail = email.trim().toLowerCase();
+    let cleanEmail = rawIdentifier.toLowerCase();
+    if (!rawIdentifier.includes('@')) {
+      const idRegex = new RegExp(`^${rawIdentifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+      const matchedMember = await MemberModel.findOne({
+        $or: [{ employeeId: idRegex }, { id: idRegex }],
+      }).lean().exec();
+      if (matchedMember?.email) {
+        cleanEmail = matchedMember.email.toLowerCase().trim();
+      } else {
+        const matchedUser = await UserModel.findOne({ id: idRegex }).lean().exec();
+        if (matchedUser?.email) {
+          cleanEmail = matchedUser.email.toLowerCase().trim();
+        } else {
+          const matchedRoster = OFFICIAL_ROSTER.find(
+            (e) => e.id.toLowerCase() === rawIdentifier.toLowerCase()
+          );
+          if (matchedRoster?.email) {
+            cleanEmail = matchedRoster.email.toLowerCase().trim();
+          } else {
+            return NextResponse.json(
+              { success: false, error: `Employee ID "${rawIdentifier}" not found in corporate roster.` },
+              { status: 404 }
+            );
+          }
+        }
+      }
+    }
     const officialEmp = findOfficialEmployeeByEmail(cleanEmail);
 
     let user = await UserModel.findOne(

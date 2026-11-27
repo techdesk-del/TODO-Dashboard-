@@ -36,6 +36,96 @@ export const EmployeeLoginGate: React.FC<EmployeeLoginGateProps> = ({ onSuccess 
   const [error, setError] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
+  // Real-time Forgot / Change Password state (Email OTP + MongoDB Atlas sync)
+  const [resetMode, setResetMode] = useState<'NONE' | 'REQUEST' | 'VERIFY'>('NONE');
+  const [resetCode, setResetCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [resetAccountEmail, setResetAccountEmail] = useState('');
+
+  const handleRequestPasswordReset = async () => {
+    const cleanId = employeeId.trim();
+    if (!cleanId) {
+      setError('Please select or enter your Employee ID or Corporate Email first.');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    setInfoMessage(null);
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier: cleanId, employeeId: cleanId, email: cleanId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        setError(data.error || 'Could not dispatch password reset code.');
+        return;
+      }
+      setResetAccountEmail(data.accountEmail || data.email || cleanId);
+      setResetMode('VERIFY');
+      setInfoMessage(
+        data.message || `6-digit verification code sent in real time to ${data.accountEmail || cleanId}.`
+      );
+    } catch {
+      setError('Network error while sending reset code. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCompletePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanId = (resetAccountEmail || employeeId).trim();
+    if (!cleanId || resetCode.trim().length < 6) {
+      setError('Please enter the 6-digit verification code sent to your email.');
+      return;
+    }
+    if (newPassword.length < 6) {
+      setError('New password must be at least 6 characters long.');
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setError('New password and confirm password do not match.');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setInfoMessage(null);
+    try {
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          identifier: cleanId,
+          employeeId: employeeId.trim(),
+          email: cleanId,
+          code: resetCode.trim(),
+          newPassword,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        setError(data.error || 'Password update failed. Please check the code and try again.');
+        return;
+      }
+
+      setPassword('');
+      setResetCode('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+      setResetMode('NONE');
+      setInfoMessage('Password updated');
+    } catch {
+      setError('Network error while updating password. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const liveActiveMembers = React.useMemo(() => {
     return (Array.isArray(members) ? members : []).filter((m) => {
       if (!m || !m.id || !m.email) return false;
@@ -223,7 +313,19 @@ export const EmployeeLoginGate: React.FC<EmployeeLoginGateProps> = ({ onSuccess 
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} style={{ padding: '24px 28px 28px' }}>
+        <form
+          onSubmit={
+            resetMode === 'VERIFY'
+              ? handleCompletePasswordReset
+              : resetMode === 'REQUEST'
+              ? (e) => {
+                  e.preventDefault();
+                  handleRequestPasswordReset();
+                }
+              : handleSubmit
+          }
+          style={{ padding: '24px 28px 28px' }}
+        >
           {infoMessage && (
             <div
               style={{
@@ -410,72 +512,199 @@ export const EmployeeLoginGate: React.FC<EmployeeLoginGateProps> = ({ onSuccess 
             </div>
           </div>
 
-          {/* Password */}
-          <div style={{ marginBottom: requires2FA ? '14px' : '20px' }}>
-            <label
-              htmlFor="ug-emp-pass"
-              style={{
-                display: 'block',
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                color: '#334155',
-                marginBottom: '6px',
-              }}
-            >
-              Password
-            </label>
-            <div style={{ position: 'relative' }}>
-              <Lock
-                size={17}
-                style={{
-                  position: 'absolute',
-                  left: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: '#94a3b8',
-                }}
-              />
-              <input
-                id="ug-emp-pass"
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="current-password"
-                disabled={requires2FA || loading}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                style={{
-                  width: '100%',
-                  padding: '11px 40px 11px 38px',
-                  borderRadius: '10px',
-                  border: '1px solid #cbd5e1',
-                  fontSize: '0.9rem',
-                  color: '#0f172a',
-                  background: requires2FA ? '#f8fafc' : '#ffffff',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((prev) => !prev)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                style={{
-                  position: 'absolute',
-                  right: '10px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: '#64748b',
-                  padding: '4px',
-                  display: 'flex',
-                }}
-              >
-                {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-              </button>
+          {/* Password (Login Mode) OR Forgot/Change Password Verification Inputs */}
+          {resetMode === 'NONE' ? (
+            <div style={{ marginBottom: requires2FA ? '14px' : '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <label
+                  htmlFor="ug-emp-pass"
+                  style={{
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    color: '#334155',
+                  }}
+                >
+                  Password
+                </label>
+                {!requires2FA && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResetMode('REQUEST');
+                      setError(null);
+                      setInfoMessage(null);
+                    }}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#2563eb',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      padding: 0,
+                    }}
+                  >
+                    Forgot / Change Password?
+                  </button>
+                )}
+              </div>
+              <div style={{ position: 'relative' }}>
+                <Lock
+                  size={17}
+                  style={{
+                    position: 'absolute',
+                    left: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: '#94a3b8',
+                  }}
+                />
+                <input
+                  id="ug-emp-pass"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  disabled={requires2FA || loading}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  style={{
+                    width: '100%',
+                    padding: '11px 40px 11px 38px',
+                    borderRadius: '10px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '0.9rem',
+                    color: '#0f172a',
+                    background: requires2FA ? '#f8fafc' : '#ffffff',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  style={{
+                    position: 'absolute',
+                    right: '10px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: '#64748b',
+                    padding: '4px',
+                    display: 'flex',
+                  }}
+                >
+                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                </button>
+              </div>
             </div>
-          </div>
+          ) : resetMode === 'VERIFY' ? (
+            <>
+              <div style={{ marginBottom: '12px' }}>
+                <label
+                  htmlFor="ug-reset-code"
+                  style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}
+                >
+                  6-Digit Email Verification Code
+                </label>
+                <input
+                  id="ug-reset-code"
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  autoFocus
+                  value={resetCode}
+                  onChange={(e) => setResetCode(e.target.value.replace(/\D/g, ''))}
+                  placeholder="Enter 6-digit code from email"
+                  style={{
+                    width: '100%',
+                    padding: '11px 12px',
+                    borderRadius: '10px',
+                    border: '1.5px solid #2563eb',
+                    fontSize: '0.98rem',
+                    fontWeight: 700,
+                    letterSpacing: '0.2em',
+                    color: '#0f172a',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+              <div style={{ marginBottom: '12px' }}>
+                <label
+                  htmlFor="ug-new-pass"
+                  style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}
+                >
+                  New Password (min 6 characters)
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    id="ug-new-pass"
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter new password"
+                    style={{
+                      width: '100%',
+                      padding: '11px 40px 11px 12px',
+                      borderRadius: '10px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '0.9rem',
+                      color: '#0f172a',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword((prev) => !prev)}
+                    style={{
+                      position: 'absolute',
+                      right: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: '#64748b',
+                      padding: '4px',
+                      display: 'flex',
+                    }}
+                  >
+                    {showNewPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                  </button>
+                </div>
+              </div>
+              <div style={{ marginBottom: '16px' }}>
+                <label
+                  htmlFor="ug-confirm-pass"
+                  style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}
+                >
+                  Confirm New Password
+                </label>
+                <input
+                  id="ug-confirm-pass"
+                  type={showNewPassword ? 'text' : 'password'}
+                  value={confirmNewPassword}
+                  onChange={(e) => setConfirmNewPassword(e.target.value)}
+                  placeholder="Re-enter new password"
+                  style={{
+                    width: '100%',
+                    padding: '11px 12px',
+                    borderRadius: '10px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '0.9rem',
+                    color: '#0f172a',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+            </>
+          ) : (
+            <p style={{ fontSize: '0.8rem', color: '#475569', margin: '0 0 16px' }}>
+              We will send a real-time 6-digit verification code to your registered corporate email.
+            </p>
+          )}
 
           {/* 2FA OTP Input */}
           {requires2FA && (
@@ -536,6 +765,7 @@ export const EmployeeLoginGate: React.FC<EmployeeLoginGateProps> = ({ onSuccess 
             disabled={loading}
             style={{
               width: '100%',
+              marginTop: '8px',
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -552,12 +782,49 @@ export const EmployeeLoginGate: React.FC<EmployeeLoginGateProps> = ({ onSuccess 
             }}
           >
             {loading
-              ? 'Verifying...'
+              ? 'Processing...'
+              : resetMode === 'REQUEST'
+              ? 'Send Verification Code to Email'
+              : resetMode === 'VERIFY'
+              ? 'Update Password'
               : requires2FA
               ? 'Verify OTP & Enter TODO App'
               : 'Sign In to TODO App'}
             {!loading && <ArrowRight size={17} />}
           </button>
+
+          {resetMode !== 'NONE' && (
+            <button
+              type="button"
+              onClick={() => {
+                setResetMode('NONE');
+                setResetCode('');
+                setNewPassword('');
+                setConfirmNewPassword('');
+                setError(null);
+                setInfoMessage(null);
+              }}
+              style={{
+                width: '100%',
+                marginTop: '10px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                padding: '9px 12px',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0',
+                background: '#f8fafc',
+                color: '#475569',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              <ArrowLeft size={14} />
+              Back to Employee Sign In
+            </button>
+          )}
 
           {requires2FA && (
             <button
