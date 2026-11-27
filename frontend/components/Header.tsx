@@ -1190,7 +1190,6 @@ export const Header: React.FC = () => {
                         </div>
                       </div>
                     </div>
-              //
 
                     {/* Edit Profile Action Tile */}
                     <div
