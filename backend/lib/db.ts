@@ -52,7 +52,8 @@ export async function connectDB(): Promise<Connection> {
       .then((m) => {
         console.log('[DB] ✓ Connected to MongoDB Atlas');
         if (typeof window === 'undefined') {
-          import('@/lib/cron').then(m => m.initServerCron()).catch(() => {});
+          import('@/lib/cron').then(mod => mod.initServerCron()).catch(() => { });
+          import('@/lib/changeStream').then(mod => mod.initMongoChangeStream(m.connection)).catch(() => { });
         }
         return m.connection;
       })
