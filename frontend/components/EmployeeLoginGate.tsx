@@ -13,6 +13,9 @@ import {
   ArrowLeft,
   KeyRound,
   CheckCircle2,
+  Users,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { isStrictCeo } from '@/shared/lib/rosterData';
 
@@ -21,16 +24,29 @@ interface EmployeeLoginGateProps {
 }
 
 export const EmployeeLoginGate: React.FC<EmployeeLoginGateProps> = ({ onSuccess }) => {
-  const { setCurrentUser, setActiveView, setBannerNotification, setIsAuthModalOpen, setAuthModalInitialMode } = useApp();
+  const { members, refreshMembersFromDB, setCurrentUser, setActiveView, setBannerNotification, setIsAuthModalOpen, setAuthModalInitialMode } = useApp();
 
   const [employeeId, setEmployeeId] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showRoster, setShowRoster] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState('');
   const [requires2FA, setRequires2FA] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
+
+  const liveActiveMembers = React.useMemo(() => {
+    return (Array.isArray(members) ? members : []).filter((m) => {
+      if (!m || !m.id || !m.email) return false;
+      const st = String(m.status || '').toUpperCase().trim();
+      return st !== 'DEACTIVATED' && st !== 'REMOVED' && st !== 'TERMINATED' && st !== 'EXITED';
+    });
+  }, [members]);
+
+  React.useEffect(() => {
+    refreshMembersFromDB().catch(() => {});
+  }, [refreshMembersFromDB]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -247,6 +263,102 @@ export const EmployeeLoginGate: React.FC<EmployeeLoginGateProps> = ({ onSuccess 
             >
               <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '1px' }} />
               <span>{error}</span>
+            </div>
+          )}
+
+          {/* Live Real-Time MongoDB Employee Roster Quick-Select */}
+          {!requires2FA && liveActiveMembers.length > 0 && (
+            <div style={{ marginBottom: '14px' }}>
+              <button
+                type="button"
+                onClick={() => setShowRoster((prev) => !prev)}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '9px 12px',
+                  borderRadius: '10px',
+                  border: '1px solid #cbd5e1',
+                  background: '#f8fafc',
+                  color: '#1e293b',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <Users size={15} color="#2563eb" />
+                  Select Employee ({liveActiveMembers.length} live)
+                </span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#2563eb', fontWeight: 700 }}>
+                  {showRoster ? 'Hide Roster' : 'Show Roster'}
+                  {showRoster ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                </span>
+              </button>
+
+              {showRoster && (
+                <div
+                  style={{
+                    marginTop: '6px',
+                    maxHeight: '190px',
+                    overflowY: 'auto',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '10px',
+                    background: '#ffffff',
+                  }}
+                >
+                  {liveActiveMembers.map((m) => {
+                    const empCode = (m.employeeId && m.employeeId.trim()) ? m.employeeId.trim() : m.id;
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => {
+                          setEmployeeId(empCode);
+                          setShowRoster(false);
+                          setError(null);
+                        }}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '8px',
+                          padding: '8px 10px',
+                          border: 'none',
+                          borderBottom: '1px solid #f1f5f9',
+                          background: employeeId === empCode ? '#eff6ff' : '#ffffff',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                        }}
+                      >
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {m.name}
+                          </div>
+                          <div style={{ fontSize: '0.72rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {empCode} • {m.email}
+                          </div>
+                        </div>
+                        <span
+                          style={{
+                            flexShrink: 0,
+                            fontSize: '0.68rem',
+                            fontWeight: 700,
+                            padding: '2px 7px',
+                            borderRadius: '999px',
+                            background: '#f1f5f9',
+                            color: '#334155',
+                          }}
+                        >
+                          {m.department}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 

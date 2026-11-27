@@ -305,9 +305,19 @@ export async function POST(req: NextRequest) {
       console.warn('[API/members POST] AuditLog error:', auditErr);
     }
 
+    const savedMemberObj = memberRecord.toObject ? memberRecord.toObject() : memberRecord;
+    broadcastMemberMutation({
+      action: 'CREATED',
+      memberId: assignedEmpId,
+      memberName: name.trim(),
+      memberEmail: cleanEmail,
+      status,
+      member: savedMemberObj,
+    });
+
     return NextResponse.json({
       success: true,
-      data: memberRecord.toObject ? memberRecord.toObject() : memberRecord,
+      data: savedMemberObj,
       employeeId: assignedEmpId,
       invitationCode: code,
       setPasswordLink,

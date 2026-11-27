@@ -246,7 +246,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
     const seenEmails = new Set<string>();
     const seenIds = new Set<string>();
 
-    const combinedLiveMembers = [...(Array.isArray(members) ? members : []), ...extraMembers];
+    // Prefer freshest live MongoDB records (merge extraMembers and SSE-updated context members by latest updatedAt)
+    const liveById = new Map<string, TeamMember>();
+    const pushLatest = (m: TeamMember) => {
+      if (!m || !m.id) return;
+      const key = m.id.trim();
+      const existing = liveById.get(key);
+      if (!existing) {
+        liveById.set(key, m);
+        return;
+      }
+      const existingTs = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+      const incomingTs = m.updatedAt ? new Date(m.updatedAt).getTime() : 0;
+      if (incomingTs >= existingTs) {
+        liveById.set(key, m);
+      }
+    };
+    for (const m of extraMembers) pushLatest(m);
+    for (const m of (Array.isArray(members) ? members : [])) pushLatest(m);
+    const combinedLiveMembers = Array.from(liveById.values());
 
     const deactivatedEmails = new Set<string>();
     const deactivatedIds = new Set<string>();
@@ -287,18 +305,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
       }
 
       const isCeoDept = cleanId === 'mem-1' || cleanEmail === 'ceo@urbangaon.com' || m.department === 'Leadership & CEO Desk' || m.department === 'Leadership & CEO';
+      const liveName = (m.name && m.name.trim()) ? m.name.trim() : (officialMatch ? officialMatch.name : 'Team Member');
+      const liveEmail = (m.email && m.email.trim()) ? m.email.trim() : (officialMatch ? officialMatch.email : '');
+      const liveDepartment = (m.department && m.department.trim()) ? m.department.trim() : (officialMatch ? officialMatch.department : 'General');
+      const liveDesignation = (m.designation && m.designation.trim()) ? m.designation.trim() : (officialMatch ? officialMatch.designation : 'Specialist');
       list.push({
         id: cleanId,
-        name: (cleanId === 'mem-1' || cleanEmail === 'ceo@urbangaon.com') ? 'Mr. Sukh Sagar' : (officialMatch ? officialMatch.name : m.name),
-        email: officialMatch ? officialMatch.email : m.email,
+        name: liveName,
+        email: liveEmail,
         role: m.role || (officialMatch ? officialMatch.role : 'EMPLOYEE'),
-        department: isCeoDept ? 'Founder' : (officialMatch ? officialMatch.department : (m.department || 'General')),
-        designation: (cleanId === 'mem-1' || cleanEmail === 'ceo@urbangaon.com') ? 'Founder' : (officialMatch ? officialMatch.designation : (m.designation || 'Specialist')),
+        department: isCeoDept ? 'Founder' : liveDepartment,
+        designation: (cleanId === 'mem-1' || cleanEmail === 'ceo@urbangaon.com') ? (m.designation || 'Founder') : liveDesignation,
         avatar: (m.avatar && !m.avatar.includes('.png') && !m.avatar.includes('urbangaon-employee-emblem'))
           ? m.avatar
-          : (m.name?.trim().split(/\s+/).length >= 2
-            ? (m.name.trim().split(/\s+/)[0][0] + m.name.trim().split(/\s+/).slice(-1)[0][0]).toUpperCase()
-            : (m.name || 'EM').slice(0, 2).toUpperCase()),
+          : (liveName.split(/\s+/).length >= 2
+            ? (liveName.split(/\s+/)[0][0] + liveName.split(/\s+/).slice(-1)[0][0]).toUpperCase()
+            : (liveName || 'EM').slice(0, 2).toUpperCase()),
         aliases: officialMatch?.aliases,
         totalTasks: m.totalTasks ?? 0,
         completedTasks: m.completedTasks ?? 0,
@@ -308,26 +330,29 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
       });
     }
 
-    for (const o of OFFICIAL_ROSTER) {
-      const cleanEmail = o.email.toLowerCase().trim();
-      const cleanId = o.id.trim();
-      if (allPurgedIds.has(cleanId) || allPurgedEmails.has(cleanEmail)) continue;
-      if (o.aliases?.some(a => allPurgedEmails.has(a.toLowerCase().trim()))) continue;
-      if (deactivatedIds.has(cleanId) || deactivatedEmails.has(cleanEmail)) continue;
-      if (seenIds.has(cleanId) || seenEmails.has(cleanEmail)) continue;
+    // Only fallback to static OFFICIAL_ROSTER when MongoDB has not returned any live members yet
+    if (combinedLiveMembers.length === 0) {
+      for (const o of OFFICIAL_ROSTER) {
+        const cleanEmail = o.email.toLowerCase().trim();
+        const cleanId = o.id.trim();
+        if (allPurgedIds.has(cleanId) || allPurgedEmails.has(cleanEmail)) continue;
+        if (o.aliases?.some(a => allPurgedEmails.has(a.toLowerCase().trim()))) continue;
+        if (deactivatedIds.has(cleanId) || deactivatedEmails.has(cleanEmail)) continue;
+        if (seenIds.has(cleanId) || seenEmails.has(cleanEmail)) continue;
 
-      const hasAliasMatch = o.aliases?.some(a => seenEmails.has(a.toLowerCase().trim()));
-      if (hasAliasMatch) continue;
+        const hasAliasMatch = o.aliases?.some(a => seenEmails.has(a.toLowerCase().trim()));
+        if (hasAliasMatch) continue;
 
-      seenIds.add(cleanId);
-      seenEmails.add(cleanEmail);
-      o.aliases?.forEach(a => seenEmails.add(a.toLowerCase().trim()));
+        seenIds.add(cleanId);
+        seenEmails.add(cleanEmail);
+        o.aliases?.forEach(a => seenEmails.add(a.toLowerCase().trim()));
 
-      list.push(o);
+        list.push(o);
+      }
     }
 
     return list;
-  }, [members, extraMembers]);
+  }, [members, extraMembers, purgedMemberIds, purgedMemberEmails, extraPurgedIds, extraPurgedEmails]);
 
   const filteredDirectoryMembers = React.useMemo(() => {
     if (!rosterSearch.trim()) return allDirectoryMembers;

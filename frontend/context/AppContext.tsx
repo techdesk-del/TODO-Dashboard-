@@ -718,28 +718,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         eventSource.addEventListener('member_mutation', (e) => {
           try {
             const data = JSON.parse(e.data);
-            if (data.action === 'UPDATED') {
+            if (data.action === 'UPDATED' || data.action === 'CREATED') {
               const updatedMemberData = (data.member || {}) as Partial<TeamMember>;
               const newEmail = (data.memberEmail || updatedMemberData.email || '').trim().toLowerCase();
               const newName = (data.memberName || updatedMemberData.name || '').trim();
               const oldEmail = (data.oldEmail || '').trim().toLowerCase();
               const memberId = data.memberId || updatedMemberData.id;
 
-              // 1. Immediately update members list in memory across all connected PCs
+              // 1. Immediately upsert members list in memory across all connected PCs
               setMembers(prev => {
+                let matched = false;
                 const next = prev.map(m => {
                   const isMatch = (memberId && m.id === memberId) ||
                     (data.oldMemberId && m.id === data.oldMemberId) ||
                     (oldEmail && m.email?.toLowerCase() === oldEmail) ||
                     (newEmail && m.email?.toLowerCase() === newEmail);
                   if (!isMatch) return m;
+                  matched = true;
                   return {
                     ...m,
                     ...updatedMemberData,
                     ...(newEmail ? { email: newEmail } : {}),
-                    ...(newName ? { name: newName } : {})
+                    ...(newName ? { name: newName } : {}),
+                    updatedAt: updatedMemberData.updatedAt || new Date().toISOString(),
                   };
                 });
+                if (!matched && memberId && newEmail) {
+                  next.push({
+                    id: memberId,
+                    employeeId: updatedMemberData.employeeId || memberId,
+                    name: newName || 'Team Member',
+                    email: newEmail,
+                    role: updatedMemberData.role || 'EMPLOYEE',
+                    department: updatedMemberData.department || 'General',
+                    designation: updatedMemberData.designation || 'Specialist',
+                    status: updatedMemberData.status || 'ACTIVE',
+                    avatar: updatedMemberData.avatar || (newName ? newName.slice(0, 2).toUpperCase() : 'TM'),
+                    totalTasks: updatedMemberData.totalTasks ?? 0,
+                    completedTasks: updatedMemberData.completedTasks ?? 0,
+                    activeTasks: updatedMemberData.activeTasks ?? 0,
+                    overdueTasks: updatedMemberData.overdueTasks ?? 0,
+                    velocity: updatedMemberData.velocity ?? 100,
+                    updatedAt: updatedMemberData.updatedAt || new Date().toISOString(),
+                  } as TeamMember);
+                }
                 try {
                   if (typeof window !== 'undefined') {
                     localStorage.setItem('urbangaon_members_v2', JSON.stringify(next));
