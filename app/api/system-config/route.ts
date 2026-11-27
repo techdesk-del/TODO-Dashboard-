@@ -11,6 +11,7 @@ import { SystemConfigModel } from '@/models/SystemConfig';
 import { AuditLogModel } from '@/models/AuditLog';
 import { INITIAL_SYSTEM_CONFIG } from '@/shared/lib/mockData';
 import { requireAuth, sanitizeInput } from '@/lib/security';
+import { broadcastConfigMutation } from '@/lib/events';
 import type { SystemConfig } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -97,6 +98,12 @@ export async function POST(req: NextRequest) {
     } catch (auditErr) {
       console.warn('[Audit Log Write Warning]:', auditErr);
     }
+
+    broadcastConfigMutation({
+      config: mergedConfig,
+      updatedBy: actor || 'Admin',
+      updatedAt: now,
+    });
 
     return NextResponse.json({ success: true, data: mergedConfig });
   } catch (err: any) {

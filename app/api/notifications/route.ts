@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import { InAppNotificationModel } from '@/models/InAppNotification';
+import { broadcastNotificationMutation } from '@/lib/events';
 
 export async function GET(req: NextRequest) {
   try {
@@ -59,6 +60,10 @@ export async function PATCH(req: NextRequest) {
         { recipientEmail: email.trim().toLowerCase(), read: false },
         { $set: { read: true } }
       );
+      broadcastNotificationMutation({
+        action: 'READ_ALL',
+        recipientEmail: email.trim().toLowerCase(),
+      });
       return NextResponse.json({ success: true, message: 'All notifications marked as read' });
     }
 
@@ -67,6 +72,10 @@ export async function PATCH(req: NextRequest) {
         { id: notificationId },
         { $set: { read: true } }
       );
+      broadcastNotificationMutation({
+        action: 'READ',
+        notificationId,
+      });
       return NextResponse.json({ success: true, message: 'Notification marked as read' });
     }
 

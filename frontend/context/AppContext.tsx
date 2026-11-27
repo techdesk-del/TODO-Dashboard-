@@ -851,6 +851,71 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
         });
 
+        // Real-time System Configuration sync across all connected devices
+        eventSource.addEventListener('config_mutation', (e) => {
+          try {
+            const data = JSON.parse(e.data);
+            if (data.config && typeof data.config === 'object') {
+              setSystemConfig(prev => ({ ...prev, ...data.config }));
+            }
+          } catch { }
+        });
+
+        // Real-time In-App Notifications sync across all devices (strictly scoped to current user)
+        eventSource.addEventListener('notification_mutation', (e) => {
+          try {
+            const data = JSON.parse(e.data);
+            const activeUserEmail = (() => {
+              try {
+                const raw = sessionStorage.getItem('urbangaon_auth_user_v2') || localStorage.getItem('urbangaon_auth_user_v2');
+                const parsed = raw ? JSON.parse(raw) : null;
+                return (parsed?.email || '').toLowerCase().trim();
+              } catch {
+                return '';
+              }
+            })();
+            const targetEmail = (data.recipientEmail || data.notification?.recipientEmail || '').toLowerCase().trim();
+
+            if (data.action === 'CREATED' && data.notification) {
+              if (!activeUserEmail || (targetEmail && targetEmail !== activeUserEmail)) return;
+              const notif = data.notification as InAppNotification;
+              setInAppNotifications(prev => {
+                if (prev.some(n => n.id === notif.id)) return prev;
+                return [notif, ...prev].slice(0, 40);
+              });
+            } else if (data.action === 'READ' && data.notificationId) {
+              setInAppNotifications(prev =>
+                prev.map(n => n.id === data.notificationId ? { ...n, read: true } : n)
+              );
+            } else if (data.action === 'READ_ALL') {
+              if (targetEmail && activeUserEmail && targetEmail !== activeUserEmail) return;
+              setInAppNotifications(prev => prev.map(n => ({ ...n, read: true })));
+            }
+          } catch { }
+        });
+
+        // Real-time Audit Log live stream for Executive / CEO & Super Admin
+        eventSource.addEventListener('audit_log', (e) => {
+          try {
+            const data = JSON.parse(e.data);
+            if (data.entry && data.entry.id) {
+              setAuditLogs(prev => {
+                if (prev.some(a => a.id === data.entry.id)) return prev;
+                return [data.entry as AuditLogEntry, ...prev].slice(0, 1000);
+              });
+            }
+          } catch { }
+        });
+
+        // Real-time Access Request updates for Admin / HR portal
+        eventSource.addEventListener('access_request_mutation', (e) => {
+          try {
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('urbangaon:access-request-sync', { detail: JSON.parse(e.data) }));
+            }
+          } catch { }
+        });
+
         // Server says stream cycle ended → reconnect immediately (no delay)
         eventSource.addEventListener('reconnect', () => {
           eventSource?.close();

@@ -10,6 +10,7 @@ import { AuditLogModel } from '@/models/AuditLog';
 import { INITIAL_AUDIT_LOGS } from '@/shared/lib/mockData';
 import { canViewAuditTrail } from '@/shared/lib/rosterData';
 import { getAuthenticatedUser, sanitizeInput } from '@/lib/security';
+import { broadcastAuditLog } from '@/lib/events';
 
 async function seedAuditIfEmpty() {
   const count = await AuditLogModel.countDocuments();
@@ -92,6 +93,8 @@ export async function POST(req: NextRequest) {
       ipAddress: body.ipAddress || req.headers.get('x-forwarded-for') || '127.0.0.1',
       deviceInfo: body.deviceInfo || req.headers.get('user-agent') || 'Browser Client',
     });
+
+    broadcastAuditLog({ entry: entry.toObject ? entry.toObject() : entry });
 
     return NextResponse.json({ success: true, data: entry }, { status: 201 });
   } catch (err: unknown) {
