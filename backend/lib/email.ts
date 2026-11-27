@@ -42,6 +42,7 @@ export function getEmailLogoAttachments() {
 }
 
 
+
 /**
  * Universal, email-safe brand header featuring the official UrbanGaon logo and "Open Workspace" action
  */
