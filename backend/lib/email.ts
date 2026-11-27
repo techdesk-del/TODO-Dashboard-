@@ -22,6 +22,8 @@ export function getAppBaseUrl(_overrideUrl?: string): string {
   return PRODUCTION_WORKSPACE_URL;
 }
 
+
+
 /**
  * Prepares inline CID logo attachment for email clients (Gmail, Outlook, Apple Mail)
  */
@@ -38,6 +40,7 @@ export function getEmailLogoAttachments() {
   }
   return [];
 }
+
 
 /**
  * Universal, email-safe brand header featuring the official UrbanGaon logo and "Open Workspace" action
