@@ -550,85 +550,22 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
 
 
 
-            {/* Task Name / Title + Assigned By / Assigned To attribution */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0, flex: '1 1 auto' }}>
-              <span
-                className="task-title-text"
-                style={{
-                  textDecoration: 'none',
-                  color: isCompleted ? '#334155' : '#0f172a',
-                  fontWeight: 700,
-                  fontSize: '0.88rem',
-                  lineHeight: 1.4,
-                  minWidth: 0
-                }}
-                title={task.title}
-              >
-                {task.title}
-              </span>
-
-              {(() => {
-                const creatorId = (task.creator?.id || '').trim();
-                const creatorEmail = (task.creator?.email || '').toLowerCase().trim();
-                const creatorName = (task.creator?.name || '').toLowerCase().trim();
-                const isSamePerson = (a: AssigneeInfo) =>
-                  (creatorId && a.id === creatorId) ||
-                  (creatorEmail && a.email && a.email.toLowerCase().trim() === creatorEmail) ||
-                  (creatorName && a.name && a.name.toLowerCase().trim() === creatorName);
-
-                const isDelegatedToAnother = Boolean(
-                  task.creator?.name &&
-                  task.assignees &&
-                  task.assignees.length > 0 &&
-                  task.assignees.some(a => !isSamePerson(a))
-                );
-
-                if (!isDelegatedToAnother) return null;
-
-                return (
-                  <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
-                    <span
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        fontSize: '0.7rem',
-                        fontWeight: 600,
-                        color: '#5b21b6',
-                        background: '#f5f3ff',
-                        border: '1px solid #ddd6fe',
-                        borderRadius: '999px',
-                        padding: '1px 8px',
-                        whiteSpace: 'nowrap'
-                      }}
-                      title={`Assigned by ${task.creator.name}${task.creator.email ? ` (${task.creator.email})` : ''}`}
-                    >
-                      <User size={11} />
-                      Assigned by: <strong>{task.creator.name}</strong>
-                    </span>
-                    <span
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        fontSize: '0.7rem',
-                        fontWeight: 600,
-                        color: '#0369a1',
-                        background: '#f0f9ff',
-                        border: '1px solid #bae6fd',
-                        borderRadius: '999px',
-                        padding: '1px 8px',
-                        whiteSpace: 'nowrap'
-                      }}
-                      title={`Assigned to: ${task.assignees.map(a => a.name).join(', ')}`}
-                    >
-                      <Users size={11} />
-                      Assigned to: <strong>{task.assignees.map(a => a.name).join(', ')}</strong>
-                    </span>
-                  </div>
-                );
-              })()}
-            </div>
+            {/* Task Name / Title */}
+            <span
+              className="task-title-text"
+              style={{
+                textDecoration: 'none',
+                color: isCompleted ? '#334155' : '#0f172a',
+                fontWeight: 700,
+                fontSize: '0.88rem',
+                lineHeight: 1.4,
+                minWidth: 0,
+                flex: '1 1 auto'
+              }}
+              title={task.title}
+            >
+              {task.title}
+            </span>
 
             {isActuallyJustAdded && (
               <span className="just-added-badge" style={{ flexShrink: 0 }}>JUST ADDED</span>
@@ -849,6 +786,68 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
               gap: '0.65rem'
             }}
           >
+            {/* Cross-employee Assigned By / Assigned To attribution (only shown inside Options & Details when delegated to another employee) */}
+            {(() => {
+              const creatorId = (task.creator?.id || '').trim();
+              const creatorEmail = (task.creator?.email || '').toLowerCase().trim();
+              const creatorName = (task.creator?.name || '').toLowerCase().trim();
+              const isSamePerson = (a: AssigneeInfo) =>
+                (creatorId && a.id === creatorId) ||
+                (creatorEmail && a.email && a.email.toLowerCase().trim() === creatorEmail) ||
+                (creatorName && a.name && a.name.toLowerCase().trim() === creatorName);
+
+              const isDelegatedToAnother = Boolean(
+                task.creator?.name &&
+                task.assignees &&
+                task.assignees.length > 0 &&
+                task.assignees.some(a => !isSamePerson(a))
+              );
+
+              if (!isDelegatedToAnother) return null;
+
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '0.73rem',
+                      fontWeight: 600,
+                      color: '#5b21b6',
+                      background: '#f5f3ff',
+                      border: '1px solid #ddd6fe',
+                      borderRadius: '999px',
+                      padding: '2px 10px',
+                      whiteSpace: 'nowrap'
+                    }}
+                    title={`Assigned by ${task.creator.name}${task.creator.email ? ` (${task.creator.email})` : ''}`}
+                  >
+                    <User size={12} />
+                    Assigned by: <strong>{task.creator.name}</strong>
+                  </span>
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '0.73rem',
+                      fontWeight: 600,
+                      color: '#0369a1',
+                      background: '#f0f9ff',
+                      border: '1px solid #bae6fd',
+                      borderRadius: '999px',
+                      padding: '2px 10px',
+                      whiteSpace: 'nowrap'
+                    }}
+                    title={`Assigned to: ${task.assignees.map(a => a.name).join(', ')}`}
+                  >
+                    <Users size={12} />
+                    Assigned to: <strong>{task.assignees.map(a => a.name).join(', ')}</strong>
+                  </span>
+                </div>
+              );
+            })()}
             {/* Founder Final Approval Governance Banner */}
             {isAwaitingCeo && (
               <div
