@@ -214,7 +214,7 @@ export const EmployeeLoginGate: React.FC<EmployeeLoginGateProps> = ({ onSuccess 
       setActiveView(isStrictCeo(loggedInUser) ? 'ceo_portal' : 'workspace');
       setBannerNotification({
         badge: 'AUTHENTICATED',
-        message: `Welcome back, ${loggedInUser.name}. Your workspace is synced in real time.`,
+        message: `Welcome back, ${loggedInUser.name}`,
       });
 
       if (onSuccess) onSuccess();
