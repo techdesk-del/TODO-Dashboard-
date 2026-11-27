@@ -1,0 +1,117 @@
+name: Auto-Deploy to BigRock VPS (Live)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: bigrock-vps-deploy
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Next.js production standalone bundle
+        env:
+          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL || 'https://64.247.186.26' }}
+          NODE_ENV: production
+        run: |
+          npm run build
+          cp -r public .next/standalone/public
+          cp -r .next/static .next/standalone/.next/static
+          tar -czf /tmp/urbangaon-release.tar.gz -C .next/standalone .
+          ls -lh /tmp/urbangaon-release.tar.gz
+
+      - name: Install sshpass for VPS deployment
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+
+      - name: Upload release bundle to BigRock VPS
+        env:
+          SSHPASS: ${{ secrets.VPS_PASSWORD }}
+          VPS_HOST: ${{ secrets.VPS_HOST || '64.247.186.26' }}
+          VPS_USER: ${{ secrets.VPS_USER || 'root' }}
+          VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
+        run: |
+          sshpass -e scp -o StrictHostKeyChecking=no -P "$VPS_PORT" \
+            /tmp/urbangaon-release.tar.gz \
+            "$VPS_USER@$VPS_HOST:/root/urbangaon-release.tar.gz"
+
+      - name: Atomic swap, restart PM2, and verify health (with auto-rollback)
+        env:
+          SSHPASS: ${{ secrets.VPS_PASSWORD }}
+          VPS_HOST: ${{ secrets.VPS_HOST || '64.247.186.26' }}
+          VPS_USER: ${{ secrets.VPS_USER || 'root' }}
+          VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
+        run: |
+          sshpass -e ssh -o StrictHostKeyChecking=no -p "$VPS_PORT" \
+            "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE_EOF'
+          set -euo pipefail
+
+          APP_DIR="/var/www/urbangaon-todo"
+          NEXT_DIR="/var/www/urbangaon-todo-next"
+          PREV_DIR="/var/www/urbangaon-todo-prev"
+          ARCHIVE="/root/urbangaon-release.tar.gz"
+
+          echo "[Deploy] Preparing fresh staging directory..."
+          rm -rf "$NEXT_DIR"
+          mkdir -p "$NEXT_DIR"
+          tar -xzf "$ARCHIVE" -C "$NEXT_DIR"
+
+          # Preserve live server .env
+          if [ -f "$APP_DIR/.env" ]; then
+            cp "$APP_DIR/.env" "$NEXT_DIR/.env"
+          fi
+
+          # Atomic directory swap with previous release backup
+          rm -rf "$PREV_DIR"
+          if [ -d "$APP_DIR" ]; then
+            mv "$APP_DIR" "$PREV_DIR"
+          fi
+          mv "$NEXT_DIR" "$APP_DIR"
+
+          # Restart PM2 cleanly from new directory
+          cd "$APP_DIR"
+          pm2 delete urbangaon-todo 2>/dev/null || true
+          PORT=3000 HOSTNAME=127.0.0.1 pm2 start server.js --name urbangaon-todo
+          pm2 save
+
+          # Health check with automatic rollback on failure
+          sleep 3
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3000 || echo "000")
+          echo "[Deploy] Health check HTTP status: $HTTP_CODE"
+
+          if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "307" ] && [ "$HTTP_CODE" != "302" ]; then
+            echo "[Deploy] ERROR: Health check failed ($HTTP_CODE). Rolling back to previous release!"
+            rm -rf "$APP_DIR"
+            if [ -d "$PREV_DIR" ]; then
+              mv "$PREV_DIR" "$APP_DIR"
+              cd "$APP_DIR"
+              pm2 delete urbangaon-todo 2>/dev/null || true
+              PORT=3000 HOSTNAME=127.0.0.1 pm2 start server.js --name urbangaon-todo
+              pm2 save
+            fi
+            exit 1
+          fi
+
+          # Trigger roster/DB sync endpoint
+          curl -fsS "http://127.0.0.1:3000/api/admin/git-sync?key=urbangaon_git_sync_2026" >/dev/null || true
+          rm -f "$ARCHIVE"
+          echo "[Deploy] SUCCESS: Live BigRock VPS updated and verified!"
+          REMOTE_EOF

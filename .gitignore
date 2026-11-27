@@ -38,6 +38,7 @@ next-env.d.ts
 *.zip
 *.tar.gz
 *.tgz
+*.apk
 
 # temporary scratchpad & local dumps
 scratch/

@@ -21,7 +21,8 @@ import {
   Plus,
   Edit3,
   Loader2,
-  User
+  User,
+  BookOpen
 } from 'lucide-react';
 import { useTaskDeadlines } from '@/hooks/useTaskDeadlines';
 import { formatDateDisplay, formatDateShort, getTodayStr } from '@/shared/lib/dateUtils';
@@ -325,35 +326,37 @@ export const Header: React.FC = () => {
                 <span className="date-pill-compact">{formatDateShort(selectedDate)}</span>
               </button>
 
-              {/* Flowchart 6: Add Task Action Button (Disabled & Hidden for CEO - Executive Monitor Mode) */}
-              {!isCeoMonitoring ? (
-                <button
-                  type="button"
-                  onClick={() => setIsCreateTaskModalOpen(true)}
-                  className="header-action-btn header-add-task-btn"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '6px 12px',
-                    background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    boxShadow: '0 2px 4px rgba(37, 99, 235, 0.25)',
-                    whiteSpace: 'nowrap',
-                    transition: 'all 0.15s ease',
-                    minHeight: '32px'
-                  }}
-                  title="Add New Deliverable / Task"
-                >
-                  <Plus size={15} strokeWidth={2.75} />
-                  <span className="header-action-label">Add Task</span>
-                </button>
-              ) : (
+              {/* Book Reading Portal Link (replaces top Add Task button) */}
+              <a
+                href="https://bookreading-peach.vercel.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="header-action-btn header-add-task-btn"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 12px',
+                  background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  textDecoration: 'none',
+                  boxShadow: '0 2px 4px rgba(37, 99, 235, 0.25)',
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.15s ease',
+                  minHeight: '32px'
+                }}
+                title="Open Book reading"
+              >
+                <BookOpen size={15} strokeWidth={2.5} />
+                <span className="header-action-label">Book reading</span>
+              </a>
+
+              {isCeoMonitoring && (
                 <div
                   className="header-action-btn"
                   style={{
@@ -373,7 +376,6 @@ export const Header: React.FC = () => {
                   }}
                   title="Executive Oversight Active — Real-time Deliverable Monitoring across all employees"
                 >
-
                   <span className="header-action-label">Executive Monitor</span>
                 </div>
               )}
