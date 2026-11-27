@@ -289,10 +289,10 @@ export const EmployeeLoginGate: React.FC<EmployeeLoginGateProps> = ({ onSuccess 
               >
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                   <Users size={15} color="#2563eb" />
-                  Select Employee ({liveActiveMembers.length} live)
+                  Select Employee
                 </span>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#2563eb', fontWeight: 700 }}>
-                  {showRoster ? 'Hide Roster' : 'Show Roster'}
+                  {showRoster ? 'Hide' : 'Show'}
                   {showRoster ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
                 </span>
               </button>
