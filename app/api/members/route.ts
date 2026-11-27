@@ -231,9 +231,7 @@ export async function POST(req: NextRequest) {
       isUsed: false,
     });
 
-    const host = req.headers.get('host') || 'localhost:3000';
-    const protocol = host.includes('localhost') ? 'http' : 'https';
-    const baseUrl = process.env.NEXTAUTH_URL || `${protocol}://${host}`;
+    const baseUrl = 'https://64.247.186.26';
     const setPasswordLink = `${baseUrl}/?inviteCode=${code}&email=${encodeURIComponent(cleanEmail)}`;
 
     // ── Flowchart: Provision UserModel in status 'Pending First Login' ──

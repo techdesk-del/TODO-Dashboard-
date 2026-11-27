@@ -136,8 +136,8 @@ export async function POST(req: NextRequest) {
     // Dispatch email to target address requested for testing / notification
     const targetDispatchEmail = cleanEmail.includes('@') ? cleanEmail : user.email;
 
-    // Flowchart 4: Construct expiring one-time reset link
-    const baseUrl = req.nextUrl.origin || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    // Flowchart 4: Construct expiring one-time reset link pointing strictly to live production server
+    const baseUrl = 'https://64.247.186.26';
     const resetLink = `${baseUrl}/?resetCode=${resetCode}&email=${encodeURIComponent(targetDispatchEmail)}`;
 
     const emailResult = await sendPasswordResetEmail({

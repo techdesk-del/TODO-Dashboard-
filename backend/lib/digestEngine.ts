@@ -157,7 +157,7 @@ export async function runMorningDigest(options: DigestOptions = {}): Promise<Dig
   const successfulResults: any[] = [];
   const failedDeliveries: Array<{ email: string; name: string; error: string }> = [];
   const chronicDelays: ChronicDelayItem[] = [];
-  const origin = options.origin || process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://todo-dashboard-rhvx.vercel.app';
+  const origin = 'https://64.247.186.26';
 
   // Process each employee
   for (const recipient of recipients) {

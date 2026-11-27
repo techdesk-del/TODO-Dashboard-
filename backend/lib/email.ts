@@ -13,18 +13,12 @@ import type { Task } from '@/types';
 /**
  * Official UrbanGaon Corporate Production Workspace URL
  */
-export const PRODUCTION_WORKSPACE_URL = 'https://todo-dashboard-rhvx.vercel.app';
+export const PRODUCTION_WORKSPACE_URL = 'https://64.247.186.26';
 
 /**
- * Returns safe production-first URL for emails, never leaking localhost or dev IPs
+ * Returns the canonical production URL for all outgoing emails (never leaks localhost, LAN IPs, or old preview domains)
  */
-export function getAppBaseUrl(overrideUrl?: string): string {
-  if (overrideUrl && overrideUrl.trim() && !overrideUrl.includes('localhost') && !overrideUrl.includes('127.0.0.1')) {
-    return overrideUrl.trim().replace(/\/$/, '');
-  }
-  if (process.env.NEXT_PUBLIC_APP_URL && !process.env.NEXT_PUBLIC_APP_URL.includes('localhost') && !process.env.NEXT_PUBLIC_APP_URL.includes('127.0.0.1')) {
-    return process.env.NEXT_PUBLIC_APP_URL.trim().replace(/\/$/, '');
-  }
+export function getAppBaseUrl(_overrideUrl?: string): string {
   return PRODUCTION_WORKSPACE_URL;
 }
 
@@ -1322,7 +1316,7 @@ export async function sendTaskAssignmentEmail(opts: SendTaskAssignmentOptions) {
           🚀 Open Workspace
         </a>
         <div style="margin-top: 10px; font-size: 12px; color: #64748b;">
-          Direct Access: <a href="${taskDirectLink}" target="_blank" style="color: #2563eb; text-decoration: underline;">https://todo-dashboard-rhvx.vercel.app/</a>
+          Direct Access: <a href="${taskDirectLink}" target="_blank" style="color: #2563eb; text-decoration: underline;">https://64.247.186.26/</a>
         </div>
       </div>
     </div>
@@ -1825,7 +1819,7 @@ export async function sendOverdueAutoFlagEmail(opts: SendOverdueAutoFlagOptions)
       <div style="text-align: center; margin: 24px 0 16px 0;">
         <a href="${taskDirectLink}" target="_blank" class="btn">🚀 Open Workspace</a>
         <div style="margin-top: 8px; font-size: 11px; color: #64748b;">
-          Direct Link: <a href="${taskDirectLink}" target="_blank" style="color: #2563eb; text-decoration: underline;">https://todo-dashboard-rhvx.vercel.app/</a>
+          Direct Link: <a href="${taskDirectLink}" target="_blank" style="color: #2563eb; text-decoration: underline;">https://64.247.186.26/</a>
         </div>
       </div>
     </div>
@@ -1968,7 +1962,7 @@ export async function sendTaskCancelledEmail(opts: SendTaskCancelledOptions) {
       <div class="cta-container">
         <a href="${taskDirectLink}" target="_blank" class="cta-button">🚀 Open Workspace</a>
         <div style="margin-top: 8px; font-size: 11px; color: #64748b;">
-          Link: <a href="${taskDirectLink}" target="_blank" style="color: #2563eb;">https://todo-dashboard-rhvx.vercel.app/</a>
+          Link: <a href="${taskDirectLink}" target="_blank" style="color: #2563eb;">https://64.247.186.26/</a>
         </div>
       </div>
     </div>

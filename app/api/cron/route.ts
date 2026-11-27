@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     // 1. Overdue and No-Reason Engine (Hourly IST Vercel Cron)
     if (action === 'overdue') {
       const { runOverdueAndNoReasonEvaluation } = await import('@/lib/overdueEngine');
-      const origin = req.headers.get('origin') || process.env.NEXTAUTH_URL || 'https://todo.urbangaon.com';
+      const origin = 'https://64.247.186.26';
       const result = await runOverdueAndNoReasonEvaluation({
         thresholdDays: 3,
         sendNotifications: true,
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
 
     // 2. Morning Email Digest + Overdue Evaluation (08:30 AM IST Vercel Cron)
     if (action === 'digest') {
-      const origin = req.headers.get('origin') || process.env.NEXTAUTH_URL || 'https://todo.urbangaon.com';
+      const origin = 'https://64.247.186.26';
 
       // Check working days configuration in real time
       let configuredWorkingDays: string[] | undefined = undefined;
@@ -148,7 +148,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === 'digest') {
-      const origin = req.headers.get('origin') || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+      const origin = 'https://64.247.186.26';
       const data = await runMorningDigest({
         targetEmail: body.email,
         targetName: body.name,
