@@ -34,8 +34,9 @@ jobs:
           NODE_ENV: production
         run: |
           npm run build
-          cp -r public .next/standalone/public
-          cp -r .next/static .next/standalone/.next/static
+          mkdir -p .next/standalone/public .next/standalone/.next/static
+          cp -a public/. .next/standalone/public/
+          cp -a .next/static/. .next/standalone/.next/static/
           tar -czf /tmp/urbangaon-release.tar.gz -C .next/standalone .
           ls -lh /tmp/urbangaon-release.tar.gz
 

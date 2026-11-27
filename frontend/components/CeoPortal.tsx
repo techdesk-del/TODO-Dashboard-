@@ -3,7 +3,7 @@ import { computeMultiAssigneeStatus } from '@/shared/lib/multiAssignee';
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
-import { isCeoUser, isStrictCeo } from '@/shared/lib/rosterData';
+import { isCeoUser, isStrictCeo, getCanonicalDepartment } from '@/shared/lib/rosterData';
 import { getTodayStr, formatDateDisplay, formatDateShort, formatCreationDate } from '@/shared/lib/dateUtils';
 import { Task, TeamMember } from '@/types';
 import { TaskCard } from '@/components/TaskCard';
@@ -210,10 +210,10 @@ export const CeoPortal: React.FC = () => {
   const departmentList = useMemo(() => {
     const set = new Set<string>();
     tasks.forEach(t => {
-      if (t.department) set.add(t.department);
+      if (t.department) set.add(getCanonicalDepartment(t.department));
     });
     activeMembers.forEach(m => {
-      if (m.department) set.add(m.department);
+      if (m.department) set.add(getCanonicalDepartment(m.department));
     });
     return Array.from(set).sort();
   }, [tasks, activeMembers]);
@@ -244,7 +244,7 @@ export const CeoPortal: React.FC = () => {
       }
 
       // Department filter
-      if (departmentFilter !== 'ALL' && task.department !== departmentFilter) {
+      if (departmentFilter !== 'ALL' && getCanonicalDepartment(task.department || '') !== departmentFilter) {
         return false;
       }
 
@@ -428,10 +428,10 @@ export const CeoPortal: React.FC = () => {
               cursor: 'pointer',
               transition: 'all 0.15s ease'
             }}
-            title="Synchronize ledger with live MongoDB Atlas database"
+            title="Sync latest data"
           >
             <RotateCcw size={13} className={isRefreshing ? 'spin-animation' : ''} />
-            <span>Sync Ledger</span>
+            <span>Sync</span>
           </button>
 
           <button
@@ -451,10 +451,10 @@ export const CeoPortal: React.FC = () => {
               cursor: 'pointer',
               transition: 'all 0.15s ease'
             }}
-            title="Download executive board print/PDF dossier"
+            title="Export report as PDF"
           >
             <Printer size={14} color="#2563eb" />
-            <span>Board PDF Dossier</span>
+            <span>Export PDF</span>
           </button>
 
           <button

@@ -806,44 +806,54 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index }) => {
               if (!isDelegatedToAnother) return null;
 
               return (
-                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', flexWrap: 'wrap', gap: '6px', maxWidth: '100%' }}>
                   <span
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
+                      flexWrap: 'wrap',
                       gap: '4px',
                       fontSize: '0.73rem',
                       fontWeight: 600,
                       color: '#5b21b6',
                       background: '#f5f3ff',
                       border: '1px solid #ddd6fe',
-                      borderRadius: '999px',
-                      padding: '2px 10px',
-                      whiteSpace: 'nowrap'
+                      borderRadius: '10px',
+                      padding: '4px 10px',
+                      maxWidth: '100%',
+                      boxSizing: 'border-box',
+                      whiteSpace: 'normal',
+                      wordBreak: 'break-word',
+                      lineHeight: 1.35
                     }}
                     title={`Assigned by ${task.creator.name}${task.creator.email ? ` (${task.creator.email})` : ''}`}
                   >
-                    <User size={12} />
-                    Assigned by: <strong>{task.creator.name}</strong>
+                    <User size={12} style={{ flexShrink: 0 }} />
+                    <span>Assigned by: <strong>{task.creator.name}</strong></span>
                   </span>
                   <span
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
+                      flexWrap: 'wrap',
                       gap: '4px',
                       fontSize: '0.73rem',
                       fontWeight: 600,
                       color: '#0369a1',
                       background: '#f0f9ff',
                       border: '1px solid #bae6fd',
-                      borderRadius: '999px',
-                      padding: '2px 10px',
-                      whiteSpace: 'nowrap'
+                      borderRadius: '10px',
+                      padding: '4px 10px',
+                      maxWidth: '100%',
+                      boxSizing: 'border-box',
+                      whiteSpace: 'normal',
+                      wordBreak: 'break-word',
+                      lineHeight: 1.35
                     }}
                     title={`Assigned to: ${task.assignees.map(a => a.name).join(', ')}`}
                   >
-                    <Users size={12} />
-                    Assigned to: <strong>{task.assignees.map(a => a.name).join(', ')}</strong>
+                    <Users size={12} style={{ flexShrink: 0 }} />
+                    <span>Assigned to: <strong>{task.assignees.map(a => a.name).join(', ')}</strong></span>
                   </span>
                 </div>
               );

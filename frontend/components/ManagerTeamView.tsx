@@ -323,43 +323,73 @@ export const ManagerTeamView: React.FC = () => {
         </div>
 
         {/* View Switcher: Team Roster vs Team Report */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <div style={{ background: '#f1f5f9', padding: '3px', borderRadius: '7px', display: 'flex', gap: '3px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%', maxWidth: '100%' }}>
+          <div
+            style={{
+              background: '#f1f5f9',
+              padding: '4px',
+              borderRadius: '8px',
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '4px',
+              width: '100%',
+              maxWidth: '100%',
+              boxSizing: 'border-box'
+            }}
+          >
             <button
               type="button"
               className="btn-secondary"
               style={{
-                padding: '0.35rem 0.85rem',
+                flex: '1 1 135px',
+                minWidth: 0,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '5px',
+                padding: '0.45rem 0.65rem',
                 border: 'none',
-                borderRadius: '5px',
+                borderRadius: '6px',
                 background: activeTab === 'roster' ? '#ffffff' : 'transparent',
                 boxShadow: activeTab === 'roster' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                 fontWeight: activeTab === 'roster' ? 800 : 600,
                 color: activeTab === 'roster' ? '#2563eb' : '#64748b',
-                fontSize: '0.78rem'
+                fontSize: '0.75rem',
+                whiteSpace: 'normal',
+                textAlign: 'center',
+                lineHeight: 1.25
               }}
               onClick={() => setActiveTab('roster')}
             >
-              <Users size={13} />
-              Team Roster &amp; Tasks
+              <Users size={13} style={{ flexShrink: 0 }} />
+              <span>Team Roster &amp; Tasks</span>
             </button>
             <button
               type="button"
               className="btn-secondary"
               style={{
-                padding: '0.35rem 0.85rem',
+                flex: '1 1 135px',
+                minWidth: 0,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '5px',
+                padding: '0.45rem 0.65rem',
                 border: 'none',
-                borderRadius: '5px',
+                borderRadius: '6px',
                 background: activeTab === 'report' ? '#ffffff' : 'transparent',
                 boxShadow: activeTab === 'report' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                 fontWeight: activeTab === 'report' ? 800 : 600,
                 color: activeTab === 'report' ? '#2563eb' : '#64748b',
-                fontSize: '0.78rem'
+                fontSize: '0.75rem',
+                whiteSpace: 'normal',
+                textAlign: 'center',
+                lineHeight: 1.25
               }}
               onClick={() => setActiveTab('report')}
             >
-              <BarChart3 size={13} />
-              View Team Report
+              <BarChart3 size={13} style={{ flexShrink: 0 }} />
+              <span>View Team Report</span>
             </button>
           </div>
         </div>

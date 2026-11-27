@@ -494,7 +494,7 @@ export default function Home() {
                       </select>
                     </div>
                   ) : (
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', background: '#f1f5f9', padding: '3px', borderRadius: '8px', flexShrink: 0, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px', background: '#f1f5f9', padding: '3px', borderRadius: '8px', maxWidth: '100%', boxSizing: 'border-box', flexWrap: 'wrap' }}>
                       <button
                         type="button"
                         onClick={() => setAssigneeFilter('all')}
