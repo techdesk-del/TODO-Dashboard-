@@ -328,7 +328,7 @@ export const Header: React.FC = () => {
 
               {/* Book Reading Portal Link (replaces top Add Task button) */}
               <a
-                href="https://bookreading-peach.vercel.app/"
+                href="https://books.64.247.186.26.sslip.io/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="header-action-btn header-add-task-btn"
